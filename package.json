@@ -1,0 +1,25 @@
+{
+  "name": "mozilla-loop-server",
+  "description": "The Mozilla Loop (WebRTC App) server",
+  "version": "0.0.1",
+  "engines": {
+    "node": "0.10.x",
+    "npm":"1.3.x"
+  },
+  "dependencies": {
+    "express": "3.x",
+    "bunyan": "0.21.x"
+  },
+  "devDependencies": {
+    "awsbox": "0.6.x",
+    "mocha": "1.8.x",
+    "chai": "1.5.x",
+    "istanbul": "*",
+    "jshint": "2.x",
+    "sinon": "1.6.x",
+  },
+  "scripts": {
+    "test": "make test",
+    "start": "make runserver"
+  }
+}
