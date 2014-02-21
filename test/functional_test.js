@@ -7,25 +7,48 @@ var app = require("../loop");
 
 describe("HTTP API exposed by the server", function() {
   "use strict";
-  var req;
-
-  beforeEach(function(){
-    req = request(app)
-            .post('/call-url')
-            .set('Accept', 'application/json')
-            .expect('Content-Type', /json/);
-  });
 
   describe("POST /call-url", function() {
-    it("should require simple push url", function() {
-      req.expect(400).end(function(err, res){
-        if (err) throw err;
-        expect(res.body.error).eql('simple_push_url is required');
-      });
+    var jsonReq;
+
+    beforeEach(function() {
+      jsonReq = request(app)
+                  .post('/call-url')
+                  .type('json')
+                  .expect('Content-Type', /json/);
     });
 
-    it.skip("should validate the simple push url", function() {
-      
+    it("should require simple push url", function(done) {
+      jsonReq
+        .send({}) // XXX sending nothing fails here, investigate
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body.error).eql('simple_push_url is required');
+          done();
+        });
+    });
+
+    it("should validate the simple push url", function(done) {
+      jsonReq
+        .send({'simple_push_url': 'not-an-url'})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body.error).eql('simple_push_url should be a valid url');
+          done();
+        });
+    });
+
+    it("should reject non-JSON requests", function(done) {
+      request(app)
+        .post('/call-url')
+        .type('html')
+        .expect(406).end(function(err, res) {
+          if (err) throw err;
+          expect(res.body).eql(["application/json"]);
+          done();
+        });
     });
 
     it.skip("should attach a session to the user agent", function() {
@@ -39,8 +62,8 @@ describe("HTTP API exposed by the server", function() {
     it.skip("should store push url", function() {
       // XXX move in a different location.
     });
-
   });
+
   describe("GET /calls/{call_token}", function() {
     it.skip("should return a valid HTML page", function() {
 
@@ -67,6 +90,7 @@ describe("HTTP API exposed by the server", function() {
 
   describe("POST /calls/{call_token}", function() {
     it.skip("should trigger simple push", function() {
+
     });
 
     it.skip("should store incoming call info", function() {
