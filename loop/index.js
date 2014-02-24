@@ -1,4 +1,4 @@
-/* jshint strict:false */
+"use strict";
 
 var express = require('express');
 var tokenlib = require('./tokenlib');

@@ -1,9 +1,11 @@
+"use strict";
+
 var crypto = require("crypto");
 var base64 = require('urlsafe-base64');
 
 function TokenManager(secret) {
   if (!secret)
-      throw new Error("TokenManager requires a 'secret' argument");
+    throw new Error("TokenManager requires a 'secret' argument");
 
   this.secret = secret;
   this.signatureSize = 32 / 8;
