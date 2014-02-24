@@ -1,10 +1,14 @@
-/* jshint strict:false */
+"use strict";
 
 var express = require('express');
+var tokenlib = require('./tokenlib');
 var app = express();
 
 app.use(express.json());
 app.use(express.urlencoded());
+
+var SECRET = "this is not a secret";
+var tokenManager = new tokenlib.TokenManager(SECRET);
 
 function validateCallUrl(reqDataObj) {
   if (typeof reqDataObj !== 'object')
@@ -31,9 +35,12 @@ app.post('/call-url', function(req, res) {
     return res.json(400, {error: err.message});
   }
 
-  return res.json(200, {validated: validated}); // XXX to be continued
+  var token = tokenManager.encode({}, SECRET);
+  var host = req.protocol + "://" + req.get('host');
+  return res.send(200, {call_url: host + "/call/" + token});
 });
 
 app.listen(5000);
 
 module.exports = app;
+

@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "express": "3.x",
-    "bunyan": "0.21.x"
+    "bunyan": "0.21.x",
+    "urlsafe-base64": "0.0.2"
   },
   "devDependencies": {
     "awsbox": "0.6.x",
@@ -17,7 +18,7 @@
     "istanbul": "*",
     "jshint": "2.x",
     "sinon": "1.6.x",
-    "supertest": "0.9.0"
+    "supertest": "0.9.x"
   },
   "scripts": {
     "test": "make test",
