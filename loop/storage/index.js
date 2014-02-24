@@ -17,12 +17,12 @@ module.exports = function Storage(adapter) {
     },
 
     /**
-     * Retrieves a simplepush url record out of a userid.
+     * Retrieves all simplepush url records associated to a userid.
      * @param  {String}   userid User id
-     * @param  {Function} cb     Callback(err, record)
+     * @param  {Function} cb     Callback(err, records)
      */
-    getSimplepushUrl: function(userid, cb) {
-      adapter.getOne("simplepush_urls", {
+    getSimplepushUrls: function(userid, cb) {
+      adapter.get("simplepush_urls", {
         userid: userid
       }, cb);
     },
@@ -43,7 +43,7 @@ module.exports = function Storage(adapter) {
     },
 
     /**
-     * Retrieves a call info record out of a userid.
+     * Retrieves a call info record associated to a userid.
      * @param  {String}   userid User id
      * @param  {Function} cb     Callback(err, record)
      */

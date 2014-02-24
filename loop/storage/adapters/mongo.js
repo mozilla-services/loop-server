@@ -45,6 +45,25 @@ module.exports = function MongoAdapter(connectionString) {
     },
 
     /**
+     * Retrieves multiple records matching the provided query object. Sends back
+     * an error if no matching entry was found.
+     * @param  {String}   coll  Collection name
+     * @param  {Object}   query Query object
+     * @param  {Function} cb    Callback(err, record)
+     */
+    get: function(coll, query, cb) {
+      _ensureConnected(function(err, db) {
+        if (err)
+          return cb(err);
+        db.collection(coll).find(query).toArray(function(err, records) {
+          if (err)
+            return cb(err);
+          cb(null, records);
+        });
+      });
+    },
+
+    /**
      * Retrieves a single record matching the provided query object. Sends back
      * an error if no matching entry was found.
      * @param  {String}   coll  Collection name

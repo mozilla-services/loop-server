@@ -25,6 +25,22 @@ module.exports = function MemoryAdapter() {
     },
 
     /**
+     * Retrieves multiple records matching the provided query object.
+     * @param  {String}   coll  Collection name
+     * @param  {Object}   query Query object
+     * @param  {Function} cb    Callback(err, records)
+     */
+    get: function(coll, query, cb) {
+      _ensureStore(coll);
+      var records = stores[coll].filter(function(record) {
+        return Object.keys(query).some(function(field) {
+          return record[field] === query[field];
+        });
+      });
+      cb(null, records);
+    },
+
+    /**
      * Retrieves a single record matching the provided query object. Sends back
      * an error if no matching entry was found.
      * @param  {String}   coll  Collection name

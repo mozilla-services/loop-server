@@ -24,13 +24,14 @@ describe("Storage", function() {
     beforeEach(function() {
       fakeAdapter = {
         addOne: sinon.spy(),
+        get: sinon.spy(),
         getOne: sinon.spy()
       };
       storage = new Storage(fakeAdapter);
     });
 
     describe("#addSimplepushUrl", function() {
-      it("should add a simplepush url", function() {
+      it("should add a simplepush url for a given user", function() {
         var cb = function(){};
         storage.addSimplepushUrl(42, "http://foo", cb);
 
@@ -42,20 +43,20 @@ describe("Storage", function() {
       });
     });
 
-    describe("#getSimplepushUrl", function() {
-      it("should retrieve a simplepush url", function() {
+    describe("#getSimplepushUrls", function() {
+      it("should retrieve simplepush urls associated to a user", function() {
         var cb = function(){};
-        storage.getSimplepushUrl(42, cb);
+        storage.getSimplepushUrls(42, cb);
 
-        sinon.assert.calledOnce(fakeAdapter.getOne);
-        sinon.assert.calledWithExactly(fakeAdapter.getOne, "simplepush_urls", {
+        sinon.assert.calledOnce(fakeAdapter.get);
+        sinon.assert.calledWithExactly(fakeAdapter.get, "simplepush_urls", {
           userid: 42
         }, cb);
       });
     });
 
     describe("#addCallInfo", function() {
-      it("should add a call info", function() {
+      it("should add a call info for a given user", function() {
         var cb = function(){};
         storage.addCallInfo(42, "token", "session", cb);
 
@@ -69,7 +70,7 @@ describe("Storage", function() {
     });
 
     describe("#getCallInfo", function() {
-      it("should retrieve a call info", function() {
+      it("should retrieve a call info for a given user", function() {
         var cb = function(){};
         storage.getCallInfo(42, cb);
 
@@ -116,6 +117,29 @@ describe("Adapters", function() {
             expect(err).to.be.a("null");
             expect(record).to.be.a("object");
             expect(record.a).eql(1);
+            done();
+          });
+        });
+      });
+
+      describe("#get", function() {
+        it("should retrieve records out of a query object", function(done) {
+          adapter.addOne("test_coll", {a: 1, b: 2}, function() {
+            adapter.addOne("test_coll", {a: 1, b: 3}, function() {
+              adapter.get("test_coll", {a: 1}, function(err, records) {
+                expect(err).to.be.a("null");
+                expect(records).to.have.length.of(2);
+                done();
+              });
+            });
+          });
+        });
+
+        it("should return an empty array on no match found", function(done) {
+          adapter.get("test_coll", {x: 42}, function(err, records) {
+            expect(err).to.be.a("null");
+            expect(records).to.be.a("array");
+            expect(records).to.have.length.of(0);
             done();
           });
         });
