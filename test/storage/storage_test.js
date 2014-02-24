@@ -100,6 +100,20 @@ describe("MongoAdapter", function() {
         });
       });
     });
+
+    describe("#drop", function() {
+      it("should drop the database", function(done) {
+        adapter.addOne("bar", {a: 1}, function() {
+          adapter.drop(function(err) {
+            expect(err).to.be.a("null");
+            adapter.getOne("test_coll", {a: 1}, function(err, record) {
+              expect(err).to.be.a("object");
+              done();
+            });
+          });
+        });
+      });
+    });
   });
 });
 
@@ -147,6 +161,20 @@ describe("MemoryAdapter", function() {
           expect(err).to.be.a.instanceOf(Error);
           expect(err.message).to.match(/No record found matching query/);
           done();
+        });
+      });
+    });
+
+    describe("#drop", function() {
+      it("should drop the database", function(done) {
+        adapter.addOne("bar", {a: 1}, function() {
+          adapter.drop(function(err) {
+            expect(err).to.be.a("null");
+            adapter.getOne("test_coll", {a: 1}, function(err, record) {
+              expect(err).to.be.a("object");
+              done();
+            });
+          });
         });
       });
     });
