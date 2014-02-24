@@ -8,6 +8,12 @@ module.exports = function MongoAdapter(connectionString) {
   if (!connectionString)
     throw new Error("A connection string is required");
 
+  /**
+   * Ensures the database is connected. Sends an existing opened database
+   * instance if it exists, creates one if it's not.
+   * @private
+   * @param  {Function} cb Callback(err, db)
+   */
   function _ensureConnected(cb) {
     if (db)
       return cb(null, db);
@@ -20,6 +26,12 @@ module.exports = function MongoAdapter(connectionString) {
   }
 
   return {
+    /**
+     * Adds a single record to the collection.
+     * @param {String}   coll   Collection name
+     * @param {Object}   record Record Object
+     * @param {Function} cb     Callback(err, record)
+     */
     addOne: function(coll, record, cb) {
       _ensureConnected(function(err, db) {
         if (err)
@@ -32,6 +44,13 @@ module.exports = function MongoAdapter(connectionString) {
       });
     },
 
+    /**
+     * Retrieves a single record matching the provided query object. Sends back
+     * an error if no matching entry was found.
+     * @param  {String}   coll  Collection name
+     * @param  {Object}   query Query object
+     * @param  {Function} cb    Callback(err, record)
+     */
     getOne: function(coll, query, cb) {
       _ensureConnected(function(err, db) {
         if (err)
@@ -44,6 +63,10 @@ module.exports = function MongoAdapter(connectionString) {
       });
     },
 
+    /**
+     * Drops current database.
+     * @param  {Function} cb Callback(err)
+     */
     drop: function(cb) {
       _ensureConnected(function(err, db) {
         db.dropDatabase(cb);
