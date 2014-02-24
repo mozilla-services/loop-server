@@ -4,6 +4,9 @@ var expect = require("chai").expect;
 var request = require("supertest");
 
 var app = require("../loop");
+var tokenlib = require("../loop/tokenlib");
+
+var SECRET = "this is not a secret";
 
 describe("HTTP API exposed by the server", function() {
   "use strict";
@@ -52,11 +55,25 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it.skip("should attach a session to the user agent", function() {
-
     });
 
-    it.skip("should generate a valid call-url", function() {
+    it("should generate a valid call-url", function(done) {
+      jsonReq
+        .send({simple_push_url: "http://example.com"})
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .end(function(err, res) {
+          var call_url = res.body && res.body.call_url, token;
 
+          expect(call_url).to.not.equal(null);
+
+          // XXX: the content of the token should change in the
+          // future.
+          token = call_url.split("/").pop();
+          expect(tokenlib.decode(token, SECRET)).to.deep.equal({});
+
+          done(err);
+        });
     });
 
     it.skip("should store push url", function() {

@@ -1,10 +1,13 @@
 /* jshint strict:false */
 
 var express = require('express');
+var tokenlib = require('./tokenlib');
 var app = express();
 
 app.use(express.json());
 app.use(express.urlencoded());
+
+var SECRET = "this is not a secret";
 
 function validateCallUrl(reqDataObj) {
   if (typeof reqDataObj !== 'object')
@@ -31,9 +34,12 @@ app.post('/call-url', function(req, res) {
     return res.json(400, {error: err.message});
   }
 
-  return res.json(200, {validated: validated}); // XXX to be continued
+  var token = tokenlib.encode({}, SECRET);
+  // XXX: use config to remove the hardcoded localhost
+  return res.send(200, {call_url: "http://localhost/call/" + token});
 });
 
 app.listen(5000);
 
 module.exports = app;
+
