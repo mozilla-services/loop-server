@@ -1,44 +1,47 @@
 var crypto = require("crypto");
 var base64 = require('urlsafe-base64');
 
-var tokenlib = {
-  encode: function(data, secret) {
-    if (!secret)
-      throw new Error("It requires a secret");
+function TokenManager(secret) {
+  if (!secret)
+      throw new Error("TokenManager requires a 'secret' argument");
 
+  this.secret = secret;
+  this.signatureSize = 32 / 8;
+}
+
+TokenManager.prototype = {
+  encode: function(data) {
     var payload, signature, hmac;
 
     payload = new Buffer(JSON.stringify(data));
 
-    hmac = crypto.createHmac("sha256", secret);
+    hmac = crypto.createHmac("sha256", this.secret);
     hmac.write(payload);
     hmac.end();
 
     signature = hmac.read();
     // keep the last 32 bits only, so we avoid huge signatures
-    signature = signature.slice(signature.length - 4);
+    signature = signature.slice(signature.length - this.signatureSize);
 
     return base64.encode(Buffer.concat([payload,signature]));
   },
 
-  decode: function(token, secret) {
-    if (!secret)
-      throw new Error("It requires a secret");
-
+  decode: function(token) {
     token = base64.decode(token);
     // Split token into <payload><signature: 32 bits>
-    var signature = token.slice(token.length - 4).toString();
-    var payload = token.slice(0, token.length - 4).toString();
+    var signature = token.slice(token.length - this.signatureSize).toString();
+    var payload = token.slice(0, token.length - this.signatureSize).toString();
 
-    var hmac = crypto.createHmac("sha256", secret);
+    var hmac = crypto.createHmac("sha256", this.secret);
     hmac.write(payload);
     hmac.end();
 
-    var sig = hmac.read();
+    var payloadSignature = hmac.read();
     // The signature is always the last 32 bits only
-    sig = sig.slice(sig.length - 4).toString();
+    payloadSignature = payloadSignature
+      .slice(payloadSignature.length - this.signatureSize).toString();
 
-    if (sig !== signature)
+    if (signature !== payloadSignature)
       throw new Error("Invalid signature");
 
     return JSON.parse(payload);
@@ -46,4 +49,4 @@ var tokenlib = {
 };
 
 
-module.exports = tokenlib;
+module.exports = {TokenManager: TokenManager};

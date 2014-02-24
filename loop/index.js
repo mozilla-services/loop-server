@@ -8,6 +8,7 @@ app.use(express.json());
 app.use(express.urlencoded());
 
 var SECRET = "this is not a secret";
+var tokenManager = new tokenlib.TokenManager(SECRET);
 
 function validateCallUrl(reqDataObj) {
   if (typeof reqDataObj !== 'object')
@@ -34,7 +35,7 @@ app.post('/call-url', function(req, res) {
     return res.json(400, {error: err.message});
   }
 
-  var token = tokenlib.encode({}, SECRET);
+  var token = tokenManager.encode({}, SECRET);
   var host = req.protocol + "://" + req.get('host');
   return res.send(200, {call_url: host + "/call/" + token});
 });

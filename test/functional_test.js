@@ -58,6 +58,8 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should generate a valid call-url", function(done) {
+      var tokenManager = new tokenlib.TokenManager(SECRET);
+
       jsonReq
         .send({simple_push_url: "http://example.com"})
         .expect(200)
@@ -70,7 +72,7 @@ describe("HTTP API exposed by the server", function() {
           // XXX: the content of the token should change in the
           // future.
           token = callUrl.split("/").pop();
-          expect(tokenlib.decode(token, SECRET)).to.deep.equal({});
+          expect(tokenManager.decode(token)).to.deep.equal({});
 
           done(err);
         });
