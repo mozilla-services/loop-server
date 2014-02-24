@@ -35,8 +35,8 @@ app.post('/call-url', function(req, res) {
   }
 
   var token = tokenlib.encode({}, SECRET);
-  // XXX: use config to remove the hardcoded localhost
-  return res.send(200, {call_url: "http://localhost/call/" + token});
+  var host = req.protocol + "://" + req.get('host');
+  return res.send(200, {call_url: host + "/call/" + token});
 });
 
 app.listen(5000);

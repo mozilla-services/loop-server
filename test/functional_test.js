@@ -61,15 +61,15 @@ describe("HTTP API exposed by the server", function() {
       jsonReq
         .send({simple_push_url: "http://example.com"})
         .expect(200)
-        .expect('Content-Type', /json/)
         .end(function(err, res) {
-          var call_url = res.body && res.body.call_url, token;
+          var callUrl = res.body && res.body.call_url, token;
 
-          expect(call_url).to.not.equal(null);
+          expect(callUrl).to.not.equal(null);
+          expect(callUrl).to.match(/^http:\/\/127.0.0.1/);
 
           // XXX: the content of the token should change in the
           // future.
-          token = call_url.split("/").pop();
+          token = callUrl.split("/").pop();
           expect(tokenlib.decode(token, SECRET)).to.deep.equal({});
 
           done(err);
