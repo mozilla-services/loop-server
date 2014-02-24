@@ -14,6 +14,11 @@ describe("tokenlib", function() {
       expect(token.constructor.name).to.be.equal("String");
     });
 
+    it("should return an hexadecimal value", function() {
+      var token = tokenlib.encode({some: "data"}, SECRET);
+      expect(token).to.match(/[0-9A-F]/);
+    });
+
     it("should throw an error if no secret has been provided", function() {
       var noSecret;
       var failure = tokenlib.encode.bind(tokenlib, {}, noSecret);
