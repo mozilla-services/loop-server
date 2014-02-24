@@ -36,7 +36,11 @@ module.exports = function MongoAdapter(dsn) {
       _ensureConnected(function(err, db) {
         if (err)
           return cb(err);
-        db.collection(coll).findOne(query, cb);
+        db.collection(coll).findOne(query, function(err, record) {
+          if (!record)
+            return cb(new Error("No record found matching query"));
+          cb(null, record);
+        });
       });
     },
 

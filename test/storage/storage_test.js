@@ -6,6 +6,7 @@ var sinon = require("sinon");
 var Storage = require("../../loop/storage");
 var MongoClient = require('mongodb').MongoClient;
 var MongoAdapter = require("../../loop/storage/adapters/mongo");
+var MemoryAdapter = require("../../loop/storage/adapters/memory");
 
 describe("Storage", function() {
   "use strict";
@@ -91,8 +92,62 @@ describe("MongoAdapter", function() {
         });
       });
 
-      it.skip("should give an error on no record found", function(done) {
+      it("should give an error on no record found", function(done) {
+        adapter.getOne("test_coll", {x: 42}, function(err, record) {
+          expect(err).to.be.a.instanceOf(Error);
+          expect(err.message).to.match(/No record found matching query/);
+          done();
+        });
+      });
+    });
+  });
+});
 
+describe("MemoryAdapter", function() {
+  "use strict";
+
+  describe("constructed", function() {
+    var adapter;
+
+    beforeEach(function() {
+      adapter = new MemoryAdapter();
+    });
+
+    afterEach(function(done) {
+      adapter.drop(function(err) {
+        done(err);
+      });
+    });
+
+    describe("#addOne", function() {
+      it("should add a record to a given collection", function(done) {
+        adapter.addOne("test_coll", {a: 1, b: 2}, function(err, record) {
+          expect(err).to.be.a("null");
+          expect(record).to.be.a("object");
+          expect(record.a).eql(1);
+          done();
+        });
+      });
+    });
+
+    describe("#getOne", function() {
+      it("should retrieve a record out of a query object", function(done) {
+        adapter.addOne("test_coll", {a: 1, b: 2}, function(err) {
+          adapter.getOne("test_coll", {a: 1}, function(err, record) {
+            expect(err).to.be.a("null");
+            expect(record).to.be.a("object");
+            expect(record.a).eql(1);
+            done();
+          });
+        });
+      });
+
+      it("should give an error on no record found", function(done) {
+        adapter.getOne("test_coll", {x: 42}, function(err, record) {
+          expect(err).to.be.a.instanceOf(Error);
+          expect(err.message).to.match(/No record found matching query/);
+          done();
+        });
       });
     });
   });
