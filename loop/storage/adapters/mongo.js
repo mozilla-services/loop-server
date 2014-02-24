@@ -1,17 +1,17 @@
 var MongoClient = require('mongodb').MongoClient;
 
-module.exports = function MongoAdapter(dsn) {
+module.exports = function MongoAdapter(connectionString) {
   "use strict";
 
   var db;
 
-  if (!dsn)
-    throw new Error("A DSN is required");
+  if (!connectionString)
+    throw new Error("A connection string is required");
 
   function _ensureConnected(cb) {
     if (db)
       return cb(null, db);
-    MongoClient.connect(dsn, function(err, resultDb) {
+    MongoClient.connect(connectionString, function(err, resultDb) {
       if (err)
         return cb(err);
       db = resultDb;

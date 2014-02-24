@@ -87,10 +87,10 @@ describe("Adapters", function() {
 
   describe("MongoAdapter", function() {
     describe("#constructor", function() {
-      it("should require a DSN", function() {
+      it("should require a connection string", function() {
         expect(function() {
           new MongoAdapter();
-        }).Throw(Error, /A DSN is required/);
+        }).Throw(Error, /A connection string is required/);
       });
     });
   });
