@@ -41,6 +41,44 @@ describe("Storage", function() {
         }, cb);
       });
     });
+
+    describe("#getSimplepushUrl", function() {
+      it("should retrieve a simplepush url", function() {
+        var cb = function(){};
+        storage.getSimplepushUrl(42, cb);
+
+        sinon.assert.calledOnce(fakeAdapter.getOne);
+        sinon.assert.calledWithExactly(fakeAdapter.getOne, "simplepush_urls", {
+          userid: 42
+        }, cb);
+      });
+    });
+
+    describe("#addCallInfo", function() {
+      it("should add a call info", function() {
+        var cb = function(){};
+        storage.addCallInfo(42, "token", "session", cb);
+
+        sinon.assert.calledOnce(fakeAdapter.addOne);
+        sinon.assert.calledWithExactly(fakeAdapter.addOne, "call_info", {
+          userid: 42,
+          token: "token",
+          session: "session"
+        }, cb);
+      });
+    });
+
+    describe("#getCallInfo", function() {
+      it("should retrieve a call info", function() {
+        var cb = function(){};
+        storage.getCallInfo(42, cb);
+
+        sinon.assert.calledOnce(fakeAdapter.getOne);
+        sinon.assert.calledWithExactly(fakeAdapter.getOne, "call_info", {
+          userid: 42
+        }, cb);
+      });
+    });
   });
 });
 

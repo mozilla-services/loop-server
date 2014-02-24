@@ -10,13 +10,13 @@ module.exports = function Storage(adapter) {
       }, cb);
     },
 
-    getSimplepushUrl: function(userid) {
+    getSimplepushUrl: function(userid, cb) {
       adapter.getOne("simplepush_urls", {
         userid: userid
       }, cb);
     },
 
-    addCallInfo: function(userid, token, session) {
+    addCallInfo: function(userid, token, session, cb) {
       adapter.addOne("call_info", {
         userid: userid,
         token: token,
@@ -24,7 +24,7 @@ module.exports = function Storage(adapter) {
       }, cb);
     },
 
-    getCallInfo: function(userid) {
+    getCallInfo: function(userid, cb) {
       adapter.getOne("call_info", {
         userid: userid
       }, cb);
