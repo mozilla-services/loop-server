@@ -1,5 +1,3 @@
-/* global it, describe */
-
 var expect = require("chai").expect;
 var base64 = require('urlsafe-base64');
 var tokenlib = require("../loop/tokenlib");
