@@ -3,10 +3,9 @@
 var expect = require("chai").expect;
 var sinon = require("sinon");
 
-var Storage = require("../../loop/storage");
-var MongoClient = require('mongodb').MongoClient;
-var MongoAdapter = require("../../loop/storage/adapters/mongo");
-var MemoryAdapter = require("../../loop/storage/adapters/memory");
+var Storage = require("../loop/storage");
+var MongoAdapter = require("../loop/storage/adapters/mongo");
+var MemoryAdapter = require("../loop/storage/adapters/memory");
 
 describe("Storage", function() {
   "use strict";
