@@ -27,13 +27,13 @@ describe("tokenlib", function() {
   });
 
   describe("#decode", function() {
-    it("should return an object", function() {
+    it("should decode a valid encoded token", function() {
       var data = {some: "data"};
       var token = tokenlib.encode(data, SECRET);
       expect(tokenlib.decode(token, SECRET)).to.deep.equal(data);
     });
 
-    it("should raise an error if the signature is invalid", function() {
+    it("should trhow an error if the signature is invalid", function() {
       var data = {some: "data"};
       var token = tokenlib.encode(data, "h4x0r");
       var failure = tokenlib.decode.bind(tokenlib, token, SECRET);
