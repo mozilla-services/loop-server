@@ -1,7 +1,9 @@
 /* global it, describe */
 
 var expect = require("chai").expect;
+var base64 = require('urlsafe-base64');
 var tokenlib = require("../loop/tokenlib");
+
 
 var SECRET = "this is not a secret";
 
@@ -14,9 +16,9 @@ describe("tokenlib", function() {
       expect(token.constructor.name).to.be.equal("String");
     });
 
-    it("should return an hexadecimal value", function() {
+    it("should return an base64 url safe value", function() {
       var token = tokenlib.encode({some: "data"}, SECRET);
-      expect(token).to.match(/[0-9A-F]/);
+      expect(base64.validate(token)).to.equal(true);
     });
 
     it("should throw an error if no secret has been provided", function() {
