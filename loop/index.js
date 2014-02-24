@@ -1,4 +1,6 @@
 /* jshint strict:false */
+var env = process.env.NODE_ENV || "development";
+var config = require('../config/' + env + '.js');
 
 var express = require('express');
 var app = express();
