@@ -19,7 +19,7 @@ jshint:
 .PHONY: mocha
 mocha:
 	@env NODE_ENV=test SESSION_SECRET=${SESSION_SECRET} \
-		./node_modules/mocha/bin/mocha --reporter spec
+		./node_modules/mocha/bin/mocha test/* --reporter spec
 
 .PHONY: runserver
 runserver:
