@@ -6,6 +6,7 @@
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
+var auth = require('./authentication');
 var app = express();
 
 app.use(express.json());
@@ -27,7 +28,7 @@ function validateCallUrl(reqDataObj) {
   return reqDataObj;
 }
 
-app.post('/call-url', function(req, res) {
+app.post('/call-url', auth.isAuthenticated, function(req, res) {
   var validated;
 
   if (req.headers['content-type'] !== 'application/json')
@@ -47,4 +48,3 @@ app.post('/call-url', function(req, res) {
 app.listen(5000);
 
 module.exports = app;
-
