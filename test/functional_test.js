@@ -7,8 +7,8 @@ var request = require("supertest");
 
 var app = require("../loop");
 var tokenlib = require("../loop/tokenlib");
+var conf = require('../loop/config.js');
 
-var SECRET = "this is not a secret";
 
 describe("HTTP API exposed by the server", function() {
   "use strict";
@@ -60,7 +60,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should generate a valid call-url", function(done) {
-      var tokenManager = new tokenlib.TokenManager(SECRET);
+      var tokenManager = new tokenlib.TokenManager(conf.get("tokenSecret"));
 
       jsonReq
         .send({simple_push_url: "http://example.com"})
