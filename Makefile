@@ -5,7 +5,7 @@
 NODE_LOCAL_BIN=./node_modules/.bin
 
 .PHONY: test
-test: lint mocha
+test: lint cover-mocha
 
 install:
 	@npm install
@@ -14,7 +14,12 @@ install:
 lint: jshint
 
 clean:
-	rm -rf .venv node_modules
+	rm -rf .venv node_modules coverage lib-cov html-report
+
+.PHONY: cover-mocha
+cover-mocha:
+	@env $(NODE_LOCAL_BIN)/istanbul cover $(NODE_LOCAL_BIN)/_mocha -- --reporter spec test/*
+	@echo aim your browser at coverage/lcov-report/index.html for details
 
 .PHONY: jshint
 jshint:
