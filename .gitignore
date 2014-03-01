@@ -1,1 +1,4 @@
 node_modules
+coverage
+html-report
+lib-cov
