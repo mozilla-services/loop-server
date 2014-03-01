@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 var expect = require("chai").expect;
+var sinon  = require("sinon");
 var request = require("supertest");
 var sinon = require("sinon");
 
@@ -14,6 +15,8 @@ var auth = require("../loop/authentication");
 
 describe("HTTP API exposed by the server", function() {
   "use strict";
+
+  var now = 1393595554796;
 
   describe("POST /call-url", function() {
     var jsonReq, sandbox, expectedAssertion;
@@ -88,6 +91,7 @@ describe("HTTP API exposed by the server", function() {
       });
 
       it("should generate a valid call-url", function(done) {
+        var clock = sinon.useFakeTimers(now);
         var tokenManager = new tokenlib.TokenManager(conf.get('tokenSecret'));
 
         jsonReq
@@ -102,8 +106,11 @@ describe("HTTP API exposed by the server", function() {
             // XXX: the content of the token should change in the
             // future.
             token = callUrl.split("/").pop();
-            expect(tokenManager.decode(token)).to.deep.equal({});
+            expect(tokenManager.decode(token)).to.deep.equal({
+              expires: now + tokenManager.timeout
+            });
 
+            clock.restore();
             done(err);
           });
       });
@@ -134,6 +141,13 @@ describe("HTTP API exposed by the server", function() {
           .expect(401)
           .end(done);
       });
+    });
+
+    it.skip("should attach a session to the user agent", function() {
+    });
+
+    it.skip("should store push url", function() {
+      // XXX move in a different location.
     });
   });
 
