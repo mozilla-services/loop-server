@@ -15,7 +15,7 @@ app.use(express.urlencoded());
 
 var tokenManager = new tokenlib.TokenManager(conf.get('tokenSecret'));
 
-function validateCallUrl(reqDataObj) {
+function validateSimplePushURL(reqDataObj) {
   if (typeof reqDataObj !== 'object')
     throw new Error('missing request data');
 
@@ -29,20 +29,24 @@ function validateCallUrl(reqDataObj) {
 }
 
 app.post('/call-url', auth.isAuthenticated, function(req, res) {
+  var token = tokenManager.encode({}, conf.get('tokenSecret'));
+  var host = req.protocol + "://" + req.get('host');
+  return res.json(200, {call_url: host + "/call/" + token});
+});
+
+app.post('/registration', auth.isAuthenticated, function(req, res) {
   var validated;
 
   if (req.headers['content-type'] !== 'application/json')
     return res.json(406, ['application/json']);
 
   try {
-    validated = validateCallUrl(req.body);
+    validated = validateSimplePushURL(req.body);
   } catch (err) {
     return res.json(400, {error: err.message});
   }
 
-  var token = tokenManager.encode({}, conf.get('tokenSecret'));
-  var host = req.protocol + "://" + req.get('host');
-  return res.send(200, {call_url: host + "/call/" + token});
+  return res.json(200, "ok");
 });
 
 app.listen(conf.get('port'), conf.get('host'));
