@@ -5,12 +5,17 @@ This is the server part of the loop project.
 
 It exposes the following APIs:
 
-    # A "*" means this URI requires authentication (you should pass a valid 
+    # A "*" means this URI requires authentication (you should pass a valid
     # BrowserID assertion).
-    
-    * POST /call-url/      →  Create the call url a callee can click on.
+
+    * POST /registration/  →  Associates a Simple Push Endpoint (URL)
+                              with the authenticated user.
                               (Requires a "simple_push_url" parameter.)
-      
+
+    * POST /call-url/      →  Create the call url a callee can click on.
+                              (Requires "remote_id" and "valid_duration"
+                              parameters).
+
       GET  /calls/{token}  →  Get the app (that's the url in question, which
                               displays an app)
                               (No parameter required.)
