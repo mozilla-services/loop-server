@@ -31,6 +31,16 @@ It exposes the following APIs:
 How to install?
 ---------------
 
+You will need mongodb installed:
+
+    apt-get install mongodb-server
+
+or on OSX:
+
+    brew install mongo
+
+Then clone the loop server and install its dependencies:
+
     git clone https://github.com/mozilla/loop-server.git
     cd loop-server && make install
 
