@@ -21,7 +21,7 @@ function getMiddlewares(method, url) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion;
+  var sandbox, expectedAssertion, pushURL;
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
@@ -34,6 +34,11 @@ describe("HTTP API exposed by the server", function() {
       else
         cb("error");
     });
+
+    // Let's do the tests with a real URL.
+    pushURL = 'https://push.services.mozilla.com/update/MGlYke2SrEmYE8ceyu' +
+              'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
+              'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
   });
 
   afterEach(function() {
@@ -78,23 +83,6 @@ describe("HTTP API exposed by the server", function() {
           done();
         });
     });
-    it("should require user authentication", function(done) {
-      jsonReq
-        .expect(401)
-        .end(function(err, res) {
-          if (err) throw err;
-          expect(res.headers['www-authenticate']).to.eql('BrowserID');
-          done();
-        });
-    });
-
-    it("should reject invalid browserid assertions", function(done) {
-      // Mock the calls to the external BrowserID verifier.
-      jsonReq
-        .set('Authorization', 'BrowserID ' + "invalid-assertion")
-        .expect(401)
-        .end(done);
-    });
   });
 
   describe("POST /call-url", function() {
@@ -103,6 +91,7 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function() {
       jsonReq = request(app)
         .post('/call-url')
+        .send({})
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .type('json')
         .expect('Content-Type', /json/);
@@ -116,7 +105,6 @@ describe("HTTP API exposed by the server", function() {
       var tokenManager = new tokenlib.TokenManager(conf.get('tokenSecret'));
 
       jsonReq
-        .send({simple_push_url: "http://example.com"})
         .expect(200)
         .end(function(err, res) {
           var callUrl = res.body && res.body.call_url, token;
@@ -131,10 +119,6 @@ describe("HTTP API exposed by the server", function() {
 
           done(err);
         });
-    });
-
-    it.skip("should store push url", function() {
-      // XXX move in a different location.
     });
   });
 
@@ -186,6 +170,15 @@ describe("HTTP API exposed by the server", function() {
           expect(res.body).eql(["application/json"]);
           done();
         });
+    });
+
+    it("should return a 200 if everything went fine", function(done) {
+      jsonReq
+        .send({'simple_push_url': pushURL})
+        .expect(200).end(done);
+    });
+
+    it("should store push url", function() {
     });
   });
 
