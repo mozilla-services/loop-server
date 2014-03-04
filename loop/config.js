@@ -1,5 +1,16 @@
 "use strict";
 var convict = require('convict');
+var format = require('util').format;
+
+function validateStoreConfig(val) {
+  if (!val)
+    throw new Error("Should be defined");
+
+  ["engine", "settings"].forEach(function(key) {
+    if (!val.hasOwnProperty(key))
+      throw new Error(format("Should have a %s property", key));
+  });
+}
 
 function hexKeyOfSize(size) {
   return function check(val) {
@@ -43,6 +54,11 @@ var conf = convict({
     default: "",
     env: "ENCRYPTING_SECRET"
   },
+  urlsStore: {
+    doc: "The configuration for the urlsStore",
+    format: validateStoreConfig,
+    default: ""
+  }
 });
 
 

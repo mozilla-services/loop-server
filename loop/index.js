@@ -8,6 +8,7 @@ var express = require('express');
 var tokenlib = require('./tokenlib');
 var conf = require('./config.js');
 var auth = require('./authentication');
+var getStore = require('./stores').getStore;
 var app = express();
 
 app.use(express.json());
@@ -17,6 +18,11 @@ var tokenManager = new tokenlib.TokenManager({
   macSecret: conf.get('macSecret'),
   encryptionSecret: conf.get('encryptionSecret')
 });
+
+var urlsStore = getStore(
+  conf.get('urlsStore'),
+  {unique: ["user", "simplepushURL"]}
+);
 
 function validateSimplePushURL(reqDataObj) {
   if (typeof reqDataObj !== 'object')
@@ -49,9 +55,21 @@ app.post('/registration', auth.isAuthenticated, function(req, res) {
     return res.json(400, {error: err.message});
   }
 
-  return res.json(200, "ok");
+  urlsStore.add({
+    user: req.user,
+    simplepushURL: req.body.simple_push_url
+  }, function(err, record){
+    if (err) {
+      return res.json(503, err);
+    }
+
+    return res.json(200, "ok");
+  });
 });
 
 app.listen(conf.get('port'), conf.get('host'));
 
-module.exports = app;
+module.exports = {
+  app: app,
+  urlsStore: urlsStore
+};
