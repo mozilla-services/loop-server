@@ -14,7 +14,8 @@
  * @param  {Object} options          Options object
  * @return {MemoryStore}
  */
-module.exports = function MemoryStore(options) {
+module.exports = function MemoryStore(settings, options) {
+  "use strict";
   var _db = [],
       _options = options || {unique: []};
 
