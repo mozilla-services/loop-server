@@ -8,9 +8,30 @@ var expect = require("chai").expect;
 
 var MongoStore = require("../loop/stores/mongo");
 var MemoryStore = require("../loop/stores/memory");
+var getStore = require("../loop/stores").getStore;
 
 describe("Stores", function() {
   "use strict";
+
+  describe("getStore", function() {
+    it("should load an existing store", function() {
+      var conf = {
+        engine: 'mongo',
+        settings: {
+          connectionString: 'mongodb://127.0.0.1:27017/loop_test',
+          name: 'temporary'
+        }
+      };
+
+      expect(getStore(conf)).to.be.an("object");
+    });
+
+    it("should fail loading a non-existing store", function() {
+      expect(function() {
+        getStore({engine: 'does-not-exist'});
+      }).to.Throw(/Cannot find module/);
+    });
+  });
 
   describe("MongoStore", function() {
     describe("#constructor", function() {
@@ -22,14 +43,17 @@ describe("Stores", function() {
 
       it("should require a name argument", function() {
         expect(function() {
-          new MongoStore("foo");
+          new MongoStore({connectionString: "foo"});
         }).Throw(Error, /name/);
       });
     });
 
     describe("get name()", function() {
       it("should expose a name property", function() {
-        var store = new MongoStore("foo", "bar");
+        var store = new MongoStore({
+          connectionString: "foo",
+          name: "bar"
+        });
         expect(store.name).eql("bar");
       });
     });
@@ -212,12 +236,14 @@ describe("Stores", function() {
 
   describe("constructed", function() {
     testStore("MongoStore", function createMongoStore(options) {
-      return new MongoStore(
-        "mongodb://127.0.0.1:27017/loop_test", "test_coll", options);
+      return new MongoStore({
+        connectionString: "mongodb://127.0.0.1:27017/loop_test",
+        name: "test_coll"
+      }, options);
     });
 
     testStore("MemoryStore", function createMemoryStore(options) {
-      return new MemoryStore(options);
+      return new MemoryStore({}, options);
     });
   });
 });

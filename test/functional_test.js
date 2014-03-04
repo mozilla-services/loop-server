@@ -7,9 +7,10 @@ var expect = require("chai").expect;
 var request = require("supertest");
 var sinon = require("sinon");
 
-var app = require("../loop");
+var app = require("../loop").app;
+var urlsStore = require("../loop").urlsStore;
 var tokenlib = require("../loop/tokenlib");
-var conf = require('../loop/config.js');
+var conf = require("../loop/config.js");
 var auth = require("../loop/authentication");
 
 function getMiddlewares(method, url) {
@@ -20,16 +21,17 @@ function getMiddlewares(method, url) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL;
+  var sandbox, expectedAssertion, pushURL, user;
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
     expectedAssertion = "BID-ASSERTION";
+    user = "alexis@notmyidea.org";
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
       if (assertion === expectedAssertion)
-        cb(null, "alexis@notmyidea.org", {});
+        cb(null, user, {});
       else
         cb("error");
     });
@@ -40,8 +42,11 @@ describe("HTTP API exposed by the server", function() {
               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
   });
 
-  afterEach(function() {
+  afterEach(function(done) {
     sandbox.restore();
+    urlsStore.drop(function() {
+      done();
+    });
   });
 
   describe("authentication middleware", function() {
@@ -189,7 +194,60 @@ describe("HTTP API exposed by the server", function() {
         .expect(200).end(done);
     });
 
-    it("should store push url", function() {
+    it("should store push url", function(done) {
+      jsonReq
+        .send({'simple_push_url': pushURL})
+        .expect(200).end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+
+          urlsStore.findOne({user: user}, function(err, record) {
+            if (err) {
+              throw err;
+            }
+
+            expect(record.simplepushURL).eql(pushURL);
+            done();
+          });
+        });
+    });
+
+    it("should be able to store multiple push urls for one user",
+      function(done) {
+        function addPushURL(url, callback) {
+          request(app)
+            .post('/registration')
+            .set('Authorization', 'BrowserID ' + expectedAssertion)
+            .type('json')
+            .send({'simple_push_url': pushURL})
+            .expect('Content-Type', /json/)
+            .expect(200).end(callback);
+        }
+
+        addPushURL("http://url1", function(err, res) {
+          if (err) {
+            throw err;
+          }
+          addPushURL("http://url2", function(err, res) {
+            urlsStore.find({user: user}, function(err, records) {
+              if (err) {
+                throw err;
+              }
+              expect(records.length).eql(2);
+              done();
+            });
+          });
+        });
+      });
+
+    it("should answer a 503 if the database isn't available", function(done) {
+      sandbox.stub(urlsStore, "add", function(record, cb) {
+        cb("error");
+      });
+      jsonReq
+      .send({'simple_push_url': pushURL})
+      .expect(503).end(done);
     });
   });
 
