@@ -48,7 +48,7 @@ describe("HTTP API exposed by the server", function() {
     var jsonReq;
 
     app.post('/with-middleware', auth.isAuthenticated, function(req, res) {
-      res.json(200, "OK");
+      res.json(200, req.user);
     });
 
     beforeEach(function() {
@@ -73,12 +73,24 @@ describe("HTTP API exposed by the server", function() {
         .expect(401)
         .end(done);
     });
+
     it("should accept valid browserid assertions", function(done) {
       jsonReq
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .expect(200)
         .end(function(err, res) {
           if (err) throw err;
+          done();
+        });
+    });
+
+    it("should set an 'user' property on the request object", function(done) {
+      jsonReq
+        .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .expect(200)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body).eql("alexis@notmyidea.org");
           done();
         });
     });
