@@ -18,7 +18,8 @@ clean:
 
 .PHONY: cover-mocha
 cover-mocha:
-	@env $(NODE_LOCAL_BIN)/istanbul cover $(NODE_LOCAL_BIN)/_mocha -- --reporter spec test/*
+	@env NODE_ENV=test $(NODE_LOCAL_BIN)/istanbul cover \
+			 $(NODE_LOCAL_BIN)/_mocha -- --reporter spec test/*
 	@echo aim your browser at coverage/lcov-report/index.html for details
 
 .PHONY: jshint
@@ -27,10 +28,9 @@ jshint:
 
 .PHONY: mocha
 mocha:
-	@env NODE_ENV=test SESSION_SECRET=${SESSION_SECRET} \
-		./node_modules/mocha/bin/mocha test/* --reporter spec
+	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec
 
 .PHONY: runserver
 runserver:
-	@env NODE_ENV=${NODE_ENV} PORT=5000 SESSION_SECRET=${SESSION_SECRET} \
+	@env NODE_ENV=${NODE_ENV} PORT=5000 \
 		node loop/index.js

@@ -13,7 +13,10 @@ var app = express();
 app.use(express.json());
 app.use(express.urlencoded());
 
-var tokenManager = new tokenlib.TokenManager(conf.get('tokenSecret'));
+var tokenManager = new tokenlib.TokenManager({
+  macSecret: conf.get('macSecret'),
+  encryptionSecret: conf.get('encryptionSecret')
+});
 
 function validateSimplePushURL(reqDataObj) {
   if (typeof reqDataObj !== 'object')
@@ -29,7 +32,7 @@ function validateSimplePushURL(reqDataObj) {
 }
 
 app.post('/call-url', auth.isAuthenticated, function(req, res) {
-  var token = tokenManager.encode({}, conf.get('tokenSecret'));
+  var token = tokenManager.encode({});
   var host = req.protocol + "://" + req.get('host');
   return res.json(200, {call_url: host + "/call/" + token});
 });
