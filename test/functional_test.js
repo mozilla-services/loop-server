@@ -9,10 +9,12 @@ var sinon = require("sinon");
 
 var app = require("../loop").app;
 var urlsStore = require("../loop").urlsStore;
+var callsStore = require("../loop").callsStore;
 var conf = require("../loop").conf;
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
 var sessions = require("../loop/sessions");
+var tokBox = conf.get("tokBox");
 
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
@@ -32,11 +34,14 @@ app.get('/get-cookies', function(req, res) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, sessionCookie;
+  var sandbox, expectedAssertion, pushURL, sessionCookie, user, fakeCallInfo;
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
     expectedAssertion = "BID-ASSERTION";
+    fakeCallInfo = conf.get("fakeCallInfo");
+    user = "alexis@notmyidea.org";
+    fakeCallInfo = conf.get("fakeCallInfo");
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
@@ -60,7 +65,9 @@ describe("HTTP API exposed by the server", function() {
   afterEach(function(done) {
     sandbox.restore();
     urlsStore.drop(function() {
-      done();
+      callsStore.drop(function() {
+        done();
+      });
     });
   });
 
@@ -202,6 +209,7 @@ describe("HTTP API exposed by the server", function() {
         .post('/call-url')
         .send({})
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('json')
         .expect('Content-Type', /json/);
     });
@@ -292,6 +300,7 @@ describe("HTTP API exposed by the server", function() {
       request(app)
         .post('/registration')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('html')
         .expect(406).end(function(err, res) {
           if (err) throw err;
@@ -376,17 +385,103 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("GET /calls", function() {
-    it.skip("should list existing calls", function() {
+    var req, calls;
 
+    beforeEach(function(done) {
+      req = request(app)
+        .get('/calls')
+        .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
+        .type('json')
+        .expect('Content-Type', /json/);
+
+      calls = [
+        {
+          user:      user,
+          sessionId: fakeCallInfo.session1,
+          token:     fakeCallInfo.token1,
+          version:   0
+        },
+        {
+          user:      user,
+          sessionId: fakeCallInfo.session2,
+          token:     fakeCallInfo.token2,
+          version:   1
+        },
+        {
+          user:      user,
+          sessionId: fakeCallInfo.session3,
+          token:     fakeCallInfo.token2,
+          version:   2
+        }
+      ];
+
+      callsStore.add(calls[0], function() {
+        callsStore.add(calls[1], function() {
+          callsStore.add(calls[2], done);
+        });
+      });
     });
 
-    it.skip("should require a user session", function() {
+    it("should list existing calls", function(done) {
+      var callsList = calls.map(function(call) {
+        return {
+          apiKey: tokBox.apiKey,
+          sessionId: call.sessionId,
+          token: call.token
+        };
+      });
 
+      req.send({version: 0}).expect(200).end(function(err, res) {
+        expect(res.body).to.deep.equal({calls: callsList});
+        done(err);
+      });
     });
 
-    it.skip("should validate a user session", function() {
+    it("should list calls more recent than a given version", function(done) {
+      var callsList = [{
+        apiKey: tokBox.apiKey,
+        sessionId: calls[2].sessionId,
+        token: calls[2].token
+      }];
 
+      req.send({version: 2}).expect(200).end(function(err, res) {
+        expect(res.body).to.deep.equal({calls: callsList});
+        done(err);
+      });
     });
+
+    it.skip("should have the authentication middleware installed", function() {
+      expect(getMiddlewares('get', '/calls'))
+        .include(auth.isAuthenticated);
+    });
+
+    it("should have the requireSession middleware installed", function() {
+      expect(getMiddlewares('get', '/calls'))
+        .include(sessions.requireSession);
+    });
+
+    it("should reject non-JSON requests", function(done) {
+      request(app)
+        .get('/calls')
+        .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
+        .type('html')
+        .expect(406).end(function(err, res) {
+          if (err) throw err;
+          expect(res.body).eql(["application/json"]);
+          done();
+        });
+    });
+
+    it("should answer a 503 if the database isn't available", function(done) {
+      sandbox.stub(callsStore, "find", function(record, cb) {
+        cb("error");
+      });
+
+      req.send({version: 0}).expect(503).end(done);
+    });
+
   });
 
   describe("POST /calls/{call_token}", function() {
