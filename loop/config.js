@@ -63,6 +63,11 @@ var conf = convict({
     doc: "The configuration for the urlsStore",
     format: validateStoreConfig,
     default: ""
+  },
+  callsStore: {
+    doc: "The configuration for the callsStore",
+    format: validateStoreConfig,
+    default: ""
   }
 });
 

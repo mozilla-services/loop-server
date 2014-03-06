@@ -12,5 +12,17 @@
   },
   "sessionSecret": "this is not a secret",
   "sessionDuration": 300,
-  "useSSL": false
+  "useSSL": false,
+  "callsStore": {
+    "engine": "mongo",
+    "settings": {
+      "name": "callsStore",
+      "connectionString": "mongodb://127.0.0.1:27017/loop"
+    }
+  },
+  "tokBox": {
+    "apiKey": "44687443",
+    "apiSecret": "5379ba385ad44c83a2584840d095c08351cd9041",
+    "serverIP": "127.0.0.1"
+  }
 }

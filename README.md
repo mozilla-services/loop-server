@@ -25,7 +25,7 @@ It exposes the following APIs:
                               (No parameter required.)
 
     * GET  /calls/         →  List incoming calls for the authenticated user.
-                              (No parameter required.)
+                              (Requires a "version" parameter).
 
 
 How to install?
