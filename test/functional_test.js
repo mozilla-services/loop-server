@@ -4,26 +4,53 @@
 "use strict";
 
 var expect = require("chai").expect;
-var request = require("supertest");
+var supertest = require("supertest");
 var sinon = require("sinon");
 
 var app = require("../loop").app;
+var request = require('../loop').request;
 var urlsStore = require("../loop").urlsStore;
 var callsStore = require("../loop").callsStore;
 var conf = require("../loop").conf;
+var tokBox = require("../loop").tokBox;
+var validateToken = require("../loop").validateToken;
+
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
 var sessions = require("../loop/sessions");
-var tokBox = conf.get("tokBox");
+var tokBoxConfig = conf.get("tokBox");
 
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
+var uuid = "1234";
 
 function getMiddlewares(method, url) {
   return app.routes[method].filter(function(e){
     return e.path === url;
   }).shift().callbacks;
+}
+
+function intersection(array1, array2) {
+  return array1.filter(function(n) {
+    return array2.indexOf(n) !== -1;
+  });
+}
+
+function register(url, assertion, cookie, cb) {
+  supertest(app)
+    .post('/registration')
+    .set('Authorization', 'BrowserID ' + assertion)
+    .set('Cookie', cookie)
+    .type('json')
+    .send({'simple_push_url': url})
+    .expect(200)
+    .end(function(err, resp) {
+      if (err) {
+        throw err;
+      }
+      cb(resp);
+    });
 }
 
 // Create a route to retrieve cookies only
@@ -56,7 +83,7 @@ describe("HTTP API exposed by the server", function() {
               'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
 
-    request(app).get('/get-cookies').end(function(err, res) {
+    supertest(app).get('/get-cookies').end(function(err, res) {
       sessionCookie = res.headers['set-cookie'][0];
       done(err);
     });
@@ -73,7 +100,7 @@ describe("HTTP API exposed by the server", function() {
 
   describe("GET /", function() {
     it("should display project information.", function(done) {
-      request(app)
+      supertest(app)
         .get('/')
         .expect(200)
         .end(function(err, res) {
@@ -88,7 +115,7 @@ describe("HTTP API exposed by the server", function() {
     function(done) {
       conf.set("displayVersion", false);
 
-      request(app)
+      supertest(app)
         .get('/')
         .expect(200)
         .end(function(err, res) {
@@ -108,7 +135,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     beforeEach(function() {
-      jsonReq = request(app)
+      jsonReq = supertest(app)
         .post('/with-middleware');
     });
 
@@ -169,8 +196,8 @@ describe("HTTP API exposed by the server", function() {
       });
 
     beforeEach(function() {
-      withSession = request(app).post("/with-session");
-      withSessionRequired = request(app).post("/with-session-required");
+      withSession = supertest(app).post("/with-session");
+      withSessionRequired = supertest(app).post("/with-session-required");
     });
 
     it("should accept a valid session cookie", function(done) {
@@ -205,7 +232,7 @@ describe("HTTP API exposed by the server", function() {
     var jsonReq;
 
     beforeEach(function() {
-      jsonReq = request(app)
+      jsonReq = supertest(app)
         .post('/call-url')
         .send({})
         .set('Authorization', 'BrowserID ' + expectedAssertion)
@@ -242,10 +269,11 @@ describe("HTTP API exposed by the server", function() {
           // XXX: the content of the token should change in the
           // future.
           token = callUrl.split("/").pop();
-          expect(tokenManager.decode(token)).to.deep.equal({
-            user: user,
-            expires: Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
-          });
+          var decoded = tokenManager.decode(token);
+          expect(decoded.expires).eql(
+            Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
+          );
+          expect(decoded.hasOwnProperty('uuid'));
 
           clock.restore();
           done(err);
@@ -257,7 +285,7 @@ describe("HTTP API exposed by the server", function() {
     var jsonReq;
 
     beforeEach(function() {
-      jsonReq = request(app)
+      jsonReq = supertest(app)
         .post('/registration')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .type('json')
@@ -297,7 +325,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should reject non-JSON requests", function(done) {
-      request(app)
+      supertest(app)
         .post('/registration')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie)
@@ -337,22 +365,8 @@ describe("HTTP API exposed by the server", function() {
 
     it("should be able to store multiple push urls for one user",
       function(done) {
-        function addPushURL(url, callback) {
-          request(app)
-            .post('/registration')
-            .set('Authorization', 'BrowserID ' + expectedAssertion)
-            .set('Cookie', sessionCookie)
-            .type('json')
-            .send({'simple_push_url': pushURL})
-            .expect('Content-Type', /json/)
-            .expect(200).end(callback);
-        }
-
-        addPushURL("http://url1", function(err, res) {
-          if (err) {
-            throw err;
-          }
-          addPushURL("http://url2", function(err, res) {
+        register("http://url1", expectedAssertion, sessionCookie, function() {
+          register("http://url2", expectedAssertion, sessionCookie, function() {
             urlsStore.find({user: user}, function(err, records) {
               if (err) {
                 throw err;
@@ -376,11 +390,9 @@ describe("HTTP API exposed by the server", function() {
 
   describe("GET /calls/{call_token}", function() {
     it.skip("should return a valid HTML page", function() {
-
     });
 
     it.skip("should validate the token", function() {
-
     });
   });
 
@@ -388,7 +400,7 @@ describe("HTTP API exposed by the server", function() {
     var req, calls;
 
     beforeEach(function(done) {
-      req = request(app)
+      req = supertest(app)
         .get('/calls')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie)
@@ -426,7 +438,7 @@ describe("HTTP API exposed by the server", function() {
     it("should list existing calls", function(done) {
       var callsList = calls.map(function(call) {
         return {
-          apiKey: tokBox.apiKey,
+          apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           token: call.token
         };
@@ -440,7 +452,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
-        apiKey: tokBox.apiKey,
+        apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         token: calls[2].token
       }];
@@ -462,7 +474,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should reject non-JSON requests", function(done) {
-      request(app)
+      supertest(app)
         .get('/calls')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie)
@@ -484,23 +496,147 @@ describe("HTTP API exposed by the server", function() {
 
   });
 
-  describe("POST /calls/{call_token}", function() {
-    it.skip("should trigger simple push", function() {
+  describe("POST /call/:token", function() {
 
+    var requests, tokenManager, token, jsonReq, tokBoxSessionId,
+        tokBoxCallerToken, tokBoxCalleeToken;
+
+    beforeEach(function () {
+      requests = [];
+      var fakeCallInfo = conf.get("fakeCallInfo");
+      sandbox.useFakeTimers(fakeNow);
+      tokBoxSessionId = fakeCallInfo.session1;
+      tokBoxCalleeToken = fakeCallInfo.token1;
+      tokBoxCallerToken = fakeCallInfo.token2;
+
+      tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+
+      token = tokenManager.encode({
+        uuid: uuid,
+        user: user
+      });
+
+      sandbox.stub(request, "put", function(options) {
+        requests.push(options);
+      });
+
+      jsonReq = supertest(app)
+        .post('/call/' + token)
+        .expect(200);
     });
 
-    it.skip("should store incoming call info", function() {
+    it("should have the token validation middleware installed", function() {
+      expect(getMiddlewares('post', '/call/:token')).include(validateToken);
     });
 
-    it.skip("should return provider info", function() {
+    describe("working tokbox APIs", function() {
+      beforeEach(function() {
+        sandbox.stub(tokBox, "getInfo", function(cb) {
+          cb(null, {
+            sessionId: tokBoxSessionId,
+            callerToken: tokBoxCallerToken,
+            calleeToken: tokBoxCalleeToken
+          });
+        });
+      });
 
+      it("should accept valid call token", function(done) {
+        jsonReq.end(done);
+      });
+
+      it("should trigger all the simple push URLs of the user",
+        function(done) {
+        var url1 = "http://www.example.org";
+        var url2 = "http://www.mozilla.org";
+
+        register(url1, expectedAssertion, sessionCookie, function() {
+          register(url2, expectedAssertion, sessionCookie, function() {
+            jsonReq.end(function(err, res) {
+              if (err) {
+                throw err;
+              }
+              expect(intersection(requests.map(function(record) {
+                return record.url;
+              }), [url1, url2]).length).eql(2);
+              expect(requests.every(function(record) {
+                return record.form.version === fakeNow;
+              }));
+              done();
+            });
+          });
+        });
+      });
+
+      it("should return sessionId, apiKey and caller token info",
+      function(done) {
+        jsonReq.end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          expect(res.body).eql({
+            sessionId: tokBoxSessionId,
+            token: tokBoxCallerToken,
+            apiKey: tokBox.apiKey
+          });
+          done();
+        });
+      });
+
+      it("should store sessionId and callee token info in database",
+      function(done) {
+        jsonReq.end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+
+          callsStore.find({user: user}, function(err, items) {
+            if (err) {
+              throw err;
+            }
+            expect(items.length).eql(1);
+            // We don't want to compare this, it's added by mongo.
+            delete items[0]._id;
+            expect(items[0]).eql({
+              uuid: uuid,
+              user: user,
+              sessionId: tokBoxSessionId,
+              calleeToken: tokBoxCalleeToken,
+              timestamp: fakeNow
+            });
+            done();
+          });
+        });
+      });
+
+      it("should return a 503 if callsStore is not available", function(done) {
+        sandbox.stub(callsStore, "add", function(record, cb) {
+          cb("error");
+        });
+        jsonReq
+          .expect(503)
+          .end(done);
+      });
+
+      it("should return a 503 if urlsStore is not available", function(done) {
+        sandbox.stub(urlsStore, "find", function(query, cb) {
+          cb("error");
+        });
+        jsonReq
+          .expect(503)
+          .end(done);
+      });
     });
 
-    it.skip("should accept valid call token", function() {
-
-    });
-
-    it.skip("should reject invalid call token", function() {
+    it("should return a 503 if tokbox API errors out", function(done) {
+      sandbox.stub(tokBox, "getInfo", function(cb) {
+        cb("error");
+      });
+      jsonReq
+        .expect(503)
+        .end(done);
     });
   });
 });
