@@ -10,6 +10,7 @@ var sessions = require("./sessions");
 var conf = require('./config.js');
 var getStore = require('./stores').getStore;
 var pjson = require('../package.json');
+var tokBox = conf.get("tokBox");
 var app = express();
 
 app.use(express.json());
@@ -26,6 +27,7 @@ var urlsStore = getStore(
   conf.get('urlsStore'),
   {unique: ["user", "simplepushURL"]}
 );
+var callsStore = getStore(conf.get('callsStore'));
 
 function validateSimplePushURL(reqDataObj) {
   if (typeof reqDataObj !== 'object')
@@ -86,6 +88,25 @@ app.post('/registration', sessions.attachSession, function(req, res) {
   });
 });
 
+app.get("/calls", auth.isAuthenticated, function(req, res) {
+  callsStore.find({user: req.user}, function(err, records) {
+    if (err) {
+      res.json(503, "Service Unavailable");
+      return;
+    }
+
+    var calls = records.map(function(record) {
+      return {
+        apiKey: tokBox.apiKey,
+        sessionId: record.sessionId,
+        token: record.token
+      };
+    });
+
+    res.send(200, {calls: calls});
+  });
+});
+
 app.listen(conf.get('port'), conf.get('host'));
 console.log('Server listening on: ' +
             conf.get('host') + ':' + conf.get('port'));
@@ -93,5 +114,6 @@ console.log('Server listening on: ' +
 module.exports = {
   app: app,
   conf: conf,
-  urlsStore: urlsStore
+  urlsStore: urlsStore,
+  callsStore: callsStore
 };
