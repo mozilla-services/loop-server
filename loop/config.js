@@ -23,6 +23,17 @@ function hexKeyOfSize(size) {
   };
 }
 
+function hexKeyOfSize(size) {
+  return function check(val) {
+    if (val === "")
+      return;
+    if (!new RegExp('^[a-f0-9]{' + size * 2 + '}$').test(val)){
+      throw new Error("Should be an " + size +
+                      " bytes key encoded as hexadecimal");
+    }
+  };
+}
+
 var conf = convict({
   env: {
     doc: "The applicaton environment.",
