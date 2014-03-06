@@ -12,6 +12,9 @@ var tokenlib = require("../loop/tokenlib");
 var conf = require('../loop/config.js');
 var auth = require("../loop/authentication");
 
+var ONE_MINUTE = 60 * 60 * 1000;
+var fakeNow = 1393595554796;
+
 function getMiddlewares(method, url) {
   return app.routes[method].filter(function(e){
     return e.path === url;
@@ -113,7 +116,11 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should generate a valid call-url", function(done) {
-      var tokenManager = new tokenlib.TokenManager(conf.get('tokenSecret'));
+      var clock = sinon.useFakeTimers(fakeNow);
+      var tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
 
       jsonReq
         .expect(200)
@@ -126,8 +133,11 @@ describe("HTTP API exposed by the server", function() {
           // XXX: the content of the token should change in the
           // future.
           token = callUrl.split("/").pop();
-          expect(tokenManager.decode(token)).to.deep.equal({});
+          expect(tokenManager.decode(token)).to.deep.equal({
+            expires: Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
+          });
 
+          clock.restore();
           done(err);
         });
     });
