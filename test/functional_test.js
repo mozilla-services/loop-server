@@ -396,18 +396,21 @@ describe("HTTP API exposed by the server", function() {
       calls = [
         {
           user:      user,
+          apiKey:    fakeCallInfo.apiKey,
           sessionId: fakeCallInfo.session1,
           token:     fakeCallInfo.token1,
           version:   1
         },
         {
           user:      user,
+          apiKey:    fakeCallInfo.apiKey,
           sessionId: fakeCallInfo.session2,
           token:     fakeCallInfo.token2,
           version:   2
         },
         {
           user:      user,
+          apiKey:    fakeCallInfo.apiKey,
           sessionId: fakeCallInfo.session3,
           token:     fakeCallInfo.token2,
           version:   3
@@ -479,7 +482,6 @@ describe("HTTP API exposed by the server", function() {
 
       req.send({version: 0}).expect(503).end(done);
     });
-
   });
 
   describe("POST /calls/{call_token}", function() {
