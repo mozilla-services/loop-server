@@ -198,11 +198,15 @@ describe("HTTP API exposed by the server", function() {
       jsonReq
         .send({'simple_push_url': pushURL})
         .expect(200).end(function(err, res) {
-          if (err)
+          if (err) {
             throw err;
+          }
+
           urlsStore.findOne({user: user}, function(err, record) {
-            if (err)
+            if (err) {
               throw err;
+            }
+
             expect(record.simplepushURL).eql(pushURL);
             done();
           });

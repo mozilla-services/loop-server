@@ -22,7 +22,8 @@ describe("Stores", function() {
           name: 'temporary'
         }
       };
-      getStore(conf);
+
+      expect(getStore(conf)).to.be.an("object");
     });
 
     it("should fail loading a non-existing store", function() {
@@ -51,7 +52,7 @@ describe("Stores", function() {
       it("should expose a name property", function() {
         var store = new MongoStore({
           connectionString: "foo",
-          name:"bar"
+          name: "bar"
         });
         expect(store.name).eql("bar");
       });

@@ -56,8 +56,10 @@ app.post('/registration', auth.isAuthenticated, function(req, res) {
     user: req.user,
     simplepushURL: req.body.simple_push_url
   }, function(err, record){
-    if (err)
+    if (err) {
       return res.json(503, err);
+    }
+
     return res.json(200, "ok");
   });
 });
