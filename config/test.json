@@ -1,5 +1,12 @@
 {
   "host": "localhost",
   "port": 5000,
-  "tokenSecret": "THIS IS NOT A SECRET"
+  "tokenSecret": "THIS IS NOT A SECRET",
+  "urlsStore": {
+    "engine": "mongo",
+    "settings": {
+      "name": "urlsStore",
+      "connectionString": "mongodb://127.0.0.1:27017/loop_test"
+    }
+  }
 }

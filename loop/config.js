@@ -1,4 +1,17 @@
+"use strict";
+
 var convict = require('convict');
+var format = require('util').format;
+
+function validateStoreConfig(val) {
+  if (!val)
+    throw new Error("Should be defined");
+
+  ["engine", "settings"].forEach(function(key) {
+    if (!val.hasOwnProperty(key))
+      throw new Error(format("Should have a %s property", key));
+  });
+}
 
 var conf = convict({
   env: {
@@ -25,6 +38,11 @@ var conf = convict({
     default: "",
     env: "TOKEN_SECRET"
   },
+  urlsStore: {
+    doc: "The configuration for the urlsStore",
+    format: validateStoreConfig,
+    default: ""
+  }
 });
 
 

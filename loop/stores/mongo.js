@@ -11,57 +11,60 @@ var MongoClient = require('mongodb').MongoClient;
  *
  * - {Array} unique: list of fields which compound value should be unique.
  *
- * @param  {String} connectionString MongoDB connection string
- * @param  {String} name             Store name, used to name the collection
- * @param  {Object} options          Options object
+ * @param  {Object} settings    Settings object
+ * @param  {Object} options     Options object
  * @return {MongoStore}
  */
-module.exports = function MongoStore(connectionString, name, options) {
+module.exports = function MongoStore(settings, options) {
   "use strict";
 
   var _db,
-      _options = options || {unique: []};
+      _coll,
+      _options = options || {unique: []},
+      _settings = settings || {};
 
-  if (!connectionString) {
-    throw new Error("The connectionString argument is required");
+  if (!_settings.hasOwnProperty('connectionString')) {
+    throw new Error("The connectionString setting is required");
   }
 
-  if (!name) {
-    throw new Error("The name argument is required");
+  if (!_settings.hasOwnProperty('name')) {
+    throw new Error("The name setting is required");
   }
+
 
   /**
    * Ensures the database is connected, sends back an instance of the
    * db. Creates defined unique index if any.
    *
    * @private
-   * @param  {Function} cb Callback(err, db)
+   * @param  {Function} cb Callback(err, collection)
    */
   function _ensureConnected(cb) {
-    if (_db) {
-      cb(null, _db);
+    if (_coll) {
+      cb(null, _coll);
       return;
     }
-    MongoClient.connect(connectionString, function(err, resultDb) {
+    MongoClient.connect(_settings.connectionString, function(err, resultDb) {
       if (err) {
         cb(err);
         return;
       }
       _db = resultDb;
+      _coll = _db.collection(_settings.name);
       if (!Array.isArray(_options.unique) || _options.unique.length === 0) {
-        cb(null, _db);
+        cb(null, _coll);
         return;
       }
       var defs = _options.unique.reduce(function(obj, field) {
         obj[field] = 1;
         return obj;
       }, {});
-      _db.collection(name).ensureIndex(defs, {unique: true}, function(err) {
+      _coll.ensureIndex(defs, {unique: true}, function(err) {
         if (err) {
           cb(err);
           return;
         }
-        cb(null, _db);
+        cb(null, _coll);
       });
     });
   }
@@ -73,7 +76,7 @@ module.exports = function MongoStore(connectionString, name, options) {
      * @return {String}
      */
     get name() {
-      return name;
+      return _settings.name;
     },
 
     /**
@@ -83,12 +86,12 @@ module.exports = function MongoStore(connectionString, name, options) {
      * @param {Function} cb     Callback(err, record)
      */
     add: function(record, cb) {
-      _ensureConnected(function(err, db) {
+      _ensureConnected(function(err, coll) {
         if (err) {
           cb(err);
           return;
         }
-        db.collection(name).insert(record, function(err, records) {
+        coll.insert(record, function(err, records) {
           if (err) {
             cb(err);
             return;
@@ -105,12 +108,12 @@ module.exports = function MongoStore(connectionString, name, options) {
      * @param  {Function} cb    Callback(err, record)
      */
     find: function(query, cb) {
-      _ensureConnected(function(err, db) {
+      _ensureConnected(function(err, coll) {
         if (err) {
           cb(err);
           return;
         }
-        db.collection(name).find(query).toArray(cb);
+        coll.find(query).toArray(cb);
       });
     },
 
@@ -121,12 +124,12 @@ module.exports = function MongoStore(connectionString, name, options) {
      * @param  {Function} cb    Callback(err, record|null)
      */
     findOne: function(query, cb) {
-      _ensureConnected(function(err, db) {
+      _ensureConnected(function(err, coll) {
         if (err) {
           cb(err);
           return;
         }
-        db.collection(name).findOne(query, cb);
+        coll.findOne(query, cb);
       });
     },
 
@@ -135,14 +138,14 @@ module.exports = function MongoStore(connectionString, name, options) {
      * @param  {Function} cb Callback(err)
      */
     drop: function(cb) {
-      _ensureConnected(function(err, db) {
+      _ensureConnected(function(err, coll) {
         if (err) {
           cb(err);
           return;
         }
         try {
           // drop() is a synchronous operation
-          db.collection(name).drop();
+          coll.drop();
           cb(null);
         } catch (err) {
           cb(err);
