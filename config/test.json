@@ -11,5 +11,8 @@
       "name": "urlsStore",
       "connectionString": "mongodb://127.0.0.1:27017/loop_test"
     }
-  }
+  },
+  "sessionSecret": "this is not a secret",
+  "sessionDuration": 300,
+  "useSSL": false
 }
