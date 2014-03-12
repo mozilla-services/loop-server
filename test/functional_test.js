@@ -9,8 +9,8 @@ var sinon = require("sinon");
 
 var app = require("../loop").app;
 var urlsStore = require("../loop").urlsStore;
+var conf = require("../loop").conf;
 var tokenlib = require("../loop/tokenlib");
-var conf = require("../loop/config.js");
 var auth = require("../loop/authentication");
 
 var ONE_MINUTE = 60 * 60 * 1000;
@@ -50,6 +50,34 @@ describe("HTTP API exposed by the server", function() {
     urlsStore.drop(function() {
       done();
     });
+  });
+
+  describe("GET /", function() {
+    it("should display project information.", function(done) {
+      request(app)
+        .get('/')
+        .expect(200)
+        .end(function(err, res) {
+          ["name", "description", "version", "homepage"].forEach(function(key) {
+            expect(res.body).to.have.property(key);
+          });
+          done();
+        });
+    });
+
+    it("should not display server version if displayVersion is false.",
+    function(done) {
+      conf.set("displayVersion", false);
+
+      request(app)
+        .get('/')
+        .expect(200)
+        .end(function(err, res) {
+          expect(res.body).not.to.have.property("version");
+          done();
+        });
+    });
+
   });
 
   describe("authentication middleware", function() {

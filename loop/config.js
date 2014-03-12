@@ -54,6 +54,11 @@ var conf = convict({
     default: "",
     env: "ENCRYPTING_SECRET"
   },
+  displayVersion: {
+    doc: "Display the server version on the homepage.",
+    default: true,
+    format: Boolean
+  },
   urlsStore: {
     doc: "The configuration for the urlsStore",
     format: validateStoreConfig,

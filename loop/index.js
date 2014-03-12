@@ -9,6 +9,7 @@ var tokenlib = require('./tokenlib');
 var conf = require('./config.js');
 var auth = require('./authentication');
 var getStore = require('./stores').getStore;
+var pjson = require('../package.json');
 var app = express();
 
 app.use(express.json());
@@ -36,6 +37,21 @@ function validateSimplePushURL(reqDataObj) {
 
   return reqDataObj;
 }
+
+app.get("/", function(req, res) {
+  var credentials = {
+    name: pjson.name,
+    description: pjson.description,
+    version: pjson.version,
+    homepage: pjson.homepage
+  };
+
+  if (!conf.get("displayVersion")) {
+    delete credentials.version;
+  }
+
+  return res.json(200, credentials);
+});
 
 app.post('/call-url', auth.isAuthenticated, function(req, res) {
   var token = tokenManager.encode({});
@@ -68,8 +84,11 @@ app.post('/registration', auth.isAuthenticated, function(req, res) {
 });
 
 app.listen(conf.get('port'), conf.get('host'));
+console.log('Server listening on: ' +
+            conf.get('host') + ':' + conf.get('port'));
 
 module.exports = {
   app: app,
+  conf: conf,
   urlsStore: urlsStore
 };
