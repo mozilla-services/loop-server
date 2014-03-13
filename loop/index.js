@@ -41,14 +41,17 @@ var callsStore = getStore(
 var tokBox = new TokBox(conf.get('tokBox'));
 
 function validateSimplePushURL(reqDataObj) {
-  if (typeof reqDataObj !== 'object')
+  if (typeof reqDataObj !== 'object') {
     throw new Error('missing request data');
+  }
 
-  if (!reqDataObj.hasOwnProperty('simple_push_url'))
+  if (!reqDataObj.hasOwnProperty('simple_push_url')) {
     throw new Error('simple_push_url is required');
+  }
 
-  if (reqDataObj.simple_push_url.indexOf('http') !== 0)
+  if (reqDataObj.simple_push_url.indexOf('http') !== 0) {
     throw new Error('simple_push_url should be a valid url');
+  }
 
   return reqDataObj;
 }
@@ -129,9 +132,13 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     return;
   }
 
-  urlsStore.add({
+  // XXX Bug 980289 — 
+  // With FxA we will want to handle many SimplePushUrls per user.
+  urlsStore.updateOrCreate({
+    userMac: hmac(req.user, conf.get('userMacSecret'))
+  }, {
     userMac: hmac(req.user, conf.get('userMacSecret')),
-    simplepushURL: req.body.simple_push_url
+    simplepushURL: validated.simple_push_url
   }, function(err, record){
     if (err) {
       res.json(503, "Service Unavailable");
@@ -204,7 +211,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
 
     callsStore.add({
       "uuid": req.token.uuid,
-      "user": req.token.user,
+      "userMac": hmac(req.token.user, conf.get("userMacSecret")),
       "sessionId": tokboxInfo.sessionId,
       "calleeToken": tokboxInfo.calleeToken,
       "timestamp": currentTimestamp

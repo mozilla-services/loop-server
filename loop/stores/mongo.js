@@ -102,6 +102,31 @@ module.exports = function MongoStore(settings, options) {
     },
 
     /**
+     * Update all existing records matching the given criteria or create a
+     * new one.
+     *
+     * @param {Object}   criteria Criteria Object
+     * @param {Object}   record   Record Object
+     * @param {Function} cb       Callback(err)
+     */
+    updateOrCreate: function(criteria, record, cb) {
+      _ensureConnected(function(err, coll) {
+        if (err) {
+          cb(err);
+          return;
+        }
+        coll.update(
+          criteria, {
+            "$set": record
+          }, {
+            safe: true,
+            upsert: true,
+            multi: true
+          }, cb);
+          });
+    },
+
+    /**
      * Retrieves multiple records matching the provided query object.
      *
      * @param  {Object}   query Query object

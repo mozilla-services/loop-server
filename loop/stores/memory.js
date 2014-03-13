@@ -78,6 +78,39 @@ module.exports = function MemoryStore(settings, options) {
     },
 
     /**
+     * Update all existing records matching the given criteria or create a
+     * new one.
+     *
+     * @param {Object} criteria Criteria Object
+     * @param {Object} newObj Record Object
+     * @param {Function} cb Callback(err)
+     */
+    updateOrCreate: function(criteria, newObj, cb) {
+      _db = _db || [];
+      this.find(criteria, function(err, records) {
+        if (err) {
+          cb(err);
+          return;
+        }
+        if (records.length === 0) {
+          this.add(newObj, function(err) {
+            cb(err);
+          });
+          return;
+        }
+        records.forEach(function(record) {
+          for(var key in record) {
+            delete record[key];
+          }
+          for(var key in newObj) {
+            record[key] = newObj[key];
+          }
+        });
+        cb(null);
+      }.bind(this));
+    },
+    
+    /**
      * Retrieves multiple records matching all the criterias defined by the
      * query object.
      *
