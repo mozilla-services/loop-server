@@ -89,13 +89,28 @@ app.post('/registration', sessions.attachSession, function(req, res) {
 });
 
 app.get("/calls", auth.isAuthenticated, function(req, res) {
+  var version;
+
+  if (req.headers['content-type'] !== 'application/json') {
+    res.json(406, ['application/json']);
+    return;
+  }
+
+  version = req.body.version;
+  if (version === undefined) {
+    res.json(400, "version is required");
+    return;
+  }
+
   callsStore.find({user: req.user}, function(err, records) {
     if (err) {
       res.json(503, "Service Unavailable");
       return;
     }
 
-    var calls = records.map(function(record) {
+    var calls = records.filter(function(record) {
+      return record.version > version;
+    }).map(function(record) {
       return {
         apiKey: tokBox.apiKey,
         sessionId: record.sessionId,

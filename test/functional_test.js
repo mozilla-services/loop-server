@@ -387,23 +387,27 @@ describe("HTTP API exposed by the server", function() {
       req = request(app)
         .get('/calls')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .type('json')
         .expect('Content-Type', /json/);
 
       calls = [
         {
           user:      user,
           sessionId: fakeCallInfo.session1,
-          token:     fakeCallInfo.token1
+          token:     fakeCallInfo.token1,
+          version:   1
         },
         {
           user:      user,
           sessionId: fakeCallInfo.session2,
-          token:     fakeCallInfo.token2
+          token:     fakeCallInfo.token2,
+          version:   2
         },
         {
           user:      user,
           sessionId: fakeCallInfo.session3,
-          token:     fakeCallInfo.token2
+          token:     fakeCallInfo.token2,
+          version:   3
         }
       ];
 
@@ -423,15 +427,40 @@ describe("HTTP API exposed by the server", function() {
         };
       });
 
-      req.expect(200).end(function(err, res) {
+      req.send({version: 0}).expect(200).end(function(err, res) {
+        expect(res.body).to.deep.equal({calls: callsList});
+        done(err);
+      });
+    });
+
+    it("should list calls more recent than a given version", function(done) {
+      var callsList = [{
+        apiKey: tokBox.apiKey,
+        sessionId: calls[2].sessionId,
+        token: calls[2].token
+      }];
+
+      req.send({version: 2}).expect(200).end(function(err, res) {
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
       });
     });
 
     it("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('post', '/call-url'))
+      expect(getMiddlewares('get', '/calls'))
         .include(auth.isAuthenticated);
+    });
+
+    it("should reject non-JSON requests", function(done) {
+      request(app)
+        .get('/calls')
+        .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .type('html')
+        .expect(406).end(function(err, res) {
+          if (err) throw err;
+          expect(res.body).eql(["application/json"]);
+          done();
+        });
     });
 
     it("should answer a 503 if the database isn't available", function(done) {
@@ -439,7 +468,7 @@ describe("HTTP API exposed by the server", function() {
         cb("error");
       });
 
-      req.expect(503).end(done);
+      req.send({version: 0}).expect(503).end(done);
     });
 
   });
