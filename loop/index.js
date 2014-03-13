@@ -6,14 +6,16 @@
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
+var sessions = require("./sessions");
 var conf = require('./config.js');
-var auth = require('./authentication');
 var getStore = require('./stores').getStore;
 var pjson = require('../package.json');
 var app = express();
 
 app.use(express.json());
 app.use(express.urlencoded());
+app.use(sessions.clientSessions);
+app.use(app.router);
 
 var tokenManager = new tokenlib.TokenManager({
   macSecret: conf.get('macSecret'),
@@ -53,13 +55,14 @@ app.get("/", function(req, res) {
   return res.json(200, credentials);
 });
 
-app.post('/call-url', auth.isAuthenticated, function(req, res) {
-  var token = tokenManager.encode({});
-  var host = req.protocol + "://" + req.get('host');
-  return res.json(200, {call_url: host + "/call/" + token});
-});
+app.post('/call-url', sessions.requireSession, sessions.attachSession,
+  function(req, res) {
+    var token = tokenManager.encode({user: req.user});
+    var host = req.protocol + "://" + req.get('host');
+    return res.json(200, {call_url: host + "/call/" + token});
+  });
 
-app.post('/registration', auth.isAuthenticated, function(req, res) {
+app.post('/registration', sessions.attachSession, function(req, res) {
   var validated;
 
   if (req.headers['content-type'] !== 'application/json')

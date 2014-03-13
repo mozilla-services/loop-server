@@ -12,9 +12,11 @@ var urlsStore = require("../loop").urlsStore;
 var conf = require("../loop").conf;
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
+var sessions = require("../loop/sessions");
 
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
+var user = "alexis@notmyidea.org";
 
 function getMiddlewares(method, url) {
   return app.routes[method].filter(function(e){
@@ -22,14 +24,19 @@ function getMiddlewares(method, url) {
   }).shift().callbacks;
 }
 
+// Create a route to retrieve cookies only
+app.get('/get-cookies', function(req, res) {
+  req.session.uid = user;
+  res.send(200);
+});
+
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, user;
+  var sandbox, expectedAssertion, pushURL, sessionCookie;
 
-  beforeEach(function() {
+  beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
     expectedAssertion = "BID-ASSERTION";
-    user = "alexis@notmyidea.org";
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
@@ -43,6 +50,11 @@ describe("HTTP API exposed by the server", function() {
     pushURL = 'https://push.services.mozilla.com/update/MGlYke2SrEmYE8ceyu' +
               'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
+
+    request(app).get('/get-cookies').end(function(err, res) {
+      sessionCookie = res.headers['set-cookie'][0];
+      done(err);
+    });
   });
 
   afterEach(function(done) {
@@ -133,6 +145,55 @@ describe("HTTP API exposed by the server", function() {
     });
   });
 
+  describe("sessions middlewares", function() {
+
+    var withSession, withSessionRequired;
+
+    // Create a route with the requireSession middleware
+    app.post('/with-session', sessions.attachSession,
+      function(req, res) {
+        res.json(200);
+      });
+
+    // Create a route with the attachSession middleware
+    app.post('/with-session-required', sessions.requireSession,
+      function(req, res) {
+        res.json(200);
+      });
+
+    beforeEach(function() {
+      withSession = request(app).post("/with-session");
+      withSessionRequired = request(app).post("/with-session-required");
+    });
+
+    it("should accept a valid session cookie", function(done) {
+      withSessionRequired.set('Cookie', sessionCookie).expect(200).end(done);
+    });
+
+    it("should return an error if there is no session", function(done) {
+      withSessionRequired.expect(400).end(done);
+    });
+
+    it("should attach a session cookie if none is provided", function(done) {
+      withSession
+        .expect("Set-Cookie", /^loop-session=/)
+        .expect(200).end(function(err, res) {
+          expect(res.headers["set-cookie"][0]).to.not.equal(sessionCookie);
+          done(err);
+        });
+    });
+
+    it("should not attach a new cookie if one is provided", function(done) {
+      withSession
+        .set('Cookie', sessionCookie)
+        .expect(200).end(function(err, res) {
+          expect(res.headers["set-cookie"]).to.equal(undefined);
+          done(err);
+        });
+    });
+
+  });
+
   describe("POST /call-url", function() {
     var jsonReq;
 
@@ -145,8 +206,13 @@ describe("HTTP API exposed by the server", function() {
         .expect('Content-Type', /json/);
     });
 
-    it("should have the authentication middleware installed", function() {
+    it.skip("should have the authentication middleware installed", function() {
       expect(getMiddlewares('post', '/call-url')).include(auth.isAuthenticated);
+    });
+
+    it("should have the requireSession middleware installed", function() {
+      expect(getMiddlewares('post', '/call-url'))
+        .include(sessions.requireSession);
     });
 
     it("should generate a valid call-url", function(done) {
@@ -157,6 +223,7 @@ describe("HTTP API exposed by the server", function() {
       });
 
       jsonReq
+        .set('Cookie', sessionCookie)
         .expect(200)
         .end(function(err, res) {
           var callUrl = res.body && res.body.call_url, token;
@@ -168,6 +235,7 @@ describe("HTTP API exposed by the server", function() {
           // future.
           token = callUrl.split("/").pop();
           expect(tokenManager.decode(token)).to.deep.equal({
+            user: user,
             expires: Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
           });
 
@@ -188,9 +256,14 @@ describe("HTTP API exposed by the server", function() {
         .expect('Content-Type', /json/);
     });
 
-    it("should have the authentication middleware installed", function() {
+    it.skip("should have the authentication middleware installed", function() {
       expect(getMiddlewares('post', '/registration'))
         .include(auth.isAuthenticated);
+    });
+
+    it("should have the attachSession middleware installed", function() {
+      expect(getMiddlewares('post', '/registration'))
+        .include(sessions.attachSession);
     });
 
     it("should require simple push url", function(done) {
@@ -236,6 +309,7 @@ describe("HTTP API exposed by the server", function() {
     it("should store push url", function(done) {
       jsonReq
         .send({'simple_push_url': pushURL})
+        .set('Cookie', sessionCookie)
         .expect(200).end(function(err, res) {
           if (err) {
             throw err;
@@ -258,6 +332,7 @@ describe("HTTP API exposed by the server", function() {
           request(app)
             .post('/registration')
             .set('Authorization', 'BrowserID ' + expectedAssertion)
+            .set('Cookie', sessionCookie)
             .type('json')
             .send({'simple_push_url': pushURL})
             .expect('Content-Type', /json/)
