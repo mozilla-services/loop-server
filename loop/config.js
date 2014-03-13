@@ -2,14 +2,31 @@
 var convict = require('convict');
 var format = require('util').format;
 
-function validateStoreConfig(val) {
-  if (!val)
-    throw new Error("Should be defined");
+/**
+ * Validates the keys are present in the configuration object.
+ *
+ * @param {List} keys  A list of keys that must be present.
+ **/
+function validateKeys(keys) {
+  return function(val) {
+    if (!val)
+      throw new Error("Should be defined");
+    keys.forEach(function(key) {
+      if (!val.hasOwnProperty(key))
+        throw new Error(format("Should have a %s property", key));
+    });
+  };
+}
 
-  ["engine", "settings"].forEach(function(key) {
-    if (!val.hasOwnProperty(key))
-      throw new Error(format("Should have a %s property", key));
-  });
+function hexKeyOfSize(size) {
+  return function check(val) {
+    if (val === "")
+      return;
+    if (!new RegExp('^[a-f0-9]{' + size * 2 + '}$').test(val)){
+      throw new Error("Should be an " + size +
+                      " bytes key encoded as hexadecimal");
+    }
+  };
 }
 
 function hexKeyOfSize(size) {
@@ -60,8 +77,18 @@ var conf = convict({
     format: Boolean
   },
   urlsStore: {
-    doc: "The configuration for the urlsStore",
-    format: validateStoreConfig,
+    doc: "urlsStore config",
+    format: validateKeys(["engine", "settings"]),
+    default: ""
+  },
+  callsStore: {
+    doc: "callsStore config",
+    format: validateKeys(["engine", "settings"]),
+    default: ""
+  },
+  tokBox: {
+    doc: "TokBox service config",
+    format: validateKeys(["apiKey", "apiSecret", "serverIP"]),
     default: ""
   }
 });

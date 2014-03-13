@@ -5,11 +5,17 @@
 "use strict";
 
 var express = require('express');
+var crypto = require('crypto');
 var tokenlib = require('./tokenlib');
 var sessions = require("./sessions");
 var conf = require('./config.js');
 var getStore = require('./stores').getStore;
 var pjson = require('../package.json');
+var tokBox = conf.get("tokBox");
+var request = require('request');
+
+var TokBox = require('./tokbox').TokBox;
+
 var app = express();
 
 app.use(express.json());
@@ -27,6 +33,14 @@ var urlsStore = getStore(
   {unique: ["user", "simplepushURL"]}
 );
 
+var callsStore = getStore(
+  conf.get('callsStore'),
+  {unique: ["user", "sessionId"]}
+);
+
+var tokBox = new TokBox(conf.get('tokBox'));
+
+
 function validateSimplePushURL(reqDataObj) {
   if (typeof reqDataObj !== 'object')
     throw new Error('missing request data');
@@ -38,6 +52,21 @@ function validateSimplePushURL(reqDataObj) {
     throw new Error('simple_push_url should be a valid url');
 
   return reqDataObj;
+}
+
+function validateToken(req, res, next) {
+  if (!req.param('token')) {
+    res.json(400, "miss the 'token' parameter");
+    return;
+  }
+
+  try {
+    req.token = tokenManager.decode(req.param('token'));
+  } catch(err) {
+    res.json(400, err);
+    return;
+  }
+  next();
 }
 
 app.get("/", function(req, res) {
@@ -52,26 +81,35 @@ app.get("/", function(req, res) {
     delete credentials.version;
   }
 
-  return res.json(200, credentials);
+  res.json(200, credentials);
+  return;
 });
 
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
   function(req, res) {
-    var token = tokenManager.encode({user: req.user});
+    var uuid = crypto.randomBytes(12).toString("hex");
+    var token = tokenManager.encode({
+      user: req.user,
+      uuid: uuid
+    });
     var host = req.protocol + "://" + req.get('host');
-    return res.json(200, {call_url: host + "/call/" + token});
+    res.json(200, {call_url: host + "/call/" + token});
+    return;
   });
 
 app.post('/registration', sessions.attachSession, function(req, res) {
   var validated;
 
-  if (req.headers['content-type'] !== 'application/json')
-    return res.json(406, ['application/json']);
+  if (req.headers['content-type'] !== 'application/json') {
+    res.json(406, ['application/json']);
+    return;
+  }
 
   try {
     validated = validateSimplePushURL(req.body);
   } catch (err) {
-    return res.json(400, {error: err.message});
+    res.json(400, {error: err.message});
+    return;
   }
 
   urlsStore.add({
@@ -79,10 +117,92 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     simplepushURL: req.body.simple_push_url
   }, function(err, record){
     if (err) {
-      return res.json(503, err);
+      res.json(503, "Service Unavailable");
+      return;
+    }
+    res.json(200, "ok");
+    return;
+  });
+});
+
+app.get("/calls", sessions.requireSession, sessions.attachSession,
+  function(req, res) {
+  var version;
+
+  if (req.headers['content-type'] !== 'application/json') {
+    res.json(406, ['application/json']);
+    return;
+  }
+
+  version = req.body.version;
+  if (version === undefined) {
+    res.json(400, "version is required");
+    return;
+  }
+
+  callsStore.find({user: req.user}, function(err, records) {
+    if (err) {
+      res.json(503, "Service Unavailable");
+      return;
     }
 
-    return res.json(200, "ok");
+    var calls = records.filter(function(record) {
+      return record.version > version;
+    }).map(function(record) {
+      return {
+        apiKey: tokBox.apiKey,
+        sessionId: record.sessionId,
+        token: record.token
+      };
+    });
+
+    res.json(200, {calls: calls});
+    return;
+  });
+});
+
+app.post('/call/:token', validateToken, function(req, res) {
+  tokBox.getInfo(function(err, tokboxInfo) {
+    if (err) {
+      // XXX Handle TokBox error messages.
+      res.json(503, "Service Unavailable");
+      return;
+    }
+
+    var currentTimestamp = new Date().getTime();
+
+    callsStore.add({
+      "uuid": req.token.uuid,
+      "user": req.token.user,
+      "sessionId": tokboxInfo.sessionId,
+      "calleeToken": tokboxInfo.calleeToken,
+      "timestamp": currentTimestamp
+    }, function(err, record){
+      if (err) {
+        // XXX Handle database error messages.
+        res.json(503, "Service Unavailable");
+        return;
+      }
+      urlsStore.find({user: req.token.user}, function(err, items) {
+        if (err) {
+          res.json(503, "Service Unavailable");
+          return;
+        }
+        // Call SimplePush urls.
+        items.forEach(function(item) {
+          request.put({
+            url: item.simplepushURL,
+            form: {version: currentTimestamp}
+          });
+        });
+        res.json(200, {
+          sessionId: tokboxInfo.sessionId,
+          token: tokboxInfo.callerToken,
+          apiKey: tokBox.apiKey
+        });
+        return;
+      });
+    });
   });
 });
 
@@ -93,5 +213,9 @@ console.log('Server listening on: ' +
 module.exports = {
   app: app,
   conf: conf,
-  urlsStore: urlsStore
+  urlsStore: urlsStore,
+  callsStore: callsStore,
+  request: request,
+  tokBox: tokBox,
+  validateToken: validateToken
 };

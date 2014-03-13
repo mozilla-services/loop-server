@@ -82,7 +82,6 @@ TokenManager.prototype = {
 
   decode: function(token) {
     var mac, encipheredPayload, payload, hmac, payloadMac, decipher, IV;
-
     token = base64.decode(token);
     if (token.length < (16 + this.macSize))
       throw new Error("Invalid token size");
