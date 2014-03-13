@@ -18,7 +18,7 @@ var validateToken = require("../loop").validateToken;
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
 var sessions = require("../loop/sessions");
-var tokBox = conf.get("tokBox");
+var tokBoxConfig = conf.get("tokBox");
 
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
@@ -37,10 +37,11 @@ function intersection(array1, array2) {
   });
 }
 
-function register(url, assertion, cb) {
+function register(url, assertion, cookie, cb) {
   supertest(app)
     .post('/registration')
     .set('Authorization', 'BrowserID ' + assertion)
+    .set('Cookie', cookie)
     .type('json')
     .send({'simple_push_url': url})
     .expect(200)
@@ -362,8 +363,8 @@ describe("HTTP API exposed by the server", function() {
 
     it("should be able to store multiple push urls for one user",
       function(done) {
-        register("http://url1", expectedAssertion, function() {
-          register("http://url2", expectedAssertion, function() {
+        register("http://url1", expectedAssertion, sessionCookie, function() {
+          register("http://url2", expectedAssertion, sessionCookie, function() {
             urlsStore.find({user: user}, function(err, records) {
               if (err) {
                 throw err;
@@ -438,7 +439,7 @@ describe("HTTP API exposed by the server", function() {
     it("should list existing calls", function(done) {
       var callsList = calls.map(function(call) {
         return {
-          apiKey: tokBox.apiKey,
+          apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           token: call.token
         };
@@ -452,7 +453,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
-        apiKey: tokBox.apiKey,
+        apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         token: calls[2].token
       }];
@@ -551,8 +552,8 @@ describe("HTTP API exposed by the server", function() {
         var url1 = "http://www.example.org";
         var url2 = "http://www.mozilla.org";
 
-        register(url1, expectedAssertion, function() {
-          register(url2, expectedAssertion, function() {
+        register(url1, expectedAssertion, sessionCookie, function() {
+          register(url2, expectedAssertion, sessionCookie, function() {
             jsonReq.end(function(err, res) {
               if (err) {
                 throw err;

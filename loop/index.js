@@ -117,7 +117,7 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     simplepushURL: req.body.simple_push_url
   }, function(err, record){
     if (err) {
-      res.json(503, err);
+      res.json(503, "Service Unavailable");
       return;
     }
     res.json(200, "ok");
