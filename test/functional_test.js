@@ -207,6 +207,7 @@ describe("HTTP API exposed by the server", function() {
         .post('/call-url')
         .send({})
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('json')
         .expect('Content-Type', /json/);
     });
@@ -297,6 +298,7 @@ describe("HTTP API exposed by the server", function() {
       request(app)
         .post('/registration')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('html')
         .expect(406).end(function(err, res) {
           if (err) throw err;
@@ -387,6 +389,7 @@ describe("HTTP API exposed by the server", function() {
       req = request(app)
         .get('/calls')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('json')
         .expect('Content-Type', /json/);
 
@@ -446,15 +449,21 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
-    it("should have the authentication middleware installed", function() {
+    it.skip("should have the authentication middleware installed", function() {
       expect(getMiddlewares('get', '/calls'))
         .include(auth.isAuthenticated);
     });
+    it("should have the requireSession middleware installed", function() {
+      expect(getMiddlewares('get', '/calls'))
+        .include(sessions.requireSession);
+    });
+
 
     it("should reject non-JSON requests", function(done) {
       request(app)
         .get('/calls')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('html')
         .expect(406).end(function(err, res) {
           if (err) throw err;

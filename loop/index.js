@@ -88,7 +88,8 @@ app.post('/registration', sessions.attachSession, function(req, res) {
   });
 });
 
-app.get("/calls", auth.isAuthenticated, function(req, res) {
+app.get("/calls", sessions.requireSession, sessions.attachSession,
+  function(req, res) {
   var version;
 
   if (req.headers['content-type'] !== 'application/json') {
