@@ -55,13 +55,16 @@ function validateSimplePushURL(reqDataObj) {
 }
 
 function validateToken(req, res, next) {
-  if (!req.param('token'))
-    return res.json(400, "miss the 'token' parameter");
+  if (!req.param('token')) {
+    res.json(400, "miss the 'token' parameter");
+    return;
+  }
 
   try {
     req.token = tokenManager.decode(req.param('token'));
   } catch(err) {
-    return res.json(400, err);
+    res.json(400, err);
+    return;
   }
   next();
 }
@@ -78,7 +81,8 @@ app.get("/", function(req, res) {
     delete credentials.version;
   }
 
-  return res.json(200, credentials);
+  res.json(200, credentials);
+  return;
 });
 
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
@@ -89,19 +93,23 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
       uuid: uuid
     });
     var host = req.protocol + "://" + req.get('host');
-    return res.json(200, {call_url: host + "/call/" + token});
+    res.json(200, {call_url: host + "/call/" + token});
+    return;
   });
 
 app.post('/registration', sessions.attachSession, function(req, res) {
   var validated;
 
-  if (req.headers['content-type'] !== 'application/json')
-    return res.json(406, ['application/json']);
+  if (req.headers['content-type'] !== 'application/json') {
+    res.json(406, ['application/json']);
+    return;
+  }
 
   try {
     validated = validateSimplePushURL(req.body);
   } catch (err) {
-    return res.json(400, {error: err.message});
+    res.json(400, {error: err.message});
+    return;
   }
 
   urlsStore.add({
@@ -109,9 +117,11 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     simplepushURL: req.body.simple_push_url
   }, function(err, record){
     if (err) {
-      return res.json(503, err);
+      res.json(503, err);
+      return;
     }
-    return res.json(200, "ok");
+    res.json(200, "ok");
+    return;
   });
 });
 
@@ -146,40 +156,51 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
       };
     });
 
-    res.send(200, {calls: calls});
+    res.json(200, {calls: calls});
+    return;
   });
 });
 
 app.post('/call/:token', validateToken, function(req, res) {
   tokBox.getInfo(function(err, tokboxInfo) {
     if (err) {
-      // XXX Verify the error and give a message.
-      console.log("tokbox error", err);
-      return res.json(503, "Service Unavailable");
+      // XXX Handle TokBox error messages.
+      res.json(503, "Service Unavailable");
+      return;
     }
+
+    var currentTimestamp = new Date().getTime();
 
     callsStore.add({
       "uuid": req.token.uuid,
       "user": req.token.user,
       "sessionId": tokboxInfo.sessionId,
-      "calleeToken": tokboxInfo.calleeToken
+      "calleeToken": tokboxInfo.calleeToken,
+      "timestamp": currentTimestamp
     }, function(err, record){
       if (err) {
         // XXX Handle database error messages.
-        return res.json(503, "Service Unavailable");
+        res.json(503, "Service Unavailable");
+        return;
       }
       urlsStore.find({user: req.token.user}, function(err, items) {
         if (err) {
-          return res.json(503, "Service Unavailable");
+          res.json(503, "Service Unavailable");
+          return;
         }
         // Call SimplePush urls.
         items.forEach(function(item) {
-          request.put({url: item.simplepushURL});
+          request.put({
+            url: item.simplepushURL,
+            form: {version: currentTimestamp}
+          });
         });
-        return res.json(200, {
+        res.json(200, {
           sessionId: tokboxInfo.sessionId,
-          token: tokboxInfo.callerToken
+          token: tokboxInfo.callerToken,
+          apiKey: tokBox.apiKey
         });
+        return;
       });
     });
   });

@@ -9,7 +9,7 @@ var OpenTok = require('opentok');
 function TokBox(settings) {
   this.serverIP = settings.serverIP;
   this.apiKey = settings.apiKey;
-  this._opentok = new OpenTok.OpenTokSDK(settings.apiKey, settings.apiSecret);
+  this._opentok = new OpenTok.OpenTokSDK(this.apiKey, settings.apiSecret);
 }
 
 TokBox.prototype = {
@@ -19,6 +19,7 @@ TokBox.prototype = {
       this.serverIP, {'p2p.preference':'enabled'}, function(err, sessionId) {
         if (err) {
           cb(err);
+          return;
         }
         cb(null, {
           sessionId: sessionId,

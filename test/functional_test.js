@@ -503,6 +503,7 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function () {
       requests = [];
       var fakeCallInfo = conf.get("fakeCallInfo");
+      sandbox.useFakeTimers(fakeNow);
       tokBoxSessionId = fakeCallInfo.session1;
       tokBoxCalleeToken = fakeCallInfo.token1;
       tokBoxCallerToken = fakeCallInfo.token2;
@@ -517,8 +518,8 @@ describe("HTTP API exposed by the server", function() {
         user: user
       });
 
-      sandbox.stub(request, "put", function(xhr) {
-        requests.push(xhr.url);
+      sandbox.stub(request, "put", function(options) {
+        requests.push(options);
       });
 
       jsonReq = supertest(app)
@@ -556,21 +557,28 @@ describe("HTTP API exposed by the server", function() {
               if (err) {
                 throw err;
               }
-              expect(intersection(requests, [url1, url2]).length).eql(2);
+              expect(intersection(requests.map(function(record) {
+                return record.url;
+              }), [url1, url2]).length).eql(2);
+              expect(requests.every(function(record) {
+                return record.form.version === fakeNow;
+              }));
               done();
             });
           });
         });
       });
 
-      it("should return sessionId and caller token info", function(done) {
+      it("should return sessionId, apiKey and caller token info",
+      function(done) {
         jsonReq.end(function(err, res) {
           if (err) {
             throw err;
           }
           expect(res.body).eql({
             sessionId: tokBoxSessionId,
-            token: tokBoxCallerToken
+            token: tokBoxCallerToken,
+            apiKey: tokBox.apiKey
           });
           done();
         });
@@ -594,7 +602,8 @@ describe("HTTP API exposed by the server", function() {
               uuid: uuid,
               user: user,
               sessionId: tokBoxSessionId,
-              calleeToken: tokBoxCalleeToken
+              calleeToken: tokBoxCalleeToken,
+              timestamp: fakeNow
             });
             done();
           });
