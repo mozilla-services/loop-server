@@ -7,7 +7,7 @@ var expect = require("chai").expect;
 var sinon  = require("sinon");
 var base64 = require('urlsafe-base64');
 var tokenlib = require("../loop/tokenlib");
-var conf = require("../loop/config");
+var conf = require("../loop/config").conf;
 
 var ONE_MINUTE = 60 * 60 * 1000;
 

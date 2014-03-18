@@ -2,14 +2,20 @@
 var convict = require('convict');
 var format = require('util').format;
 
-function validateStoreConfig(val) {
-  if (!val)
-    throw new Error("Should be defined");
-
-  ["engine", "settings"].forEach(function(key) {
-    if (!val.hasOwnProperty(key))
-      throw new Error(format("Should have a %s property", key));
-  });
+/**
+ * Validates the keys are present in the configuration object.
+ *
+ * @param {List} keys  A list of keys that must be present.
+ **/
+function validateKeys(keys) {
+  return function(val) {
+    if (!val)
+      throw new Error("Should be defined");
+    keys.forEach(function(key) {
+      if (!val.hasOwnProperty(key))
+        throw new Error(format("Should have a %s property", key));
+    });
+  };
 }
 
 function hexKeyOfSize(size) {
@@ -60,13 +66,18 @@ var conf = convict({
     format: Boolean
   },
   urlsStore: {
-    doc: "The configuration for the urlsStore",
-    format: validateStoreConfig,
+    doc: "urlsStore config",
+    format: validateKeys(["engine", "settings"]),
     default: ""
   },
   callsStore: {
-    doc: "The configuration for the callsStore",
-    format: validateStoreConfig,
+    doc: "callsStore config",
+    format: validateKeys(["engine", "settings"]),
+    default: ""
+  },
+  tokBox: {
+    doc: "TokBox service config",
+    format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),
     default: ""
   }
 });
@@ -83,4 +94,8 @@ if (conf.get('macSecret') === "")
 if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
 
-module.exports = conf;
+module.exports = {
+  conf: conf,
+  hexKeyOfSize: hexKeyOfSize,
+  validateKeys: validateKeys
+};
