@@ -7,10 +7,11 @@
 var express = require('express');
 var tokenlib = require('./tokenlib');
 var sessions = require("./sessions");
-var conf = require('./config.js');
+var conf = require('./config');
 var getStore = require('./stores').getStore;
 var pjson = require('../package.json');
 var tokBox = conf.get("tokBox");
+var crypto = require('crypto');
 var app = express();
 
 app.use(express.json());
@@ -25,7 +26,7 @@ var tokenManager = new tokenlib.TokenManager({
 
 var urlsStore = getStore(
   conf.get('urlsStore'),
-  {unique: ["user", "simplepushURL"]}
+  {unique: ["userMac", "simplepushURL"]}
 );
 var callsStore = getStore(conf.get('callsStore'));
 
@@ -40,6 +41,27 @@ function validateSimplePushURL(reqDataObj) {
     throw new Error('simple_push_url should be a valid url');
 
   return reqDataObj;
+}
+
+/**
+ * Returns the HMac digest of the given payload.
+ *
+ * The global configuration object is used to determine which algorithm and
+ * secret should be used.
+ *
+ * @param {String}  payload     The string to mac.
+ * @return {String} hexadecimal hash.
+ **/
+function hmac(payload) {
+  var algorithm = conf.get("userMacAlgorithm");
+  var secret = conf.get("userMacSecret");
+  var _hmac = crypto.createHmac(
+    algorithm,
+    new Buffer(secret, "hex")
+  );
+  _hmac.write(payload);
+  _hmac.end();
+  return _hmac.read().toString('hex');
 }
 
 app.get("/", function(req, res) {
@@ -57,13 +79,6 @@ app.get("/", function(req, res) {
   return res.json(200, credentials);
 });
 
-app.post('/call-url', sessions.requireSession, sessions.attachSession,
-  function(req, res) {
-    var token = tokenManager.encode({user: req.user});
-    var host = req.protocol + "://" + req.get('host');
-    return res.json(200, {call_url: host + "/call/" + token});
-  });
-
 app.post('/registration', sessions.attachSession, function(req, res) {
   var validated;
 
@@ -77,7 +92,7 @@ app.post('/registration', sessions.attachSession, function(req, res) {
   }
 
   urlsStore.add({
-    user: req.user,
+    userMac: hmac(req.user),
     simplepushURL: req.body.simple_push_url
   }, function(err, record){
     if (err) {
@@ -87,6 +102,13 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     return res.json(200, "ok");
   });
 });
+
+app.post('/call-url', sessions.requireSession, sessions.attachSession,
+  function(req, res) {
+    var token = tokenManager.encode({user: req.user});
+    var host = req.protocol + "://" + req.get('host');
+    return res.json(200, {call_url: host + "/call/" + token});
+  });
 
 app.get("/calls", sessions.requireSession, sessions.attachSession,
   function(req, res) {
@@ -103,7 +125,8 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
       return;
     }
 
-    callsStore.find({user: req.user}, function(err, records) {
+    callsStore.find({userMac: hmac(req.user)},
+    function(err, records) {
       if (err) {
         res.json(503, "Service Unavailable");
         return;
@@ -131,5 +154,7 @@ module.exports = {
   app: app,
   conf: conf,
   urlsStore: urlsStore,
-  callsStore: callsStore
+  callsStore: callsStore,
+  hmac: hmac,
+  validateSimplePushURL: validateSimplePushURL
 };
