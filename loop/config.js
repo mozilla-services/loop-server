@@ -79,6 +79,12 @@ var conf = convict({
     doc: "TokBox service config",
     format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),
     default: ""
+  },
+  webAppUrl: {
+    doc: "Loop Web App Home Page.",
+    format: "url",
+    default: "http://localhost:3000/#call/{token}",
+    env: "WEB_APP_URL"
   }
 });
 

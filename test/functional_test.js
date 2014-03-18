@@ -11,6 +11,7 @@ var app = require("../loop").app;
 var request = require('../loop').request;
 var urlsStore = require("../loop").urlsStore;
 var callsStore = require("../loop").callsStore;
+var validateToken = require("../loop").validateToken;
 var conf = require("../loop").conf;
 var tokBox = require("../loop").tokBox;
 var validateToken = require("../loop").validateToken;
@@ -388,10 +389,24 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("GET /calls/{call_token}", function() {
-    it.skip("should return a valid HTML page", function() {
+    it("should return a 302 to the WebApp page", function(done) {
+      var tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+      var token = tokenManager.encode({
+        uuid: uuid,
+        user: user
+      });
+      supertest(app)
+        .get('/calls/' + token)
+        .expect("Location", conf.get("webAppUrl").replace("{token}", token))
+        .expect(302).end(done);
     });
 
-    it.skip("should validate the token", function() {
+    it("should have the validateToken middleware installed.", function() {
+      expect(getMiddlewares('get', '/calls/:token'))
+        .include(validateToken);
     });
   });
 
@@ -576,7 +591,8 @@ describe("HTTP API exposed by the server", function() {
               });
             });
           });
-      });
+        }
+      );
 
       it("should return sessionId, apiKey and caller token info",
         function(done) {
@@ -591,7 +607,8 @@ describe("HTTP API exposed by the server", function() {
             });
             done();
           });
-      });
+        }
+      );
 
       it("should store sessionId and callee token info in database",
         function(done) {
@@ -617,7 +634,8 @@ describe("HTTP API exposed by the server", function() {
               done();
             });
           });
-      });
+        }
+      );
 
       it("should return a 503 if callsStore is not available", function(done) {
         sandbox.stub(callsStore, "add", function(record, cb) {
