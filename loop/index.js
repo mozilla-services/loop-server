@@ -188,6 +188,10 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
       });
   });
 
+app.get('/calls/:token', validateToken, function(req, res) {
+  res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
+});
+
 app.post('/calls/:token', validateToken, function(req, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (err) {
