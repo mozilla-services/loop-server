@@ -495,7 +495,7 @@ describe("HTTP API exposed by the server", function() {
 
   });
 
-  describe("POST /call/:token", function() {
+  describe("POST /calls/:token", function() {
 
     var requests, tokenManager, token, jsonReq, tokBoxSessionId,
         tokBoxCallerToken, tokBoxCalleeToken;
@@ -523,12 +523,12 @@ describe("HTTP API exposed by the server", function() {
       });
 
       jsonReq = supertest(app)
-        .post('/call/' + token)
+        .post('/calls/' + token)
         .expect(200);
     });
 
     it("should have the token validation middleware installed", function() {
-      expect(getMiddlewares('post', '/call/:token')).include(validateToken);
+      expect(getMiddlewares('post', '/calls/:token')).include(validateToken);
     });
 
     it("should return a 503 if tokbox API errors out", function(done) {

@@ -92,7 +92,7 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
       uuid: uuid
     });
     var host = req.protocol + "://" + req.get('host');
-    res.json(200, {call_url: host + "/call/" + token});
+    res.json(200, {call_url: host + "/calls/" + token});
     return;
   });
 
@@ -159,7 +159,7 @@ function(req, res) {
   });
 });
 
-app.post('/call/:token', validateToken, function(req, res) {
+app.post('/calls/:token', validateToken, function(req, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (err) {
       // XXX Handle TokBox error messages.
