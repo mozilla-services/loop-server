@@ -1,6 +1,7 @@
 "use strict";
 var convict = require('convict');
 var format = require('util').format;
+var crypto = require('crypto');
 
 function validateStoreConfig(val) {
   if (!val)
@@ -54,6 +55,22 @@ var conf = convict({
     default: "",
     env: "ENCRYPTING_SECRET"
   },
+  userMacSecret: {
+    doc: "The secret for hmac-ing userIds (16 bytes key encoded as hex)",
+    format: hexKeyOfSize(16),
+    default: "",
+    env: "USER_MAC_SECRET"
+  },
+  userMacAlgorithm: {
+    doc: "The algorithm that should be used to mac userIds",
+    format: function(val) {
+      if (crypto.getHashes().indexOf(val) === -1) {
+        throw new Error("Given hmac algorithm is not supported");
+      }
+    },
+    default: "sha256",
+    env: "USER_MAC_ALGORITHM"
+  },
   displayVersion: {
     doc: "Display the server version on the homepage.",
     default: true,
@@ -83,4 +100,7 @@ if (conf.get('macSecret') === "")
 if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
 
-module.exports = conf;
+module.exports = {
+  conf: conf,
+  hexKeyOfSize: hexKeyOfSize
+};

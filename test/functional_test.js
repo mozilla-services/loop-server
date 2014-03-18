@@ -11,6 +11,7 @@ var app = require("../loop").app;
 var urlsStore = require("../loop").urlsStore;
 var callsStore = require("../loop").callsStore;
 var conf = require("../loop").conf;
+var hmac = require("../loop").hmac;
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
 var sessions = require("../loop/sessions");
@@ -19,6 +20,8 @@ var tokBox = conf.get("tokBox");
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
+var userHmac = hmac(user, conf.get("userMacSecret"));
+
 
 function getMiddlewares(method, url) {
   return app.routes[method].filter(function(e){
@@ -34,13 +37,11 @@ app.get('/get-cookies', function(req, res) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, sessionCookie, user, fakeCallInfo;
+  var sandbox, expectedAssertion, pushURL, sessionCookie, fakeCallInfo;
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
     expectedAssertion = "BID-ASSERTION";
-    fakeCallInfo = conf.get("fakeCallInfo");
-    user = "alexis@notmyidea.org";
     fakeCallInfo = conf.get("fakeCallInfo");
 
     // Mock the calls to the external BrowserID verifier.
@@ -324,7 +325,7 @@ describe("HTTP API exposed by the server", function() {
             throw err;
           }
 
-          urlsStore.findOne({user: user}, function(err, record) {
+          urlsStore.findOne({userMac: userHmac}, function(err, record) {
             if (err) {
               throw err;
             }
@@ -353,7 +354,7 @@ describe("HTTP API exposed by the server", function() {
             throw err;
           }
           addPushURL("http://url2", function(err, res) {
-            urlsStore.find({user: user}, function(err, records) {
+            urlsStore.find({userMac: userHmac}, function(err, records) {
               if (err) {
                 throw err;
               }
@@ -397,19 +398,19 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          user:      user,
+          userMac:   userHmac,
           sessionId: fakeCallInfo.session1,
           token:     fakeCallInfo.token1,
           version:   0
         },
         {
-          user:      user,
+          userMac:   userHmac,
           sessionId: fakeCallInfo.session2,
           token:     fakeCallInfo.token2,
           version:   1
         },
         {
-          user:      user,
+          userMac:   userHmac,
           sessionId: fakeCallInfo.session3,
           token:     fakeCallInfo.token2,
           version:   2

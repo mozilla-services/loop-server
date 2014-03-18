@@ -5,6 +5,8 @@
   "encryptionSecret": "7c69b9ca88e4f127f7280368f7055646",
   "invalidMacSecret": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "invalidEncryptionSecret": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "userMacAlgorithm": "sha256",
+  "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
   "urlsStore": {
     "engine": "mongo",
     "settings": {
