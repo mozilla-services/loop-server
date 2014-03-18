@@ -112,18 +112,17 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should not display server version if displayVersion is false.",
-    function(done) {
-      conf.set("displayVersion", false);
+      function(done) {
+        conf.set("displayVersion", false);
 
-      supertest(app)
-        .get('/')
-        .expect(200)
-        .end(function(err, res) {
-          expect(res.body).not.to.have.property("version");
-          done();
-        });
-    });
-
+        supertest(app)
+          .get('/')
+          .expect(200)
+          .end(function(err, res) {
+            expect(res.body).not.to.have.property("version");
+            done();
+          });
+      });
   });
 
   describe("authentication middleware", function() {
@@ -532,9 +531,18 @@ describe("HTTP API exposed by the server", function() {
       expect(getMiddlewares('post', '/call/:token')).include(validateToken);
     });
 
-    describe("working tokbox APIs", function() {
+    it("should return a 503 if tokbox API errors out", function(done) {
+      sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+        cb("error");
+      });
+      jsonReq
+        .expect(503)
+        .end(done);
+    });
+
+    describe("With working tokbox APIs", function() {
       beforeEach(function() {
-        sandbox.stub(tokBox, "getInfo", function(cb) {
+        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
           cb(null, {
             sessionId: tokBoxSessionId,
             callerToken: tokBoxCallerToken,
@@ -549,66 +557,66 @@ describe("HTTP API exposed by the server", function() {
 
       it("should trigger all the simple push URLs of the user",
         function(done) {
-        var url1 = "http://www.example.org";
-        var url2 = "http://www.mozilla.org";
+          var url1 = "http://www.example.org";
+          var url2 = "http://www.mozilla.org";
 
-        register(url1, expectedAssertion, sessionCookie, function() {
-          register(url2, expectedAssertion, sessionCookie, function() {
-            jsonReq.end(function(err, res) {
-              if (err) {
-                throw err;
-              }
-              expect(intersection(requests.map(function(record) {
-                return record.url;
-              }), [url1, url2]).length).eql(2);
-              expect(requests.every(function(record) {
-                return record.form.version === fakeNow;
-              }));
-              done();
+          register(url1, expectedAssertion, sessionCookie, function() {
+            register(url2, expectedAssertion, sessionCookie, function() {
+              jsonReq.end(function(err, res) {
+                if (err) {
+                  throw err;
+                }
+                expect(intersection(requests.map(function(record) {
+                  return record.url;
+                }), [url1, url2]).length).eql(2);
+                expect(requests.every(function(record) {
+                  return record.form.version === fakeNow;
+                }));
+                done();
+              });
             });
           });
-        });
       });
 
       it("should return sessionId, apiKey and caller token info",
-      function(done) {
-        jsonReq.end(function(err, res) {
-          if (err) {
-            throw err;
-          }
-          expect(res.body).eql({
-            sessionId: tokBoxSessionId,
-            token: tokBoxCallerToken,
-            apiKey: tokBox.apiKey
-          });
-          done();
-        });
-      });
-
-      it("should store sessionId and callee token info in database",
-      function(done) {
-        jsonReq.end(function(err, res) {
-          if (err) {
-            throw err;
-          }
-
-          callsStore.find({user: user}, function(err, items) {
+        function(done) {
+          jsonReq.end(function(err, res) {
             if (err) {
               throw err;
             }
-            expect(items.length).eql(1);
-            // We don't want to compare this, it's added by mongo.
-            delete items[0]._id;
-            expect(items[0]).eql({
-              uuid: uuid,
-              user: user,
+            expect(res.body).eql({
               sessionId: tokBoxSessionId,
-              calleeToken: tokBoxCalleeToken,
-              timestamp: fakeNow
+              token: tokBoxCallerToken,
+              apiKey: tokBox.apiKey
             });
             done();
           });
-        });
+      });
+
+      it("should store sessionId and callee token info in database",
+        function(done) {
+          jsonReq.end(function(err, res) {
+            if (err) {
+              throw err;
+            }
+
+            callsStore.find({user: user}, function(err, items) {
+              if (err) {
+                throw err;
+              }
+              expect(items.length).eql(1);
+              // We don't want to compare this, it's added by mongo.
+              delete items[0]._id;
+              expect(items[0]).eql({
+                uuid: uuid,
+                user: user,
+                sessionId: tokBoxSessionId,
+                calleeToken: tokBoxCalleeToken,
+                timestamp: fakeNow
+              });
+              done();
+            });
+          });
       });
 
       it("should return a 503 if callsStore is not available", function(done) {
@@ -630,13 +638,5 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
-    it("should return a 503 if tokbox API errors out", function(done) {
-      sandbox.stub(tokBox, "getInfo", function(cb) {
-        cb("error");
-      });
-      jsonReq
-        .expect(503)
-        .end(done);
-    });
   });
 });

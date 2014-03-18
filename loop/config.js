@@ -77,7 +77,7 @@ var conf = convict({
   },
   tokBox: {
     doc: "TokBox service config",
-    format: validateKeys(["apiKey", "apiSecret", "serverIP"]),
+    format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),
     default: ""
   }
 });
@@ -94,4 +94,8 @@ if (conf.get('macSecret') === "")
 if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
 
-module.exports = conf;
+module.exports = {
+  conf: conf,
+  hexKeyOfSize: hexKeyOfSize,
+  validateKeys: validateKeys
+};

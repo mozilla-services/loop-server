@@ -5,7 +5,7 @@
 
 var TokBox = require("../loop/tokbox").TokBox;
 var OpenTok = require("../loop/tokbox").OpenTok;
-var conf = require("../loop/config");
+var conf = require("../loop/config").conf;
 
 var sinon = require("sinon");
 var expect = require("chai").expect;
@@ -30,44 +30,48 @@ describe("TokBox", function() {
 
   describe("#constructor", function() {
     it("should create an OpenTok object with info from settings", function() {
-      var stub = sandbox.stub(OpenTok, "OpenTokSDK");
+      sandbox.stub(OpenTok, "OpenTokSDK");
 
-      new TokBox({apiKey: apiKey, apiSecret: apiSecret, serverIP: serverIP});
-      assert.calledOnce(stub);
-      assert.calledWithExactly(stub, apiKey, apiSecret);
+      new TokBox({
+        apiKey: apiKey,
+        apiSecret: apiSecret,
+        serverIP: serverIP,
+        tokenDuration: 3600
+      });
+      assert.calledOnce(OpenTok.OpenTokSDK);
+      assert.calledWithExactly(OpenTok.OpenTokSDK, apiKey, apiSecret);
     });
   });
 
-  describe("#getInfo", function() {
+  describe("#getSessionTokens", function() {
     var tokBox;
 
     beforeEach(function() {
       tokBox = new TokBox({
         apiKey: apiKey,
         apiSecret: apiSecret,
-        serverIP: serverIP
+        serverIP: serverIP,
+        tokenDuration: 3600 // 1h.
       });
     });
 
     it("should return session and token info if tokbox API are working",
     function(done) {
-      var createSessionStub = sandbox.stub(tokBox._opentok, "createSession",
+      sandbox.stub(tokBox._opentok, "createSession",
       function(location, options, cb) {
         cb(null, fakeCallInfo.session1);
       });
 
       var generateTokenCalls = 0;
-      var generateTokenStub = sandbox.stub(tokBox._opentok, "generateToken",
-      function(options) {
+      sandbox.stub(tokBox._opentok, "generateToken", function(options) {
         generateTokenCalls += 1;
-        if(generateTokenCalls === 1) {
+        if (generateTokenCalls === 1) {
           return fakeCallInfo.token1;
-        } else {
-          return fakeCallInfo.token2;
         }
+        return fakeCallInfo.token2;
       });
 
-      tokBox.getInfo(function(error, info) {
+      tokBox.getSessionTokens(function(error, info) {
         expect(error).eql(null);
         expect(info).eql({
           sessionId: fakeCallInfo.session1,
@@ -75,23 +79,21 @@ describe("TokBox", function() {
           calleeToken: fakeCallInfo.token2
         });
 
-        assert.calledOnce(createSessionStub);
-        assert.calledTwice(generateTokenStub);
+        assert.calledOnce(tokBox._opentok.createSession);
+        assert.calledTwice(tokBox._opentok.generateToken);
         done();
       });
     });
 
     it("should error out if the tokbox API doesn't work", function(done) {
       sandbox.stub(tokBox._opentok, "createSession",
-      function(location, options, cb) {
-        cb("error");
-      });
-      tokBox.getInfo(function(error, info) {
+        function(location, options, cb) {
+          cb("error");
+        });
+      tokBox.getSessionTokens(function(error, info) {
         expect(error).eql("error");
         done();
       });
     });
-
-
   });
 });

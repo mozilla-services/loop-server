@@ -5,7 +5,7 @@
 
 var crypto = require("crypto");
 var sessions = require("client-sessions");
-var conf = require('./config.js');
+var conf = require('./config').conf;
 
 var DAYS = 24 * 60 * 60 * 1000;
 var SESSION_DURATION = conf.get('sessionDuration') * DAYS;

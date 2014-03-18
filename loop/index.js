@@ -8,10 +8,9 @@ var express = require('express');
 var crypto = require('crypto');
 var tokenlib = require('./tokenlib');
 var sessions = require("./sessions");
-var conf = require('./config.js');
+var conf = require('./config').conf;
 var getStore = require('./stores').getStore;
 var pjson = require('../package.json');
-var tokBox = conf.get("tokBox");
 var request = require('request');
 
 var TokBox = require('./tokbox').TokBox;
@@ -161,7 +160,7 @@ function(req, res) {
 });
 
 app.post('/call/:token', validateToken, function(req, res) {
-  tokBox.getInfo(function(err, tokboxInfo) {
+  tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (err) {
       // XXX Handle TokBox error messages.
       res.json(503, "Service Unavailable");

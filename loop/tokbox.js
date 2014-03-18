@@ -9,27 +9,32 @@ var OpenTok = require('opentok');
 function TokBox(settings) {
   this.serverIP = settings.serverIP;
   this.apiKey = settings.apiKey;
+  this.tokenDuration = settings.tokenDuration;
   this._opentok = new OpenTok.OpenTokSDK(this.apiKey, settings.apiSecret);
 }
 
 TokBox.prototype = {
-  "getInfo": function(cb) {
-    var that = this;
+  getSessionTokens: function(cb) {
+    var self = this;
     this._opentok.createSession(
       this.serverIP, {'p2p.preference':'enabled'}, function(err, sessionId) {
         if (err) {
           cb(err);
           return;
         }
+        var now = Math.round(new Date().getTime() / 1000.0);
+        var expirationTime = now + self.tokenDuration;
         cb(null, {
           sessionId: sessionId,
-          callerToken: that._opentok.generateToken({
+          callerToken: self._opentok.generateToken({
             session_id: sessionId,
-            role: OpenTok.RoleConstants.PUBLISHER
+            role: OpenTok.RoleConstants.PUBLISHER,
+            expire_time: expirationTime
           }),
-          calleeToken: that._opentok.generateToken({
+          calleeToken: self._opentok.generateToken({
             session_id: sessionId,
-            role: OpenTok.RoleConstants.PUBLISHER
+            role: OpenTok.RoleConstants.PUBLISHER,
+            expire_time: expirationTime
           })
         });
       }
