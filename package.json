@@ -17,7 +17,8 @@
     "browserid-verify": "0.1.2",
     "client-sessions": "0.6.0",
     "request": "2.34.0",
-    "opentok": "git+https://github.com/opentok/opentok-node.git#60dda2"
+    "opentok": "1.0.2",
+    "raven": "0.6.2"
   },
   "devDependencies": {
     "awsbox": "0.6.x",
