@@ -33,11 +33,20 @@ How to install?
 
 You will need mongodb installed:
 
+### Linux
+
     apt-get install mongodb-server
 
-or on OSX:
+### OS X
+
+Assuming you have brew installed, use it to install mongodb; then configure
+your account to run it:
 
     brew install mongo
+    ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents
+    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
+
+### All Platforms
 
 Then clone the loop server and install its dependencies:
 
