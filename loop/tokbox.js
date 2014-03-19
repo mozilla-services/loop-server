@@ -18,8 +18,8 @@ TokBox.prototype = {
     var self = this;
     this._opentok.createSession(
       this.serverIP, {'p2p.preference':'enabled'}, function(err, sessionId) {
-        if (err) {
-          cb(err);
+        if (err || sessionId === undefined || sessionId === null) {
+          cb(err || new Error("Got an empty sessionId: " + sessionId));
           return;
         }
         var now = Math.round(new Date().getTime() / 1000.0);

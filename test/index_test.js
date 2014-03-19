@@ -91,7 +91,7 @@ describe("index", function() {
     it("should return a 400 if the token is invalid.", function(done) {
       jsonReq
         .get('/validateToken/invalidToken/')
-        .expect(400, /Error: Invalid token size/)
+        .expect(400, /invalid token/)
         .end(done);
     });
 

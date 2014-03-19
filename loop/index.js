@@ -13,8 +13,16 @@ var getStore = require('./stores').getStore;
 var crypto = require('crypto');
 var pjson = require('../package.json');
 var request = require('request');
+var raven = require('raven');
 
 var TokBox = require('./tokbox').TokBox;
+
+var ravenClient = new raven.Client(conf.get('sentryDSN'));
+
+function logError(err) {
+  console.log(err);
+  ravenClient.captureError(err);
+}
 
 var app = express();
 
@@ -22,6 +30,8 @@ app.use(express.json());
 app.use(express.urlencoded());
 app.use(sessions.clientSessions);
 app.use(app.router);
+// Exception logging should come at the end of the list of middlewares.
+app.use(raven.middleware.express(conf.get('sentryDSN')));
 
 var tokenManager = new tokenlib.TokenManager({
   macSecret: conf.get('macSecret'),
@@ -60,7 +70,8 @@ function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
   } catch(err) {
-    res.json(400, err.toString());
+    logError(err);
+    res.json(400, "invalid token");
     return;
   }
   next();
@@ -109,7 +120,6 @@ app.get("/", function(req, res) {
   if (!conf.get("displayVersion")) {
     delete credentials.version;
   }
-
   res.json(200, credentials);
 });
 
@@ -136,6 +146,7 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     simplepushURL: validated.simple_push_url
   }, function(err, record){
     if (err) {
+      logError(err);
       res.json(503, "Service Unavailable");
       return;
     }
@@ -172,6 +183,7 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
     callsStore.find({userMac: hmac(req.user, conf.get('userMacSecret'))},
       function(err, records) {
         if (err) {
+          logError(err);
           res.json(503, "Service Unavailable");
           return;
         }
@@ -197,7 +209,7 @@ app.get('/calls/:token', validateToken, function(req, res) {
 app.post('/calls/:token', validateToken, function(req, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (err) {
-      // XXX Handle TokBox error messages.
+      logError(err);
       res.json(503, "Service Unavailable");
       return;
     }
@@ -220,6 +232,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
         userMac: hmac(req.token.user, conf.get('userMacSecret'))
       }, function(err, items) {
         if (err) {
+          logError(err);
           res.json(503, "Service Unavailable");
           return;
         }
@@ -241,7 +254,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
 });
 
 app.listen(conf.get('port'), conf.get('host'));
-console.log('Server listening on: ' +
+console.log('Server listening on http://' +
             conf.get('host') + ':' + conf.get('port'));
 
 module.exports = {
