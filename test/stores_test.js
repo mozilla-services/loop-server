@@ -146,6 +146,64 @@ describe("Stores", function() {
         });
       });
 
+      describe("#updateOrCreate", function() {
+        beforeEach(function() {
+          store = createStore();
+        });
+
+        it("should add missing records.", function(done) {
+          store.updateOrCreate({'user': 'NotFound'}, {
+            user: "Found"
+          }, function(err) {
+            if(err) {
+              throw err;
+            }
+          });
+          store.find({user: "Found"}, function(err, records) {
+            expect(err).to.be.a("null");
+            expect(records).to.have.length.of(1);
+            done();
+          });
+        });
+
+        it("should update all matching records.", function(done) {
+          store.add({"a": "Found", "b": 1}, function(err) {
+            if(err) {
+              throw err;
+            }
+            store.add({"a": "Found", "b": 2}, function(err) {
+              store.add({"a": "Not Found", "b": 5}, function(err) {
+                store.updateOrCreate({
+                  "a": "Found"
+                }, {
+                  "a": "Found",
+                  "b": 10
+                }, function(err) {
+                  if(err) {
+                    throw err;
+                  }
+
+                  store.find({"a": "Found", b: 10}, function(err, records) {
+                    if(err) {
+                      throw err;
+                    }
+
+                    expect(records).to.have.length.of(2);
+                    store.find({
+                      "a": "Not Found",
+                      "b": 5
+                    }, function(err, records) {
+                      expect(records).to.have.length.of(1);
+                      done();
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+
       describe("#find", function() {
         beforeEach(function() {
           store = createStore();

@@ -104,6 +104,7 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .get('/')
         .expect(200)
+        .expect('Content-Type', /json/)
         .end(function(err, res) {
           ["name", "description", "version", "homepage"].forEach(function(key) {
             expect(res.body).to.have.property(key);
@@ -283,11 +284,15 @@ describe("HTTP API exposed by the server", function() {
 
   describe("POST /registration", function() {
     var jsonReq;
+    var url1 = "http://www.example.org";
+    var url2 = "http://www.mozilla.org";
+
 
     beforeEach(function() {
       jsonReq = supertest(app)
         .post('/registration')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
         .type('json')
         .expect('Content-Type', /json/);
     });
@@ -363,10 +368,11 @@ describe("HTTP API exposed by the server", function() {
         });
     });
 
-    it("should be able to store multiple push urls for one user",
+    // XXX Bug 980289
+    it.skip("should be able to store multiple push urls for one user",
       function(done) {
-        register("http://url1", expectedAssertion, sessionCookie, function() {
-          register("http://url2", expectedAssertion, sessionCookie, function() {
+        register(url1, expectedAssertion, sessionCookie, function() {
+          register(url2, expectedAssertion, sessionCookie, function() {
             urlsStore.find({userMac: userHmac}, function(err, records) {
               if (err) {
                 throw err;
@@ -378,14 +384,41 @@ describe("HTTP API exposed by the server", function() {
         });
       });
 
-    it("should answer a 503 if the database isn't available", function(done) {
-      sandbox.stub(urlsStore, "add", function(record, cb) {
+    it("should be able to override an old SimplePush URL.", function(done) {
+      register(url1, expectedAssertion, sessionCookie, function() {
+        register(url2, expectedAssertion, sessionCookie, function() {
+          urlsStore.find({userMac: userHmac}, function(err, records) {
+            if (err) {
+              throw err;
+            }
+            expect(records.length).eql(1);
+            done();
+          });
+        });
+      });
+    });
+
+    it("should return a 503 if the database isn't available", function(done) {
+      sandbox.stub(urlsStore, "updateOrCreate", function(query, record, cb) {
         cb("error");
       });
       jsonReq
-      .send({'simple_push_url': pushURL})
-      .expect(503).end(done);
+        .send({'simple_push_url': pushURL})
+        .expect(503).end(done);
     });
+
+    it("should return a 503 if the database isn't available on update",
+    function(done) {
+      sandbox.stub(urlsStore, "updateOrCreate", function(criteria, newObj, cb) {
+        cb("error");
+      });
+      jsonReq
+        .send({
+          'simple_push_url': pushURL,
+          'previous_simple_push_url': 'http://old'
+        }).expect(503).end(done);
+    });
+
   });
 
   describe("GET /calls/{call_token}", function() {
@@ -570,7 +603,7 @@ describe("HTTP API exposed by the server", function() {
         jsonReq.end(done);
       });
 
-      it("should trigger all the simple push URLs of the user",
+      it.skip("should trigger all the simple push URLs of the user",
         function(done) {
           var url1 = "http://www.example.org";
           var url2 = "http://www.mozilla.org";
@@ -614,8 +647,9 @@ describe("HTTP API exposed by the server", function() {
             if (err) {
               throw err;
             }
+            
 
-            callsStore.find({user: user}, function(err, items) {
+            callsStore.find({userMac: userHmac}, function(err, items) {
               if (err) {
                 throw err;
               }
@@ -624,7 +658,7 @@ describe("HTTP API exposed by the server", function() {
               delete items[0]._id;
               expect(items[0]).eql({
                 uuid: uuid,
-                user: user,
+                userMac: userHmac,
                 sessionId: tokBoxSessionId,
                 calleeToken: tokBoxCalleeToken,
                 timestamp: fakeNow
