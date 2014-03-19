@@ -100,7 +100,7 @@ var conf = convict({
   webAppUrl: {
     doc: "Loop Web App Home Page.",
     format: "url",
-    default: "http://localhost:3000/#call/{token}",
+    default: "http://localhost:3000/static/#call/{token}",
     env: "WEB_APP_URL"
   }
 });
