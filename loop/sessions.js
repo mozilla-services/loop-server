@@ -32,7 +32,7 @@ function attachSession(req, res, next) {
   if (req.session.uid) {
     uid = req.session.uid;
   } else {
-    uid = crypto.randomBytes(128).toString('hex');
+    uid = crypto.randomBytes(12).toString('hex');
     req.session.uid = uid;
   }
 

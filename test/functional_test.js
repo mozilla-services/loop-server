@@ -106,7 +106,8 @@ describe("HTTP API exposed by the server", function() {
         .expect(200)
         .expect('Content-Type', /json/)
         .end(function(err, res) {
-          ["name", "description", "version", "homepage"].forEach(function(key) {
+          ["name", "description", "version", "homepage", "endpoint"]
+          .forEach(function(key) {
             expect(res.body).to.have.property(key);
           });
           done();
@@ -456,22 +457,22 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          userMac:   userHmac,
-          sessionId: fakeCallInfo.session1,
-          token:     fakeCallInfo.token1,
-          version:   0
+          userMac:      userHmac,
+          sessionId:    fakeCallInfo.session1,
+          calleeToken:  fakeCallInfo.token1,
+          timestamp:    0
         },
         {
-          userMac:   userHmac,
-          sessionId: fakeCallInfo.session2,
-          token:     fakeCallInfo.token2,
-          version:   1
+          userMac:      userHmac,
+          sessionId:    fakeCallInfo.session2,
+          calleeToken:  fakeCallInfo.token2,
+          timestamp:    1
         },
         {
-          userMac:   userHmac,
-          sessionId: fakeCallInfo.session3,
-          token:     fakeCallInfo.token2,
-          version:   2
+          userMac:      userHmac,
+          sessionId:    fakeCallInfo.session3,
+          calleeToken:  fakeCallInfo.token2,
+          timestamp:    2
         }
       ];
 
@@ -487,7 +488,7 @@ describe("HTTP API exposed by the server", function() {
         return {
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
-          token: call.token
+          token: call.calleeToken
         };
       });
 
@@ -501,7 +502,7 @@ describe("HTTP API exposed by the server", function() {
       var callsList = [{
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
-        token: calls[2].token
+        token: calls[2].calleeToken
       }];
 
       req.send({version: 2}).expect(200).end(function(err, res) {
