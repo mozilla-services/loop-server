@@ -211,7 +211,7 @@ describe("HTTP API exposed by the server", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expect(res.body.error).eql('simple_push_url is required');
+          expect(res.body.error).eql('missing: simple_push_url');
           done();
         });
     });
@@ -354,18 +354,21 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
+          caller:       "foo",
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           timestamp:    0
         },
         {
+          caller:       "foo",
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           timestamp:    1
         },
         {
+          caller:       "bar",
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
@@ -443,7 +446,7 @@ describe("HTTP API exposed by the server", function() {
 
   describe("POST /calls/:token", function() {
 
-    var requests, tokenManager, token, jsonReq, tokBoxSessionId,
+    var emptyReq, requests, tokenManager, token, jsonReq, tokBoxSessionId,
         tokBoxCallerToken, tokBoxCalleeToken;
 
     beforeEach(function () {
@@ -468,13 +471,21 @@ describe("HTTP API exposed by the server", function() {
         requests.push(options);
       });
 
-      jsonReq = supertest(app)
-        .post('/calls/' + token)
-        .expect(200);
+      emptyReq = supertest(app).post('/calls/' + token);
+      jsonReq = supertest(app).post('/calls/' + token)
+        .send({nickname: "foo"}).expect(200);
     });
 
     it("should have the token validation middleware installed", function() {
       expect(getMiddlewares('post', '/calls/:token')).include(validateToken);
+    });
+
+    it("should require a nickname parameter", function(done) {
+      emptyReq.send({}).expect(400).end(function(err, res) {
+        if (err) throw err;
+        expect(res.body.error).eql('missing: nickname');
+        done();
+      });
     });
 
     it("should return a 503 if tokbox API errors out", function(done) {
@@ -545,7 +556,6 @@ describe("HTTP API exposed by the server", function() {
             if (err) {
               throw err;
             }
-            
 
             callsStore.find({userMac: userHmac}, function(err, items) {
               if (err) {
@@ -555,6 +565,7 @@ describe("HTTP API exposed by the server", function() {
               // We don't want to compare this, it's added by mongo.
               delete items[0]._id;
               expect(items[0]).eql({
+                caller: "foo",
                 uuid: uuid,
                 userMac: userHmac,
                 sessionId: tokBoxSessionId,

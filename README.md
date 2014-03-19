@@ -22,7 +22,7 @@ It exposes the following APIs:
 
       POST /calls/{token}  →  Add an incoming call (does a simple push notif
                               and gets room tokens), return participant tokens.
-                              (No parameter required.)
+                              (Requires "nickname" parameter)
 
     * GET  /calls/         →  List incoming calls for the authenticated user.
                               (Requires a "version" parameter).

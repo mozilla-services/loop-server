@@ -10,9 +10,7 @@ var tokenlib = require("../loop/tokenlib");
 var app = require("../loop").app;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
-var validateSimplePushURL = require("../loop").validateSimplePushURL;
 var validateToken = require("../loop").validateToken;
-
 
 describe("index", function() {
   var jsonReq;
@@ -41,36 +39,6 @@ describe("index", function() {
         "Payload",
         conf.get("userMacSecret"),
         "sha1")).to.have.length(40);
-      done();
-    });
-  });
-
-  describe("#validateSimplePushURL", function(){
-    it("should receive an object", function(done){
-      expect(validateSimplePushURL).to.throw(/missing request data/);
-      done();
-    });
-
-    it("should receive a SimplePush URL", function(done){
-      expect(function(){
-        validateSimplePushURL({});
-      }).to.throw(/simple_push_url is required/);
-      done();
-    });
-
-    it("should receive a valid HTTP URL", function(done){
-      expect(function(){
-        validateSimplePushURL({simple_push_url: "Wrong URL"});
-      }).to.throw(/simple_push_url should be a valid url/);
-      done();
-    });
-
-    it("should handle valid SimplePush URL", function(done){
-      expect(validateSimplePushURL({
-        simple_push_url: "http://www.mozilla.org"
-      })).to.eql({
-        simple_push_url: "http://www.mozilla.org"
-      });
       done();
     });
   });
