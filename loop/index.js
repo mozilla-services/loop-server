@@ -35,7 +35,7 @@ var urlsStore = getStore(
 
 var callsStore = getStore(
   conf.get('callsStore'),
-  {unique: ["user", "sessionId"]}
+  {unique: ["userMac", "sessionId"]}
 );
 
 var tokBox = new TokBox(conf.get('tokBox'));
@@ -107,7 +107,8 @@ app.get("/", function(req, res) {
     name: pjson.name,
     description: pjson.description,
     version: pjson.version,
-    homepage: pjson.homepage
+    homepage: pjson.homepage,
+    endpoint: req.protocol + "://" + req.get('host')
   };
 
   if (!conf.get("displayVersion")) {
@@ -132,12 +133,11 @@ app.post('/registration', sessions.attachSession, function(req, res) {
     return;
   }
 
-  // XXX Bug 980289 — 
+  // XXX Bug 980289 —
   // With FxA we will want to handle many SimplePushUrls per user.
-  urlsStore.updateOrCreate({
-    userMac: hmac(req.user, conf.get('userMacSecret'))
-  }, {
-    userMac: hmac(req.user, conf.get('userMacSecret')),
+  var userHmac = hmac(req.user, conf.get('userMacSecret'));
+  urlsStore.updateOrCreate({userMac: userHmac}, {
+    userMac: userHmac,
     simplepushURL: validated.simple_push_url
   }, function(err, record){
     if (err) {
@@ -150,7 +150,7 @@ app.post('/registration', sessions.attachSession, function(req, res) {
 
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
   function(req, res) {
-    var uuid = crypto.randomBytes(12).toString("hex");
+    var uuid = crypto.randomBytes(4).toString("hex");
     var token = tokenManager.encode({
       user: req.user,
       uuid: uuid
@@ -182,12 +182,12 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
         }
 
         var calls = records.filter(function(record) {
-          return record.version >= version;
+          return record.timestamp >= version;
         }).map(function(record) {
           return {
             apiKey: tokBox.apiKey,
             sessionId: record.sessionId,
-            token: record.token
+            token: record.calleeToken
           };
         });
 
