@@ -102,6 +102,16 @@ var conf = convict({
     format: "url",
     default: "http://localhost:3000/static/#call/{token}",
     env: "WEB_APP_URL"
+  },
+  sentryDSN: {
+    doc: "Sentry DSN",
+    format: function(val) {
+      if (!(typeof val === "string" || val === false)) {
+        throw new Error("should be either a sentryDSN or 'false'");
+      }
+    },
+    default: false,
+    env: "SENTRY_DSN"
   }
 });
 

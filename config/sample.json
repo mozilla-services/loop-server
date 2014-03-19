@@ -28,5 +28,6 @@
     "serverIP": "127.0.0.1",
     "tokenDuration": 86400
   },
-  "webAppUrl": "http://localhost:3000/static/#call/{token}"
+  "webAppUrl": "http://localhost:3000/static/#call/{token}",
+  "sentryDSN": false
 }
