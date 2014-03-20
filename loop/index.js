@@ -57,15 +57,10 @@ function validateSimplePushURL(reqDataObj) {
 }
 
 function validateToken(req, res, next) {
-  if (!req.param('token')) {
-    res.json(400, "miss the 'token' parameter");
-    return;
-  }
-
   try {
     req.token = tokenManager.decode(req.param('token'));
   } catch(err) {
-    res.json(400, err);
+    res.json(400, err.toString());
     return;
   }
   next();

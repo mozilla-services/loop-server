@@ -15,7 +15,6 @@ var validateToken = require("../loop").validateToken;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
-var validateToken = require("../loop").validateToken;
 
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
@@ -126,108 +125,6 @@ describe("HTTP API exposed by the server", function() {
             done();
           });
       });
-  });
-
-  describe("authentication middleware", function() {
-    var jsonReq;
-
-    // Create a route with the auth middleware installed.
-    app.post('/with-middleware', auth.isAuthenticated, function(req, res) {
-      res.json(200, req.user);
-    });
-
-    beforeEach(function() {
-      jsonReq = supertest(app)
-        .post('/with-middleware');
-    });
-
-    it("should require user authentication", function(done) {
-      jsonReq
-        .expect(401)
-        .end(function(err, res) {
-          if (err) throw err;
-          expect(res.headers['www-authenticate']).to.eql('BrowserID');
-          done();
-        });
-    });
-
-    it("should reject invalid browserid assertions", function(done) {
-      // Mock the calls to the external BrowserID verifier.
-      jsonReq
-        .set('Authorization', 'BrowserID ' + "invalid-assertion")
-        .expect(401)
-        .end(done);
-    });
-
-    it("should accept valid browserid assertions", function(done) {
-      jsonReq
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .expect(200)
-        .end(function(err, res) {
-          if (err) throw err;
-          done();
-        });
-    });
-
-    it("should set an 'user' property on the request object", function(done) {
-      jsonReq
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .expect(200)
-        .end(function(err, res) {
-          if (err) throw err;
-          expect(res.body).eql("alexis@notmyidea.org");
-          done();
-        });
-    });
-  });
-
-  describe("sessions middlewares", function() {
-
-    var withSession, withSessionRequired;
-
-    // Create a route with the attachSession middleware.
-    app.post('/with-session', sessions.attachSession,
-      function(req, res) {
-        res.json(200);
-      });
-
-    // Create a route with the requireSession middleware.
-    app.post('/with-session-required', sessions.requireSession,
-      function(req, res) {
-        res.json(200);
-      });
-
-    beforeEach(function() {
-      withSession = supertest(app).post("/with-session");
-      withSessionRequired = supertest(app).post("/with-session-required");
-    });
-
-    it("should accept a valid session cookie", function(done) {
-      withSessionRequired.set('Cookie', sessionCookie).expect(200).end(done);
-    });
-
-    it("should return an error if there is no session", function(done) {
-      withSessionRequired.expect(400).end(done);
-    });
-
-    it("should attach a session cookie if none is provided", function(done) {
-      withSession
-        .expect("Set-Cookie", /^loop-session=/)
-        .expect(200).end(function(err, res) {
-          expect(res.headers["set-cookie"][0]).to.not.equal(sessionCookie);
-          done(err);
-        });
-    });
-
-    it("should not attach a new cookie if one is provided", function(done) {
-      withSession
-        .set('Cookie', sessionCookie)
-        .expect(200).end(function(err, res) {
-          expect(res.headers["set-cookie"]).to.equal(undefined);
-          done(err);
-        });
-    });
-
   });
 
   describe("POST /call-url", function() {
