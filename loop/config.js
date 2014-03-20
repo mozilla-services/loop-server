@@ -107,7 +107,13 @@ var conf = convict({
 
 
 var env = conf.get('env');
-conf.loadFile('./config/' + env + '.json');
+try {
+  conf.loadFile('./config/' + env + '.json');
+} catch (err) {
+  console.log("Please create your config/" + env + ".json file.\n" +
+              "You can use config/sample.json as an example.\n");
+  process.exit(1);
+}
 
 conf.validate();
 

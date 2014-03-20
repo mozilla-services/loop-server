@@ -56,7 +56,16 @@ Then clone the loop server and install its dependencies:
 How to run it?
 --------------
 
+You can create your configuration file in `config/{NODE_ENV}.json`
+
+`development` is the environment by default.
+
     make runserver
+
+this is equivalent to:
+
+    NODE_ENV=development make runserver
+
 
 How to run the tests?
 ---------------------
