@@ -4,11 +4,23 @@
 "use strict";
 
 var expect = require("chai").expect;
+var supertest = require("supertest");
+var tokenlib = require("../loop/tokenlib");
+
+var app = require("../loop").app;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var validateSimplePushURL = require("../loop").validateSimplePushURL;
+var validateToken = require("../loop").validateToken;
+
 
 describe("index", function() {
+  var jsonReq;
+
+  beforeEach(function() {
+    jsonReq = supertest(app);
+  });
+
   describe("#hmac", function() {
 
     it("should raise on missing secret", function(done) {
@@ -60,6 +72,44 @@ describe("index", function() {
         simple_push_url: "http://www.mozilla.org"
       });
       done();
+    });
+  });
+
+  describe("#validateToken", function(){
+    // Create a route with the validateToken middleware installed.
+    app.get('/validateToken/:token', validateToken, function(req, res) {
+      res.json(200, "ok");
+    });
+
+    it("should return a 404 if the token is missing.", function(done) {
+      jsonReq
+        .get('/validateToken/')
+        .expect(404)
+        .end(done);
+    });
+
+    it("should return a 400 if the token is invalid.", function(done) {
+      jsonReq
+        .get('/validateToken/invalidToken/')
+        .expect(400, /Error: Invalid token size/)
+        .end(done);
+    });
+
+    it("should return a 200 if the token is valid.", function(done) {
+      var tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+
+      var token = tokenManager.encode({
+        uuid: "1234",
+        user: "natim"
+      });
+
+      jsonReq
+        .get('/validateToken/' + token)
+        .expect(200, /ok/)
+        .end(done);
     });
   });
 });
