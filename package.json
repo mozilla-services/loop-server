@@ -1,7 +1,7 @@
 {
   "name": "mozilla-loop-server",
   "description": "The Mozilla Loop (WebRTC App) server",
-  "version": "0.1.0",
+  "version": "0.2.0-DEV",
   "homepage": "https://github.com/mozilla/loop-server/",
   "license" : "MPL-2.0",
   "engines": {
