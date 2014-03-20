@@ -193,6 +193,8 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
   });
 
 app.get('/calls/:token', validateToken, function(req, res) {
+  res.set("Access-Control-Allow-Origin", conf.get('allowedOrigins'));
+  res.set("Access-Control-Allow-Methods", "GET,POST");
   res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
 });
 
@@ -236,6 +238,8 @@ app.post('/calls/:token', validateToken, requireParams("nickname"),
               form: {version: currentTimestamp}
             });
           });
+          res.set("Access-Control-Allow-Origin", conf.get('allowedOrigins'));
+          res.set("Access-Control-Allow-Methods", "GET,POST");
           res.json(200, {
             sessionId: tokboxInfo.sessionId,
             token: tokboxInfo.callerToken,

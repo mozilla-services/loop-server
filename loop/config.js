@@ -112,6 +112,12 @@ var conf = convict({
     },
     default: false,
     env: "SENTRY_DSN"
+  },
+  allowedOrigins: {
+    doc: "Authorized domains to do CORS",
+    format: String,
+    default: "",
+    env: "ALLOWED_ORIGINS"
   }
 });
 
@@ -133,6 +139,9 @@ if (conf.get('macSecret') === "")
 if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
 
+if (conf.get('allowedOrigins') === "") {
+  throw "Please defined the list of allowed origins for CORS.";
+}
 module.exports = {
   conf: conf,
   hexKeyOfSize: hexKeyOfSize,
