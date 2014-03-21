@@ -10,9 +10,8 @@ var tokenlib = require("../loop/tokenlib");
 var app = require("../loop").app;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
-var validateSimplePushURL = require("../loop").validateSimplePushURL;
 var validateToken = require("../loop").validateToken;
-
+var requireParams = require("../loop").requireParams;
 
 describe("index", function() {
   var jsonReq;
@@ -41,36 +40,6 @@ describe("index", function() {
         "Payload",
         conf.get("userMacSecret"),
         "sha1")).to.have.length(40);
-      done();
-    });
-  });
-
-  describe("#validateSimplePushURL", function(){
-    it("should receive an object", function(done){
-      expect(validateSimplePushURL).to.throw(/missing request data/);
-      done();
-    });
-
-    it("should receive a SimplePush URL", function(done){
-      expect(function(){
-        validateSimplePushURL({});
-      }).to.throw(/simple_push_url is required/);
-      done();
-    });
-
-    it("should receive a valid HTTP URL", function(done){
-      expect(function(){
-        validateSimplePushURL({simple_push_url: "Wrong URL"});
-      }).to.throw(/simple_push_url should be a valid url/);
-      done();
-    });
-
-    it("should handle valid SimplePush URL", function(done){
-      expect(validateSimplePushURL({
-        simple_push_url: "http://www.mozilla.org"
-      })).to.eql({
-        simple_push_url: "http://www.mozilla.org"
-      });
       done();
     });
   });
@@ -109,6 +78,53 @@ describe("index", function() {
       jsonReq
         .get('/validateToken/' + token)
         .expect(200, /ok/)
+        .end(done);
+    });
+  });
+
+  describe("#requireParams", function(){
+    // Create a route with the requireParams middleware installed.
+    app.post('/requireParams/', requireParams('a', 'b'), function(req, res) {
+      res.json(200, "ok");
+    });
+
+    it("should return a 406 if the body is not in JSON.", function(done) {
+      jsonReq
+        .post('/requireParams/')
+        .expect(406, /json/)
+        .end(done);
+    });
+
+    it("should return a 400 if one of the required params are missing.",
+      function(done) {
+        jsonReq
+          .post('/requireParams/')
+          .send({a: "Ok"})
+          .expect(400)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body.error).eql('missing: b');
+            done();
+          });
+      });
+
+    it("should return a 400 if all params are missing.", function(done) {
+      jsonReq
+        .post('/requireParams/')
+        .send({})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body.error).eql('missing: a, b');
+          done();
+        });
+    });
+
+    it("should return a 200 if all the params are presents.", function(done) {
+      jsonReq
+        .post('/requireParams/')
+        .send({a: "Ok", b: "Ok"})
+        .expect(200)
         .end(done);
     });
   });

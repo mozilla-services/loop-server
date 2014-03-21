@@ -50,22 +50,6 @@ var callsStore = getStore(
 
 var tokBox = new TokBox(conf.get('tokBox'));
 
-function validateSimplePushURL(reqDataObj) {
-  if (typeof reqDataObj !== 'object') {
-    throw new Error('missing request data');
-  }
-
-  if (!reqDataObj.hasOwnProperty('simple_push_url')) {
-    throw new Error('simple_push_url is required');
-  }
-
-  if (reqDataObj.simple_push_url.indexOf('http') !== 0) {
-    throw new Error('simple_push_url should be a valid url');
-  }
-
-  return reqDataObj;
-}
-
 function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
@@ -75,6 +59,29 @@ function validateToken(req, res, next) {
     return;
   }
   next();
+}
+
+function requireParams() {
+  var params = Array.prototype.slice.call(arguments);
+  return function(req, res, next) {
+    var missingParams;
+
+    if (req.headers['content-type'] !== 'application/json') {
+      res.json(406, ['application/json']);
+      return;
+    }
+
+    missingParams = params.filter(function(param) {
+      return req.body[param] === undefined;
+    });
+
+    if (missingParams.length > 0) {
+      res.json(400, {error: "missing: " + missingParams.join(", ")});
+      return;
+    }
+
+    next();
+  };
 }
 
 /**
@@ -123,36 +130,30 @@ app.get("/", function(req, res) {
   res.json(200, credentials);
 });
 
-app.post('/registration', sessions.attachSession, function(req, res) {
-  var validated;
-
-  if (req.headers['content-type'] !== 'application/json') {
-    res.json(406, ['application/json']);
-    return;
-  }
-
-  try {
-    validated = validateSimplePushURL(req.body);
-  } catch (err) {
-    res.json(400, {error: err.message});
-    return;
-  }
-
-  // XXX Bug 980289 —
-  // With FxA we will want to handle many SimplePushUrls per user.
-  var userHmac = hmac(req.user, conf.get('userMacSecret'));
-  urlsStore.updateOrCreate({userMac: userHmac}, {
-    userMac: userHmac,
-    simplepushURL: validated.simple_push_url
-  }, function(err, record){
-    if (err) {
-      logError(err);
-      res.json(503, "Service Unavailable");
+app.post('/registration',
+  sessions.attachSession, requireParams("simple_push_url"),
+  function(req, res) {
+    var simplePushURL = req.body.simple_push_url;
+    if (simplePushURL.indexOf('http') !== 0) {
+      res.json(400, {error: "simple_push_url should be a valid url"});
       return;
     }
-    res.json(200, "ok");
+
+    // XXX Bug 980289 —
+    // With FxA we will want to handle many SimplePushUrls per user.
+    var userHmac = hmac(req.user, conf.get('userMacSecret'));
+    urlsStore.updateOrCreate({userMac: userHmac}, {
+      userMac: userHmac,
+      simplepushURL: simplePushURL
+    }, function(err, record){
+      if (err) {
+        logError(err);
+        res.json(503, "Service Unavailable");
+        return;
+      }
+      res.json(200, "ok");
+    });
   });
-});
 
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
   function(req, res) {
@@ -166,19 +167,8 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
   });
 
 app.get("/calls", sessions.requireSession, sessions.attachSession,
-  function(req, res) {
-    var version;
-
-    if (req.headers['content-type'] !== 'application/json') {
-      res.json(406, ['application/json']);
-      return;
-    }
-
-    version = req.body.version;
-    if (version === undefined) {
-      res.json(400, "version is required");
-      return;
-    }
+  requireParams("version"), function(req, res) {
+    var version = req.body.version;
 
     callsStore.find({userMac: hmac(req.user, conf.get('userMacSecret'))},
       function(err, records) {
@@ -206,52 +196,55 @@ app.get('/calls/:token', validateToken, function(req, res) {
   res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
 });
 
-app.post('/calls/:token', validateToken, function(req, res) {
-  tokBox.getSessionTokens(function(err, tokboxInfo) {
-    if (err) {
-      logError(err);
-      res.json(503, "Service Unavailable");
-      return;
-    }
 
-    var currentTimestamp = new Date().getTime();
-
-    callsStore.add({
-      "uuid": req.token.uuid,
-      "userMac": hmac(req.token.user, conf.get("userMacSecret")),
-      "sessionId": tokboxInfo.sessionId,
-      "calleeToken": tokboxInfo.calleeToken,
-      "timestamp": currentTimestamp
-    }, function(err, record){
+app.post('/calls/:token', validateToken, requireParams("nickname"),
+  function(req, res) {
+    var nickname = req.body.nickname;
+    tokBox.getSessionTokens(function(err, tokboxInfo) {
       if (err) {
-        // XXX Handle database error messages.
+        logError(err);
         res.json(503, "Service Unavailable");
         return;
       }
-      urlsStore.find({
-        userMac: hmac(req.token.user, conf.get('userMacSecret'))
-      }, function(err, items) {
+
+      var currentTimestamp = new Date().getTime();
+
+      callsStore.add({
+        "caller": nickname,
+        "uuid": req.token.uuid,
+        "userMac": hmac(req.token.user, conf.get("userMacSecret")),
+        "sessionId": tokboxInfo.sessionId,
+        "calleeToken": tokboxInfo.calleeToken,
+        "timestamp": currentTimestamp
+      }, function(err, record){
         if (err) {
           logError(err);
           res.json(503, "Service Unavailable");
           return;
         }
-        // Call SimplePush urls.
-        items.forEach(function(item) {
-          request.put({
-            url: item.simplepushURL,
-            form: {version: currentTimestamp}
+        urlsStore.find({
+          userMac: hmac(req.token.user, conf.get('userMacSecret'))
+        }, function(err, items) {
+          if (err) {
+            res.json(503, "Service Unavailable");
+            return;
+          }
+          // Call SimplePush urls.
+          items.forEach(function(item) {
+            request.put({
+              url: item.simplepushURL,
+              form: {version: currentTimestamp}
+            });
           });
-        });
-        res.json(200, {
-          sessionId: tokboxInfo.sessionId,
-          token: tokboxInfo.callerToken,
-          apiKey: tokBox.apiKey
+          res.json(200, {
+            sessionId: tokboxInfo.sessionId,
+            token: tokboxInfo.callerToken,
+            apiKey: tokBox.apiKey
+          });
         });
       });
     });
   });
-});
 
 app.listen(conf.get('port'), conf.get('host'));
 console.log('Server listening on http://' +
@@ -263,8 +256,8 @@ module.exports = {
   urlsStore: urlsStore,
   callsStore: callsStore,
   hmac: hmac,
-  validateSimplePushURL: validateSimplePushURL,
   validateToken: validateToken,
+  requireParams: requireParams,
   request: request,
   tokBox: tokBox
 };
