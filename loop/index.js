@@ -167,8 +167,13 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
   });
 
 app.get("/calls", sessions.requireSession, sessions.attachSession,
-  requireParams("version"), function(req, res) {
-    var version = req.body.version;
+  function(req, res) {
+    if (!req.query.hasOwnProperty('version')) {
+      res.json(400, {error: "missing: version"});
+      return;
+    }
+
+    var version = req.query.version;
 
     callsStore.find({userMac: hmac(req.user, conf.get('userMacSecret'))},
       function(err, records) {

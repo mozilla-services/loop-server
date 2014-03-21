@@ -351,7 +351,6 @@ describe("HTTP API exposed by the server", function() {
         .get('/calls')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie)
-        .type('json')
         .expect('Content-Type', /json/);
 
       calls = [
@@ -394,7 +393,7 @@ describe("HTTP API exposed by the server", function() {
         };
       });
 
-      req.send({version: 0}).expect(200).end(function(err, res) {
+      req.query({version: 0}).expect(200).end(function(err, res) {
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
       });
@@ -407,7 +406,7 @@ describe("HTTP API exposed by the server", function() {
         sessionToken: calls[2].calleeToken
       }];
 
-      req.send({version: 2}).expect(200).end(function(err, res) {
+      req.query({version: 2}).expect(200).end(function(err, res) {
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
       });
@@ -423,25 +422,12 @@ describe("HTTP API exposed by the server", function() {
         .include(sessions.requireSession);
     });
 
-    it("should reject non-JSON requests", function(done) {
-      supertest(app)
-        .get('/calls')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .set('Cookie', sessionCookie)
-        .type('html')
-        .expect(406).end(function(err, res) {
-          if (err) throw err;
-          expect(res.body).eql(["application/json"]);
-          done();
-        });
-    });
-
     it("should answer a 503 if the database isn't available", function(done) {
       sandbox.stub(callsStore, "find", function(record, cb) {
         cb("error");
       });
 
-      req.send({version: 0}).expect(503).end(done);
+      req.query({version: 0}).expect(503).end(done);
     });
 
   });
