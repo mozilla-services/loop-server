@@ -64,9 +64,10 @@ function validateToken(req, res, next) {
 function requireParams() {
   var params = Array.prototype.slice.call(arguments);
   return function(req, res, next) {
-    var missingParams;
+    var missingParams,
+        contentType = req.headers['content-type'];
 
-    if (req.headers['content-type'] !== 'application/json') {
+    if (!contentType || contentType.indexOf('application/json') !== 0) {
       res.json(406, ['application/json']);
       return;
     }
