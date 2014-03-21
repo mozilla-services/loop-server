@@ -586,6 +586,10 @@ describe("HTTP API exposed by the server", function() {
             if (err) {
               throw err;
             }
+            var body = res.body;
+            expect(body).to.have.property('uuid');
+            delete body.uuid;
+
             expect(res.body).eql({
               sessionId: tokBoxSessionId,
               sessionToken: tokBoxCallerToken,
@@ -607,8 +611,10 @@ describe("HTTP API exposed by the server", function() {
                 throw err;
               }
               expect(items.length).eql(1);
+              expect(items[0].uuid).to.have.length(32);
               // We don't want to compare this, it's added by mongo.
               delete items[0]._id;
+              delete items[0].uuid;
               expect(items[0]).eql({
                 callerId: callerId,
                 uuid: uuid,
@@ -640,6 +646,78 @@ describe("HTTP API exposed by the server", function() {
           .end(done);
       });
     });
+  });
 
+  describe("DELETE /calls/id/:uuid", function() {
+
+    var requests, tokenManager, token, postReq, tokBoxSessionId,
+        tokBoxCallerToken, tokBoxCalleeToken;
+
+    beforeEach(function () {
+      requests = [];
+      var fakeCallInfo = conf.get("fakeCallInfo");
+      sandbox.useFakeTimers(fakeNow);
+      tokBoxSessionId = fakeCallInfo.session1;
+      tokBoxCalleeToken = fakeCallInfo.token1;
+      tokBoxCallerToken = fakeCallInfo.token2;
+
+      tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+
+      token = tokenManager.encode({
+        uuid: uuid,
+        user: user
+      });
+
+      sandbox.stub(request, "put", function(options) {
+        requests.push(options);
+      });
+
+      sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+        cb(null, {
+          sessionId: tokBoxSessionId,
+          callerToken: tokBoxCallerToken,
+          calleeToken: tokBoxCalleeToken
+        });
+      });
+
+      postReq = supertest(app).post('/calls/' + token)
+        .send({nickname: "foo"}).expect(200);
+    });
+
+    it("should return a 404 on an already delete call.", function(done) {
+      supertest(app)
+        .del('/calls/id/invalidUUID')
+        .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie)
+        .expect(404)
+        .end(done);
+    });
+
+    it("should return a 200 ok on an existing call.", function(done) {
+      postReq.end(function(err, res) {
+        if (err) {
+          throw err;
+        }
+        var uuid = res.body.uuid;
+
+        supertest(app)
+          .del('/calls/id/'+uuid)
+          .set('Authorization', 'BrowserID ' + expectedAssertion)
+          .set('Cookie', sessionCookie)
+          .expect(200)
+          .end(done);
+      });
+    });
+
+    it("should have the requireSession and attachSession middleware.",
+      function() {
+        expect(getMiddlewares('delete', '/calls/id/:uuid'))
+          .include(sessions.requireSession);
+        expect(getMiddlewares('delete', '/calls/id/:uuid'))
+          .include(sessions.attachSession);
+      });
   });
 });
