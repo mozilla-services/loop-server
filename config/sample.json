@@ -29,5 +29,6 @@
     "tokenDuration": 86400
   },
   "webAppUrl": "http://localhost:3000/static/#call/{token}",
-  "sentryDSN": false
+  "sentryDSN": false,
+  "allowedOrigins": "http://localhost:3000"
 }

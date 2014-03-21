@@ -319,7 +319,7 @@ describe("HTTP API exposed by the server", function() {
 
   });
 
-  describe("GET /calls/{call_token}", function() {
+  describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
       var tokenManager = new tokenlib.TokenManager({
         macSecret: conf.get('macSecret'),
@@ -332,6 +332,8 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .get('/calls/' + token)
         .expect("Location", conf.get("webAppUrl").replace("{token}", token))
+        .expect("Access-Control-Allow-Origin", conf.get('allowedOrigins'))
+        .expect("Access-Control-Allow-Methods", "GET,POST")
         .expect(302).end(done);
     });
 
@@ -509,7 +511,10 @@ describe("HTTP API exposed by the server", function() {
       });
 
       it("should accept valid call token", function(done) {
-        jsonReq.end(done);
+        jsonReq
+          .expect("Access-Control-Allow-Origin", conf.get('allowedOrigins'))
+          .expect("Access-Control-Allow-Methods", "GET,POST")
+          .end(done);
       });
 
       it.skip("should trigger all the simple push URLs of the user",
