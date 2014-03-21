@@ -257,6 +257,7 @@ module.exports = {
   callsStore: callsStore,
   hmac: hmac,
   validateToken: validateToken,
+  requireParams: requireParams,
   request: request,
   tokBox: tokBox
 };
