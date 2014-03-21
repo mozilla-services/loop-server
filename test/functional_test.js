@@ -240,6 +240,16 @@ describe("HTTP API exposed by the server", function() {
         });
     });
 
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=986578
+    it("should accept request with custom JSON content-type.", function(done) {
+      supertest(app)
+        .post('/call-url')
+        .send({})
+        .set('Cookie', sessionCookie)
+        .type('application/json; charset=utf-8')
+        .expect(200).end(done);
+    });
+
     it("should return a 200 if everything went fine", function(done) {
       jsonReq
         .send({'simple_push_url': pushURL})
