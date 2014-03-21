@@ -9,7 +9,7 @@ var base64 = require('urlsafe-base64');
 var tokenlib = require("../loop/tokenlib");
 var conf = require("../loop/config").conf;
 
-var ONE_MINUTE = 60 * 60 * 1000;
+var ONE_HOUR = 60 * 60 * 1000;
 
 describe("TokenManager", function() {
   "use strict";
@@ -24,7 +24,7 @@ describe("TokenManager", function() {
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
-    clock = sinon.useFakeTimers(fakeNow * 60 * 60 * 1000);
+    clock = sinon.useFakeTimers(fakeNow * ONE_HOUR);
 
     tokenManager = new tokenlib.TokenManager({
       encryptionSecret: encryptionSecret,
@@ -219,8 +219,8 @@ describe("TokenManager", function() {
     });
 
     it("should throw an error if the token expired", function() {
-      var tenMinutesAgo = (Date.now() / ONE_MINUTE) - 10;
-      var data = {some: "data", expires: tenMinutesAgo};
+      var tenHoursAgo = (Date.now() / ONE_HOUR) - 10;
+      var data = {some: "data", expires: tenHoursAgo};
       var token = tokenManager.encode(data);
       var failure = function() {
         tokenManager.decode(token);

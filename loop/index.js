@@ -56,17 +56,34 @@ var callsStore = getStore(
   {unique: ["userMac", "sessionId"]}
 );
 
+var urlsRevocationStore = getStore(
+  conf.get('urlsRevocationStore'),
+  {unique: ["uuid"]}
+);
+
 var tokBox = new TokBox(conf.get('tokBox'));
 
 function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
+    urlsRevocationStore.findOne({uuid: req.token.uuid}, function(err, record) {
+      if (err) {
+        logError(err);
+        res.json(503, "Service unavailable");
+        return;
+      }
+      if (record) {
+        console.log("expired")
+        res.json(400, "invalid token");
+        return;
+      }
+      next();
+    });
   } catch(err) {
     logError(err);
     res.json(400, "invalid token");
     return;
   }
-  next();
 }
 
 function requireParams() {
@@ -207,6 +224,25 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
 
 app.options('/calls/:token', corsEnabled);
 
+app.delete('/calls/:token', sessions.requireSession, sessions.attachSession,
+  validateToken, function(req, res) {
+    if (req.token.user !== req.user) {
+      res.json(403, "Forbidden");
+      return;
+    }
+    urlsRevocationStore.add({
+      uuid: req.token.uuid,
+      ttl: (req.token.expires * 60 * 60 * 1000) - new Date().getTime()
+    }, function(err, record) {
+      if (err) {
+        logError(err);
+        res.json(503, "Service Unavailable");
+        return;
+      }
+      res.json(200, "ok");
+    });
+  });
+
 app.get('/calls/:token', corsEnabled, validateToken, function(req, res) {
   res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
 });
@@ -272,6 +308,7 @@ module.exports = {
   conf: conf,
   urlsStore: urlsStore,
   callsStore: callsStore,
+  urlsRevocationStore: urlsRevocationStore,
   hmac: hmac,
   validateToken: validateToken,
   requireParams: requireParams,

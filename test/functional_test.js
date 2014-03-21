@@ -11,6 +11,7 @@ var app = require("../loop").app;
 var request = require('../loop').request;
 var urlsStore = require("../loop").urlsStore;
 var callsStore = require("../loop").callsStore;
+var urlsRevocationStore = require("../loop").urlsRevocationStore;
 var validateToken = require("../loop").validateToken;
 var corsEnabled = require("../loop").corsEnabled;
 var conf = require("../loop").conf;
@@ -94,7 +95,9 @@ describe("HTTP API exposed by the server", function() {
     sandbox.restore();
     urlsStore.drop(function() {
       callsStore.drop(function() {
-        done();
+        urlsRevocationStore.drop(function() {
+          done();
+        });
       });
     });
   });
@@ -388,6 +391,65 @@ describe("HTTP API exposed by the server", function() {
 
     it("should have the cors middleware installed.", function() {
       expect(getMiddlewares('get', '/calls/:token')).include(corsEnabled);
+    });
+  });
+
+  describe("DELETE /calls/:token", function() {
+    var token, tokenManager, req, clock;
+    beforeEach(function() {
+      clock = sinon.useFakeTimers(fakeNow);
+
+      tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret'),
+        timeout: 1 // Token expires in 1 hour.
+      });
+      token = tokenManager.encode({
+        uuid: uuid,
+        user: user
+      });
+      req = supertest(app)
+        .del('/calls/' + token)
+        .set('Authorization', 'BrowserID ' + expectedAssertion)
+        .set('Cookie', sessionCookie);
+    });
+
+    it("should add the token uuid in the revocation list", function(done) {
+      req.expect(200).end(function(err, res) {
+        if (err) {
+          throw err;
+        }
+        urlsRevocationStore.findOne({uuid: uuid}, function(err, record) {
+          expect(record.uuid).eql(uuid);
+          // The expiration date of the token is rounded to the hour.
+          expect(record.ttl).within(60 * 60 * 1000, 2 * 60 * 60 * 1000);
+          done();
+        });
+      });
+    });
+
+    it("should return a 503 is the database is not available", function(done) {
+      sandbox.stub(urlsRevocationStore, "findOne", function(record, cb) {
+        cb("error");
+      });
+      req.expect(503).end(done);
+    });
+
+    it("should return a 403 if the token doesn't belong to the user",
+      function(done){
+        var token = tokenManager.encode({
+          uuid: "1234",
+          user: "h4x0r"
+        });
+        req = supertest(app)
+          .del('/calls/' + token)
+          .set('Authorization', 'BrowserID ' + expectedAssertion)
+          .set('Cookie', sessionCookie)
+          .expect(403).end(done);
+      });
+
+    it("should have the validateToken middleware installed", function() {
+      expect(getMiddlewares('delete', '/calls/:token')).include(validateToken);
     });
   });
 
