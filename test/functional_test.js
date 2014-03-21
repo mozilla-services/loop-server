@@ -390,7 +390,7 @@ describe("HTTP API exposed by the server", function() {
         return {
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
-          token: call.calleeToken
+          sessionToken: call.calleeToken
         };
       });
 
@@ -404,7 +404,7 @@ describe("HTTP API exposed by the server", function() {
       var callsList = [{
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
-        token: calls[2].calleeToken
+        sessionToken: calls[2].calleeToken
       }];
 
       req.send({version: 2}).expect(200).end(function(err, res) {
@@ -548,7 +548,7 @@ describe("HTTP API exposed by the server", function() {
             }
             expect(res.body).eql({
               sessionId: tokBoxSessionId,
-              token: tokBoxCallerToken,
+              sessionToken: tokBoxCallerToken,
               apiKey: tokBox.apiKey
             });
             done();

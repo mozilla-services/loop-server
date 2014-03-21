@@ -184,7 +184,7 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
           return {
             apiKey: tokBox.apiKey,
             sessionId: record.sessionId,
-            token: record.calleeToken
+            sessionToken: record.calleeToken
           };
         });
 
@@ -242,7 +242,7 @@ app.post('/calls/:token', validateToken, requireParams("nickname"),
           res.set("Access-Control-Allow-Methods", "GET,POST");
           res.json(200, {
             sessionId: tokboxInfo.sessionId,
-            token: tokboxInfo.callerToken,
+            sessionToken: tokboxInfo.callerToken,
             apiKey: tokBox.apiKey
           });
         });
