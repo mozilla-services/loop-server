@@ -91,6 +91,7 @@ describe("index", function() {
     it("should return a 406 if the body is not in JSON.", function(done) {
       jsonReq
         .post('/requireParams/')
+        .set('Accept', 'text/html')
         .expect(406, /json/)
         .end(done);
     });
