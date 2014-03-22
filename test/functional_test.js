@@ -230,14 +230,24 @@ describe("HTTP API exposed by the server", function() {
     it("should reject non-JSON requests", function(done) {
       supertest(app)
         .post('/registration')
+        .set('Accept', 'text/html')
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie)
-        .type('html')
         .expect(406).end(function(err, res) {
           if (err) throw err;
           expect(res.body).eql(["application/json"]);
           done();
         });
+    });
+
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=986578
+    it("should accept request with custom JSON content-type.", function(done) {
+      supertest(app)
+        .post('/call-url')
+        .send({})
+        .set('Cookie', sessionCookie)
+        .type('application/json; charset=utf-8')
+        .expect(200).end(done);
     });
 
     it("should return a 200 if everything went fine", function(done) {

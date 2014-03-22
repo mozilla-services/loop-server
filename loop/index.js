@@ -66,7 +66,7 @@ function requireParams() {
   return function(req, res, next) {
     var missingParams;
 
-    if (req.headers['content-type'] !== 'application/json') {
+    if (!req.accepts("json")) {
       res.json(406, ['application/json']);
       return;
     }
