@@ -164,11 +164,12 @@ app.post('/registration',
   });
 
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
-  function(req, res) {
+  requireParams('callerId'), function(req, res) {
     var uuid = crypto.randomBytes(4).toString("hex");
     var token = tokenManager.encode({
       user: req.user,
-      uuid: uuid
+      uuid: uuid,
+      callerId: req.body.callerId
     });
     var host = req.protocol + "://" + req.get('host');
     res.json(200, {call_url: host + "/calls/" + token});
@@ -212,8 +213,7 @@ app.get('/calls/:token', corsEnabled, validateToken, function(req, res) {
 });
 
 app.post('/calls/:token', corsEnabled, validateToken,
-  requireParams("nickname"), function(req, res) {
-    var nickname = req.body.nickname;
+  function(req, res) {
     tokBox.getSessionTokens(function(err, tokboxInfo) {
       if (err) {
         logError(err);
@@ -224,7 +224,7 @@ app.post('/calls/:token', corsEnabled, validateToken,
       var currentTimestamp = new Date().getTime();
 
       callsStore.add({
-        "caller": nickname,
+        "callerId": req.token.callerId,
         "uuid": req.token.uuid,
         "userMac": hmac(req.token.user, conf.get("userMacSecret")),
         "sessionId": tokboxInfo.sessionId,
