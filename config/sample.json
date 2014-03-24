@@ -30,5 +30,5 @@
   },
   "webAppUrl": "http://localhost:3000/static/#call/{token}",
   "sentryDSN": false,
-  "allowedOrigins": "http://localhost:3000"
+  "allowedOrigins": ["http://localhost:3000"]
 }

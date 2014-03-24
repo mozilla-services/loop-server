@@ -114,10 +114,9 @@ var conf = convict({
     env: "SENTRY_DSN"
   },
   allowedOrigins: {
-    doc: "Authorized domains to do CORS",
-    format: String,
-    default: "",
-    env: "ALLOWED_ORIGINS"
+    doc: "Authorized origins for cross-origin requests.",
+    format: Array,
+    default: ['http://localhost:3000']
   }
 });
 
