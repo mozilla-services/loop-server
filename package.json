@@ -18,7 +18,8 @@
     "client-sessions": "0.6.0",
     "request": "2.34.0",
     "opentok": "1.0.2",
-    "raven": "0.6.2"
+    "raven": "0.6.2",
+    "cors": "2.2"
   },
   "devDependencies": {
     "awsbox": "0.6.x",

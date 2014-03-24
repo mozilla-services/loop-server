@@ -14,6 +14,7 @@ var crypto = require('crypto');
 var pjson = require('../package.json');
 var request = require('request');
 var raven = require('raven');
+var cors = require('cors');
 
 var TokBox = require('./tokbox').TokBox;
 
@@ -32,6 +33,13 @@ app.use(sessions.clientSessions);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
+
+var corsEnabled = cors({
+  origin: function(origin, callback) {
+    var acceptedOrigin = conf.get('allowedOrigins').indexOf(origin) !== -1;
+    callback(null, acceptedOrigin);
+  }
+});
 
 var tokenManager = new tokenlib.TokenManager({
   macSecret: conf.get('macSecret'),
@@ -197,15 +205,14 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
       });
   });
 
-app.get('/calls/:token', validateToken, function(req, res) {
-  res.set("Access-Control-Allow-Origin", conf.get('allowedOrigins'));
-  res.set("Access-Control-Allow-Methods", "GET,POST");
+app.options('/calls/:token', corsEnabled);
+
+app.get('/calls/:token', corsEnabled, validateToken, function(req, res) {
   res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
 });
 
-
-app.post('/calls/:token', validateToken, requireParams("nickname"),
-  function(req, res) {
+app.post('/calls/:token', corsEnabled, validateToken,
+  requireParams("nickname"), function(req, res) {
     var nickname = req.body.nickname;
     tokBox.getSessionTokens(function(err, tokboxInfo) {
       if (err) {
@@ -255,9 +262,10 @@ app.post('/calls/:token', validateToken, requireParams("nickname"),
     });
   });
 
-app.listen(conf.get('port'), conf.get('host'));
-console.log('Server listening on http://' +
-            conf.get('host') + ':' + conf.get('port'));
+app.listen(conf.get('port'), conf.get('host'), function(){
+  console.log('Server listening on http://' +
+              conf.get('host') + ':' + conf.get('port'));
+});
 
 module.exports = {
   app: app,
@@ -267,6 +275,7 @@ module.exports = {
   hmac: hmac,
   validateToken: validateToken,
   requireParams: requireParams,
+  corsEnabled: corsEnabled,
   request: request,
   tokBox: tokBox
 };

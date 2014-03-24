@@ -12,6 +12,7 @@ var request = require('../loop').request;
 var urlsStore = require("../loop").urlsStore;
 var callsStore = require("../loop").callsStore;
 var validateToken = require("../loop").validateToken;
+var corsEnabled = require("../loop").corsEnabled;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
@@ -329,6 +330,42 @@ describe("HTTP API exposed by the server", function() {
 
   });
 
+  describe("OPTIONS /calls/:token", function() {
+    var genuineOrigins = conf.get('allowedOrigins');
+
+    beforeEach(function() {
+      conf.set('allowedOrigins', ['http://mozilla.org', 'http://mozilla.com']);
+    });
+
+    afterEach(function() {
+      conf.set('allowedOrigins', genuineOrigins);
+    });
+
+    it("should authorize allowed origins to to CORS", function(done) {
+      supertest(app)
+        .options('/calls/token')
+        .set('Origin', 'http://mozilla.org')
+        .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
+        .expect('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE')
+        .end(done);
+    });
+
+    it("should reject unauthorized origins to do CORS", function(done) {
+      supertest(app)
+        .options('/calls/token')
+        .set('Origin', 'http://not-authorized')
+        .end(function(err, res) {
+          expect(res.headers)
+            .not.to.have.property('Access-Control-Allow-Origin');
+          done();
+        });
+    });
+
+    it("should have the cors middleware installed.", function() {
+      expect(getMiddlewares('options', '/calls/:token')).include(corsEnabled);
+    });
+  });
+
   describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
       var tokenManager = new tokenlib.TokenManager({
@@ -342,14 +379,15 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .get('/calls/' + token)
         .expect("Location", conf.get("webAppUrl").replace("{token}", token))
-        .expect("Access-Control-Allow-Origin", conf.get('allowedOrigins'))
-        .expect("Access-Control-Allow-Methods", "GET,POST")
         .expect(302).end(done);
     });
 
     it("should have the validateToken middleware installed.", function() {
-      expect(getMiddlewares('get', '/calls/:token'))
-        .include(validateToken);
+      expect(getMiddlewares('get', '/calls/:token')).include(validateToken);
+    });
+
+    it("should have the cors middleware installed.", function() {
+      expect(getMiddlewares('get', '/calls/:token')).include(corsEnabled);
     });
   });
 
@@ -478,6 +516,10 @@ describe("HTTP API exposed by the server", function() {
       expect(getMiddlewares('post', '/calls/:token')).include(validateToken);
     });
 
+    it("should have the cors middleware installed.", function() {
+      expect(getMiddlewares('post', '/calls/:token')).include(corsEnabled);
+    });
+
     it("should require a nickname parameter", function(done) {
       emptyReq.send({}).expect(400).end(function(err, res) {
         if (err) throw err;
@@ -495,7 +537,7 @@ describe("HTTP API exposed by the server", function() {
         .end(done);
     });
 
-    describe("With working tokbox APIs", function() {
+    describe("with working tokbox APIs", function() {
       beforeEach(function() {
         sandbox.stub(tokBox, "getSessionTokens", function(cb) {
           cb(null, {
@@ -507,10 +549,7 @@ describe("HTTP API exposed by the server", function() {
       });
 
       it("should accept valid call token", function(done) {
-        jsonReq
-          .expect("Access-Control-Allow-Origin", conf.get('allowedOrigins'))
-          .expect("Access-Control-Allow-Methods", "GET,POST")
-          .end(done);
+        jsonReq.end(done);
       });
 
       it.skip("should trigger all the simple push URLs of the user",
