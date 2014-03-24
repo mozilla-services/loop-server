@@ -43,6 +43,18 @@ function intersection(array1, array2) {
   });
 }
 
+function expectFormatedError(body, location, name, description) {
+  if (typeof description === "undefined") {
+    description = "missing: " + name;
+  }
+  expect(body).eql({
+    status: "errors",
+    errors: [{location: location,
+              name: name,
+              description: description}]
+  });
+}
+
 function register(url, assertion, cookie, cb) {
   supertest(app)
     .post('/registration')
@@ -157,7 +169,7 @@ describe("HTTP API exposed by the server", function() {
     it("should require a callerId parameter", function(done) {
       jsonReq.send({}).expect(400).end(function(err, res) {
         if (err) throw err;
-        expect(res.body.error).eql('missing: callerId');
+        expectFormatedError(res.body, "body", "callerId");
         done();
       });
     });
@@ -224,8 +236,9 @@ describe("HTTP API exposed by the server", function() {
         .send({}) // XXX sending nothing fails here, investigate
         .expect(400)
         .end(function(err, res) {
+          console.log(res);
           if (err) throw err;
-          expect(res.body.error).eql('missing: simple_push_url');
+          expectFormatedError(res.body, "body", "simple_push_url");
           done();
         });
     });
@@ -236,7 +249,8 @@ describe("HTTP API exposed by the server", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expect(res.body.error).eql('simple_push_url should be a valid url');
+          expectFormatedError(res.body, "body", "simple_push_url",
+                              "simple_push_url should be a valid url");
           done();
         });
     });
@@ -598,7 +612,6 @@ describe("HTTP API exposed by the server", function() {
         emptyReq = supertest(app).post('/calls/' + token);
         jsonReq = supertest(app)
           .post('/calls/' + token)
-          .send({nickname: "foo"})
           .expect(200);
       });
 
