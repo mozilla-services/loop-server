@@ -15,6 +15,7 @@ var pjson = require('../package.json');
 var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
+var errors = require('./errors');
 
 var TokBox = require('./tokbox').TokBox;
 
@@ -29,6 +30,7 @@ var app = express();
 
 app.use(express.json());
 app.use(express.urlencoded());
+app.use(errors);
 app.use(sessions.clientSessions);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
@@ -73,14 +75,14 @@ function validateToken(req, res, next) {
         return;
       }
       if (record) {
-        res.json(400, "invalid token");
+        res.sendError("url", "token", "invalid token");
         return;
       }
       next();
     });
   } catch(err) {
     logError(err);
-    res.json(400, "invalid token");
+    res.sendError("url", "token", "invalid token");
     return;
   }
 }
@@ -100,10 +102,11 @@ function requireParams() {
     });
 
     if (missingParams.length > 0) {
-      res.json(400, {error: "missing: " + missingParams.join(", ")});
-      return;
+      missingParams.forEach(function(item) {
+        res.addError("body", item, "missing: " + item);
+      });
+      res.sendError();
     }
-
     next();
   };
 }
@@ -159,7 +162,8 @@ app.post('/registration',
   function(req, res) {
     var simplePushURL = req.body.simple_push_url;
     if (simplePushURL.indexOf('http') !== 0) {
-      res.json(400, {error: "simple_push_url should be a valid url"});
+      res.sendError("body", "simple_push_url",
+                    "simple_push_url should be a valid url");
       return;
     }
 
@@ -194,7 +198,7 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
 app.get("/calls", sessions.requireSession, sessions.attachSession,
   function(req, res) {
     if (!req.query.hasOwnProperty('version')) {
-      res.json(400, {error: "missing: version"});
+      res.sendError("querystring", "version", "missing: version");
       return;
     }
 
