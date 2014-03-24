@@ -222,15 +222,12 @@ app.post('/calls/:token', corsEnabled, validateToken,
       }
 
       var currentTimestamp = new Date().getTime();
-
-      // Call ID
       var uuid = crypto.randomBytes(16).toString("hex");
 
       callsStore.add({
         "callerId": req.token.callerId,
         "uuid": uuid,
         "userMac": hmac(req.token.user, conf.get("userMacSecret")),
-        "caller": nickname,
         "sessionId": tokboxInfo.sessionId,
         "calleeToken": tokboxInfo.calleeToken,
         "timestamp": currentTimestamp
@@ -267,6 +264,22 @@ app.post('/calls/:token', corsEnabled, validateToken,
     });
   });
 
+app.get('/calls/id/:uuid', function(req, res) {
+  var uuid = req.param('uuid');
+  callsStore.findOne({uuid: uuid}, function(err, result) {
+    if (err) {
+      logError(err);
+      res.json(503, "Service Unavailable");
+      return;
+    }
+    if (result === null) {
+      res.json(404, {error: "Call " + uuid + " not found."});
+      return;
+    }
+    res.json(200, "ok");
+  });
+});
+
 app.delete('/calls/id/:uuid', sessions.requireSession, sessions.attachSession,
   function(req, res) {
     var uuid = req.param('uuid');
@@ -278,6 +291,7 @@ app.delete('/calls/id/:uuid', sessions.requireSession, sessions.attachSession,
 
     callsStore.delete(query, function(err, result) {
       if (err) {
+        logError(err);
         res.json(503, "Service Unavailable");
         return;
       }
@@ -285,7 +299,7 @@ app.delete('/calls/id/:uuid', sessions.requireSession, sessions.attachSession,
         res.json(404, {error: "Call " + uuid + " not found."});
         return;
       }
-      res.json(200, "ok");
+      res.json(204, "");
     });
   });
 

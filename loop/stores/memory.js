@@ -145,10 +145,13 @@ module.exports = function MemoryStore(settings, options) {
 
     /**
      * Delete a single record matching all the criterias defined by the
-     * query object. Sends undefined if no record was found.
+     * query object.
      *
      * @param  {Object}   query Query object
      * @param  {Function} cb    Callback(err, records)
+     *
+     * `records = null` if no record is found.
+     *
      */
     delete: function(query, cb) {
       this.find(query, function(err, records) {
@@ -157,13 +160,15 @@ module.exports = function MemoryStore(settings, options) {
           return;
         }
 
-        var copy = JSON.parse(JSON.stringify(records));
+        var recordsCopy = JSON.parse(JSON.stringify(records));
         records.forEach(function(item) {
           var i = _db.indexOf(item);
-          if (i != -1) _db.splice(i, 1);
+          if (i != -1) {
+            _db.splice(i, 1);
+          }
         });
 
-        cb(null, copy);
+        cb(null, recordsCopy);
       });
     },
 
