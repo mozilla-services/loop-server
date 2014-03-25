@@ -27,6 +27,7 @@ var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
 var userHmac = hmac(user, conf.get("userMacSecret"));
 var uuid = "1234";
+var callerId = 'natim@mozilla.com';
 
 function getMiddlewares(method, url) {
   return app.routes[method].filter(function(e){
@@ -134,7 +135,6 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function() {
       jsonReq = supertest(app)
         .post('/call-url')
-        .send({})
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie)
         .type('json')
@@ -150,6 +150,14 @@ describe("HTTP API exposed by the server", function() {
         .include(sessions.requireSession);
     });
 
+    it("should require a callerId parameter", function(done) {
+      jsonReq.send({}).expect(400).end(function(err, res) {
+        if (err) throw err;
+        expect(res.body.error).eql('missing: callerId');
+        done();
+      });
+    });
+
     it("should generate a valid call-url", function(done) {
       var clock = sinon.useFakeTimers(fakeNow);
       var tokenManager = new tokenlib.TokenManager({
@@ -160,6 +168,7 @@ describe("HTTP API exposed by the server", function() {
       jsonReq
         .set('Cookie', sessionCookie)
         .expect(200)
+        .send({callerId: callerId})
         .end(function(err, res) {
           var callUrl = res.body && res.body.call_url, token;
 
@@ -245,7 +254,7 @@ describe("HTTP API exposed by the server", function() {
     it("should accept request with custom JSON content-type.", function(done) {
       supertest(app)
         .post('/call-url')
-        .send({})
+        .send({callerId: callerId})
         .set('Cookie', sessionCookie)
         .type('application/json; charset=utf-8')
         .expect(200).end(done);
@@ -374,7 +383,8 @@ describe("HTTP API exposed by the server", function() {
       });
       var token = tokenManager.encode({
         uuid: uuid,
-        user: user
+        user: user,
+        callerId: callerId
       });
       supertest(app)
         .get('/calls/' + token)
@@ -403,21 +413,21 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          caller:       "foo",
+          callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           timestamp:    0
         },
         {
-          caller:       "foo",
+          callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           timestamp:    1
         },
         {
-          caller:       "bar",
+          callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
@@ -500,7 +510,8 @@ describe("HTTP API exposed by the server", function() {
 
       token = tokenManager.encode({
         uuid: uuid,
-        user: user
+        user: user,
+        callerId: callerId
       });
 
       sandbox.stub(request, "put", function(options) {
@@ -508,8 +519,10 @@ describe("HTTP API exposed by the server", function() {
       });
 
       emptyReq = supertest(app).post('/calls/' + token);
-      jsonReq = supertest(app).post('/calls/' + token)
-        .send({nickname: "foo"}).expect(200);
+      jsonReq = supertest(app)
+        .post('/calls/' + token)
+        .send()
+        .expect(200);
     });
 
     it("should have the token validation middleware installed", function() {
@@ -518,14 +531,6 @@ describe("HTTP API exposed by the server", function() {
 
     it("should have the cors middleware installed.", function() {
       expect(getMiddlewares('post', '/calls/:token')).include(corsEnabled);
-    });
-
-    it("should require a nickname parameter", function(done) {
-      emptyReq.send({}).expect(400).end(function(err, res) {
-        if (err) throw err;
-        expect(res.body.error).eql('missing: nickname');
-        done();
-      });
     });
 
     it("should return a 503 if tokbox API errors out", function(done) {
@@ -605,7 +610,7 @@ describe("HTTP API exposed by the server", function() {
               // We don't want to compare this, it's added by mongo.
               delete items[0]._id;
               expect(items[0]).eql({
-                caller: "foo",
+                callerId: callerId,
                 uuid: uuid,
                 userMac: userHmac,
                 sessionId: tokBoxSessionId,
