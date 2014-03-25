@@ -476,6 +476,7 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
+          uuid:         crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
@@ -483,6 +484,7 @@ describe("HTTP API exposed by the server", function() {
           timestamp:    0
         },
         {
+          uuid:         crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
@@ -490,6 +492,7 @@ describe("HTTP API exposed by the server", function() {
           timestamp:    1
         },
         {
+          uuid:         crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
@@ -508,6 +511,7 @@ describe("HTTP API exposed by the server", function() {
     it("should list existing calls", function(done) {
       var callsList = calls.map(function(call) {
         return {
+          uuid: call.uuid,
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken
@@ -522,6 +526,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
+        uuid: calls[2].uuid,
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken
