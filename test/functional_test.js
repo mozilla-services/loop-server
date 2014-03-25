@@ -6,6 +6,7 @@
 var expect = require("chai").expect;
 var supertest = require("supertest");
 var sinon = require("sinon");
+var crypto = require("crypto");
 
 var app = require("../loop").app;
 var request = require('../loop').request;
@@ -490,9 +491,8 @@ describe("HTTP API exposed by the server", function() {
 
   });
 
-  describe("POST /calls/:token", function() {
-
-    var emptyReq, requests, tokenManager, token, jsonReq, tokBoxSessionId,
+  describe("with tokens", function() {
+    var requests, tokenManager, token, jsonReq, tokBoxSessionId,
         tokBoxCallerToken, tokBoxCalleeToken;
 
     beforeEach(function () {
@@ -518,32 +518,153 @@ describe("HTTP API exposed by the server", function() {
         requests.push(options);
       });
 
-      emptyReq = supertest(app).post('/calls/' + token);
       jsonReq = supertest(app)
         .post('/calls/' + token)
         .send()
         .expect(200);
     });
 
-    it("should have the token validation middleware installed", function() {
-      expect(getMiddlewares('post', '/calls/:token')).include(validateToken);
-    });
+    describe("POST /calls/:token", function() {
+      var emptyReq;
 
-    it("should have the cors middleware installed.", function() {
-      expect(getMiddlewares('post', '/calls/:token')).include(corsEnabled);
-    });
-
-    it("should return a 503 if tokbox API errors out", function(done) {
-      sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-        cb("error");
-      });
-      jsonReq
-        .expect(503)
-        .end(done);
-    });
-
-    describe("with working tokbox APIs", function() {
       beforeEach(function() {
+        emptyReq = supertest(app).post('/calls/' + token);
+        jsonReq = supertest(app)
+          .post('/calls/' + token)
+          .send({nickname: "foo"})
+          .expect(200);
+      });
+
+      it("should have the cors middleware installed.", function() {
+        expect(getMiddlewares('post', '/calls/:token')).include(corsEnabled);
+      });
+
+      it("should have the token validation middleware installed", function() {
+        expect(getMiddlewares('post', '/calls/:token')).include(validateToken);
+      });
+
+      it("should return a 503 if tokbox API errors out", function(done) {
+        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          cb("error");
+        });
+        jsonReq
+          .expect(503)
+          .end(done);
+      });
+
+      describe("With working tokbox APIs", function() {
+
+        beforeEach(function() {
+          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+            cb(null, {
+              sessionId: tokBoxSessionId,
+              callerToken: tokBoxCallerToken,
+              calleeToken: tokBoxCalleeToken
+            });
+          });
+        });
+
+        it("should accept valid call token", function(done) {
+          jsonReq.end(done);
+        });
+
+        // XXX Bug 985387: Handle a SP Url per device
+        it.skip("should trigger all the simple push URLs of the user",
+          function(done) {
+            var url1 = "http://www.example.org";
+            var url2 = "http://www.mozilla.org";
+
+            register(url1, expectedAssertion, sessionCookie, function() {
+              register(url2, expectedAssertion, sessionCookie, function() {
+                jsonReq.end(function(err, res) {
+                  if (err) {
+                    throw err;
+                  }
+                  expect(intersection(requests.map(function(record) {
+                    return record.url;
+                  }), [url1, url2]).length).eql(2);
+                  expect(requests.every(function(record) {
+                    return record.form.version === fakeNow;
+                  }));
+                  done();
+                });
+              });
+            });
+          });
+
+        it("should return sessionId, apiKey and caller token info",
+          function(done) {
+            jsonReq.end(function(err, res) {
+              if (err) {
+                throw err;
+              }
+
+              var body = res.body;
+              expect(body).to.have.property('uuid');
+              delete body.uuid;
+
+              expect(res.body).eql({
+                sessionId: tokBoxSessionId,
+                sessionToken: tokBoxCallerToken,
+                apiKey: tokBox.apiKey
+              });
+              done();
+            });
+          });
+
+        it("should store sessionId and callee token info in database",
+          function(done) {
+            jsonReq.end(function(err, res) {
+              if (err) {
+                throw err;
+              }
+
+              callsStore.find({userMac: userHmac}, function(err, items) {
+                if (err) {
+                  throw err;
+                }
+                expect(items.length).eql(1);
+                expect(items[0].uuid).to.have.length(32);
+                // We don't want to compare this, it's added by mongo.
+                delete items[0]._id;
+                delete items[0].uuid;
+                expect(items[0]).eql({
+                  callerId: callerId,
+                  userMac: userHmac,
+                  sessionId: tokBoxSessionId,
+                  calleeToken: tokBoxCalleeToken,
+                  timestamp: fakeNow
+                });
+                done();
+              });
+            });
+          });
+
+        it("should return a 503 if callsStore is not available",
+          function(done) {
+            sandbox.stub(callsStore, "add", function(record, cb) {
+              cb("error");
+            });
+            jsonReq
+              .expect(503)
+              .end(done);
+          });
+
+        it("should return a 503 if urlsStore is not available", function(done) {
+          sandbox.stub(urlsStore, "find", function(query, cb) {
+            cb("error");
+          });
+          jsonReq
+            .expect(503)
+            .end(done);
+        });
+      });
+    });
+
+    describe("GET /calls/id/:uuid", function() {
+      var baseReq;
+
+      beforeEach(function () {
         sandbox.stub(tokBox, "getSessionTokens", function(cb) {
           cb(null, {
             sessionId: tokBoxSessionId,
@@ -551,95 +672,94 @@ describe("HTTP API exposed by the server", function() {
             calleeToken: tokBoxCalleeToken
           });
         });
+
+        baseReq = supertest(app)
+          .post('/calls/' + token)
+          .send({nickname: "foo"})
+          .expect(200);
       });
 
-      it("should accept valid call token", function(done) {
-        jsonReq.end(done);
-      });
-
-      it.skip("should trigger all the simple push URLs of the user",
+      it("should return a 503 if the database is not available.",
         function(done) {
-          var url1 = "http://www.example.org";
-          var url2 = "http://www.mozilla.org";
-
-          register(url1, expectedAssertion, sessionCookie, function() {
-            register(url2, expectedAssertion, sessionCookie, function() {
-              jsonReq.end(function(err, res) {
-                if (err) {
-                  throw err;
-                }
-                expect(intersection(requests.map(function(record) {
-                  return record.url;
-                }), [url1, url2]).length).eql(2);
-                expect(requests.every(function(record) {
-                  return record.form.version === fakeNow;
-                }));
-                done();
-              });
-            });
+          sandbox.stub(callsStore, "findOne", function(query, cb) {
+            cb(new Error("error"));
           });
+
+          var fakeUUID = crypto.randomBytes(16).toString('hex');
+
+          supertest(app)
+            .get('/calls/id/' + fakeUUID)
+            .expect(503)
+            .end(done);
         });
 
-      it("should return sessionId, apiKey and caller token info",
-        function(done) {
-          jsonReq.end(function(err, res) {
-            if (err) {
-              throw err;
-            }
-            expect(res.body).eql({
-              sessionId: tokBoxSessionId,
-              sessionToken: tokBoxCallerToken,
-              apiKey: tokBox.apiKey
-            });
-            done();
-          });
-        });
-
-      it("should store sessionId and callee token info in database",
-        function(done) {
-          jsonReq.end(function(err, res) {
-            if (err) {
-              throw err;
-            }
-
-            callsStore.find({userMac: userHmac}, function(err, items) {
-              if (err) {
-                throw err;
-              }
-              expect(items.length).eql(1);
-              // We don't want to compare this, it's added by mongo.
-              delete items[0]._id;
-              expect(items[0]).eql({
-                callerId: callerId,
-                uuid: uuid,
-                userMac: userHmac,
-                sessionId: tokBoxSessionId,
-                calleeToken: tokBoxCalleeToken,
-                timestamp: fakeNow
-              });
-              done();
-            });
-          });
-        });
-
-      it("should return a 503 if callsStore is not available", function(done) {
-        sandbox.stub(callsStore, "add", function(record, cb) {
-          cb("error");
-        });
-        jsonReq
-          .expect(503)
+      it("should return a 404 if the call doesn't exists.", function(done) {
+        supertest(app)
+          .get('/calls/id/invalidUUID')
+          .expect(404)
           .end(done);
       });
 
-      it("should return a 503 if urlsStore is not available", function(done) {
-        sandbox.stub(urlsStore, "find", function(query, cb) {
-          cb("error");
-        });
-        jsonReq
-          .expect(503)
-          .end(done);
+      it("should return a 200 if the call exists.", function(done) {
+        baseReq.end(function(req, res) {
+            supertest(app)
+              .get('/calls/id/' + res.body.uuid)
+              .expect(200)
+              .end(done);
+          });
       });
     });
 
+    describe("DELETE /calls/id/:uuid", function() {
+
+      var createCall;
+
+      beforeEach(function () {
+        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          cb(null, {
+            sessionId: tokBoxSessionId,
+            callerToken: tokBoxCallerToken,
+            calleeToken: tokBoxCalleeToken
+          });
+        });
+        createCall = supertest(app)
+          .post('/calls/' + token)
+          .send({nickname: "foo"})
+          .expect(200);
+      });
+
+      it("should return a 404 on an already delete call.", function(done) {
+        supertest(app)
+          .del('/calls/id/invalidUUID')
+          .set('Authorization', 'BrowserID ' + expectedAssertion)
+          .set('Cookie', sessionCookie)
+          .expect(404)
+          .end(done);
+      });
+
+      it("should return a 200 ok on an existing call.", function(done) {
+        createCall.end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          var uuid = res.body.uuid;
+
+          supertest(app)
+            .del('/calls/id/'+uuid)
+            .set('Authorization', 'BrowserID ' + expectedAssertion)
+            .set('Cookie', sessionCookie)
+            .expect(204)
+            .end(done);
+        });
+      });
+
+      it("should have the requireSession and attachSession middleware.",
+        function() {
+          expect(getMiddlewares('delete', '/calls/id/:uuid'))
+            .include(sessions.requireSession);
+          expect(getMiddlewares('delete', '/calls/id/:uuid'))
+            .include(sessions.attachSession);
+        });
+    });
   });
 });

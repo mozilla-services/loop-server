@@ -72,7 +72,8 @@ describe("index", function() {
 
       var token = tokenManager.encode({
         uuid: "1234",
-        user: "natim"
+        user: "natim",
+        callerId: "alexis"
       });
 
       jsonReq

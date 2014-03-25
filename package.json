@@ -28,7 +28,7 @@
     "istanbul": "*",
     "jshint": "2.x",
     "sinon": "1.9.x",
-    "supertest": "0.9.x"
+    "supertest": "0.10.x"
   },
   "scripts": {
     "test": "make test",

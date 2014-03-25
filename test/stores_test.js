@@ -271,6 +271,38 @@ describe("Stores", function() {
         });
       });
 
+      describe("#delete", function() {
+        beforeEach(function() {
+          store = createStore();
+        });
+
+        it("should delete all record matching the query and return them.",
+          function(done) {
+            store.add({a: 1, b: 2}, function(err) {
+              store.add({a: 1, b: 3}, function(err) {
+                store.delete({a: 1}, function(err, records) {
+                  expect(err).to.be.a("null");
+                  expect(records).to.be.a("array");
+                  expect(records).to.have.length(2);
+           
+                  store.find({a: 1}, function(err, records) {
+                    expect(records).to.have.length(0);
+                    done();
+                  });
+                });
+              });
+            });
+          });
+
+        it("should return a null when no record is found", function(done) {
+          store.delete({x: 42}, function(err, record) {
+            expect(err).to.be.a("null");
+            expect(record).to.be.a("null");
+            done();
+          });
+        });
+      });
+
       describe("#drop", function() {
         beforeEach(function() {
           store = createStore();

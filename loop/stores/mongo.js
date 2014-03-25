@@ -159,6 +159,39 @@ module.exports = function MongoStore(settings, options) {
     },
 
     /**
+     * Delete a single record matching all the criterias defined by the
+     * query object.
+     *
+     * @param  {Object}   query Query object
+     * @param  {Function} cb    Callback(err, records)
+     *
+     * `records = null` if no record is found.
+     *
+     */
+    delete: function(query, cb) {
+      _ensureConnected(function(err, coll) {
+        if (err) {
+          cb(err);
+          return;
+        }
+
+        coll.find(query).toArray(function(err, records) {
+          if (records.length === 0) {
+            cb(null, null);
+            return;
+          }
+          coll.remove(query, function(err) {
+            if(err) {
+              cb(err);
+              return;
+            }
+            cb(null, records);
+          });
+        });
+      });
+    },
+
+    /**
      * Drops current collection.
      * @param  {Function} cb Callback(err)
      */
