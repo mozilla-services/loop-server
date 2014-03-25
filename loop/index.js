@@ -73,7 +73,6 @@ function validateToken(req, res, next) {
         return;
       }
       if (record) {
-        console.log("expired")
         res.json(400, "invalid token");
         return;
       }
@@ -213,6 +212,7 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
           return record.timestamp >= version;
         }).map(function(record) {
           return {
+            uuid: record.uuid,
             apiKey: tokBox.apiKey,
             sessionId: record.sessionId,
             sessionToken: record.calleeToken
