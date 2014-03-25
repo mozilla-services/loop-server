@@ -6,7 +6,7 @@
 
 var crypto = require("crypto");
 var base64 = require('urlsafe-base64');
-var ONE_MINUTE = 60 * 60 * 1000;
+var ONE_HOUR = 60 * 60 * 1000;
 
 /**
  * Token manager (returned tokens are opaque to the user).
@@ -18,7 +18,7 @@ var ONE_MINUTE = 60 * 60 * 1000;
  *  - {Number} macSize, in bytes.
  *  - {String} cipherAlgorithm for ciphering the data.
  *  - {String} digestAlgorithm for HMAC computation.
- *  - {String} timeout, in minutes.
+ *  - {String} timeout, in hours.
  **/
 function TokenManager(options) {
   if (!options)
@@ -46,13 +46,13 @@ function TokenManager(options) {
 
   this.cipherAlgorithm = options.cipherAlgorithm || "aes-128-cbc";
   this.digestAlgorithm = options.digestAlgorithm || "sha256";
-  this.timeout = options.timeout || 60 * 24 * 30; // one month, in minutes.
+  this.timeout = options.timeout || 24 * 30; // one month, in hours.
 }
 
 TokenManager.prototype = {
   encode: function(data) {
     var payload, mac, hmac, cipher, encipheredPayload;
-    var expires = data.expires || (Date.now() / ONE_MINUTE) + this.timeout;
+    var expires = data.expires || (Date.now() / ONE_HOUR) + this.timeout;
     data.expires = Math.round(expires);
 
     payload = new Buffer(JSON.stringify(data));
@@ -116,7 +116,7 @@ TokenManager.prototype = {
     payload = decipher.read();
 
     var data = JSON.parse(payload);
-    if (data.expires * ONE_MINUTE < new Date().getTime())
+    if (data.expires * ONE_HOUR < new Date().getTime())
       throw new Error("The token expired");
 
     return data;

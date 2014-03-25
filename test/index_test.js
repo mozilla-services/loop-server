@@ -10,6 +10,7 @@ var tokenlib = require("../loop/tokenlib");
 var app = require("../loop").app;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
+var urlsRevocationStore = require("../loop").urlsRevocationStore;
 var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
 
@@ -45,9 +46,16 @@ describe("index", function() {
   });
 
   describe("#validateToken", function(){
+
     // Create a route with the validateToken middleware installed.
     app.get('/validateToken/:token', validateToken, function(req, res) {
       res.json(200, "ok");
+    });
+
+    afterEach(function(done) {
+      urlsRevocationStore.drop(function() {
+        done();
+      });
     });
 
     it("should return a 404 if the token is missing.", function(done) {
@@ -62,6 +70,26 @@ describe("index", function() {
         .get('/validateToken/invalidToken/')
         .expect(400, /invalid token/)
         .end(done);
+    });
+
+    it("should return a 400 if the token had been revoked", function(done) {
+      var tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+      var token = tokenManager.encode({
+        uuid: "1234",
+        user: "natim"
+      });
+      urlsRevocationStore.add({uuid: "1234"}, function(err) {
+        if (err) {
+          throw err;
+        }
+        jsonReq
+          .get('/validateToken/' + token)
+          .expect(400, /invalid token/)
+          .end(done);
+      });
     });
 
     it("should return a 200 if the token is valid.", function(done) {

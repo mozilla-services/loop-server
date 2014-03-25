@@ -92,6 +92,11 @@ var conf = convict({
     format: validateKeys(["engine", "settings"]),
     default: ""
   },
+  urlsRevocationStore: {
+    doc: "urlsRevocationStore config",
+    format: validateKeys(["engine", "settings"]),
+    default: ""
+  },
   tokBox: {
     doc: "TokBox service config",
     format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),
