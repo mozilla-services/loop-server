@@ -133,7 +133,12 @@ describe("index", function() {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expect(res.body.error).eql('missing: b');
+            expect(res.body).eql({
+              status: "errors",
+              errors: [{location: "body",
+                        name: "b",
+                        description: "missing: b"}]
+            });
             done();
           });
       });
@@ -145,7 +150,15 @@ describe("index", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expect(res.body.error).eql('missing: a, b');
+          expect(res.body).eql({
+            status: "errors",
+            errors: [{location: "body",
+                      name: "a",
+                      description: "missing: a"},
+                     {location: "body",
+                      name: "b",
+                      description: "missing: b"}]
+          });
           done();
         });
     });
