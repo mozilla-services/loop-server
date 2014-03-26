@@ -426,7 +426,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should add the token uuid in the revocation list", function(done) {
-      req.expect(200).end(function(err, res) {
+      req.expect(204).end(function(err, res) {
         if (err) {
           throw err;
         }

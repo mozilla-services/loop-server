@@ -240,7 +240,7 @@ app.delete('/calls/:token', sessions.requireSession, sessions.attachSession,
         res.json(503, "Service Unavailable");
         return;
       }
-      res.json(200, "ok");
+      res.json(204, "");
     });
   });
 
