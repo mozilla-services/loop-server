@@ -30,8 +30,8 @@
   "sessionDuration": 300,
   "useSSL": false,
   "tokBox": {
-    "apiKey": "44687443",
-    "apiSecret": "5379ba385ad44c83a2584840d095c08351cd9041",
+    "apiKey": "<put your apiKey here>",
+    "apiSecret": "<put your apiSecret here>",
     "serverIP": "127.0.0.1",
     "tokenDuration": 86400
   },
