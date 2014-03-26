@@ -142,6 +142,9 @@ function hmac(payload, secret, algorithm) {
   return _hmac.read().toString('hex');
 }
 
+/**
+ * Displays some version information at the root of the service.
+ **/
 app.get("/", function(req, res) {
   var credentials = {
     name: pjson.name,
@@ -157,6 +160,9 @@ app.get("/", function(req, res) {
   res.json(200, credentials);
 });
 
+/**
+ * Registers the given user with the given simple push url.
+ **/
 app.post('/registration',
   sessions.attachSession, requireParams("simple_push_url"),
   function(req, res) {
@@ -183,6 +189,9 @@ app.post('/registration',
     });
   });
 
+/**
+ * Generates and return a call-url for the given callerId.
+ **/
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
   requireParams('callerId'), function(req, res) {
     var uuid = crypto.randomBytes(4).toString("hex");
@@ -195,6 +204,9 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
     res.json(200, {call_url: host + "/calls/" + token});
   });
 
+/**
+ * List all the pending calls for the authenticated user.
+ **/
 app.get("/calls", sessions.requireSession, sessions.attachSession,
   function(req, res) {
     if (!req.query.hasOwnProperty('version')) {
@@ -227,8 +239,21 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
       });
   });
 
+/**
+ * Answer OPTIONS, useful for CORS.
+ **/
 app.options('/calls/:token', corsEnabled);
 
+/**
+ * Do a redirect to the Web client.
+ **/
+app.get('/calls/:token', corsEnabled, validateToken, function(req, res) {
+  res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
+});
+
+/**
+ * Revoke a given call url.
+ **/
 app.delete('/calls/:token', sessions.requireSession, sessions.attachSession,
   validateToken, function(req, res) {
     if (req.token.user !== req.user) {
@@ -248,10 +273,9 @@ app.delete('/calls/:token', sessions.requireSession, sessions.attachSession,
     });
   });
 
-app.get('/calls/:token', corsEnabled, validateToken, function(req, res) {
-  res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
-});
-
+/**
+ * Initiate a call with the user identified by the given token.
+ **/
 app.post('/calls/:token', corsEnabled, validateToken,
   function(req, res) {
     tokBox.getSessionTokens(function(err, tokboxInfo) {
@@ -304,6 +328,9 @@ app.post('/calls/:token', corsEnabled, validateToken,
     });
   });
 
+/**
+ * Returns the status of a given call.
+ **/
 app.get('/calls/id/:uuid', function(req, res) {
   var uuid = req.param('uuid');
   callsStore.findOne({uuid: uuid}, function(err, result) {
@@ -320,6 +347,9 @@ app.get('/calls/id/:uuid', function(req, res) {
   });
 });
 
+/**
+ * Rejects a given call.
+ **/
 app.delete('/calls/id/:uuid', sessions.requireSession, sessions.attachSession,
   function(req, res) {
     var uuid = req.param('uuid');
