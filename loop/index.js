@@ -48,7 +48,8 @@ var corsEnabled = cors({
 
 var tokenManager = new tokenlib.TokenManager({
   macSecret: conf.get('macSecret'),
-  encryptionSecret: conf.get('encryptionSecret')
+  encryptionSecret: conf.get('encryptionSecret'),
+  timeout: conf.get('callUrlTimeout')
 });
 
 var urlsStore = getStore(
@@ -202,12 +203,30 @@ app.post('/registration',
  **/
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
   requireParams('callerId'), function(req, res) {
+    var expiresIn,
+        maxTimeout = conf.get('callUrlMaxTimeout');
+
+    if(req.body.hasOwnProperty("expiresIn")) {
+      expiresIn = parseInt(req.body.expiresIn);
+
+      if (isNaN(expiresIn)) {
+        res.sendError("body", "expiresIn", "should be a valid number");
+        return;
+      } else if (expiresIn > maxTimeout) {
+        res.sendError("body", "expiresIn", "should be less than " + maxTimeout);
+        return;
+      }
+    }
     var uuid = crypto.randomBytes(4).toString("hex");
-    var token = tokenManager.encode({
+    var tokenPayload = {
       user: req.user,
       uuid: uuid,
       callerId: req.body.callerId
-    });
+    };
+    if (expiresIn !== undefined) {
+      tokenPayload.expires = (Date.now() / tokenlib.ONE_HOUR) + expiresIn;
+    }
+    var token = tokenManager.encode(tokenPayload);
     var host = req.protocol + "://" + req.get('host');
     res.json(200, {call_url: host + "/calls/" + token});
   });

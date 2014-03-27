@@ -264,35 +264,101 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
-    it("should generate a valid call-url", function(done) {
-      var clock = sinon.useFakeTimers(fakeNow);
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
-      });
-
+    it("should check that the given expiration is a number", function(done) {
       jsonReq
         .set('Cookie', sessionCookie)
-        .expect(200)
-        .send({callerId: callerId})
+        .send({callerId: callerId, expiresIn: "not a number"})
+        .expect(400)
         .end(function(err, res) {
-          var callUrl = res.body && res.body.call_url, token;
-
-          expect(callUrl).to.not.equal(null);
-          expect(callUrl).to.match(/^http:\/\/127.0.0.1/);
-
-          // XXX: the content of the token should change in the
-          // future.
-          token = callUrl.split("/").pop();
-          var decoded = tokenManager.decode(token);
-          expect(decoded.expires).eql(
-            Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
-          );
-          expect(decoded.hasOwnProperty('callId'));
-
-          clock.restore();
-          done(err);
+          if (err) {
+            throw err;
+          }
+          expect(res.body).eql({
+            status: "errors",
+            errors: [{location: "body",
+                      name: "expiresIn",
+                      description: "should be a valid number"}]
+          });
+          done();
         });
+    });
+
+    it("should check the given expiration is not greater than the max",
+      function(done) {
+        var oldMaxTimeout = conf.get('callUrlMaxTimeout');
+        conf.set('callUrlMaxTimeout', 5);
+        jsonReq
+          .set('Cookie', sessionCookie)
+          .send({callerId: callerId, expiresIn: "10"})
+          .expect(400)
+          .end(function(err, res) {
+            if (err) {
+              throw err;
+            }
+            expect(res.body).eql({
+              status: "errors",
+              errors: [{location: "body",
+                        name: "expiresIn",
+                        description: "should be less than 5"}]
+            });
+            conf.set('callUrlMaxTimeout', oldMaxTimeout);
+            done();
+          });
+      });
+
+    describe("with a tokenManager", function() {
+      var clock, tokenManager;
+
+      beforeEach(function() {
+        clock = sinon.useFakeTimers(fakeNow);
+        tokenManager = new tokenlib.TokenManager({
+          macSecret: conf.get('macSecret'),
+          encryptionSecret: conf.get('encryptionSecret')
+        });
+      });
+
+      afterEach(function() {
+        clock.restore();
+      });
+
+      it.only("should accept an expiresIn parameter", function(done) {
+        jsonReq
+          .set('Cookie', sessionCookie)
+          .expect(200)
+          .send({callerId: callerId, expiresIn: 5})
+          .end(function(err, res) {
+            var callUrl = res.body && res.body.call_url,
+                token;
+
+            token = callUrl.split("/").pop();
+            var decoded = tokenManager.decode(token);
+            expect(decoded.expires).eql(
+              Math.round((fakeNow / ONE_MINUTE) + 5)
+            );
+            done(err);
+          });
+      });
+
+      it("should generate a valid call-url", function(done) {
+        jsonReq
+          .set('Cookie', sessionCookie)
+          .expect(200)
+          .send({callerId: callerId})
+          .end(function(err, res) {
+            var callUrl = res.body && res.body.call_url, token;
+
+            expect(callUrl).to.not.equal(null);
+            expect(callUrl).to.match(/^http:\/\/127.0.0.1/);
+
+            token = callUrl.split("/").pop();
+            var decoded = tokenManager.decode(token);
+            expect(decoded.expires).eql(
+              Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
+            );
+            expect(decoded.hasOwnProperty('uuid'));
+            done(err);
+          });
+      });
     });
   });
 

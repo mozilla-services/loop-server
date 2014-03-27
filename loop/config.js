@@ -77,6 +77,16 @@ var conf = convict({
     default: "sha256",
     env: "USER_MAC_ALGORITHM"
   },
+  callUrlTimeout: {
+    doc: "How much time a token is valid for (in hours)",
+    format: Number,
+    default: 24 * 30 // One month.
+  },
+  callUrlMaxTimeout: {
+    doc: "The maximum number of hours a token can be valid for.",
+    format: Number,
+    default: 24 * 30
+  },
   displayVersion: {
     doc: "Display the server version on the homepage.",
     default: true,
