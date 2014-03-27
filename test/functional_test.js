@@ -174,6 +174,18 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
+    it("should check that the callerId parameter is a valid email",
+      function(done){
+        jsonReq.send({callerId: "alexis"}).expect(400).end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          expectFormatedError(res.body, "body", "callerId",
+                              "should be a valid email address");
+          done();
+        });
+      });
+
     it("should generate a valid call-url", function(done) {
       var clock = sinon.useFakeTimers(fakeNow);
       var tokenManager = new tokenlib.TokenManager({
