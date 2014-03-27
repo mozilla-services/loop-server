@@ -288,7 +288,7 @@ describe("HTTP API exposed by the server", function() {
           expect(decoded.expires).eql(
             Math.round((fakeNow / ONE_MINUTE) + tokenManager.timeout)
           );
-          expect(decoded.hasOwnProperty('uuid'));
+          expect(decoded.hasOwnProperty('callId'));
 
           clock.restore();
           done(err);
@@ -538,7 +538,7 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          uuid:         crypto.randomBytes(16).toString("hex"),
+          callId:         crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
@@ -546,7 +546,7 @@ describe("HTTP API exposed by the server", function() {
           timestamp:    0
         },
         {
-          uuid:         crypto.randomBytes(16).toString("hex"),
+          callId:         crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
@@ -554,7 +554,7 @@ describe("HTTP API exposed by the server", function() {
           timestamp:    1
         },
         {
-          uuid:         crypto.randomBytes(16).toString("hex"),
+          callId:         crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
@@ -573,7 +573,7 @@ describe("HTTP API exposed by the server", function() {
     it("should list existing calls", function(done) {
       var callsList = calls.map(function(call) {
         return {
-          uuid: call.uuid,
+          callId: call.callId,
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken
@@ -588,7 +588,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
-        uuid: calls[2].uuid,
+        callId: calls[2].callId,
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken
@@ -724,8 +724,8 @@ describe("HTTP API exposed by the server", function() {
               }
 
               var body = res.body;
-              expect(body).to.have.property('uuid');
-              delete body.uuid;
+              expect(body).to.have.property('callId');
+              delete body.callId;
 
               expect(res.body).eql({
                 sessionId: tokBoxSessionId,
@@ -748,10 +748,10 @@ describe("HTTP API exposed by the server", function() {
                   throw err;
                 }
                 expect(items.length).eql(1);
-                expect(items[0].uuid).to.have.length(32);
+                expect(items[0].callId).to.have.length(32);
                 // We don't want to compare this, it's added by mongo.
                 delete items[0]._id;
-                delete items[0].uuid;
+                delete items[0].callId;
                 expect(items[0]).eql({
                   callerId: callerId,
                   userMac: userHmac,
@@ -785,7 +785,7 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
-    describe("GET /calls/id/:uuid", function() {
+    describe("GET /calls/id/:callId", function() {
       var baseReq;
 
       beforeEach(function () {
@@ -827,14 +827,14 @@ describe("HTTP API exposed by the server", function() {
       it("should return a 200 if the call exists.", function(done) {
         baseReq.end(function(req, res) {
             supertest(app)
-              .get('/calls/id/' + res.body.uuid)
+              .get('/calls/id/' + res.body.callId)
               .expect(200)
               .end(done);
           });
       });
     });
 
-    describe("DELETE /calls/id/:uuid", function() {
+    describe("DELETE /calls/id/:callId", function() {
 
       var createCall;
 
@@ -866,10 +866,10 @@ describe("HTTP API exposed by the server", function() {
           if (err) {
             throw err;
           }
-          var uuid = res.body.uuid;
+          var callId = res.body.callId;
 
           supertest(app)
-            .del('/calls/id/'+uuid)
+            .del('/calls/id/' + callId)
             .set('Authorization', 'BrowserID ' + expectedAssertion)
             .set('Cookie', sessionCookie)
             .expect(204)
@@ -879,9 +879,9 @@ describe("HTTP API exposed by the server", function() {
 
       it("should have the requireSession and attachSession middleware.",
         function() {
-          expect(getMiddlewares('delete', '/calls/id/:uuid'))
+          expect(getMiddlewares('delete', '/calls/id/:callId'))
             .include(sessions.requireSession);
-          expect(getMiddlewares('delete', '/calls/id/:uuid'))
+          expect(getMiddlewares('delete', '/calls/id/:callId'))
             .include(sessions.attachSession);
         });
     });

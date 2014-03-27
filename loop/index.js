@@ -236,7 +236,7 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
           return record.timestamp >= version;
         }).map(function(record) {
           return {
-            uuid: record.uuid,
+            callId: record.callId,
             apiKey: tokBox.apiKey,
             sessionId: record.sessionId,
             sessionToken: record.calleeToken
@@ -288,11 +288,11 @@ app.post('/calls/:token', validateToken, function(req, res) {
       }
 
       var currentTimestamp = new Date().getTime();
-      var uuid = crypto.randomBytes(16).toString("hex");
+      var callId = crypto.randomBytes(16).toString("hex");
 
       callsStore.add({
         "callerId": req.token.callerId,
-        "uuid": uuid,
+        "callId": callId,
         "userMac": hmac(req.token.user, conf.get("userMacSecret")),
         "sessionId": tokboxInfo.sessionId,
         "calleeToken": tokboxInfo.calleeToken,
@@ -320,7 +320,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
           res.set("Access-Control-Allow-Origin", conf.get('allowedOrigins'));
           res.set("Access-Control-Allow-Methods", "GET,POST");
           res.json(200, {
-            uuid: uuid,
+            callId: callId,
             sessionId: tokboxInfo.sessionId,
             sessionToken: tokboxInfo.callerToken,
             apiKey: tokBox.apiKey
@@ -333,16 +333,16 @@ app.post('/calls/:token', validateToken, function(req, res) {
 /**
  * Returns the status of a given call.
  **/
-app.get('/calls/id/:uuid', function(req, res) {
-  var uuid = req.param('uuid');
-  callsStore.findOne({uuid: uuid}, function(err, result) {
+app.get('/calls/id/:callId', function(req, res) {
+  var callId = req.param('callId');
+  callsStore.findOne({callId: callId}, function(err, result) {
     if (err) {
       logError(err);
       res.json(503, "Service Unavailable");
       return;
     }
     if (result === null) {
-      res.json(404, {error: "Call " + uuid + " not found."});
+      res.json(404, {error: "Call " + callId + " not found."});
       return;
     }
     res.json(200, "ok");
@@ -352,13 +352,13 @@ app.get('/calls/id/:uuid', function(req, res) {
 /**
  * Rejects a given call.
  **/
-app.delete('/calls/id/:uuid', sessions.requireSession, sessions.attachSession,
+app.delete('/calls/id/:callId', sessions.requireSession, sessions.attachSession,
   function(req, res) {
-    var uuid = req.param('uuid');
+    var callId = req.param('callId');
 
     var query = {
       userMac: hmac(req.user, conf.get('userMacSecret')),
-      uuid: uuid
+      callId: callId
     };
 
     callsStore.delete(query, function(err, result) {
@@ -368,7 +368,7 @@ app.delete('/calls/id/:uuid', sessions.requireSession, sessions.attachSession,
         return;
       }
       if (result === null) {
-        res.json(404, {error: "Call " + uuid + " not found."});
+        res.json(404, {error: "Call " + callId + " not found."});
         return;
       }
       res.json(204, "");
