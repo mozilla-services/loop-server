@@ -236,8 +236,6 @@ describe("HTTP API exposed by the server", function() {
         .send({}) // XXX sending nothing fails here, investigate
         .expect(400)
         .end(function(err, res) {
-          console.log(res);
-          if (err) throw err;
           expectFormatedError(res.body, "body", "simple_push_url");
           done();
         });
