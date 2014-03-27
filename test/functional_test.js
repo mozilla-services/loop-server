@@ -870,20 +870,10 @@ describe("HTTP API exposed by the server", function() {
 
           supertest(app)
             .del('/calls/id/' + callId)
-            .set('Authorization', 'BrowserID ' + expectedAssertion)
-            .set('Cookie', sessionCookie)
             .expect(204)
             .end(done);
         });
       });
-
-      it("should have the requireSession and attachSession middleware.",
-        function() {
-          expect(getMiddlewares('delete', '/calls/id/:callId'))
-            .include(sessions.requireSession);
-          expect(getMiddlewares('delete', '/calls/id/:callId'))
-            .include(sessions.attachSession);
-        });
     });
   });
 });
