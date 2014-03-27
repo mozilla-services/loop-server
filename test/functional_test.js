@@ -14,7 +14,6 @@ var urlsStore = require("../loop").urlsStore;
 var callsStore = require("../loop").callsStore;
 var urlsRevocationStore = require("../loop").urlsRevocationStore;
 var validateToken = require("../loop").validateToken;
-var corsEnabled = require("../loop").corsEnabled;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
@@ -79,12 +78,25 @@ app.get('/get-cookies', function(req, res) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, sessionCookie, fakeCallInfo;
+  var sandbox, expectedAssertion, pushURL, sessionCookie, fakeCallInfo,
+      genuineOrigins;
+
+  var routes = {
+    '/': ['get'],
+    '/registration': ['post'],
+    '/call-url': ['post'],
+    '/calls': ['get'],
+    '/calls/token': ['get', 'del', 'post'],
+    '/calls/id/uuid': ['get', 'del']
+  };
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
     expectedAssertion = "BID-ASSERTION";
     fakeCallInfo = conf.get("fakeCallInfo");
+
+    genuineOrigins = conf.get('allowedOrigins');
+    conf.set('allowedOrigins', ['http://mozilla.org', 'http://mozilla.com']);
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
@@ -111,6 +123,84 @@ describe("HTTP API exposed by the server", function() {
       callsStore.drop(function() {
         urlsRevocationStore.drop(function() {
           done();
+        });
+      });
+    });
+    conf.set('allowedOrigins', genuineOrigins);
+  });
+
+  // Test CORS is enabled in all routes for OPTIONS.
+  Object.keys(routes).forEach(function(route) {
+    describe("OPTIONS " + route, function() {
+      it("should authorize allowed origins to do CORS", function(done) {
+        supertest(app)
+          .options(route)
+          .set('Origin', 'http://mozilla.org')
+          .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
+          .expect('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE')
+          .expect('Access-Control-Allow-Credentials', 'true')
+          .end(done);
+      });
+
+      it("should reject unauthorized origins to do CORS", function(done) {
+        supertest(app)
+          .options(route)
+          .set('Origin', 'http://not-authorized')
+          .end(function(err, res) {
+            expect(res.headers)
+              .not.to.have.property('Access-Control-Allow-Origin');
+            done();
+          });
+      });
+    });
+  });
+
+  // Test CORS is enabled in all routes for GET, POST and DELETE
+  Object.keys(routes).forEach(function(route) {
+    routes[route].forEach(function(method) {
+      if (route.indexOf('token') !== -1) {
+        var tokenManager = new tokenlib.TokenManager({
+          macSecret: conf.get('macSecret'),
+          encryptionSecret: conf.get('encryptionSecret')
+        });
+
+        var token = tokenManager.encode({
+          uuid: uuid,
+          user: user,
+          callerId: callerId
+        });
+
+        route = route.replace('token', token);
+      }
+
+      describe(method + ' ' + route, function() {
+        beforeEach(function() {
+          var fakeCallInfo = conf.get("fakeCallInfo");
+          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+            cb(null, {
+              sessionId: fakeCallInfo.session1,
+              callerToken: fakeCallInfo.token1,
+              calleeToken: fakeCallInfo.token2
+            });
+          });
+        });
+
+        it("should authorize allowed origins to do CORS", function(done) {
+          supertest(app)[method](route)
+            .set('Origin', 'http://mozilla.org')
+            .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
+            .expect('Access-Control-Allow-Credentials', 'true')
+            .end(done);
+        });
+
+        it("should reject unauthorized origins to do CORS", function(done) {
+          supertest(app)[method](route)
+            .set('Origin', 'http://not-authorized')
+            .end(function(err, res) {
+              expect(res.headers)
+                .not.to.have.property('Access-Control-Allow-Origin');
+              done();
+            });
         });
       });
     });
@@ -355,42 +445,6 @@ describe("HTTP API exposed by the server", function() {
 
   });
 
-  describe("OPTIONS /calls/:token", function() {
-    var genuineOrigins = conf.get('allowedOrigins');
-
-    beforeEach(function() {
-      conf.set('allowedOrigins', ['http://mozilla.org', 'http://mozilla.com']);
-    });
-
-    afterEach(function() {
-      conf.set('allowedOrigins', genuineOrigins);
-    });
-
-    it("should authorize allowed origins to to CORS", function(done) {
-      supertest(app)
-        .options('/calls/token')
-        .set('Origin', 'http://mozilla.org')
-        .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
-        .expect('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE')
-        .end(done);
-    });
-
-    it("should reject unauthorized origins to do CORS", function(done) {
-      supertest(app)
-        .options('/calls/token')
-        .set('Origin', 'http://not-authorized')
-        .end(function(err, res) {
-          expect(res.headers)
-            .not.to.have.property('Access-Control-Allow-Origin');
-          done();
-        });
-    });
-
-    it("should have the cors middleware installed.", function() {
-      expect(getMiddlewares('options', '/calls/:token')).include(corsEnabled);
-    });
-  });
-
   describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
       var tokenManager = new tokenlib.TokenManager({
@@ -410,10 +464,6 @@ describe("HTTP API exposed by the server", function() {
 
     it("should have the validateToken middleware installed.", function() {
       expect(getMiddlewares('get', '/calls/:token')).include(validateToken);
-    });
-
-    it("should have the cors middleware installed.", function() {
-      expect(getMiddlewares('get', '/calls/:token')).include(corsEnabled);
     });
   });
 
@@ -611,10 +661,6 @@ describe("HTTP API exposed by the server", function() {
         jsonReq = supertest(app)
           .post('/calls/' + token)
           .expect(200);
-      });
-
-      it("should have the cors middleware installed.", function() {
-        expect(getMiddlewares('post', '/calls/:token')).include(corsEnabled);
       });
 
       it("should have the token validation middleware installed", function() {

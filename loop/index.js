@@ -40,7 +40,10 @@ var corsEnabled = cors({
   origin: function(origin, callback) {
     var acceptedOrigin = conf.get('allowedOrigins').indexOf(origin) !== -1;
     callback(null, acceptedOrigin);
-  }
+  },
+  // Configures the Access-Control-Allow-Credentials CORS header, required
+  // until we stop sending cookies.
+  credentials: true
 });
 
 var tokenManager = new tokenlib.TokenManager({
@@ -143,6 +146,11 @@ function hmac(payload, secret, algorithm) {
 }
 
 /**
+ * Enable CORS for all requests.
+ **/
+app.all('*', corsEnabled);
+
+/**
  * Displays some version information at the root of the service.
  **/
 app.get("/", function(req, res) {
@@ -240,14 +248,9 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
   });
 
 /**
- * Answer OPTIONS, useful for CORS.
- **/
-app.options('/calls/:token', corsEnabled);
-
-/**
  * Do a redirect to the Web client.
  **/
-app.get('/calls/:token', corsEnabled, validateToken, function(req, res) {
+app.get('/calls/:token', validateToken, function(req, res) {
   res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
 });
 
@@ -276,8 +279,7 @@ app.delete('/calls/:token', sessions.requireSession, sessions.attachSession,
 /**
  * Initiate a call with the user identified by the given token.
  **/
-app.post('/calls/:token', corsEnabled, validateToken,
-  function(req, res) {
+app.post('/calls/:token', validateToken, function(req, res) {
     tokBox.getSessionTokens(function(err, tokboxInfo) {
       if (err) {
         logError(err);
@@ -387,7 +389,6 @@ module.exports = {
   hmac: hmac,
   validateToken: validateToken,
   requireParams: requireParams,
-  corsEnabled: corsEnabled,
   request: request,
   tokBox: tokBox
 };
