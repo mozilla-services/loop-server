@@ -321,7 +321,7 @@ describe("HTTP API exposed by the server", function() {
         clock.restore();
       });
 
-      it.only("should accept an expiresIn parameter", function(done) {
+      it("should accept an expiresIn parameter", function(done) {
         jsonReq
           .set('Cookie', sessionCookie)
           .expect(200)
@@ -359,6 +359,18 @@ describe("HTTP API exposed by the server", function() {
             done(err);
           });
       });
+
+      it("should return the expiration date of the call-url", function(done) {
+        jsonReq
+          .set('Cookie', sessionCookie)
+          .expect(200)
+          .send({callerId: callerId})
+          .end(function(err, res) {
+            var expiresAt = res.body && res.body.expiresAt;
+            expect(expiresAt).eql(387830);
+            done();
+          });
+      });
     });
   });
 
@@ -392,6 +404,9 @@ describe("HTTP API exposed by the server", function() {
         .send({}) // XXX sending nothing fails here, investigate
         .expect(400)
         .end(function(err, res) {
+          if (err) {
+            throw err;
+          }
           expectFormatedError(res.body, "body", "simple_push_url");
           done();
         });
@@ -521,7 +536,7 @@ describe("HTTP API exposed by the server", function() {
         uuid: uuid,
         user: user,
         callerId: callerId
-      });
+      }).token;
       supertest(app)
         .get('/calls/' + token)
         .expect("Location", conf.get("webAppUrl").replace("{token}", token))
@@ -546,7 +561,7 @@ describe("HTTP API exposed by the server", function() {
       token = tokenManager.encode({
         uuid: uuid,
         user: user
-      });
+      }).token;
       req = supertest(app)
         .del('/call-url/' + token)
         .set('Authorization', 'BrowserID ' + expectedAssertion)
@@ -579,7 +594,7 @@ describe("HTTP API exposed by the server", function() {
         var token = tokenManager.encode({
           uuid: "1234",
           user: "h4x0r"
-        });
+        }).token;
         req = supertest(app)
           .del('/call-url/' + token)
           .set('Authorization', 'BrowserID ' + expectedAssertion)
@@ -708,7 +723,7 @@ describe("HTTP API exposed by the server", function() {
         uuid: uuid,
         user: user,
         callerId: callerId
-      });
+      }).token;
 
       sandbox.stub(request, "put", function(options) {
         requests.push(options);

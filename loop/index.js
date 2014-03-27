@@ -226,9 +226,12 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
     if (expiresIn !== undefined) {
       tokenPayload.expires = (Date.now() / tokenlib.ONE_HOUR) + expiresIn;
     }
-    var token = tokenManager.encode(tokenPayload);
+    var tokenWrapper = tokenManager.encode(tokenPayload);
     var host = req.protocol + "://" + req.get('host');
-    res.json(200, {call_url: host + "/calls/" + token});
+    res.json(200, {
+      call_url: host + "/calls/" + tokenWrapper.token,
+      expiresAt: tokenWrapper.payload.expires
+    });
   });
 
 /**

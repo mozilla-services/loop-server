@@ -105,34 +105,48 @@ describe("TokenManager", function() {
         macSecret: macSecret,
         timeout: timeout
       });
-      var token = tokenManager.encode({some: "data"});
+      var tokenWrapper = tokenManager.encode({some: "data"});
 
-      expect(tokenManager.decode(token)).to.deep.equal({
+      expect(tokenManager.decode(tokenWrapper.token)).to.deep.equal({
         some: "data",
         expires: fakeNow + timeout
       });
+      expect(tokenWrapper.payload.expires).eql(fakeNow + timeout);
     });
   });
 
   describe("#encode", function() {
     it("should return a token string", function() {
-      var token = tokenManager.encode({some: "data"});
+      var token = tokenManager.encode({some: "data"}).token;
       expect(token.constructor.name).to.be.equal("String");
     });
 
+    it("should return a payload argument", function() {
+      var payload = tokenManager.encode({some: "data"}).payload;
+      expect(payload.constructor.name).to.be.equal("Object");
+    });
+
+    it("should return a payload with the decoded data", function() {
+      var payload = tokenManager.encode({some: "data"}).payload;
+      expect(payload).to.deep.eql({
+        some: "data",
+        expires: fakeNow + tokenManager.timeout
+      });
+    });
+
     it("should return an base64 url safe value", function() {
-      var token = tokenManager.encode({some: "data"});
+      var token = tokenManager.encode({some: "data"}).token;
       expect(base64.validate(token)).to.equal(true);
     });
 
     it("should parametrize the size of the token according to a given " +
       "macSize parameter", function() {
-        var token1 = tokenManager.encode({some: "data"});
+        var token1 = tokenManager.encode({some: "data"}).token;
         var token2 = (new tokenlib.TokenManager({
           encryptionSecret: encryptionSecret,
           macSecret: macSecret,
           macSize: 128/8
-        })).encode({some: "data"});
+        })).encode({some: "data"}).token;
         expect(token1.length < token2.length).to.equal(true);
       });
 
@@ -149,7 +163,7 @@ describe("TokenManager", function() {
     });
 
     it("should add a default `expires` time", function() {
-      var token = tokenManager.encode({some: "data"});
+      var token = tokenManager.encode({some: "data"}).token;
 
       expect(tokenManager.decode(token)).to.deep.equal({
         some: "data",
@@ -161,17 +175,19 @@ describe("TokenManager", function() {
       var expires = fakeNow + 10000; // now + 2 months (expired)
       var token = tokenManager.encode({some: "data", expires: expires});
 
-      expect(tokenManager.decode(token)).to.deep.equal({
+      expect(tokenManager.decode(token.token)).to.deep.equal({
         some: "data",
         expires: expires
       });
+
+      expect(token.payload.expires).to.deep.equal(expires);
     });
   });
 
   describe("#decode", function() {
     it("should decode a valid encoded token", function() {
       var data = {some: "data"};
-      var token = tokenManager.encode(data);
+      var token = tokenManager.encode(data).token;
 
       // XXX: here, the decoded data carries more than just the `some`
       // property but also as an `expires` property. Despite this
@@ -198,7 +214,7 @@ describe("TokenManager", function() {
         encryptionSecret: encryptionSecret,
         macSecret: invalidMacSecret
       });
-      var token = tokenForger.encode(data);
+      var token = tokenForger.encode(data).token;
       var failure = function() {
         tokenManager.decode(token);
       };
@@ -211,7 +227,7 @@ describe("TokenManager", function() {
         encryptionSecret: invalidEncryptionSecret,
         macSecret: macSecret
       });
-      var token = tokenForger.encode(data);
+      var token = tokenForger.encode(data).token;
       var failure = function() {
         tokenManager.decode(token);
       };
@@ -221,7 +237,7 @@ describe("TokenManager", function() {
     it("should throw an error if the token expired", function() {
       var tenHoursAgo = (Date.now() / ONE_HOUR) - 10;
       var data = {some: "data", expires: tenHoursAgo};
-      var token = tokenManager.encode(data);
+      var token = tokenManager.encode(data).token;
       var failure = function() {
         tokenManager.decode(token);
       };

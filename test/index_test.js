@@ -14,7 +14,7 @@ var urlsRevocationStore = require("../loop").urlsRevocationStore;
 var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
 
-describe("index", function() {
+describe("index.js", function() {
   var jsonReq;
 
   beforeEach(function() {
@@ -80,7 +80,7 @@ describe("index", function() {
       var token = tokenManager.encode({
         uuid: "1234",
         user: "natim"
-      });
+      }).token;
       urlsRevocationStore.add({uuid: "1234"}, function(err) {
         if (err) {
           throw err;
@@ -102,7 +102,7 @@ describe("index", function() {
         uuid: "1234",
         user: "natim",
         callerId: "alexis"
-      });
+      }).token;
 
       jsonReq
         .get('/validateToken/' + token)
