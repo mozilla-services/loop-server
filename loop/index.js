@@ -15,7 +15,7 @@ var pjson = require('../package.json');
 var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
-var errors = require('./errors');
+var errors = require('connect-validation');
 
 var TokBox = require('./tokbox').TokBox;
 
