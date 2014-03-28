@@ -257,7 +257,7 @@ app.get('/calls/:token', validateToken, function(req, res) {
 /**
  * Revoke a given call url.
  **/
-app.delete('/calls/:token', sessions.requireSession, sessions.attachSession,
+app.delete('/call-url/:token', sessions.requireSession, sessions.attachSession,
   validateToken, function(req, res) {
     if (req.token.user !== req.user) {
       res.json(403, "Forbidden");

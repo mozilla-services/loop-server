@@ -84,10 +84,10 @@ describe("HTTP API exposed by the server", function() {
   var routes = {
     '/': ['get'],
     '/registration': ['post'],
-    '/call-url': ['post'],
+    '/call-url': ['post', 'del'],
     '/calls': ['get'],
-    '/calls/token': ['get', 'del', 'post'],
-    '/calls/id/uuid': ['get', 'del']
+    '/calls/token': ['get', 'post'],
+    '/calls/id/callId': ['get', 'del']
   };
 
   beforeEach(function(done) {
@@ -467,7 +467,7 @@ describe("HTTP API exposed by the server", function() {
     });
   });
 
-  describe("DELETE /calls/:token", function() {
+  describe("DELETE /call-url/:token", function() {
     var token, tokenManager, req, clock;
     beforeEach(function() {
       clock = sinon.useFakeTimers(fakeNow);
@@ -482,7 +482,7 @@ describe("HTTP API exposed by the server", function() {
         user: user
       });
       req = supertest(app)
-        .del('/calls/' + token)
+        .del('/call-url/' + token)
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .set('Cookie', sessionCookie);
     });
@@ -515,14 +515,15 @@ describe("HTTP API exposed by the server", function() {
           user: "h4x0r"
         });
         req = supertest(app)
-          .del('/calls/' + token)
+          .del('/call-url/' + token)
           .set('Authorization', 'BrowserID ' + expectedAssertion)
           .set('Cookie', sessionCookie)
           .expect(403).end(done);
       });
 
     it("should have the validateToken middleware installed", function() {
-      expect(getMiddlewares('delete', '/calls/:token')).include(validateToken);
+      expect(getMiddlewares('delete', '/call-url/:token'))
+        .include(validateToken);
     });
   });
 
