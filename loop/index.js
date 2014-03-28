@@ -194,6 +194,11 @@ app.post('/registration',
  **/
 app.post('/call-url', sessions.requireSession, sessions.attachSession,
   requireParams('callerId'), function(req, res) {
+    if (req.body.callerId.split('@').length !== 2 ||
+        req.body.callerId.split(' ').length !== 1) {
+      res.sendError("body", "callerId", "should be a valid email address");
+      return;
+    }
     var uuid = crypto.randomBytes(4).toString("hex");
     var token = tokenManager.encode({
       user: req.user,
