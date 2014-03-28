@@ -350,18 +350,12 @@ app.get('/calls/id/:callId', function(req, res) {
 });
 
 /**
- * Rejects a given call.
+ * Rejects or cancel a given call.
  **/
-app.delete('/calls/id/:callId', sessions.requireSession, sessions.attachSession,
-  function(req, res) {
+app.delete('/calls/id/:callId', function(req, res) {
     var callId = req.param('callId');
 
-    var query = {
-      userMac: hmac(req.user, conf.get('userMacSecret')),
-      callId: callId
-    };
-
-    callsStore.delete(query, function(err, result) {
+    callsStore.delete({callId: callId}, function(err, result) {
       if (err) {
         logError(err);
         res.json(503, "Service Unavailable");
