@@ -50,6 +50,15 @@ function TokenManager(options) {
 }
 
 TokenManager.prototype = {
+
+  /**
+   * Encode the given data.
+   *
+   * Returns an object with two keys:
+   *  - token, the encoded token;
+   *  - payload, the data contained inside the token (it may contain additional
+                 data than the one passed in the argument)
+   */
   encode: function(data) {
     var payload, mac, hmac, cipher, encipheredPayload;
     var expires = data.expires || (Date.now() / ONE_HOUR) + this.timeout;
@@ -77,7 +86,10 @@ TokenManager.prototype = {
     // keep the first `macSize` bytes only, so we avoid huge MAC
     mac = hmac.read().slice(0, this.macSize);
 
-    return base64.encode(Buffer.concat([IV, encipheredPayload, mac]));
+    return {
+      payload: data,
+      token: base64.encode(Buffer.concat([IV, encipheredPayload, mac]))
+    };
   },
 
   decode: function(token) {
@@ -124,4 +136,7 @@ TokenManager.prototype = {
 };
 
 
-module.exports = {TokenManager: TokenManager};
+module.exports = {
+  TokenManager: TokenManager,
+  ONE_HOUR: ONE_HOUR
+};
