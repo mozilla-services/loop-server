@@ -70,7 +70,7 @@ this is equivalent to:
 How to run the tests?
 ---------------------
 
-    make tests
+    make test
 
 License
 -------
