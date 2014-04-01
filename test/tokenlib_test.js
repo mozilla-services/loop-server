@@ -79,7 +79,7 @@ describe("TokenManager", function() {
       var failure = function() {
         new tokenlib.TokenManager({
           encryptionSecret: crypto.randomBytes(15),
-          macSecret: macSecret,
+          macSecret: macSecret
         });
       };
 
@@ -145,7 +145,7 @@ describe("TokenManager", function() {
         var token2 = (new tokenlib.TokenManager({
           encryptionSecret: encryptionSecret,
           macSecret: macSecret,
-          macSize: 128/8
+          macSize: 128 / 8
         })).encode({some: "data"}).token;
         expect(token1.length < token2.length).to.equal(true);
       });

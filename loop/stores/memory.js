@@ -11,6 +11,7 @@
  *
  * - {Array} unique: list of fields which compound value should be unique.
  *
+ * @param {Object} settings          Settings object
  * @param  {Object} options          Options object
  * @return {MemoryStore}
  */
@@ -35,6 +36,7 @@ module.exports = function MemoryStore(settings, options) {
       queryObj[field] = record[field];
       return queryObj;
     }, {});
+    /*jshint validthis: true*/
     this.findOne(query, function(err, record) {
       if (err) {
         cb(err);
@@ -99,17 +101,18 @@ module.exports = function MemoryStore(settings, options) {
           return;
         }
         records.forEach(function(record) {
-          for(var key in record) {
+          var key;
+          for (key in record) {
             delete record[key];
           }
-          for(var key in newObj) {
+          for (key in newObj) {
             record[key] = newObj[key];
           }
         });
         cb(null);
       }.bind(this));
     },
-    
+
     /**
      * Retrieves multiple records matching all the criterias defined by the
      * query object.
@@ -163,7 +166,7 @@ module.exports = function MemoryStore(settings, options) {
         var recordsCopy = JSON.parse(JSON.stringify(records));
         records.forEach(function(item) {
           var i = _db.indexOf(item);
-          if (i != -1) {
+          if (i !== -1) {
             _db.splice(i, 1);
           }
         });

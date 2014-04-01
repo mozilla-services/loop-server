@@ -100,10 +100,11 @@ describe("HTTP API exposed by the server", function() {
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
-      if (assertion === expectedAssertion)
+      if (assertion === expectedAssertion) {
         cb(null, user, {});
-      else
+      } else {
         cb("error");
+      }
     });
 
     // Let's do the tests with a real URL.

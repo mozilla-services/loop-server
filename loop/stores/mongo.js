@@ -123,7 +123,7 @@ module.exports = function MongoStore(settings, options) {
             upsert: true,
             multi: true
           }, cb);
-          });
+      });
     },
 
     /**
