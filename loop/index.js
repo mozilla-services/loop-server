@@ -85,7 +85,6 @@ function validateToken(req, res, next) {
       next();
     });
   } catch(err) {
-    logError(err);
     res.sendError("url", "token", "invalid token");
     return;
   }
