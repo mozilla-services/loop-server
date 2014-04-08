@@ -52,20 +52,6 @@ var tokenManager = new tokenlib.TokenManager({
   timeout: conf.get('callUrlTimeout')
 });
 
-var urlsStore = getStore(
-  conf.get('urlsStore'),
-  {unique: ["userMac", "simplepushURL"]}
-);
-
-var callsStore = getStore(
-  conf.get('callsStore'),
-  {unique: ["userMac", "sessionId"]}
-);
-
-var urlsRevocationStore = getStore(
-  conf.get('urlsRevocationStore'),
-  {unique: ["uuid"]}
-);
 
 var tokBox = new TokBox(conf.get('tokBox'));
 
