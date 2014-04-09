@@ -60,7 +60,7 @@ var tokBox = new TokBox(conf.get('tokBox'));
 function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
-    storage.isRevocatedURL(req.token.uuid, function(err, record) {
+    storage.isURLRevoked(req.token.uuid, function(err, record) {
       if (err) {
         logError(err);
         res.json(503, "Service unavailable");
@@ -270,7 +270,7 @@ app.delete('/call-url/:token', sessions.requireSession, sessions.attachSession,
       res.json(403, "Forbidden");
       return;
     }
-    storage.revokeURLId(req.token, function(err, record) {
+    storage.revokeURLToken(req.token, function(err, record) {
       if (err) {
         logError(err);
         res.json(503, "Service Unavailable");

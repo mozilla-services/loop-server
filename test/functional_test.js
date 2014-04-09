@@ -566,7 +566,7 @@ describe("HTTP API exposed by the server", function() {
         if (err) {
           throw err;
         }
-        storage.isRevocatedURL(uuid, function(err, record) {
+        storage.isURLRevoked(uuid, function(err, record) {
           expect(record.uuid).eql(uuid);
           // The expiration date of the token is rounded to the hour.
           expect(record.ttl).within(60 * 60 * 1000, 2 * 60 * 60 * 1000);
@@ -576,7 +576,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should return a 503 is the database is not available", function(done) {
-      sandbox.stub(storage, "isRevocatedURL", function(urlId, cb) {
+      sandbox.stub(storage, "isURLRevoked", function(urlId, cb) {
         cb("error");
       });
       req.expect(503).end(done);

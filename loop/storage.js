@@ -29,14 +29,14 @@ function Storage(options) {
 }
 
 Storage.prototype = {
-  revokeURLId: function(token, callback) {
+  revokeURLToken: function(token, callback) {
     this._urlsRevocationStore.add({
       uuid: token.uuid,
       ttl: (token.expires * 60 * 60 * 1000) - new Date().getTime()
     }, callback);
   },
 
-  isRevocatedURL: function(urlId, callback) {
+  isURLRevoked: function(urlId, callback) {
     this._urlsRevocationStore.findOne({uuid: urlId}, callback);
   },
 

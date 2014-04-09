@@ -80,7 +80,7 @@ describe("index.js", function() {
         uuid: "1234",
         user: "natim"
       });
-      storage.revokeURLId(tokenWrapper.payload, function(err) {
+      storage.revokeURLToken(tokenWrapper.payload, function(err) {
         if (err) {
           throw err;
         }
