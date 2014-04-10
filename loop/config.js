@@ -92,20 +92,9 @@ var conf = convict({
     default: true,
     format: Boolean
   },
-  urlsStore: {
-    doc: "urlsStore config",
-    format: validateKeys(["engine", "settings"]),
-    default: ""
-  },
-  callsStore: {
-    doc: "callsStore config",
-    format: validateKeys(["engine", "settings"]),
-    default: ""
-  },
-  urlsRevocationStore: {
-    doc: "urlsRevocationStore config",
-    format: validateKeys(["engine", "settings"]),
-    default: ""
+  storage: {
+    doc: "storage config",
+    default: {}
   },
   tokBox: {
     doc: "TokBox service config",

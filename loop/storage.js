@@ -5,77 +5,109 @@
 "use strict";
 var redis = require("redis");
 
-function getClient(conf) {
-  var client = redis.createClient(conf.host, conf.port, conf.options);
-  if (conf.db) {
-    client.select(conf.db);
+
+function Storage(options, settings) {
+  this._settings = settings;
+  this._client = redis.createClient(
+    options.host,
+    options.port,
+    options.options
+  );
+  if (options.db) {
+    this._client.select(options.db);
   }
-  return client;
-}
-
-
-function Storage(options) {
-  this._urlsStore = getClient(
-    options.get('urlsStore')
-  );
-
-  this._callsStore = getClient(
-    options.get('callsStore')
-  );
-
-  this._urlsRevocationStore = getClient(
-    options.get('urlsRevocationStore')
-  );
 }
 
 Storage.prototype = {
   revokeURLToken: function(token, callback) {
-    this._urlsRevocationStore.add({
-      uuid: token.uuid,
-      ttl: (token.expires * 60 * 60 * 1000) - new Date().getTime()
-    }, callback);
+    var ttl = (token.expires * 60 * 60 * 1000) - new Date().getTime();
+    this._client.psetex('urlRevoked.' + token.uuid, ttl, JSON.stringify({
+      ttl: ttl,
+      uuid: token.uuid
+    }), callback);
   },
 
   isURLRevoked: function(urlId, callback) {
-    this._urlsRevocationStore.findOne({uuid: urlId}, callback);
+    this._client.get('urlRevoked.' + urlId, function(err, result) {
+      callback(err, result ? JSON.parse(result) : result);
+    });
   },
 
   addUserSimplePushURL: function(userMac, simplepushURL, callback) {
-    this._urlsStore.updateOrCreate({userMac: userMac}, {
-      userMac: userMac,
-      simplepushURL: simplepushURL
-    }, callback);
+    this._client.set('spurl.' + userMac, simplepushURL, callback);
   },
 
   getUserSimplePushURLs: function(userMac, callback) {
-    this._urlsStore.find({userMac: userMac}, callback);
+    this._client.get('spurl.' + userMac, function(err, result) {
+      var simplePushURL = [];
+      if (result !== null) {
+        simplePushURL.push({simplepushURL: result});
+      }
+      callback(err, simplePushURL);
+    });
   },
 
   addUserCall: function(userMac, call, callback) {
-    this._callsStore.add(call, callback);
+    var self = this;
+    this._client.setex(
+      'call.' + call.callId,
+      this._settings.tokenDuration,
+      JSON.stringify(call),
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.sadd('userCalls.' + userMac,
+                          'call.' + call.callId, callback);
+      });
   },
 
   getUserCalls: function(userMac, callback) {
-    this._callsStore.find({userMac: userMac}, callback);
+    var self = this;
+    this._client.smembers('userCalls.' + userMac, function(err, members) {
+      self._client.mget(members, function(err, calls) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var expired = calls.map(function(val, index) {
+          return (val === null) ? index : null;
+        }).filter(function(val) {
+          return val !== null;
+        });
+
+        var pendingCalls = calls.filter(function(val) {
+          return val !== null;
+        }).map(JSON.parse).sort(function(a, b) {
+          return a.timestamp - b.timestamp;
+        });
+
+        if (expired.length > 0) {
+          self._client.srem(expired, function(err, res) {
+            callback(null, pendingCalls);
+          });
+          return;
+        }
+        callback(null, pendingCalls);
+      });
+    });
   },
 
   getCall: function(callId, callback) {
-    this._callsStore.findOne({callId: callId}, callback);
+    this._client.get('call.' + callId, function(err, call) {
+      callback(err, JSON.parse(call));
+    });
   },
 
   deleteCall: function(callId, callback) {
-    this._callsStore.delete({callId: callId}, callback);
+    this._client.del('call.' + callId, function(err, result) {
+      callback(err, result === 0 ? null : result);
+    });
   },
 
   drop: function(callback) {
-    var self = this;
-    self._urlsStore.drop(function() {
-      self._callsStore.drop(function() {
-        self._urlsRevocationStore.drop(function() {
-          callback();
-        });
-      });
-    });
+    this._client.flushdb(callback);
   }
 };
 

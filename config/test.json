@@ -1,33 +1,15 @@
 {
   "host": "localhost",
   "port": 5000,
+  "storage": {
+    "db": 5
+  },
   "macSecret": "263ceaa5546dce837191be98db91e852ae8d050d6805a402272e0c776193cfba",
   "encryptionSecret": "7c69b9ca88e4f127f7280368f7055646",
   "invalidMacSecret": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "invalidEncryptionSecret": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "userMacAlgorithm": "sha256",
   "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
-  "urlsStore": {
-    "engine": "mongo",
-    "settings": {
-      "name": "urlsStore",
-      "connectionString": "mongodb://127.0.0.1:27017/loop_test"
-    }
-  },
-  "callsStore": {
-    "engine": "mongo",
-    "settings": {
-      "name": "callsStore",
-      "connectionString": "mongodb://127.0.0.1:27017/loop_test"
-    }
-  },
-  "urlsRevocationStore": {
-    "engine": "mongo",
-    "settings": {
-      "name": "urlsRevocationStore",
-      "connectionString": "mongodb://127.0.0.1:27017/loop_test"
-    }
-  },
   "sessionSecret": "this is not a secret",
   "sessionDuration": 300,
   "useSSL": false,

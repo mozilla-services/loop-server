@@ -21,7 +21,9 @@ var TokBox = require('./tokbox').TokBox;
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
 
 var Storage = require('./storage');
-var storage = new Storage(conf);
+var storage = new Storage(conf.get('storage'), {
+  'tokenDuration': conf.get('tokBox').tokenDuration
+});
 
 function logError(err) {
   console.log(err);

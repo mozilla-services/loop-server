@@ -457,7 +457,6 @@ describe("HTTP API exposed by the server", function() {
             if (err) {
               throw err;
             }
-
             expect(records[0].simplepushURL).eql(pushURL);
             done();
           });

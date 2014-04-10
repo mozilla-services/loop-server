@@ -1,1 +1,2 @@
-- test the whole HTTP flow (integration testing)
+- isURL → return true /false
+- expire set of SP URL.

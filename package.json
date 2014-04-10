@@ -25,8 +25,8 @@
     "raven": "0.6.2",
     "request": "2.34.0",
     "urlsafe-base64": "0.0.2",
-	"hiredis": "0.1.16",
-	"redis": "0.10.1"
+    "hiredis": "0.1.16",
+    "redis": "0.10.1"
   },
   "devDependencies": {
     "awsbox": "0.6.x",
