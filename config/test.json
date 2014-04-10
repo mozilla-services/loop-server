@@ -2,9 +2,9 @@
   "host": "localhost",
   "port": 5000,
   "storage": {
-    "engine": "memory",
+    "engine": "redis",
 	"settings": {
-      "connectionString": "mongodb://127.0.0.1:27017/loop_test"
+      "db": 5
     }
   },
   "macSecret": "263ceaa5546dce837191be98db91e852ae8d050d6805a402272e0c776193cfba",
