@@ -20,16 +20,17 @@ function Storage(options, settings) {
 
 Storage.prototype = {
   revokeURLToken: function(token, callback) {
-    var ttl = (token.expires * 60 * 60 * 1000) - new Date().getTime();
-    this._client.psetex('urlRevoked.' + token.uuid, ttl, JSON.stringify({
-      ttl: ttl,
-      uuid: token.uuid
-    }), callback);
+    var ttl = (token.expires * 60 * 60 * 1000);
+    this._client.psetex('urlRevoked.' + token.uuid, ttl, "ok", callback);
   },
 
   isURLRevoked: function(urlId, callback) {
     this._client.get('urlRevoked.' + urlId, function(err, result) {
-      callback(err, result ? JSON.parse(result) : result);
+      if(result === null) {
+        callback(err, false);
+      } else {
+        callback(err, true);
+      }
     });
   },
 
@@ -41,7 +42,7 @@ Storage.prototype = {
     this._client.get('spurl.' + userMac, function(err, result) {
       var simplePushURL = [];
       if (result !== null) {
-        simplePushURL.push({simplepushURL: result});
+        simplePushURL.push(result);
       }
       callback(err, simplePushURL);
     });

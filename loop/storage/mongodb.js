@@ -45,7 +45,7 @@ function Storage(settings, options) {
           return;
         }
 
-        var ttl = (token.expires * 60 * 60 * 1000) - new Date().getTime();
+        var ttl = (token.expires * 60 * 60 * 1000) + new Date().getTime();
         coll.insert({
           uuid: token.uuid,
           ttl: ttl
@@ -62,7 +62,19 @@ function Storage(settings, options) {
           return;
         }
 
-        coll.findOne({uuid: urlId}, callback);
+        coll.findOne({uuid: urlId}, function(err, result) {
+          var answer = false;
+          if (result !== null) {
+            answer = result.ttl  > new Date().getTime();
+          }
+          if (answer) {
+            coll.remove(result, function() {
+              callback(err, answer);
+            });
+            return;
+          }
+          callback(err, answer);
+        });
       });
     },
   
@@ -95,7 +107,11 @@ function Storage(settings, options) {
           return;
         }
 
-        coll.find({userMac: userMac}).toArray(callback);
+        coll.find({userMac: userMac}).toArray(function(err, results) {
+          callback(err, results.map(function (val) {
+            return val.simplepushURL;
+          }));
+        });
       });
     },
   

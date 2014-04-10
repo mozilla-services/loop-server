@@ -13,8 +13,8 @@ var request = require('../loop').request;
 var validateToken = require("../loop").validateToken;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
-var storage = require('../loop').storage;
 var tokBox = require("../loop").tokBox;
+var storage = require("../loop").storage;
 
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
@@ -94,7 +94,8 @@ describe("HTTP API exposed by the server", function() {
     fakeCallInfo = conf.get("fakeCallInfo");
 
     genuineOrigins = conf.get('allowedOrigins');
-    conf.set('allowedOrigins', ['http://mozilla.org', 'http://mozilla.com']);
+    conf.set('allowedOrigins', ['http://mozilla.org',
+                                'http://mozilla.com']);
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
@@ -458,7 +459,7 @@ describe("HTTP API exposed by the server", function() {
               throw err;
             }
             console.log(records);
-            expect(records[0].simplepushURL).eql(pushURL);
+            expect(records[0]).eql(pushURL);
             done();
           });
         });
@@ -561,16 +562,18 @@ describe("HTTP API exposed by the server", function() {
         .set('Cookie', sessionCookie);
     });
 
+    afterEach(function() {
+      clock.restore();
+    });
+
     it("should add the token uuid in the revocation list", function(done) {
       req.expect(204).end(function(err, res) {
         if (err) {
           throw err;
         }
         storage.isURLRevoked(uuid, function(err, record) {
-          expect(record.uuid).eql(uuid);
-          // The expiration date of the token is rounded to the hour.
-          expect(record.ttl).within(60 * 60 * 1000, 2 * 60 * 60 * 1000);
-          done();
+          expect(record).eql(true);
+          done(err);
         });
       });
     });

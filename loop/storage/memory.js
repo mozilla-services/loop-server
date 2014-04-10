@@ -56,7 +56,7 @@ function Storage(settings, options) {
     },
 
     revokeURLToken: function(token, callback) {
-      var ttl = (token.expires * 60 * 60 * 1000) - new Date().getTime();
+      var ttl = (token.expires * 60 * 60 * 1000) + new Date().getTime();
       var record = {
         uuid: token.uuid,
         ttl: ttl
@@ -68,7 +68,17 @@ function Storage(settings, options) {
     },
   
     isURLRevoked: function(urlId, callback) {
-      findOne('urlsRevocationStore', {uuid: urlId}, callback);
+      findOne('urlsRevocationStore', {uuid: urlId}, function(err, result) {
+        var answer = false;
+        if (result !== null) {
+          answer = result.ttl  > new Date().getTime();
+          deleteItem('urlsRevocationStore', {uuid: urlId}, function() {
+            callback(err, answer);
+          });
+          return;
+        }
+        callback(err, answer);
+      });
     },
   
     addUserSimplePushURL: function(userMac, simplepushURL, callback) {
@@ -83,7 +93,11 @@ function Storage(settings, options) {
     },
   
     getUserSimplePushURLs: function(userMac, callback) {
-      find('urlsStore', {userMac: userMac}, callback);
+      find('urlsStore', {userMac: userMac}, function(err, results) {
+        callback(err, results.map(function (val) {
+          return val.simplepushURL;
+        }));
+      });
     },
   
     addUserCall: function(userMac, call, callback) {

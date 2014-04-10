@@ -311,15 +311,15 @@ app.post('/calls/:token', validateToken, function(req, res) {
           res.json(503, "Service Unavailable");
           return;
         }
-        storage.getUserSimplePushURLs(userMac, function(err, items) {
+        storage.getUserSimplePushURLs(userMac, function(err, urls) {
           if (err) {
             res.json(503, "Service Unavailable");
             return;
           }
           // Call SimplePush urls.
-          items.forEach(function(item) {
+          urls.forEach(function(simplePushUrl) {
             request.put({
-              url: item.simplepushURL,
+              url: simplePushUrl,
               form: {version: currentTimestamp}
             });
           });
