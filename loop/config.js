@@ -94,7 +94,8 @@ var conf = convict({
   },
   storage: {
     doc: "storage config",
-    default: {}
+    format: validateKeys(["engine", "settings"]),
+    default: {engine: "redis", settings: {}}
   },
   tokBox: {
     doc: "TokBox service config",
