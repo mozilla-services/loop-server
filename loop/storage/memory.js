@@ -5,7 +5,7 @@
 "use strict";
 
 
-function Storage(settings, options) {
+function MemoryStorage(settings, options) {
   var _db = {
     urlsRevocationStore: [],
     urlsStore: [],
@@ -33,28 +33,22 @@ function Storage(settings, options) {
   function deleteItem(name, query, cb) {
     find(name, query, function(err, records) {
       if (records.length === 0) {
-        cb(null, null);
+        cb(null, false);
         return;
       }
       
-      var recordsCopy = JSON.parse(JSON.stringify(records));
       records.forEach(function(item) {
         var i = _db[name].indexOf(item);
-        if (i != -1) {
+        if (i !== -1) {
           _db[name].splice(i, 1);
         }
       });
       
-      cb(null, recordsCopy);
+      cb(null, true);
     });
   }
 
   return {
-
-    get name() {
-      return _settings.engine;
-    },
-
     revokeURLToken: function(token, callback) {
       var ttl = (token.expires * 60 * 60 * 1000) + new Date().getTime();
       var record = {
@@ -128,4 +122,4 @@ function Storage(settings, options) {
   };
 }
 
-module.exports = Storage;
+module.exports = MemoryStorage;

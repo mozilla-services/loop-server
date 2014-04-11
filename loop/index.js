@@ -366,7 +366,7 @@ app.delete('/calls/id/:callId', function(req, res) {
       res.json(503, "Service Unavailable");
       return;
     }
-    if (result === null) {
+    if (result === false) {
       res.json(404, {error: "Call " + callId + " not found."});
       return;
     }

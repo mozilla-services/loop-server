@@ -930,7 +930,7 @@ describe("HTTP API exposed by the server", function() {
           .expect(200);
       });
 
-      it("should return a 404 on an already delete call.", function(done) {
+      it("should return a 404 on an already deleted call.", function(done) {
         supertest(app)
           .del('/calls/id/invalidUUID')
           .set('Authorization', 'BrowserID ' + expectedAssertion)

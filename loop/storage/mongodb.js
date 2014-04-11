@@ -6,11 +6,10 @@
 var MongoClient = require("mongodb");
 
 
-function Storage(settings, options) {
+function MongoStorage(settings, options) {
   var _db,
       _coll = {},
-      _settings = settings || {},
-      _options = options || {};
+      _settings = settings || {};
 
   if (!_settings.hasOwnProperty('connectionString')) {
     throw new Error("The connectionString setting is required");
@@ -52,9 +51,9 @@ function Storage(settings, options) {
         }, function(err, records) {
           callback(err, records ? records[0] : null);
         });
-      })
+      });
     },
-  
+
     isURLRevoked: function(urlId, callback) {
       _ensureConnected('urlsRevocationStore', function(err, coll) {
         if (err) {
@@ -77,7 +76,7 @@ function Storage(settings, options) {
         });
       });
     },
-  
+
     addUserSimplePushURL: function(userMac, simplepushURL, callback) {
       _ensureConnected("urlsStore", function(err, coll) {
         if (err) {
@@ -99,7 +98,7 @@ function Storage(settings, options) {
         }, callback);
       });
     },
-  
+
     getUserSimplePushURLs: function(userMac, callback) {
       _ensureConnected('urlsStore', function(err, coll) {
         if (err) {
@@ -114,7 +113,7 @@ function Storage(settings, options) {
         });
       });
     },
-  
+
     addUserCall: function(userMac, call, callback) {
       _ensureConnected('callsStore', function(err, coll) {
         if (err) {
@@ -125,7 +124,7 @@ function Storage(settings, options) {
         coll.insert(call, callback);
       });
     },
-  
+
     getUserCalls: function(userMac, callback) {
       _ensureConnected('callsStore', function(err, coll) {
         if (err) {
@@ -136,7 +135,7 @@ function Storage(settings, options) {
         coll.find({userMac: userMac}).toArray(callback);
       });
     },
-  
+
     getCall: function(callId, callback) {
       _ensureConnected('callsStore', function(err, coll) {
         if (err) {
@@ -147,7 +146,7 @@ function Storage(settings, options) {
         coll.findOne({callId: callId}, callback);
       });
     },
-  
+
     deleteCall: function(callId, callback) {
       _ensureConnected('callsStore', function(err, coll) {
         if (err) {
@@ -158,7 +157,7 @@ function Storage(settings, options) {
 
         coll.find(query).toArray(function(err, records) {
           if (records.length === 0) {
-            callback(null, null);
+            callback(null, false);
             return;
           }
           coll.remove(query, function(err) {
@@ -166,12 +165,12 @@ function Storage(settings, options) {
               callback(err);
               return;
             }
-            callback(null, records);
+            callback(null, true);
           });
         });
       });
     },
-  
+
     drop: function(callback) {
       if(_coll) {
         Object.keys(_coll).forEach(function(key) {
@@ -183,4 +182,4 @@ function Storage(settings, options) {
   };
 }
 
-module.exports = Storage;
+module.exports = MongoStorage;

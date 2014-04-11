@@ -18,9 +18,37 @@ var simplePushURL = "https://push.mozilla.com/test";
 var fakeCallInfo = conf.get("fakeCallInfo");
 
 
-describe("constructed Storage", function() {
+describe("Storage", function() {
   function testStorage(name, createStorage) {
-    var storage;
+    var storage, 
+        a_second = 1 / 3600,  // A second in hours.
+        calls = [
+        {
+          callId:       crypto.randomBytes(16).toString("hex"),
+          callerId:     callerId,
+          userMac:      userMac,
+          sessionId:    fakeCallInfo.session1,
+          calleeToken:  fakeCallInfo.token1,
+          timestamp:    0
+        },
+        {
+          callId:       crypto.randomBytes(16).toString("hex"),
+          callerId:     callerId,
+          userMac:      userMac,
+          sessionId:    fakeCallInfo.session2,
+          calleeToken:  fakeCallInfo.token2,
+          timestamp:    1
+        },
+        {
+          callId:       crypto.randomBytes(16).toString("hex"),
+          callerId:     callerId,
+          userMac:      userMac,
+          sessionId:    fakeCallInfo.session3,
+          calleeToken:  fakeCallInfo.token2,
+          timestamp:    2
+        }
+      ],
+      call = calls[0];
 
     describe(name, function() {
       beforeEach(function() {
@@ -31,88 +59,113 @@ describe("constructed Storage", function() {
   
       afterEach(function(done) {
         storage.drop(function(err) {
+          // Remove the storage reference so tests blow up in an explicit way.
           storage = undefined;
           done(err);
         });
       });
 
-      describe("urlsRevocationStore", function() {
-        var a_second = 1 / 3600;  // A second in hour
+      describe('#revokeURLToken', function() {
+        it("should add a revoked url", function(done) {
+          storage.revokeURLToken({uuid: uuid, expires: a_second},
+            function(err) {
+              if (err)  {
+                throw err;
+              }
+              storage.isURLRevoked(uuid, function(err, value){
+                expect(value).to.equal(true);
+                done(err);
+              });
+            });
+        });
+      });
 
-        it("should store the URLToken so we can see it has been revoked",
-          function(done) {
-            storage.revokeURLToken({uuid: uuid, expires: a_second},
+      describe('isURLRevoked', function() {
+        it("should not return an expired token", function(done) {
+          storage.revokeURLToken({uuid: uuid, expires: a_second / 100},
+            function(err) {
+              setTimeout(function() {
+                storage.isURLRevoked(uuid, function(err, value) {
+                  if (err) {
+                    throw err;
+                  }
+                  expect(value).to.equal(false);
+                  done();
+                });
+              }, 20);
+            });
+        });
+
+        it("should not return a non existing token", function(done) {
+          storage.isURLRevoked("does-not-exist", function(err, value) {
+            expect(value).to.equal(false);
+            done(err);
+          });
+        });
+      });
+
+      describe("#addUserSimplePushURL", function() {
+        it("should be able to add a user simple push URL", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getUserSimplePushURLs(userMac, function(err, urls) {
+              expect(urls).to.have.length(1);
+              expect(urls).to.eql([simplePushURL]);
+              done(err);
+            });
+          });
+        });
+
+        it("should overwrite existing simple push URLs", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL + '2',
               function(err) {
-                storage.isURLRevoked(uuid, function(err, value){
-                  expect(value).to.equal(true);
+                storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                  expect(urls).to.have.length(1);
+                  expect(urls).to.eql([simplePushURL + '2']);
                   done(err);
                 });
               });
           });
+        });
+      });
 
-        it("should not store expired token", function(done) {
-            storage.revokeURLToken({uuid: uuid, expires: a_second / 100},
-              function(err) {
-                setTimeout(function() {
-                  storage.isURLRevoked(uuid, function(err, value) {
-                    expect(value).to.equal(false);
-                    done(err);
-                  });
-                }, 20);
+      describe("#getUserSimplePushURLs", function() {
+        it("should return an empty list if nothing had been registered",
+          function(done) {
+            storage.getUserSimplePushURLs("does-not-exist",
+              function(err, urls) {
+                if (err) {
+                  throw err;
+                }
+                expect(urls).to.eql([]);
+                done();
               });
           });
       });
 
-      describe("urlsStore", function() {
-        it("should be able to retrieve a simplePush URL per user",
-          function(done) {
-            storage.addUserSimplePushURL(userMac, simplePushURL, function() {
-              storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                expect(urls).to.have.length(1);
-                expect(urls).to.eql([simplePushURL]);
-
-                /* A new URL should override the previous one */
-                storage.addUserSimplePushURL(userMac, simplePushURL+'2',
-                  function() {
-                    storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                      expect(urls).to.have.length(1);
-                      expect(urls).to.eql([simplePushURL+'2']);
-                      done(err);
-                    });
-                  });
-              });
+      
+      describe("#addUserCalls", function() {
+        it("should be able to add one call to the store", function(done) {
+          storage.addUserCall(userMac, call, function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getUserCalls(userMac, function(err, results) {
+              if (err) {
+                throw err;
+              }
+              expect(results).to.have.length(1);
+              expect(results).to.eql([call]);
+              done();
             });
           });
+        });
       });
-  
-      describe("callsStore", function() {
-        var calls = [
-          {
-            callId:       crypto.randomBytes(16).toString("hex"),
-            callerId:     callerId,
-            userMac:      userMac,
-            sessionId:    fakeCallInfo.session1,
-            calleeToken:  fakeCallInfo.token1,
-            timestamp:    0
-          },
-          {
-            callId:       crypto.randomBytes(16).toString("hex"),
-            callerId:     callerId,
-            userMac:      userMac,
-            sessionId:    fakeCallInfo.session2,
-            calleeToken:  fakeCallInfo.token2,
-            timestamp:    1
-          },
-          {
-            callId:       crypto.randomBytes(16).toString("hex"),
-            callerId:     callerId,
-            userMac:      userMac,
-            sessionId:    fakeCallInfo.session3,
-            calleeToken:  fakeCallInfo.token2,
-            timestamp:    2
-          }
-        ];
 
+      describe("#getUserCalls", function() {
         it("should keep a list of the user calls", function(done) {
           storage.addUserCall(userMac, calls[0], function() {
             storage.addUserCall(userMac, calls[1], function() {
@@ -126,31 +179,61 @@ describe("constructed Storage", function() {
             });
           });
         });
+      });
 
-        it("should be able to manage calls.", function(done) {
-          var call = calls[0];
-          storage.addUserCall(userMac, call, function() {
+      describe("#getCall", function() {
+        it("should be able to list a call by its id", function(done) {
+          storage.addUserCall(userMac, call, function(err) {
+            if (err) {
+              throw err;
+            }
             storage.getCall(call.callId, function(err, result) {
+              if (err) {
+                throw err;
+              }
               expect(result).to.eql(call);
+              done();
+            });
+          });
+        });
 
-              storage.deleteCall(call.callId, function() {
-                storage.getCall(call.callId, function(err, result) {
-                  expect(result).to.equal(null);
-                  done(err);
-                });
+        it("should return null if the call doesn't exist", function(done) {
+          storage.getCall("does-not-exist", function(err, call) {
+            expect(call).to.eql(null);
+            done();
+          });
+        });
+      });
+
+      describe("#deleteCall", function() {
+        it("should delete an existing call", function(done) {
+          storage.addUserCall(userMac, call, function(err) {
+            storage.deleteCall(call.callId, function(err, result) {
+              expect(result).to.eql(true);
+              storage.getCall(call.callId, function(err, result) {
+                expect(result).to.equal(null);
+                done(err);
               });
             });
           });
         });
-      });  
+
+        it("should return an error if the call doesn't exist", function(done) {
+          storage.deleteCall("does-not-exist", function(err, result) {
+            expect(result).to.eql(false);
+            done();
+          });
+        });
+      });
     });
   }
 
-  testStorage("RedisStore", function createRedisStorage(options) {
+  // Test all the storages implementation.
+  testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
   });
 
-  testStorage("MongoDBStore", function createMongoDBStorage(options) {
+  testStorage("MongoDB", function createMongoDBStorage(options) {
     return getStorage({
       engine: "mongodb",
       settings: {
@@ -159,7 +242,7 @@ describe("constructed Storage", function() {
     }, options);
   });
 
-  testStorage("MemoryStore", function createMemoryStorage(options) {
+  testStorage("Memory", function createMemoryStorage(options) {
     return getStorage({engine: "memory"}, options);
   });
 });

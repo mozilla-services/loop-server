@@ -6,7 +6,7 @@
 var redis = require("redis");
 
 
-function Storage(options, settings) {
+function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(
     options.host,
@@ -18,7 +18,7 @@ function Storage(options, settings) {
   }
 }
 
-Storage.prototype = {
+RedisStorage.prototype = {
   revokeURLToken: function(token, callback) {
     var ttl = (token.expires * 60 * 60 * 1000);
     this._client.psetex('urlRevoked.' + token.uuid, ttl, "ok", callback);
@@ -103,7 +103,7 @@ Storage.prototype = {
 
   deleteCall: function(callId, callback) {
     this._client.del('call.' + callId, function(err, result) {
-      callback(err, result === 0 ? null : result);
+      callback(err, result !== 0);
     });
   },
 
@@ -112,4 +112,4 @@ Storage.prototype = {
   }
 };
 
-module.exports = Storage;
+module.exports = RedisStorage;

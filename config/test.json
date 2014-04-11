@@ -3,7 +3,7 @@
   "port": 5000,
   "storage": {
     "engine": "redis",
-	"settings": {
+    "settings": {
       "db": 5
     }
   },
