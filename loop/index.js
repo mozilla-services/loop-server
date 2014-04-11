@@ -9,7 +9,6 @@ var tokenlib = require('./tokenlib');
 var sessions = require("./sessions");
 var conf = require('./config').conf;
 var hexKeyOfSize = require('./config').hexKeyOfSize;
-var getStore = require('./stores').getStore;
 var crypto = require('crypto');
 var pjson = require('../package.json');
 var request = require('request');
@@ -20,6 +19,11 @@ var errors = require('connect-validation');
 var TokBox = require('./tokbox').TokBox;
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
+
+var getStorage = require('./storage');
+var storage = getStorage(conf.get("storage"), {
+  'tokenDuration': conf.get('tokBox').tokenDuration
+});
 
 function logError(err) {
   console.log(err);
@@ -52,27 +56,13 @@ var tokenManager = new tokenlib.TokenManager({
   timeout: conf.get('callUrlTimeout')
 });
 
-var urlsStore = getStore(
-  conf.get('urlsStore'),
-  {unique: ["userMac", "simplepushURL"]}
-);
-
-var callsStore = getStore(
-  conf.get('callsStore'),
-  {unique: ["userMac", "sessionId"]}
-);
-
-var urlsRevocationStore = getStore(
-  conf.get('urlsRevocationStore'),
-  {unique: ["uuid"]}
-);
 
 var tokBox = new TokBox(conf.get('tokBox'));
 
 function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
-    urlsRevocationStore.findOne({uuid: req.token.uuid}, function(err, record) {
+    storage.isURLRevoked(req.token.uuid, function(err, record) {
       if (err) {
         logError(err);
         res.json(503, "Service unavailable");
@@ -184,17 +174,15 @@ app.post('/registration',
     // XXX Bug 980289 —
     // With FxA we will want to handle many SimplePushUrls per user.
     var userHmac = hmac(req.user, conf.get('userMacSecret'));
-    urlsStore.updateOrCreate({userMac: userHmac}, {
-      userMac: userHmac,
-      simplepushURL: simplePushURL
-    }, function(err, record){
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
-        return;
-      }
-      res.json(200, "ok");
-    });
+    storage.addUserSimplePushURL(userHmac, simplePushURL,
+      function(err, record) {
+        if (err) {
+          logError(err);
+          res.json(503, "Service Unavailable");
+          return;
+        }
+        res.json(200, "ok");
+      });
   });
 
 /**
@@ -245,7 +233,7 @@ app.get("/calls", sessions.requireSession, sessions.attachSession,
 
     var version = req.query.version;
 
-    callsStore.find({userMac: hmac(req.user, conf.get('userMacSecret'))},
+    storage.getUserCalls(hmac(req.user, conf.get('userMacSecret')),
       function(err, records) {
         if (err) {
           logError(err);
@@ -284,10 +272,7 @@ app.delete('/call-url/:token', sessions.requireSession, sessions.attachSession,
       res.json(403, "Forbidden");
       return;
     }
-    urlsRevocationStore.add({
-      uuid: req.token.uuid,
-      ttl: (req.token.expires * 60 * 60 * 1000) - new Date().getTime()
-    }, function(err, record) {
+    storage.revokeURLToken(req.token, function(err, record) {
       if (err) {
         logError(err);
         res.json(503, "Service Unavailable");
@@ -311,10 +296,12 @@ app.post('/calls/:token', validateToken, function(req, res) {
       var currentTimestamp = new Date().getTime();
       var callId = crypto.randomBytes(16).toString("hex");
 
-      callsStore.add({
+      var userMac = hmac(req.token.user, conf.get("userMacSecret"));
+
+      storage.addUserCall(userMac, {
         "callerId": req.token.callerId,
         "callId": callId,
-        "userMac": hmac(req.token.user, conf.get("userMacSecret")),
+        "userMac": userMac,
         "sessionId": tokboxInfo.sessionId,
         "calleeToken": tokboxInfo.calleeToken,
         "timestamp": currentTimestamp
@@ -324,17 +311,15 @@ app.post('/calls/:token', validateToken, function(req, res) {
           res.json(503, "Service Unavailable");
           return;
         }
-        urlsStore.find({
-          userMac: hmac(req.token.user, conf.get('userMacSecret'))
-        }, function(err, items) {
+        storage.getUserSimplePushURLs(userMac, function(err, urls) {
           if (err) {
             res.json(503, "Service Unavailable");
             return;
           }
           // Call SimplePush urls.
-          items.forEach(function(item) {
+          urls.forEach(function(simplePushUrl) {
             request.put({
-              url: item.simplepushURL,
+              url: simplePushUrl,
               form: {version: currentTimestamp}
             });
           });
@@ -356,7 +341,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
  **/
 app.get('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');
-  callsStore.findOne({callId: callId}, function(err, result) {
+  storage.getCall(callId, function(err, result) {
     if (err) {
       logError(err);
       res.json(503, "Service Unavailable");
@@ -374,21 +359,20 @@ app.get('/calls/id/:callId', function(req, res) {
  * Rejects or cancel a given call.
  **/
 app.delete('/calls/id/:callId', function(req, res) {
-    var callId = req.param('callId');
-
-    callsStore.delete({callId: callId}, function(err, result) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
-        return;
-      }
-      if (result === null) {
-        res.json(404, {error: "Call " + callId + " not found."});
-        return;
-      }
-      res.json(204, "");
-    });
+  var callId = req.param('callId');
+  storage.deleteCall(callId, function(err, result) {
+    if (err) {
+      logError(err);
+      res.json(503, "Service Unavailable");
+      return;
+    }
+    if (result === false) {
+      res.json(404, {error: "Call " + callId + " not found."});
+      return;
+    }
+    res.json(204, "");
   });
+});
 
 app.listen(conf.get('port'), conf.get('host'), function(){
   console.log('Server listening on http://' +
@@ -398,10 +382,8 @@ app.listen(conf.get('port'), conf.get('host'), function(){
 module.exports = {
   app: app,
   conf: conf,
-  urlsStore: urlsStore,
-  callsStore: callsStore,
-  urlsRevocationStore: urlsRevocationStore,
   hmac: hmac,
+  storage: storage,
   validateToken: validateToken,
   requireParams: requireParams,
   request: request,

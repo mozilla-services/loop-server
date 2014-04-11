@@ -10,13 +10,11 @@ var crypto = require("crypto");
 
 var app = require("../loop").app;
 var request = require('../loop').request;
-var urlsStore = require("../loop").urlsStore;
-var callsStore = require("../loop").callsStore;
-var urlsRevocationStore = require("../loop").urlsRevocationStore;
 var validateToken = require("../loop").validateToken;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
+var storage = require("../loop").storage;
 
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
@@ -96,7 +94,8 @@ describe("HTTP API exposed by the server", function() {
     fakeCallInfo = conf.get("fakeCallInfo");
 
     genuineOrigins = conf.get('allowedOrigins');
-    conf.set('allowedOrigins', ['http://mozilla.org', 'http://mozilla.com']);
+    conf.set('allowedOrigins', ['http://mozilla.org',
+                                'http://mozilla.com']);
 
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(auth, "verify", function(assertion, audience, cb){
@@ -119,14 +118,8 @@ describe("HTTP API exposed by the server", function() {
 
   afterEach(function(done) {
     sandbox.restore();
-    urlsStore.drop(function() {
-      callsStore.drop(function() {
-        urlsRevocationStore.drop(function() {
-          done();
-        });
-      });
-    });
     conf.set('allowedOrigins', genuineOrigins);
+    storage.drop(done);
   });
 
   // Test CORS is enabled in all routes for OPTIONS.
@@ -461,13 +454,12 @@ describe("HTTP API exposed by the server", function() {
           if (err) {
             throw err;
           }
-
-          urlsStore.findOne({userMac: userHmac}, function(err, record) {
+          storage.getUserSimplePushURLs(userHmac, function(err, records) {
             if (err) {
               throw err;
             }
-
-            expect(record.simplepushURL).eql(pushURL);
+            console.log(records);
+            expect(records[0]).eql(pushURL);
             done();
           });
         });
@@ -478,7 +470,7 @@ describe("HTTP API exposed by the server", function() {
       function(done) {
         register(url1, expectedAssertion, sessionCookie, function() {
           register(url2, expectedAssertion, sessionCookie, function() {
-            urlsStore.find({userMac: userHmac}, function(err, records) {
+            storage.getUserSimplePushURLs(userHmac, function(err, records) {
               if (err) {
                 throw err;
               }
@@ -492,7 +484,7 @@ describe("HTTP API exposed by the server", function() {
     it("should be able to override an old SimplePush URL.", function(done) {
       register(url1, expectedAssertion, sessionCookie, function() {
         register(url2, expectedAssertion, sessionCookie, function() {
-          urlsStore.find({userMac: userHmac}, function(err, records) {
+          storage.getUserSimplePushURLs(userHmac, function(err, records) {
             if (err) {
               throw err;
             }
@@ -504,9 +496,10 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should return a 503 if the database isn't available", function(done) {
-      sandbox.stub(urlsStore, "updateOrCreate", function(query, record, cb) {
-        cb("error");
-      });
+      sandbox.stub(storage, "addUserSimplePushURL",
+        function(userMac, simplepushURL, cb) {
+          cb("error");
+        });
       jsonReq
         .send({'simple_push_url': pushURL})
         .expect(503).end(done);
@@ -514,9 +507,10 @@ describe("HTTP API exposed by the server", function() {
 
     it("should return a 503 if the database isn't available on update",
     function(done) {
-      sandbox.stub(urlsStore, "updateOrCreate", function(criteria, newObj, cb) {
-        cb("error");
-      });
+      sandbox.stub(storage, "addUserSimplePushURL",
+        function(userMac, simplepushURL, cb) {
+          cb("error");
+        });
       jsonReq
         .send({
           'simple_push_url': pushURL,
@@ -568,22 +562,24 @@ describe("HTTP API exposed by the server", function() {
         .set('Cookie', sessionCookie);
     });
 
+    afterEach(function() {
+      clock.restore();
+    });
+
     it("should add the token uuid in the revocation list", function(done) {
       req.expect(204).end(function(err, res) {
         if (err) {
           throw err;
         }
-        urlsRevocationStore.findOne({uuid: uuid}, function(err, record) {
-          expect(record.uuid).eql(uuid);
-          // The expiration date of the token is rounded to the hour.
-          expect(record.ttl).within(60 * 60 * 1000, 2 * 60 * 60 * 1000);
-          done();
+        storage.isURLRevoked(uuid, function(err, record) {
+          expect(record).eql(true);
+          done(err);
         });
       });
     });
 
     it("should return a 503 is the database is not available", function(done) {
-      sandbox.stub(urlsRevocationStore, "findOne", function(record, cb) {
+      sandbox.stub(storage, "isURLRevoked", function(urlId, cb) {
         cb("error");
       });
       req.expect(503).end(done);
@@ -620,7 +616,7 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          callId:         crypto.randomBytes(16).toString("hex"),
+          callId:       crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
@@ -628,7 +624,7 @@ describe("HTTP API exposed by the server", function() {
           timestamp:    0
         },
         {
-          callId:         crypto.randomBytes(16).toString("hex"),
+          callId:       crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
@@ -636,7 +632,7 @@ describe("HTTP API exposed by the server", function() {
           timestamp:    1
         },
         {
-          callId:         crypto.randomBytes(16).toString("hex"),
+          callId:       crypto.randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
@@ -645,9 +641,9 @@ describe("HTTP API exposed by the server", function() {
         }
       ];
 
-      callsStore.add(calls[0], function() {
-        callsStore.add(calls[1], function() {
-          callsStore.add(calls[2], done);
+      storage.addUserCall(userHmac, calls[0], function() {
+        storage.addUserCall(userHmac, calls[1], function() {
+          storage.addUserCall(userHmac, calls[2], done);
         });
       });
     });
@@ -693,7 +689,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should answer a 503 if the database isn't available", function(done) {
-      sandbox.stub(callsStore, "find", function(record, cb) {
+      sandbox.stub(storage, "getUserCalls", function(userMac, cb) {
         cb("error");
       });
 
@@ -825,7 +821,7 @@ describe("HTTP API exposed by the server", function() {
                 throw err;
               }
 
-              callsStore.find({userMac: userHmac}, function(err, items) {
+              storage.getUserCalls(userHmac, function(err, items) {
                 if (err) {
                   throw err;
                 }
@@ -848,7 +844,7 @@ describe("HTTP API exposed by the server", function() {
 
         it("should return a 503 if callsStore is not available",
           function(done) {
-            sandbox.stub(callsStore, "add", function(record, cb) {
+            sandbox.stub(storage, "addUserCall", function(userMac, call, cb) {
               cb("error");
             });
             jsonReq
@@ -857,7 +853,7 @@ describe("HTTP API exposed by the server", function() {
           });
 
         it("should return a 503 if urlsStore is not available", function(done) {
-          sandbox.stub(urlsStore, "find", function(query, cb) {
+          sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, cb) {
             cb("error");
           });
           jsonReq
@@ -887,7 +883,7 @@ describe("HTTP API exposed by the server", function() {
 
       it("should return a 503 if the database is not available.",
         function(done) {
-          sandbox.stub(callsStore, "findOne", function(query, cb) {
+          sandbox.stub(storage, "getCall", function(callId, cb) {
             cb(new Error("error"));
           });
 
@@ -934,7 +930,7 @@ describe("HTTP API exposed by the server", function() {
           .expect(200);
       });
 
-      it("should return a 404 on an already delete call.", function(done) {
+      it("should return a 404 on an already deleted call.", function(done) {
         supertest(app)
           .del('/calls/id/invalidUUID')
           .set('Authorization', 'BrowserID ' + expectedAssertion)

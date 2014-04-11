@@ -5,27 +5,6 @@
   "encryptionSecret": "7c69b9ca88e4f127f7280368f7055646",
   "userMacAlgorithm": "sha256",
   "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
-  "urlsStore": {
-    "engine": "mongo",
-    "settings": {
-      "name": "urlsStore",
-      "connectionString": "mongodb://127.0.0.1:27017/loop"
-    }
-  },
-  "urlsRevocationStore": {
-    "engine": "mongo",
-    "settings": {
-      "name": "urlsRevocationStore",
-      "connectionString": "mongodb://127.0.0.1:27017/loop_test"
-    }
-  },
-  "callsStore": {
-    "engine": "mongo",
-    "settings": {
-      "name": "callsStore",
-      "connectionString": "mongodb://127.0.0.1:27017/loop"
-    }
-  },
   "sessionSecret": "this is not a secret",
   "sessionDuration": 300,
   "useSSL": false,

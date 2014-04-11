@@ -10,9 +10,10 @@ var tokenlib = require("../loop/tokenlib");
 var app = require("../loop").app;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
-var urlsRevocationStore = require("../loop").urlsRevocationStore;
+var storage = require("../loop").storage;
 var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
+
 
 describe("index.js", function() {
   var jsonReq;
@@ -53,9 +54,7 @@ describe("index.js", function() {
     });
 
     afterEach(function(done) {
-      urlsRevocationStore.drop(function() {
-        done();
-      });
+      storage.drop(done);
     });
 
     it("should return a 404 if the token is missing.", function(done) {
@@ -77,16 +76,16 @@ describe("index.js", function() {
         macSecret: conf.get('macSecret'),
         encryptionSecret: conf.get('encryptionSecret')
       });
-      var token = tokenManager.encode({
+      var tokenWrapper = tokenManager.encode({
         uuid: "1234",
         user: "natim"
-      }).token;
-      urlsRevocationStore.add({uuid: "1234"}, function(err) {
+      });
+      storage.revokeURLToken(tokenWrapper.payload, function(err) {
         if (err) {
           throw err;
         }
         jsonReq
-          .get('/validateToken/' + token)
+          .get('/validateToken/' + tokenWrapper.token)
           .expect(400, /invalid token/)
           .end(done);
       });
