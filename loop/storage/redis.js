@@ -109,6 +109,12 @@ RedisStorage.prototype = {
 
   drop: function(callback) {
     this._client.flushdb(callback);
+  },
+
+  ping: function(callback) {
+    this._client.ping(function(err, value) {
+      callback((err === null && value === "PONG"));
+    });
   }
 };
 

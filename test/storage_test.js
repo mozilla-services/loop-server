@@ -225,6 +225,15 @@ describe("Storage", function() {
           });
         });
       });
+
+      describe("#ping", function() {
+        it("should return true if we are connected", function(done) {
+          storage.ping(function(connected) {
+            expect(connected).to.eql(true);
+            done();
+          });
+        });
+      });
     });
   }
 

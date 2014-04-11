@@ -17,7 +17,7 @@ function MemoryStorage(settings, options) {
       return Object.keys(query).every(function(field) {
         return record[field] === query[field];
       });
-    })); 
+    }));
   }
 
   function findOne(name, query, cb) {
@@ -36,14 +36,14 @@ function MemoryStorage(settings, options) {
         cb(null, false);
         return;
       }
-      
+
       records.forEach(function(item) {
         var i = _db[name].indexOf(item);
         if (i !== -1) {
           _db[name].splice(i, 1);
         }
       });
-      
+
       cb(null, true);
     });
   }
@@ -60,7 +60,7 @@ function MemoryStorage(settings, options) {
         callback(null, record);
       });
     },
-  
+
     isURLRevoked: function(urlId, callback) {
       findOne('urlsRevocationStore', {uuid: urlId}, function(err, result) {
         var answer = false;
@@ -74,7 +74,7 @@ function MemoryStorage(settings, options) {
         callback(err, answer);
       });
     },
-  
+
     addUserSimplePushURL: function(userMac, simplepushURL, callback) {
       deleteItem('urlsStore', {userMac: userMac}, function(){
         var record = {
@@ -85,7 +85,7 @@ function MemoryStorage(settings, options) {
         callback(null, record);
       });
     },
-  
+
     getUserSimplePushURLs: function(userMac, callback) {
       find('urlsStore', {userMac: userMac}, function(err, results) {
         callback(err, results.map(function (val) {
@@ -93,24 +93,24 @@ function MemoryStorage(settings, options) {
         }));
       });
     },
-  
+
     addUserCall: function(userMac, call, callback) {
       _db.callsStore.push(call);
       callback(null, call);
     },
-  
+
     getUserCalls: function(userMac, callback) {
       find('callsStore', {userMac: userMac}, callback);
     },
-  
+
     getCall: function(callId, callback) {
       findOne('callsStore', {callId: callId}, callback);
     },
-  
+
     deleteCall: function(callId, callback) {
       deleteItem('callsStore', {callId: callId}, callback);
     },
-  
+
     drop: function(callback) {
       _db = {
         urlsRevocationStore: [],
@@ -118,6 +118,10 @@ function MemoryStorage(settings, options) {
         callsStore: []
       };
       callback();
+    },
+
+    ping: function(callback) {
+      callback(true);
     }
   };
 }

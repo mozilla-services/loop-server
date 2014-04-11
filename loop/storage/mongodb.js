@@ -171,6 +171,12 @@ function MongoStorage(settings, options) {
       });
     },
 
+    ping: function(callback) {
+      _ensureConnected("urlsStore", function(err) {
+        callback(err === null);
+      });
+    },
+
     drop: function(callback) {
       if(_coll) {
         Object.keys(_coll).forEach(function(key) {
