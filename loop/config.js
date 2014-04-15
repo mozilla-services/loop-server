@@ -102,6 +102,11 @@ var conf = convict({
     format: Boolean,
     default: false
   },
+  fakeTokBoxURL: {
+    doc: "URL where to Mock TokBox calls",
+    format: String,
+    default: "http://httpbin.org/deny"
+  },
   tokBox: {
     doc: "TokBox service config",
     format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),

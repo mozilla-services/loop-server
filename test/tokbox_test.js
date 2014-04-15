@@ -5,6 +5,7 @@
 
 var TokBox = require("../loop/tokbox").TokBox;
 var FakeTokBox = require("../loop/tokbox").FakeTokBox;
+var request = require("../loop/tokbox").request;
 var OpenTok = require("../loop/tokbox").OpenTok;
 var conf = require("../loop/config").conf;
 
@@ -111,13 +112,25 @@ describe("TokBox", function() {
   });
 });
 
-describe("FakeTokBox", function() {
+describe.only("FakeTokBox", function() {
   describe("#getSessionTokens", function() {
-    var tokbox;
+    var tokbox, sandbox, requests;
 
     beforeEach(function() {
+      sandbox = sinon.sandbox.create();
+
+      requests = [];
+      sandbox.stub(request, "get", function(options, cb) {
+        requests.push(options);
+        cb(null);
+      });
       tokbox = new FakeTokBox();
     });
+
+    afterEach(function() {
+      sandbox.restore();
+    });
+
 
     it("should return new session and tokens.", function(done) {
       tokbox.getSessionTokens(function(err, credentials) {
@@ -135,5 +148,13 @@ describe("FakeTokBox", function() {
         done();
       });
     });
+
+    it("should do a call to a predefined url.", function(done) {
+      tokbox.getSessionTokens(function(err) {
+        expect(requests).to.have.length(1);
+        expect(requests[0]).to.equal(conf.get("fakeTokBoxURL"));
+        done();
+      });
+    });    
   });
 });

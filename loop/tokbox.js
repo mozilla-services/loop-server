@@ -7,6 +7,7 @@
 var OpenTok = require('opentok');
 var crypto = require('crypto');
 var request = require('request');
+var conf = require('./config').conf;
 
 function TokBox(settings) {
   this.serverIP = settings.serverIP;
@@ -50,24 +51,24 @@ function FakeTokBox() {
 }
 
 FakeTokBox.prototype = {
+  _urlSafeBase64RandomBytes: function(number_of_bytes) {
+    return crypto.randomBytes(number_of_bytes).toString('base64')
+                 .replace(/\+/g, '-').replace(/\//g, '_');
+  },
   _fakeSessionId: function() {
     this._token = 0;
     this._counter += 1;
-    return this._counter + '_' +
-      crypto.randomBytes(51).toString('base64')
-            .replace(/\+/g, '-').replace(/\//g, '_');
+    return this._counter + '_' + this._urlSafeBase64RandomBytes(51);
 
   },
   _generateFakeToken: function() {
     this._token += 1;
-    return 'T' + this._token + '==' +
-      crypto.randomBytes(293).toString('base64')
-            .replace(/\+/g, '-').replace(/\//g, '_');
+    return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
   },
   getSessionTokens: function(cb) {
     var self = this;
-    // Add a real HTTP call to be able to have good load test feedback
-    request.get("http://httpbin.org/deny", function(err) {
+    // Do a real HTTP call to have a realistic behavior
+    request.get(conf.get("fakeTokBoxURL"), function(err) {
       cb(err, {
         sessionId: self._fakeSessionId(),
         callerToken: self._generateFakeToken(),
@@ -80,5 +81,6 @@ FakeTokBox.prototype = {
 module.exports = {
   TokBox: TokBox,
   FakeTokBox: FakeTokBox,
-  OpenTok: OpenTok
+  OpenTok: OpenTok,
+  request: request
 };
