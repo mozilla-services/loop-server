@@ -15,6 +15,7 @@ var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
 var errors = require('connect-validation');
+var logging = require('./logging');
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Use of TokBox mock activated.");
@@ -37,6 +38,9 @@ function logError(err) {
 
 var app = express();
 
+if (conf.get("env") === "development") {
+  app.use(logging);
+}
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(errors);
