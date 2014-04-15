@@ -4,6 +4,7 @@
 "use strict";
 
 var TokBox = require("../loop/tokbox").TokBox;
+var FakeTokBox = require("../loop/tokbox").FakeTokBox;
 var OpenTok = require("../loop/tokbox").OpenTok;
 var conf = require("../loop/config").conf;
 
@@ -107,5 +108,32 @@ describe("TokBox", function() {
           done();
         });
       });
+  });
+});
+
+describe("FakeTokBox", function() {
+  describe("#getSessionTokens", function() {
+    var tokbox;
+
+    beforeEach(function() {
+      tokbox = new FakeTokBox();
+    });
+
+    it("should return new session and tokens.", function(done) {
+      tokbox.getSessionTokens(function(err, credentials) {
+        // Verify sessionId
+        expect(credentials.hasOwnProperty('sessionId')).to.equal(true);
+        expect(credentials.sessionId).to.match(/^1_/);
+
+        // Verify callerToken
+        expect(credentials.hasOwnProperty('callerToken')).to.equal(true);
+        expect(credentials.callerToken).to.match(/^T1==/);
+
+        // Verify calleeToken
+        expect(credentials.hasOwnProperty('calleeToken')).to.equal(true);
+        expect(credentials.calleeToken).to.match(/^T2==/);
+        done();
+      });
+    });
   });
 });
