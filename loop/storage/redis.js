@@ -35,7 +35,12 @@ RedisStorage.prototype = {
   },
 
   addUserSimplePushURL: function(userMac, simplepushURL, callback) {
-    this._client.set('spurl.' + userMac, simplepushURL, callback);
+    this._client.setex(
+      'spurl.' + userMac,
+      this._settings.registrationDuration * 24 * 3600,
+      simplepushURL,
+      callback
+    );
   },
 
   getUserSimplePushURLs: function(userMac, callback) {

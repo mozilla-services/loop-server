@@ -28,7 +28,8 @@ var ravenClient = new raven.Client(conf.get('sentryDSN'));
 
 var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
-  'tokenDuration': conf.get('tokBox').tokenDuration
+  'tokenDuration': conf.get('tokBox').tokenDuration,
+  'registrationDuration': conf.get('sessionDuration')
 });
 
 function logError(err) {

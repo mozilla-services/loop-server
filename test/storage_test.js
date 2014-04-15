@@ -53,7 +53,8 @@ describe("Storage", function() {
     describe(name, function() {
       beforeEach(function() {
         storage = createStorage({
-          tokenDuration: conf.get('tokBox').tokenDuration
+          tokenDuration: conf.get('tokBox').tokenDuration,
+          registrationDuration: conf.get('sessionDuration')
         });
       });
   
