@@ -5,6 +5,9 @@
 "use strict";
 
 var OpenTok = require('opentok');
+var crypto = require('crypto');
+var request = require('request');
+var conf = require('./config').conf;
 
 function TokBox(settings) {
   this.serverIP = settings.serverIP;
@@ -43,7 +46,41 @@ TokBox.prototype = {
   }
 };
 
+function FakeTokBox() {
+  this._counter = 0;
+}
+
+FakeTokBox.prototype = {
+  _urlSafeBase64RandomBytes: function(number_of_bytes) {
+    return crypto.randomBytes(number_of_bytes).toString('base64')
+                 .replace(/\+/g, '-').replace(/\//g, '_');
+  },
+  _fakeSessionId: function() {
+    this._token = 0;
+    this._counter += 1;
+    return this._counter + '_' + this._urlSafeBase64RandomBytes(51);
+
+  },
+  _generateFakeToken: function() {
+    this._token += 1;
+    return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
+  },
+  getSessionTokens: function(cb) {
+    var self = this;
+    // Do a real HTTP call to have a realistic behavior
+    request.get(conf.get("fakeTokBoxURL"), function(err) {
+      cb(err, {
+        sessionId: self._fakeSessionId(),
+        callerToken: self._generateFakeToken(),
+        calleeToken: self._generateFakeToken()
+      });
+    });
+  }
+};
+
 module.exports = {
   TokBox: TokBox,
-  OpenTok: OpenTok
+  FakeTokBox: FakeTokBox,
+  OpenTok: OpenTok,
+  request: request
 };

@@ -16,7 +16,12 @@ var raven = require('raven');
 var cors = require('cors');
 var errors = require('connect-validation');
 
-var TokBox = require('./tokbox').TokBox;
+if (conf.get("fakeTokBox") === true) {
+  console.log("Use of TokBox mock activated.");
+  var TokBox = require('./tokbox').FakeTokBox;
+} else {
+  var TokBox = require('./tokbox').TokBox;
+}
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
 

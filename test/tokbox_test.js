@@ -4,6 +4,8 @@
 "use strict";
 
 var TokBox = require("../loop/tokbox").TokBox;
+var FakeTokBox = require("../loop/tokbox").FakeTokBox;
+var request = require("../loop/tokbox").request;
 var OpenTok = require("../loop/tokbox").OpenTok;
 var conf = require("../loop/config").conf;
 
@@ -107,5 +109,52 @@ describe("TokBox", function() {
           done();
         });
       });
+  });
+});
+
+describe.only("FakeTokBox", function() {
+  describe("#getSessionTokens", function() {
+    var tokbox, sandbox, requests;
+
+    beforeEach(function() {
+      sandbox = sinon.sandbox.create();
+
+      requests = [];
+      sandbox.stub(request, "get", function(options, cb) {
+        requests.push(options);
+        cb(null);
+      });
+      tokbox = new FakeTokBox();
+    });
+
+    afterEach(function() {
+      sandbox.restore();
+    });
+
+
+    it("should return new session and tokens.", function(done) {
+      tokbox.getSessionTokens(function(err, credentials) {
+        // Verify sessionId
+        expect(credentials.hasOwnProperty('sessionId')).to.equal(true);
+        expect(credentials.sessionId).to.match(/^1_/);
+
+        // Verify callerToken
+        expect(credentials.hasOwnProperty('callerToken')).to.equal(true);
+        expect(credentials.callerToken).to.match(/^T1==/);
+
+        // Verify calleeToken
+        expect(credentials.hasOwnProperty('calleeToken')).to.equal(true);
+        expect(credentials.calleeToken).to.match(/^T2==/);
+        done();
+      });
+    });
+
+    it("should do a call to a predefined url.", function(done) {
+      tokbox.getSessionTokens(function(err) {
+        expect(requests).to.have.length(1);
+        expect(requests[0]).to.equal(conf.get("fakeTokBoxURL"));
+        done();
+      });
+    });    
   });
 });

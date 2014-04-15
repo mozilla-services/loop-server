@@ -97,6 +97,16 @@ var conf = convict({
     format: validateKeys(["engine", "settings"]),
     default: {engine: "redis", settings: {}}
   },
+  fakeTokBox: {
+    doc: "Mock TokBox calls",
+    format: Boolean,
+    default: false
+  },
+  fakeTokBoxURL: {
+    doc: "URL where to Mock TokBox calls",
+    format: String,
+    default: "http://httpbin.org/deny"
+  },
   tokBox: {
     doc: "TokBox service config",
     format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),
