@@ -112,7 +112,7 @@ describe("TokBox", function() {
   });
 });
 
-describe.only("FakeTokBox", function() {
+describe("FakeTokBox", function() {
   describe("#getSessionTokens", function() {
     var tokbox, sandbox, requests;
 
