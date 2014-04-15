@@ -6,6 +6,7 @@
 
 var OpenTok = require('opentok');
 var crypto = require('crypto');
+var request = require('request');
 
 function TokBox(settings) {
   this.serverIP = settings.serverIP;
@@ -64,10 +65,14 @@ FakeTokBox.prototype = {
             .replace(/\+/g, '-').replace(/\//g, '_');
   },
   getSessionTokens: function(cb) {
-    cb(null, {
-      sessionId: this._fakeSessionId(),
-      callerToken: this._generateFakeToken(),
-      calleeToken: this._generateFakeToken()
+    var self = this;
+    // Add a real HTTP call to be able to have good load test feedback
+    request.get("http://httpbin.org/deny", function(err) {
+      cb(err, {
+        sessionId: self._fakeSessionId(),
+        callerToken: self._generateFakeToken(),
+        calleeToken: self._generateFakeToken()
+      });
     });
   }
 };
