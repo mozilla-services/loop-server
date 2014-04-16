@@ -43,6 +43,7 @@ if (conf.get("env") === "development") {
   app.use(logging);
 }
 app.use(headers);
+app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(errors);
