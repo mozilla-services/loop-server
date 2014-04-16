@@ -7,7 +7,21 @@ var redis = require("redis");
 
 
 function RedisStorage(options, settings) {
-  this._settings = settings;
+  if (!settings.hasOwnProperty("registrationDuration") || 
+      typeof settings.registrationDuration !== "number") {
+    throw new Error("settings arguments must have an registrationDuration " +
+                    "and should be a number of days.");
+  }
+
+  if (!settings.hasOwnProperty("tokenDuration") || 
+      typeof settings.tokenDuration !== "number") {
+    throw new Error("settings arguments must have an tokenDuration " +
+                    "and should be a number of seconds.");
+  }
+
+  this._registrationDuration = settings.registrationDuration;
+  this._tokenDuration = settings.tokenDuration;
+
   this._client = redis.createClient(
     options.host,
     options.port,
@@ -37,7 +51,7 @@ RedisStorage.prototype = {
   addUserSimplePushURL: function(userMac, simplepushURL, callback) {
     this._client.setex(
       'spurl.' + userMac,
-      this._settings.registrationDuration * 24 * 3600,
+      this._registrationDuration * 24 * 3600,
       simplepushURL,
       callback
     );
@@ -57,7 +71,7 @@ RedisStorage.prototype = {
     var self = this;
     this._client.setex(
       'call.' + call.callId,
-      this._settings.tokenDuration,
+      this._tokenDuration,
       JSON.stringify(call),
       function(err) {
         if (err) {
