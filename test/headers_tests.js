@@ -25,29 +25,29 @@ describe("#headers", function(){
     res.json(503, "ko");
   });
 
-  it("should return X-Timestamp on page returning 200.", function(done) {
+  it("should set a Timestamp header when returning a 200 ok.", function(done) {
     supertest(app).get('/return200/').expect(200).end(function(err, res) {
       if (err) {
         throw err;
       }
 
-      expect(res.headers.hasOwnProperty('x-timestamp')).eql(true);
+      expect(res.headers.hasOwnProperty('timestamp')).eql(true);
       done();
     });
   });
 
-  it("should return X-Timestamp on page returning 401.", function(done) {
+  it("should set a Timestamp header when returning a 401.", function(done) {
     supertest(app).get('/return401/').expect(401).end(function(err, res) {
       if (err) {
         throw err;
       }
 
-      expect(res.headers.hasOwnProperty('x-timestamp')).eql(true);
+      expect(res.headers.hasOwnProperty('timestamp')).eql(true);
       done();
     });
   });
 
-  it("should not return X-Timestamp on page returning 400.", function(done) {
+  it("should not set a Timestamp header when returning a 400.", function(done) {
     supertest(app).get('/return400/').expect(400).end(function(err, res) {
       if (err) {
         throw err;
@@ -58,7 +58,7 @@ describe("#headers", function(){
     });
   });
 
-  it("should return Retry-After on page returning 503.", function(done) {
+  it("should set a Retry-After header when returning a 503.", function(done) {
     supertest(app).get('/return503/').expect(503).end(function(err, res) {
       if (err) {
         throw err;

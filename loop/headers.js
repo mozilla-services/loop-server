@@ -8,7 +8,7 @@ var conf = require("./config").conf;
 module.exports = function headersMiddleware(req, res, next){
   res.once('header', function() {
     if (res.statusCode === 200 || res.statusCode === 401) {
-      res.setHeader('X-Timestamp', new Date().getTime());
+      res.setHeader('Timestamp', new Date().getTime());
     }
 
     if (res.statusCode === 503) {
