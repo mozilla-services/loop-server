@@ -20,7 +20,7 @@ TokBox.prototype = {
   getSessionTokens: function(cb) {
     var self = this;
     this._opentok.createSession(
-      this.serverIP, {'p2p.preference':'enabled'}, function(err, sessionId) {
+      this.serverIP, {'p2p.preference': 'enabled'}, function(err, sessionId) {
         if (err || sessionId === undefined || sessionId === null) {
           cb(err || new Error("Got an empty sessionId from tokbox, check " +
                               "your credentials."));

@@ -5,7 +5,6 @@
 "use strict";
 var redis = require("redis");
 
-
 function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(

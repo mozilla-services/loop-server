@@ -4,7 +4,6 @@
 
 "use strict";
 
-
 function MemoryStorage(settings, options) {
   var _db = {
     urlsRevocationStore: [],

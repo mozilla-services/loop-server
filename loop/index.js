@@ -204,8 +204,8 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
     var expiresIn,
         maxTimeout = conf.get('callUrlMaxTimeout');
 
-    if(req.body.hasOwnProperty("expiresIn")) {
-      expiresIn = parseInt(req.body.expiresIn);
+    if (req.body.hasOwnProperty("expiresIn")) {
+      expiresIn = parseInt(req.body.expiresIn, 10);
 
       if (isNaN(expiresIn)) {
         res.sendError("body", "expiresIn", "should be a valid number");
