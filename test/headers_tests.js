@@ -15,10 +15,10 @@ describe("#headers", function(){
     res.json(200, "ok");
   });
   app.get('/return400/', function(req, res) {
-    res.json(400, "pas ok");
+    res.json(400, "ko");
   });
   app.get('/return401/', function(req, res) {
-    res.json(401, "pas ok");
+    res.json(401, "ko");
   });
 
   it("should return X-Timestamp on page returning 200.", function(done) {
@@ -27,7 +27,7 @@ describe("#headers", function(){
         throw err;
       }
 
-      expect(res.headers.hasOwnProperty('x-timestamp')).to.be.true;
+      expect(res.headers.hasOwnProperty('x-timestamp')).eql(true);
       done();
     });
   });
@@ -38,7 +38,7 @@ describe("#headers", function(){
         throw err;
       }
 
-      expect(res.headers.hasOwnProperty('x-timestamp')).to.be.true;
+      expect(res.headers.hasOwnProperty('x-timestamp')).eql(true);
       done();
     });
   });
@@ -49,7 +49,7 @@ describe("#headers", function(){
         throw err;
       }
 
-      expect(res.headers.hasOwnProperty('x-timestamp')).to.be.false;
+      expect(res.headers.hasOwnProperty('x-timestamp')).eql(false);
       done();
     });
   });

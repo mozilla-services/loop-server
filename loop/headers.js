@@ -4,7 +4,7 @@
 
 "use strict";
 
-module.exports = function(req, res, next){
+module.exports = function headersMiddleware(req, res, next){
   res.on('header', function() {
     if (res.statusCode === 200 || res.statusCode === 401) {
       res.setHeader('X-Timestamp', new Date().getTime());
