@@ -132,6 +132,11 @@ var conf = convict({
     doc: "Authorized origins for cross-origin requests.",
     format: Array,
     default: ['http://localhost:3000']
+  },
+  retryAfter: {
+    doc: "Seconds to wait for on 503",
+    format: Number,
+    default: 30
   }
 });
 
