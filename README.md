@@ -7,20 +7,21 @@ its APIs by looking at [the online documentation](https://docs.services.mozilla.
 How to install?
 ---------------
 
-You will need mongodb installed:
+You will need redis-server installed:
 
 ### Linux
 
-    apt-get install mongodb-server
+    apt-get install redis-server
 
 ### OS X
 
-Assuming you have brew installed, use it to install mongodb; then configure
-your account to run it:
+Assuming you have brew installed, use it to install redis:
 
-    brew install mongo
-    ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents
-    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
+    brew install redis
+
+If you need to restart it (after configuration update):
+
+    brew services restart redis
 
 ### All Platforms
 
@@ -60,4 +61,3 @@ License
 The Loop server code is released under the terms of the
 [Mozilla Public License v2.0](http://www.mozilla.org/MPL/2.0/). See the
 `LICENSE` file at the root of the repository.
-
