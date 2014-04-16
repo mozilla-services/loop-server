@@ -70,4 +70,15 @@ describe("#headers", function(){
       done();
     });
   });
+
+  it("should not return any X-Powered-By headers..", function(done) {
+    supertest(app).get('/return200/').expect(200).end(function(err, res) {
+      if (err) {
+        throw err;
+      }
+
+      expect(res.headers.hasOwnProperty('x-powered-by')).eql(false);
+      done();
+    });
+  });
 });
