@@ -5,7 +5,6 @@
 "use strict";
 var MongoClient = require("mongodb");
 
-
 function MongoStorage(settings, options) {
   var _db,
       _coll = {},
