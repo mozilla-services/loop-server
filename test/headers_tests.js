@@ -7,6 +7,7 @@ var supertest = require("supertest");
 var expect = require("chai").expect;
 
 var app = require("../loop").app;
+var conf = require("../loop").conf;
 
 describe("#headers", function(){
 
@@ -19,6 +20,9 @@ describe("#headers", function(){
   });
   app.get('/return401/', function(req, res) {
     res.json(401, "ko");
+  });
+  app.get('/return503/', function(req, res) {
+    res.json(503, "ko");
   });
 
   it("should return X-Timestamp on page returning 200.", function(done) {
@@ -50,6 +54,19 @@ describe("#headers", function(){
       }
 
       expect(res.headers.hasOwnProperty('x-timestamp')).eql(false);
+      done();
+    });
+  });
+
+  it("should return Retry-After on page returning 503.", function(done) {
+    supertest(app).get('/return503/').expect(503).end(function(err, res) {
+      if (err) {
+        throw err;
+      }
+
+      expect(res.headers.hasOwnProperty('retry-after')).eql(true);
+      expect(res.headers['retry-after']).equal(
+        conf.get('retryAfter').toString());
       done();
     });
   });
