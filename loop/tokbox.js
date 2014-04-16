@@ -14,6 +14,7 @@ function TokBox(settings) {
   this.apiKey = settings.apiKey;
   this.tokenDuration = settings.tokenDuration;
   this._opentok = new OpenTok.OpenTokSDK(this.apiKey, settings.apiSecret);
+  this.serverURL = 'https://' + this._opentok.api_url;
 }
 
 TokBox.prototype = {
@@ -46,8 +47,9 @@ TokBox.prototype = {
   }
 };
 
-function FakeTokBox() {
+function FakeTokBox(serverURL) {
   this._counter = 0;
+  this.serverURL = conf.get("fakeTokBoxURL");
 }
 
 FakeTokBox.prototype = {
@@ -67,8 +69,8 @@ FakeTokBox.prototype = {
   },
   getSessionTokens: function(cb) {
     var self = this;
-    // Do a real HTTP call to have a realistic behavior
-    request.get(conf.get("fakeTokBoxURL"), function(err) {
+    // Do a real HTTP call to have a realistic behavior.
+    request.get(self.serverURL, function(err) {
       cb(err, {
         sessionId: self._fakeSessionId(),
         callerToken: self._generateFakeToken(),
