@@ -199,6 +199,70 @@ describe("HTTP API exposed by the server", function() {
     });
   });
 
+  describe("GET /__hearbeat__", function() {
+
+    it("should return a 503 if storage is down", function(done) {
+      sandbox.stub(request, "get", function(url, callback){
+        callback(null);
+      });
+      sandbox.stub(storage, "ping", function(callback) {
+        callback(false);
+      });
+
+      supertest(app)
+        .get('/__heartbeat__')
+        .expect(503)
+        .end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          expect(res.body).to.eql({
+            'storage': false,
+            'provider': true
+          });
+          done();
+        });
+    });
+
+    it("should return a 503 if provider service is down", function(done) {
+      sandbox.stub(request, "get", function(url, callback){
+        callback("error");
+      });
+      supertest(app)
+        .get('/__heartbeat__')
+        .expect(503)
+        .end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          expect(res.body).to.eql({
+            'storage': true,
+            'provider': false
+          });
+          done();
+        });
+    });
+
+    it("should return a 200 if all dependencies are ok", function(done) {
+      sandbox.stub(request, "get", function(url, callback){
+        callback(null);
+      });
+      supertest(app)
+        .get('/__heartbeat__')
+        .expect(200)
+        .end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          expect(res.body).to.eql({
+            'storage': true,
+            'provider': true
+          });
+          done();
+        });
+    });
+  });
+
   describe("GET /", function() {
     it("should display project information.", function(done) {
       supertest(app)

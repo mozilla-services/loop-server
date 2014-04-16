@@ -19,7 +19,7 @@ var logging = require('./logging');
 var headers = require('./headers');
 
 if (conf.get("fakeTokBox") === true) {
-  console.log("Use of TokBox mock activated.");
+  console.log("Calls to TokBox are now mocked.");
   var TokBox = require('./tokbox').FakeTokBox;
 } else {
   var TokBox = require('./tokbox').TokBox;
@@ -150,6 +150,27 @@ function hmac(payload, secret, algorithm) {
  * Enable CORS for all requests.
  **/
 app.all('*', corsEnabled);
+
+/**
+ * Checks that the service and its dependencies are healthy.
+ **/
+app.get("/__heartbeat__", function(req, res) {
+  storage.ping(function(storageStatus) {
+    request.get(tokBox.serverURL, function(requestError) {
+      var status;
+      if (storageStatus === true && requestError === null) {
+        status = 200;
+      } else {
+        status = 503;
+      }
+
+      res.json(status, {
+        storage: storageStatus,
+        provider: (requestError === null) ? true : false
+      });
+    });
+  });
+});
 
 /**
  * Displays some version information at the root of the service.
