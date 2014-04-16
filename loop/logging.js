@@ -4,6 +4,7 @@
 
 "use strict";
 
+var conf = require("./config").conf;
 var strftime = require('strftime');
 
 module.exports = function(req, res, next){
@@ -14,7 +15,7 @@ module.exports = function(req, res, next){
 
     console.log(
       '[%s] "%s %s HTTP/%s.%s" %s %s — (%s ms)',
-      strftime("%B %d, %y %H:%M:%S", start),
+      strftime(conf.get("consoleDateFormat"), start),
       req.method, req.url, req.httpVersionMajor, req.httpVersionMinor,
       res.statusCode, length, stop - start);
   });

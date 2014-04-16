@@ -142,6 +142,11 @@ var conf = convict({
     doc: "Seconds to wait for on 503",
     format: Number,
     default: 30
+  },
+  consoleDateFormat: {
+    doc: "Date format of the logging line in development.",
+    format: String,
+    default: "%y/%b/%d %H:%M:%S"
   }
 });
 
