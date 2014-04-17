@@ -11,11 +11,18 @@ var crypto = require('crypto');
 /**
  * Validates the keys are present in the configuration object.
  *
- * @param {List} keys  A list of keys that must be present.
+ * @param {List}    keys      A list of keys that must be present.
+ * @param {Boolean} options   List of options to use.
  **/
-function validateKeys(keys) {
+function validateKeys(keys, options) {
+  options = options || {};
+  var optional = options.optional || false;
+
   return function(val) {
-    if (!val)
+    if (JSON.stringify(val) === "{}" && optional === true) {
+      return;
+    }
+    if (!optional && !val)
       throw new Error("Should be defined");
     keys.forEach(function(key) {
       if (!val.hasOwnProperty(key))
@@ -135,8 +142,13 @@ var conf = convict({
   },
   statsd: {
     doc: "Statsd configuration",
-    format: validateKeys(['port', 'host']),
-    default: ""
+    format: validateKeys(['port', 'host'], {'optional': true}),
+    default: {}
+  },
+  statsdEnabled: {
+    doc: "Defines if statsd is enabled or not",
+    format: Boolean,
+    default: false
   },
   allowedOrigins: {
     doc: "Authorized origins for cross-origin requests.",

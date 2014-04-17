@@ -33,8 +33,5 @@
     "token3": "T3==GcFydG5lcl9pZD00NDY4NzQ0MiZzZGtfdmVyc2lvbj10YnJ1YnktdGJyYi12MC45MS4yMDELxTyALT3EJnNpZz00ODkZNTQ1YTZlOWIzGOM2ZjmRMWFiYTdjZmFhNV2mOWUxMzFlMWYwOnJvbGU9cHVibGlzaGVyJnNlc3Npb25faWQ9M9VNWDQwTkRZNE56UTBNbjUtVjJWa0lFWMhjaUF4TWlBd016bzFPVG8xTVNCUVJGUWdNakF4Tkg0d0xqUTVPVE16TWpNM2ZnJmNyZWF0ZV90aW1lPTEzOTQ2MjE5OTcmbm9uY2U9MC4yMzM2MDQyMzM2MzY2OTQ1OCZleHBpcmVfdGltZT0xMzk0NjI1NTgzJmNvmb5lY3Rbp25fZGF0TY0="
   },
   "allowedOrigins": ["http://localhost:3000"],
-  "statsd": {
-    "host": "localhost",
-    "port": 8125
-  }
+  "statsdEnabled": true
 }

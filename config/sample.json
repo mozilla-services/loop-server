@@ -17,8 +17,5 @@
   "webAppUrl": "http://localhost:3000/content/#call/{token}",
   "sentryDSN": false,
   "allowedOrigins": ["http://localhost:3000"],
-  "statsd": {
-    "host": "localhost",
-    "port": 8125
-  }
+  "statsdEnabled": false,
 }
