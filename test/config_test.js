@@ -17,6 +17,10 @@ describe("config", function() {
     it("should not throw if all keys are valid", function() {
       config.validateKeys(['foo'])({foo: 'oh yeah'});
     });
+
+    it("should not throw any error if it is defined as optional", function() {
+      config.validateKeys(['foo'], {'optional': true})({});
+    });
   });
 
   describe("#hexKeyOfSize", function() {

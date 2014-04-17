@@ -34,6 +34,7 @@ function attachSession(req, res, next) {
   } else {
     uid = crypto.randomBytes(12).toString('hex');
     req.session.uid = uid;
+    req.newSession = true;
   }
 
   req.user = uid;

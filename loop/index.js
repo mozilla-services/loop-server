@@ -17,6 +17,7 @@ var cors = require('cors');
 var errors = require('connect-validation');
 var logging = require('./logging');
 var headers = require('./headers');
+var StatsdClient = require('statsd-node').client;
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -26,6 +27,10 @@ if (conf.get("fakeTokBox") === true) {
 }
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
+var statsdClient;
+if (conf.get('statsdEnabled') === true) {
+  statsdClient = new StatsdClient(conf.get('statsd'));
+}
 
 var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
@@ -214,6 +219,9 @@ app.post('/registration',
           res.json(503, "Service Unavailable");
           return;
         }
+        if (statsdClient !== undefined && req.newSession === true) {
+          statsdClient.count('loop-activated-users', 1);
+        }
         res.json(200, "ok");
       });
   });
@@ -252,6 +260,12 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
       call_url: host + "/calls/" + tokenWrapper.token,
       expiresAt: tokenWrapper.payload.expires
     });
+
+    var userMac = hmac(req.user, conf.get('userMacSecret'));
+    if (statsdClient !== undefined) {
+      statsdClient.count('loop-call-urls', 1);
+      statsdClient.count('loop-call-urls-' + userMac, 1);
+    }
   });
 
 /**
@@ -420,5 +434,6 @@ module.exports = {
   validateToken: validateToken,
   requireParams: requireParams,
   request: request,
-  tokBox: tokBox
+  tokBox: tokBox,
+  statsdClient: statsdClient
 };

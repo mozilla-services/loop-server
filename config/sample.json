@@ -16,5 +16,6 @@
   },
   "webAppUrl": "http://localhost:3000/content/#call/{token}",
   "sentryDSN": false,
-  "allowedOrigins": ["http://localhost:3000"]
+  "allowedOrigins": ["http://localhost:3000"],
+  "statsdEnabled": false,
 }
