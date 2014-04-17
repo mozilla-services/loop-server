@@ -328,7 +328,6 @@ describe("HTTP API exposed by the server", function() {
 
     it("should check that the given expiration is a number", function(done) {
       jsonReq
-        .set('Cookie', sessionCookie)
         .send({callerId: callerId, expiresIn: "not a number"})
         .expect(400)
         .end(function(err, res) {
@@ -350,7 +349,6 @@ describe("HTTP API exposed by the server", function() {
         var oldMaxTimeout = conf.get('callUrlMaxTimeout');
         conf.set('callUrlMaxTimeout', 5);
         jsonReq
-          .set('Cookie', sessionCookie)
           .send({callerId: callerId, expiresIn: "10"})
           .expect(400)
           .end(function(err, res) {
@@ -385,7 +383,6 @@ describe("HTTP API exposed by the server", function() {
 
       it("should accept an expiresIn parameter", function(done) {
         jsonReq
-          .set('Cookie', sessionCookie)
           .expect(200)
           .send({callerId: callerId, expiresIn: 5})
           .end(function(err, res) {
@@ -403,7 +400,6 @@ describe("HTTP API exposed by the server", function() {
 
       it("should generate a valid call-url", function(done) {
         jsonReq
-          .set('Cookie', sessionCookie)
           .expect(200)
           .send({callerId: callerId})
           .end(function(err, res) {
@@ -424,7 +420,6 @@ describe("HTTP API exposed by the server", function() {
 
       it("should return the expiration date of the call-url", function(done) {
         jsonReq
-          .set('Cookie', sessionCookie)
           .expect(200)
           .send({callerId: callerId})
           .end(function(err, res) {
