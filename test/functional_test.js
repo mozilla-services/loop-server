@@ -8,6 +8,7 @@ var expect = require("chai").expect;
 var supertest = require("supertest");
 var sinon = require("sinon");
 var crypto = require("crypto");
+var assert = sinon.assert;
 
 var app = require("../loop").app;
 var request = require('../loop').request;
@@ -16,6 +17,8 @@ var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
 var storage = require("../loop").storage;
+var statsdClient = require("../loop").statsdClient;
+
 
 var tokenlib = require("../loop/tokenlib");
 var auth = require("../loop/authentication");
@@ -430,6 +433,26 @@ describe("HTTP API exposed by the server", function() {
             done();
           });
       });
+
+      it("should count new url generation using statsd", function(done) {
+        sandbox.stub(statsdClient, "count");
+        jsonReq
+          .expect(200)
+          .send({callerId: callerId})
+          .end(function(err, res) {
+            if (err) {
+              throw err;
+            }
+            assert.calledTwice(statsdClient.count);
+            assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
+            assert.calledWithExactly(
+              statsdClient.count,
+              "loop-call-urls-" + userHmac,
+              1
+            );
+            done();
+          });
+      });
     });
   });
 
@@ -580,10 +603,44 @@ describe("HTTP API exposed by the server", function() {
       jsonReq
         .send({
           'simple_push_url': pushURL,
-          'previous_simple_push_url': 'http://old'
         }).expect(503).end(done);
     });
 
+    it("should count new users if the session is created", function(done) {
+      sandbox.stub(statsdClient, "count");
+      supertest(app)
+        .post('/registration')
+        .type('json')
+        .send({
+          'simple_push_url': pushURL,
+        }).expect(200).end(function(err, res) {
+          if (err) {
+            throw err;
+          }
+          assert.calledOnce(statsdClient.count);
+          assert.calledWithExactly(
+            statsdClient.count,
+            "loop-activated-users",
+            1
+          );
+          done();
+        });
+    });
+
+    it("shouldn't count a new user if the session already exists",
+      function(done) {
+        sandbox.stub(statsdClient, "count");
+        jsonReq
+          .send({
+            'simple_push_url': pushURL,
+          }).expect(200).end(function(err, res) {
+            if (err) {
+              throw err;
+            }
+            assert.notCalled(statsdClient.count);
+            done();
+          });
+      });
   });
 
   describe("GET /calls/:token", function() {

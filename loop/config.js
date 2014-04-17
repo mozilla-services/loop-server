@@ -133,6 +133,11 @@ var conf = convict({
     default: false,
     env: "SENTRY_DSN"
   },
+  statsd: {
+    doc: "Statsd configuration",
+    format: validateKeys(['port', 'host']),
+    default: ""
+  },
   allowedOrigins: {
     doc: "Authorized origins for cross-origin requests.",
     format: Array,
