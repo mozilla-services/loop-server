@@ -143,10 +143,7 @@ function hmac(payload, secret, algorithm) {
   if (algorithm === undefined) {
     algorithm = conf.get("userMacAlgorithm");
   }
-  var _hmac = crypto.createHmac(
-    algorithm,
-    new Buffer(secret, "hex")
-  );
+  var _hmac = crypto.createHmac(algorithm, new Buffer(secret, "hex"));
   _hmac.write(payload);
   _hmac.end();
   return _hmac.read().toString('hex');
