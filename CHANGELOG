@@ -1,0 +1,36 @@
+Changelog
+=========
+
+This document describes changes between each past release.
+
+0.3.0 (2014-04-21)
+------------------
+
+- Rewrite Store in Storage (with redis as default storage)
+- Remove authentication for discarding a call.
+- Add TTL on urls
+- Add TTL on revocation and callUrl stores
+- Write the API documentation
+- Add a hertbeat endpoint that ping the storage and the partner API.
+- Add the FakePartner interface for load testing.
+- Add an API logger for development.
+- Add Timestam and Retry-After headers
+- Add server telemetry using a Statsd endpoint.
+
+
+0.2.0 (2014-03-26)
+------------------
+
+- Log server errors using Sentry.
+- Accept CORS requests.
+- Have the caller name in the token.
+- Add the discar call endpoint.
+- Add the revoke call endpoint.
+- Better handle OpenTok error messages.
+- Improve 400 errors format.
+
+
+0.1.0 (2014-03-20)
+------------------
+
+- Get the basic API working
