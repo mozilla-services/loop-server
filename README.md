@@ -4,6 +4,17 @@ Loop server
 This is the server part of the loop project. You can find more information on
 its APIs by looking at [the online documentation](https://docs.services.mozilla.com/loop/)
 
+Estimate Redis Memory Usage
+---------------------------
+
+    usage = nbUsers * 280 + nbCallsPerDay * 1365 + nbUrlRevocationPerMonth * 150 + 600000 (bytes)
+    
+ - For 10M users and 100 000 calls a day we will need around 2.7 GB
+ - For 250M users and 10M calls a day we will need around 78 GB
+
+The biggest AWS Elasticache Redis virtual machine is 68GB large so if we want to handle more that 150M users we will probably want to do some sharding to have one redis for calls and another one for user management.
+
+
 How to install?
 ---------------
 
