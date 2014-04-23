@@ -44,7 +44,7 @@ function logError(err) {
 
 var app = express();
 
-if (conf.get("env") === "development") {
+if (conf.get("env") === "dev") {
   app.use(logging);
 }
 app.use(headers);
