@@ -2,5 +2,6 @@ node_modules
 coverage
 html-report
 lib-cov
-config/development.json
-config/production.json
+config/dev.json
+config/stage.json
+config/prod.json
