@@ -7,6 +7,8 @@
 var convict = require('convict');
 var format = require('util').format;
 var crypto = require('crypto');
+var path = require('path');
+var fs = require('fs');
 
 /**
  * Validates the keys are present in the configuration object.
@@ -50,8 +52,8 @@ function hexKeyOfSize(size) {
 var conf = convict({
   env: {
     doc: "The applicaton environment.",
-    format: ["production", "development", "test"],
-    default: "development",
+    format: [ "dev", "test", "stage", "prod" ],
+    default: "dev",
     env: "NODE_ENV"
   },
   ip: {
@@ -173,15 +175,16 @@ var conf = convict({
 });
 
 
-var env = conf.get('env');
-try {
-  conf.loadFile('./config/' + env + '.json');
-} catch (err) {
-  console.log("Please create your config/" + env + ".json file.\n" +
-              "You can use config/sample.json as an example.\n");
-  process.exit(1);
-}
+// handle configuration files.  you can specify a CSV list of configuration
+// files to process, which will be overlayed in order, in the CONFIG_FILES
+// environment variable. By default, the ../config/<env>.json file is loaded.
 
+var envConfig = path.join(__dirname + '/../config', conf.get('env') + '.json');
+var files = (envConfig + ',' + process.env.CONFIG_FILES)
+    .split(',')
+    .filter(fs.existsSync);
+
+conf.loadFile(files);
 conf.validate();
 
 if (conf.get('macSecret') === "")
