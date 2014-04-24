@@ -8,7 +8,7 @@ Estimate Redis Memory Usage
 ---------------------------
 
     usage = nbUsers * 280 + nbCallsPerDay * 1365 + nbUrlRevocationPerMonth * 150 + 600000 (bytes)
-    
+
  - For 10M users and 100 000 calls a day we will need around 2.7 GB
  - For 250M users and 10M calls a day we will need around 78 GB
 
@@ -46,13 +46,13 @@ How to run it?
 
 You can create your configuration file in `config/{NODE_ENV}.json`
 
-`development` is the environment by default.
+`dev` is the environment by default.
 
     make runserver
 
 this is equivalent to:
 
-    NODE_ENV=development make runserver
+    NODE_ENV=dev make runserver
 
 
 How to run the tests?
