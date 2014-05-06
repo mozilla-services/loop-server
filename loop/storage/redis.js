@@ -8,8 +8,8 @@ var redis = require("redis");
 function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(
-    options.host,
     options.port,
+    options.host,
     options.options
   );
   if (options.db) {
