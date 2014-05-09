@@ -69,7 +69,7 @@ Redis is the default backend, but you could use another one (MongoDB, Memory).
 All three are tested with `make test` so you will need a local mongodb
 server to test the MongoDB backend.
 
-To install mongodb:
+## To install mongodb
 
 ### Linux
 
@@ -80,6 +80,10 @@ To install mongodb:
     brew install mongo
     ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents
     launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
+
+Also make sure to have a sufficient ulimit value:
+
+    ulimit -n 8191
 
 Where to report bugs?
 ---------------------
