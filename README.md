@@ -24,6 +24,10 @@ You will need redis-server installed:
 
     apt-get install redis-server
 
+or
+
+    yum install redis
+
 ### OS X
 
 Assuming you have brew installed, use it to install redis:
