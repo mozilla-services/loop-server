@@ -69,13 +69,13 @@ Redis is the default backend, but you could use another one (MongoDB, Memory).
 All three are tested with `make test` so you will need a local mongodb
 server to test the MongoDB backend.
 
-## To install mongodb
+### To install mongodb
 
-### Linux
+#### on Linux
 
     apt-get install mongodb-server
 
-### MacOS
+#### on MacOS
 
     brew install mongo
     ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents
