@@ -64,26 +64,8 @@ How to run the tests?
 
     make test
 
-Redis is the default backend, but you could use another one (MongoDB, Memory).
-
-All three are tested with `make test` so you will need a local mongodb
-server to test the MongoDB backend.
-
-### To install mongodb
-
-#### on Linux
-
-    apt-get install mongodb-server
-
-#### on MacOS
-
-    brew install mongo
-    ln -sfv /usr/local/opt/mongodb/*.plist ~/Library/LaunchAgents
-    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist
-
-Also make sure to have a sufficient ulimit value:
-
-    ulimit -n 8191
+Redis is the default backend. The code is made to support multiple ones but
+only supports redis for now.
 
 Where to report bugs?
 ---------------------

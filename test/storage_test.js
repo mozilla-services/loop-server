@@ -241,17 +241,4 @@ describe("Storage", function() {
   testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
   });
-
-  testStorage("MongoDB", function createMongoDBStorage(options) {
-    return getStorage({
-      engine: "mongodb",
-      settings: {
-        connectionString: "mongodb://127.0.0.1:27017/loop_test"
-      }
-    }, options);
-  });
-
-  testStorage("Memory", function createMemoryStorage(options) {
-    return getStorage({engine: "memory"}, options);
-  });
 });

@@ -945,8 +945,6 @@ describe("HTTP API exposed by the server", function() {
                 }
                 expect(items.length).eql(1);
                 expect(items[0].callId).to.have.length(32);
-                // We don't want to compare this, it's added by mongo.
-                delete items[0]._id;
                 delete items[0].callId;
                 expect(items[0]).eql({
                   callerId: callerId,
