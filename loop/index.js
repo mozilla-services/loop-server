@@ -6,7 +6,6 @@
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
-var sessions = require("./sessions");
 var conf = require('./config').conf;
 var hexKeyOfSize = require('./config').hexKeyOfSize;
 var crypto = require('crypto');
@@ -18,6 +17,8 @@ var errors = require('connect-validation');
 var logging = require('./logging');
 var headers = require('./headers');
 var StatsdClient = require('statsd-node').client;
+
+var hawk = require('./hawk');
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -37,6 +38,22 @@ var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration
 });
 
+var requireHawkSession = hawk.getMiddleware(
+  storage.getHawkSession.bind(storage));
+
+var attachOrCreateHawkSession = hawk.getMiddleware(
+  storage.getHawkSession.bind(storage),
+  function(tokenId, authKey, callback) {
+    storage.setHawkSession(tokenId, authKey, function(err, data) {
+      console.log("youpi: ", err, data);
+      if(err === null) {
+        statsdClient.count('loop-activated-users', 1);
+      }
+      callback(err, data);
+    });
+  });
+
+
 function logError(err) {
   console.log(err);
   ravenClient.captureError(err);
@@ -52,7 +69,7 @@ app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(errors);
-app.use(sessions.clientSessions);
+//app.use(sessions.clientSessions);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
@@ -196,8 +213,8 @@ app.get("/", function(req, res) {
 /**
  * Registers the given user with the given simple push url.
  **/
-app.post('/registration',
-  sessions.attachSession, requireParams("simple_push_url"),
+app.post('/registration', attachOrCreateHawkSession,
+         requireParams("simple_push_url"),
   function(req, res) {
     var simplePushURL = req.body.simple_push_url;
     if (simplePushURL.indexOf('http') !== 0) {
@@ -209,15 +226,13 @@ app.post('/registration',
     // XXX Bug 980289 —
     // With FxA we will want to handle many SimplePushUrls per user.
     var userHmac = hmac(req.user, conf.get('userMacSecret'));
+    console.log(userHmac);
     storage.addUserSimplePushURL(userHmac, simplePushURL,
       function(err, record) {
         if (err) {
           logError(err);
           res.json(503, "Service Unavailable");
           return;
-        }
-        if (statsdClient !== undefined && req.newSession === true) {
-          statsdClient.count('loop-activated-users', 1);
         }
         res.json(200, "ok");
       });
@@ -226,8 +241,8 @@ app.post('/registration',
 /**
  * Generates and return a call-url for the given callerId.
  **/
-app.post('/call-url', sessions.requireSession, sessions.attachSession,
-  requireParams('callerId'), function(req, res) {
+app.post('/call-url', requireHawkSession, requireParams('callerId'),
+         function(req, res) {
     var expiresIn,
         maxTimeout = conf.get('callUrlMaxTimeout');
 
@@ -268,8 +283,7 @@ app.post('/call-url', sessions.requireSession, sessions.attachSession,
 /**
  * List all the pending calls for the authenticated user.
  **/
-app.get("/calls", sessions.requireSession, sessions.attachSession,
-  function(req, res) {
+app.get("/calls", requireHawkSession, function(req, res) {
     if (!req.query.hasOwnProperty('version')) {
       res.sendError("querystring", "version", "missing: version");
       return;
@@ -310,7 +324,7 @@ app.get('/calls/:token', validateToken, function(req, res) {
 /**
  * Revoke a given call url.
  **/
-app.delete('/call-url/:token', sessions.requireSession, sessions.attachSession,
+app.delete('/call-url/:token', requireHawkSession,
   validateToken, function(req, res) {
     if (req.token.user !== req.user) {
       res.json(403, "Forbidden");
@@ -432,5 +446,7 @@ module.exports = {
   requireParams: requireParams,
   request: request,
   tokBox: tokBox,
-  statsdClient: statsdClient
+  statsdClient: statsdClient,
+  requireHawkSession: requireHawkSession,
+  attachOrCreateHawkSession: attachOrCreateHawkSession
 };

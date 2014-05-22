@@ -64,6 +64,7 @@ function getMiddleware(getSession, createSession) {
                 // requests.
                 // XXX. Pass a sendSession parameter to the function
                 // optionally.
+                req.user = tokenId;
                 res.setHeader('Hawk-Session-Token', sessionToken);
                 next();
               });
@@ -83,6 +84,7 @@ function getMiddleware(getSession, createSession) {
           res.json(403, "Forbidden");
           return;
         }
+        req.user = req.hawk.id;
 
         /* Make sure we don't decorate the writeHead more than one time. */
         if (res._hawkEnabled) {

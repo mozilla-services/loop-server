@@ -25,7 +25,7 @@ describe("hawk middleware", function() {
     cb(null, null);
   };
 
-  var createSessionArguments, credentials, sessionToken;
+  var createSessionArguments, credentials;
 
   var _createSession = function(id, key, cb) {
     createSessionArguments = arguments;
@@ -49,13 +49,12 @@ describe("hawk middleware", function() {
   beforeEach(function(done) {
     createSessionArguments = undefined;
     var token = new Token();
-    token.getCredentials(function(tokenId, authKey, authToken) {
+    token.getCredentials(function(tokenId, authKey) {
       credentials = {
         id: tokenId,
         key: authKey,
         algorithm: "sha256"
       };
-      sessionToken = authToken
       done();
     });
   });
