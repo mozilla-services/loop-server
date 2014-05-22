@@ -106,6 +106,26 @@ RedisStorage.prototype = {
     });
   },
 
+  setHawkSession: function(tokenId, authKey, callback) {
+    this._client.set('hawk.' + tokenId, authKey, callback);
+  },
+
+  getHawkSession: function(tokenId, callback) {
+    this._client.get('hawk.' + tokenId, function(err, result) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var data = {
+        key: result,
+        algorithm: "sha256"
+      };
+
+      callback(null, result === null ? null : data);
+    });
+  },
+
   drop: function(callback) {
     this._client.flushdb(callback);
   },
