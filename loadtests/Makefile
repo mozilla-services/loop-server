@@ -1,4 +1,4 @@
-SERVER_URL = https://loop.stage.mozaws.net
+SERVER_URL = https://loop.stage.mozaws.net:443
 
 # Hackety-hack around OSX system python bustage.
 # The need for this should go away with a future osx/xcode update.
@@ -13,7 +13,6 @@ build:
 	$(INSTALL) pexpect
 	$(INSTALL) gevent
 	$(INSTALL) https://github.com/mozilla-services/loads/archive/master.zip
-	$(INSTALL) PyBrowserID
 
 # Clean all the things installed by `make build`.
 clean:
