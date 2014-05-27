@@ -75,7 +75,9 @@ app.use(raven.middleware.express(conf.get('sentryDSN')));
 
 var corsEnabled = cors({
   origin: function(origin, callback) {
-    var acceptedOrigin = conf.get('allowedOrigins').indexOf(origin) !== -1;
+    var allowedOrigins = conf.get('allowedOrigins');
+    var acceptedOrigin = allowedOrigins.indexOf(origin) !== -1 ||
+                         allowedOrigins.indexOf('*') !== -1;
     callback(null, acceptedOrigin);
   }
 });
