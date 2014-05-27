@@ -45,8 +45,7 @@ var attachOrCreateHawkSession = hawk.getMiddleware(
   storage.getHawkSession.bind(storage),
   function(tokenId, authKey, callback) {
     storage.setHawkSession(tokenId, authKey, function(err, data) {
-      console.log("youpi: ", err, data);
-      if(err === null) {
+      if(statsdClient && err === null) {
         statsdClient.count('loop-activated-users', 1);
       }
       callback(err, data);
@@ -226,7 +225,6 @@ app.post('/registration', attachOrCreateHawkSession,
     // XXX Bug 980289 —
     // With FxA we will want to handle many SimplePushUrls per user.
     var userHmac = hmac(req.user, conf.get('userMacSecret'));
-    console.log(userHmac);
     storage.addUserSimplePushURL(userHmac, simplePushURL,
       function(err, record) {
         if (err) {
