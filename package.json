@@ -40,7 +40,7 @@
     "mocha": "1.8.x",
     "sinon": "1.9.x",
     "supertest": "0.10.x",
-    "superagent-hawk": "0.0.3"
+    "superagent-hawk": "git://github.com/CrowdProcess/superagent-hawk.git"
   },
   "scripts": {
     "test": "make test",
