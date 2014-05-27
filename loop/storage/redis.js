@@ -64,6 +64,7 @@ RedisStorage.prototype = {
   },
 
   getUserCalls: function(userMac, callback) {
+    console.log(userMac);
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
       self._client.mget(members, function(err, calls) {
@@ -103,6 +104,26 @@ RedisStorage.prototype = {
   deleteCall: function(callId, callback) {
     this._client.del('call.' + callId, function(err, result) {
       callback(err, result !== 0);
+    });
+  },
+
+  setHawkSession: function(tokenId, authKey, callback) {
+    this._client.set('hawk.' + tokenId, authKey, callback);
+  },
+
+  getHawkSession: function(tokenId, callback) {
+    this._client.get('hawk.' + tokenId, function(err, result) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var data = {
+        key: result,
+        algorithm: "sha256"
+      };
+
+      callback(null, result === null ? null : data);
     });
   },
 

@@ -226,6 +226,33 @@ describe("Storage", function() {
         });
       });
 
+      describe("#getHawkSession", function() {
+        it("should return null if the hawk session doesn't exist",
+          function(done) {
+            storage.getHawkSession("does-not-exist", function(err, result) {
+              expect(result).to.eql(null);
+              done();
+            });
+          });
+      });
+
+      describe("#setHawkSession", function() {
+        it("should return a valid hawk session", function(done) {
+          storage.setHawkSession("id", "key", function(err){
+            if (err) {
+              throw err;
+            }
+            storage.getHawkSession("id", function(err, result) {
+              expect(result).to.eql({
+                key: "key",
+                algorithm: "sha256"
+              });
+              done();
+            });
+          });
+        });
+      });
+
       describe("#ping", function() {
         it("should return true if we are connected", function(done) {
           storage.ping(function(connected) {
@@ -240,18 +267,5 @@ describe("Storage", function() {
   // Test all the storages implementation.
   testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
-  });
-
-  testStorage("MongoDB", function createMongoDBStorage(options) {
-    return getStorage({
-      engine: "mongodb",
-      settings: {
-        connectionString: "mongodb://127.0.0.1:27017/loop_test"
-      }
-    }, options);
-  });
-
-  testStorage("Memory", function createMemoryStorage(options) {
-    return getStorage({engine: "memory"}, options);
   });
 });
