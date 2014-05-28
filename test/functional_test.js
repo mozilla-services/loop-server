@@ -25,7 +25,7 @@ var attachOrCreateHawkSession = require("../loop").attachOrCreateHawkSession;
 
 var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
-var auth = require("../loop/authentication");
+var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
 
 var ONE_MINUTE = 60 * 60 * 1000;
@@ -99,7 +99,7 @@ describe("HTTP API exposed by the server", function() {
                                 'http://mozilla.com']);
 
     // Mock the calls to the external BrowserID verifier.
-    sandbox.stub(auth, "verify", function(assertion, audience, cb){
+    sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
       if (assertion === expectedAssertion) {
         cb(null, user, {});
       } else {
@@ -140,7 +140,6 @@ describe("HTTP API exposed by the server", function() {
           .set('Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE')
-          .expect('Access-Control-Allow-Credentials', 'true')
           .end(done);
       });
 
@@ -191,7 +190,6 @@ describe("HTTP API exposed by the server", function() {
           supertest(app)[method](route)
             .set('Origin', 'http://mozilla.org')
             .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
-            .expect('Access-Control-Allow-Credentials', 'true')
             .end(done);
         });
 
@@ -311,10 +309,6 @@ describe("HTTP API exposed by the server", function() {
         .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
-    });
-
-    it.skip("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('post', '/call-url')).include(auth.isAuthenticated);
     });
 
     it("should have the requireHawk middleware installed", function() {
@@ -468,11 +462,6 @@ describe("HTTP API exposed by the server", function() {
         .hawk(hawkCredentials)
         ;//.type('json')
         //.expect('Content-Type', /json/);
-    });
-
-    it.skip("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('post', '/registration'))
-        .include(auth.isAuthenticated);
     });
 
     it("should have the attachOrCreateHawkSession middleware installed",
@@ -798,11 +787,6 @@ describe("HTTP API exposed by the server", function() {
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
       });
-    });
-
-    it.skip("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('get', '/calls'))
-        .include(auth.isAuthenticated);
     });
 
     it("should have the requireHawk middleware installed", function() {

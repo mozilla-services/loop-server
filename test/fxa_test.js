@@ -8,7 +8,7 @@ var supertest = require("supertest");
 var sinon = require("sinon");
 
 var app = require("../loop").app;
-var auth = require("../loop/authentication");
+var auth = require("../loop/fxa");
 var user = "alexis@notmyidea.org";
 
 describe("authentication middleware", function() {

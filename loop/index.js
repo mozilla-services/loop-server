@@ -19,6 +19,7 @@ var headers = require('./headers');
 var StatsdClient = require('statsd-node').client;
 
 var hawk = require('./hawk');
+//var fxa = require('./fxa');
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -76,8 +77,8 @@ app.use(raven.middleware.express(conf.get('sentryDSN')));
 var corsEnabled = cors({
   origin: function(origin, callback) {
     var allowedOrigins = conf.get('allowedOrigins');
-    var acceptedOrigin = allowedOrigins.indexOf(origin) !== -1 ||
-                         allowedOrigins.indexOf('*') !== -1;
+    var acceptedOrigin = allowedOrigins.indexOf('*') !== -1 ||
+                         allowedOrigins.indexOf(origin) !== -1;
     callback(null, acceptedOrigin);
   }
 });
