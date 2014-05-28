@@ -37,15 +37,21 @@ describe("hawk middleware", function() {
     res.json(200);
   };
 
-  app.post('/require-session', hawk.getMiddleware(_getExistingSession), ok_200);
+  var setUser = function(req, res, tokenId, done) {
+    done();
+  };
+
+  app.post('/require-session', hawk.getMiddleware(_getExistingSession, setUser),
+    ok_200);
   app.post('/require-or-create-session',
-    hawk.getMiddleware(_getExistingSession, _createSession), ok_200);
+    hawk.getMiddleware(_getExistingSession, _createSession, setUser), ok_200);
 
   app.post('/require-invalid-session', 
-    hawk.getMiddleware(_getNonExistingSession), ok_200);
+    hawk.getMiddleware(_getNonExistingSession, setUser), ok_200);
 
   app.post('/require-or-create-invalid-session', 
-    hawk.getMiddleware(_getNonExistingSession, _createSession), ok_200);
+    hawk.getMiddleware(_getNonExistingSession, _createSession, setUser),
+    ok_200);
 
   beforeEach(function(done) {
     createSessionArguments = undefined;
@@ -77,8 +83,11 @@ describe("hawk middleware", function() {
       supertest(app)
         .post('/require-invalid-session')
         .hawk(credentials)
-        .expect(403)
-        .end(done);
+        .expect(401)
+        .end(function(err, res) {
+          expect(res.header['www-authenticate']).to.eql('Hawk');
+          done();
+        });
     });
   });
 
@@ -106,8 +115,11 @@ describe("hawk middleware", function() {
       supertest(app)
         .post('/require-or-create-invalid-session')
         .hawk(credentials)
-        .expect(403)
-        .end(done);
+        .expect(401)
+        .end(function(err, res) {
+          expect(res.header['www-authenticate']).to.eql('Hawk');
+          done();
+        });
     });
   });
 });

@@ -19,7 +19,7 @@ var headers = require('./headers');
 var StatsdClient = require('statsd-node').client;
 
 var hawk = require('./hawk');
-//var fxa = require('./fxa');
+var fxa = require('./fxa');
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -28,19 +28,69 @@ if (conf.get("fakeTokBox") === true) {
   var TokBox = require('./tokbox').TokBox;
 }
 
+var getStorage = require('./storage');
+var storage = getStorage(conf.get("storage"), {
+  'tokenDuration': conf.get('tokBox').tokenDuration,
+  'hawkSessionDuration': conf.get('hawkSessionDuration')
+});
+
+
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
 var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
 }
 
-var getStorage = require('./storage');
-var storage = getStorage(conf.get("storage"), {
-  'tokenDuration': conf.get('tokBox').tokenDuration
-});
+function logError(err) {
+  console.log(err);
+  ravenClient.captureError(err);
+}
+
+/**
+ * Returns the HMac digest of the given payload.
+ *
+ * If no options are passed, the global configuration object is used to
+ * determine which algorithm and secret should be used.
+ *
+ * @param {String} payload    The string to mac.
+ * @param {String} secret     key encoded as hex.
+ * @param {String} algorithm  Algorithm to use (defaults to sha256).
+ * @return {String} hexadecimal hash.
+ **/
+function hmac(payload, secret, algorithm) {
+  if (secret === undefined) {
+    throw new Error("You should provide a secret.");
+  }
+
+  // Test for secret size and validity
+  hexKeyOfSize(16)(secret);
+
+  if (algorithm === undefined) {
+    algorithm = conf.get("userMacAlgorithm");
+  }
+  var _hmac = crypto.createHmac(algorithm, new Buffer(secret, "hex"));
+  _hmac.write(payload);
+  _hmac.end();
+  return _hmac.read().toString('hex');
+}
+
+function setUser(req, res, tokenId, done) {
+  storage.getHawkUser(tokenId, function(err, user) {
+    // If an identity is defined for this hawk session, use it.
+    if (user !== null) {
+      req.user = user;
+      done();
+      return;
+    }
+    req.user = tokenId;
+    done();
+  });
+}
 
 var requireHawkSession = hawk.getMiddleware(
-  storage.getHawkSession.bind(storage));
+  storage.getHawkSession.bind(storage),
+  setUser
+);
 
 var attachOrCreateHawkSession = hawk.getMiddleware(
   storage.getHawkSession.bind(storage),
@@ -51,13 +101,82 @@ var attachOrCreateHawkSession = hawk.getMiddleware(
       }
       callback(err, data);
     });
-  });
+  },
+  setUser
+);
 
+var requireFxA = fxa.getMiddleware(conf.get('fxaAudience'),
+  function(req, res, assertion, next) {
+    var identifier = assertion['fxa-verifiedMSISDN'] ||
+                     assertion['fxa-verifiedEmail'];
 
-function logError(err) {
-  console.log(err);
-  ravenClient.captureError(err);
+    if (identifier === undefined) {
+      logError(new Error("Assertion is invalid: " + assertion));
+      res.sendError("header", "Authorization",
+        "BrowserID assertion is invalid");
+      return;
+    }
+
+    var userHmac = hmac(identifier, conf.get('userMacSecret'));
+
+    // generate the hawk session.
+    hawk.generateHawkSession(storage.setHawkSession.bind(storage),
+      function(err, tokenId, authKey, sessionToken) {
+        storage.setHawkUser(userHmac, tokenId, function(err) {
+          if (err) {
+            logError(err);
+            res.json(503, "Service unavailable");
+            return;
+          }
+
+          // return hawk credentials.
+          hawk.setHawkHeaders(res, sessionToken);
+          req.user = userHmac;
+          next();
+        });
+      }
+    );
+  }
+);
+
+function authenticate(req, res, next) {
+  var supported = ["BrowserID", "Hawk"];
+
+  // First thing: check that the headers are valid. Otherwise 401.
+  var authorization = req.headers.authorization;
+
+  function _unauthorized(message, supported){
+    res.set('WWW-Authenticate', supported.join());
+    res.json(401, message || "Unauthorized");
+  }
+
+  if (authorization !== undefined) {
+    var splitted = authorization.split(" ");
+    var policy = splitted[0];
+    // var assertion = splitted[1];
+
+    // Next, let's check which one the user wants to use.
+    if (supported.map(function(s) { return s.toLowerCase(); })
+        .indexOf(policy.toLowerCase()) === -1) {
+      _unauthorized("Unsupported", supported);
+      return;
+    }
+
+    if (policy.toLowerCase() === "browserid") {
+      // If that's BrowserID, then check and create hawk credentials, plus
+      // return them.
+      requireFxA(req, res, next);
+    } else if (policy.toLowerCase() === "hawk") {
+      // If that's Hawk, let's check they're valid.
+      requireHawkSession(req, res, next);
+    }
+  } else {
+    // unauthenticated.
+    attachOrCreateHawkSession(req, res, next);
+  }
+  // In any case, we should add the hawk header.
 }
+
 
 var app = express();
 
@@ -69,7 +188,6 @@ app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(errors);
-//app.use(sessions.clientSessions);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
@@ -138,34 +256,6 @@ function requireParams() {
 }
 
 /**
- * Returns the HMac digest of the given payload.
- *
- * If no options are passed, the global configuration object is used to
- * determine which algorithm and secret should be used.
- *
- * @param {String} payload    The string to mac.
- * @param {String} secret     key encoded as hex.
- * @param {String} algorithm  Algorithm to use (defaults to sha256).
- * @return {String} hexadecimal hash.
- **/
-function hmac(payload, secret, algorithm) {
-  if (secret === undefined) {
-    throw new Error("You should provide a secret.");
-  }
-
-  // Test for secret size and validity
-  hexKeyOfSize(16)(secret);
-
-  if (algorithm === undefined) {
-    algorithm = conf.get("userMacAlgorithm");
-  }
-  var _hmac = crypto.createHmac(algorithm, new Buffer(secret, "hex"));
-  _hmac.write(payload);
-  _hmac.end();
-  return _hmac.read().toString('hex');
-}
-
-/**
  * Enable CORS for all requests.
  **/
 app.all('*', corsEnabled);
@@ -212,8 +302,7 @@ app.get("/", function(req, res) {
 /**
  * Registers the given user with the given simple push url.
  **/
-app.post('/registration', attachOrCreateHawkSession,
-         requireParams("simple_push_url"),
+app.post('/registration', authenticate, requireParams("simple_push_url"),
   function(req, res) {
     var simplePushURL = req.body.simple_push_url;
     if (simplePushURL.indexOf('http') !== 0) {
@@ -240,7 +329,7 @@ app.post('/registration', attachOrCreateHawkSession,
  * Generates and return a call-url for the given callerId.
  **/
 app.post('/call-url', requireHawkSession, requireParams('callerId'),
-         function(req, res) {
+  function(req, res) {
     var expiresIn,
         maxTimeout = conf.get('callUrlMaxTimeout');
 
@@ -264,18 +353,18 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
     if (expiresIn !== undefined) {
       tokenPayload.expires = (Date.now() / tokenlib.ONE_HOUR) + expiresIn;
     }
-    var tokenWrapper = tokenManager.encode(tokenPayload);
-    var host = req.protocol + "://" + req.get('host');
-    res.json(200, {
-      call_url: host + "/calls/" + tokenWrapper.token,
-      expiresAt: tokenWrapper.payload.expires
-    });
 
     var userMac = hmac(req.user, conf.get('userMacSecret'));
     if (statsdClient !== undefined) {
       statsdClient.count('loop-call-urls', 1);
       statsdClient.count('loop-call-urls-' + userMac, 1);
     }
+    var tokenWrapper = tokenManager.encode(tokenPayload);
+    var host = req.protocol + "://" + req.get('host');
+    res.json(200, {
+      call_url: host + "/calls/" + tokenWrapper.token,
+      expiresAt: tokenWrapper.payload.expires
+    });
   });
 
 /**
@@ -322,8 +411,8 @@ app.get('/calls/:token', validateToken, function(req, res) {
 /**
  * Revoke a given call url.
  **/
-app.delete('/call-url/:token', requireHawkSession,
-  validateToken, function(req, res) {
+app.delete('/call-url/:token', requireHawkSession, validateToken,
+  function(req, res) {
     if (req.token.user !== req.user) {
       res.json(403, "Forbidden");
       return;
@@ -445,6 +534,6 @@ module.exports = {
   request: request,
   tokBox: tokBox,
   statsdClient: statsdClient,
-  requireHawkSession: requireHawkSession,
-  attachOrCreateHawkSession: attachOrCreateHawkSession
+  authenticate: authenticate,
+  requireHawkSession: requireHawkSession
 };

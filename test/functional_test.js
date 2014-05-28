@@ -20,7 +20,7 @@ var tokBox = require("../loop").tokBox;
 var storage = require("../loop").storage;
 var statsdClient = require("../loop").statsdClient;
 var requireHawkSession = require("../loop").requireHawkSession;
-var attachOrCreateHawkSession = require("../loop").attachOrCreateHawkSession;
+var authenticate = require("../loop").authenticate;
 
 
 var Token = require("../loop/token").Token;
@@ -62,7 +62,6 @@ function expectFormatedError(body, location, name, description) {
 function register(url, assertion, credentials, cb) {
   supertest(app)
     .post('/registration')
-    .set('Authorization', 'BrowserID ' + assertion)
     .hawk(credentials)
     .type('json')
     .send({'simple_push_url': url})
@@ -101,7 +100,7 @@ describe("HTTP API exposed by the server", function() {
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
       if (assertion === expectedAssertion) {
-        cb(null, user, {});
+        cb(null, user, {"fxa-verified-email": user});
       } else {
         cb("error");
       }
@@ -120,8 +119,8 @@ describe("HTTP API exposed by the server", function() {
         key: authKey,
         algorithm: "sha256"
       };
-      storage.setHawkSession(tokenId, authKey, done);
       userHmac = hmac(tokenId, conf.get("userMacSecret"));
+      storage.setHawkSession(tokenId, authKey, done);
     });
   });
 
@@ -305,13 +304,12 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function() {
       jsonReq = supertest(app)
         .post('/call-url')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
         .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
     });
 
-    it("should have the requireHawk middleware installed", function() {
+    it("should have the requireHawkSession middleware installed", function() {
       expect(getMiddlewares('post', '/call-url'))
         .include(requireHawkSession);
     });
@@ -458,16 +456,15 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function() {
       jsonReq = supertest(app)
         .post('/registration')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
         .hawk(hawkCredentials)
-        ;//.type('json')
-        //.expect('Content-Type', /json/);
+        .type('json')
+        .expect('Content-Type', /json/);
     });
 
-    it("should have the attachOrCreateHawkSession middleware installed",
+    it("should have the authenticate middleware installed",
       function() {
         expect(getMiddlewares('post', '/registration'))
-          .include(attachOrCreateHawkSession);
+          .include(authenticate);
       });
 
     it("should require simple push url", function(done) {
@@ -499,7 +496,6 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .post('/registration')
         .set('Accept', 'text/html')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
         .hawk(hawkCredentials)
         .expect(406).end(function(err, res) {
           if (err) throw err;
@@ -669,7 +665,6 @@ describe("HTTP API exposed by the server", function() {
       }).token;
       req = supertest(app)
         .del('/call-url/' + token)
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
         .hawk(hawkCredentials);
     });
 
@@ -704,7 +699,6 @@ describe("HTTP API exposed by the server", function() {
         }).token;
         req = supertest(app)
           .del('/call-url/' + token)
-          .set('Authorization', 'BrowserID ' + expectedAssertion)
           .hawk(hawkCredentials)
           .expect(403).end(done);
       });
@@ -721,7 +715,6 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function(done) {
       req = supertest(app)
         .get('/calls')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/);
 
@@ -1036,7 +1029,6 @@ describe("HTTP API exposed by the server", function() {
       it("should return a 404 on an already deleted call.", function(done) {
         supertest(app)
           .del('/calls/id/invalidUUID')
-          .set('Authorization', 'BrowserID ' + expectedAssertion)
           .hawk(hawkCredentials)
           .expect(404)
           .end(done);

@@ -8,14 +8,18 @@ var supertest = require("supertest");
 var sinon = require("sinon");
 
 var app = require("../loop").app;
-var auth = require("../loop/fxa");
+var fxa = require("../loop/fxa");
 var user = "alexis@notmyidea.org";
 
 describe("authentication middleware", function() {
   var jsonReq, expectedAssertion, sandbox;
 
   // Create a route with the auth middleware installed.
-  app.post('/with-middleware', auth.isAuthenticated, function(req, res) {
+  app.post('/with-middleware',
+    fxa.getMiddleware("audience", function(req, res, assertion, next) {
+      req.user = assertion.email;
+      next();
+    }), function(req, res) {
     res.json(200, req.user);
   });
 
@@ -28,9 +32,9 @@ describe("authentication middleware", function() {
     expectedAssertion = "BID-ASSERTION";
 
     // Mock the calls to the external BrowserID verifier.
-    sandbox.stub(auth, "verify", function(assertion, audience, cb){
+    sandbox.stub(fxa, "verify", function(assertion, audience, cb){
       if (assertion === expectedAssertion) {
-        cb(null, user, {});
+        cb(null, user, {email: user});
       } else {
         cb("error");
       }

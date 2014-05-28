@@ -16,6 +16,7 @@ exports.verify = require('browserid-verify')({
   agent: agent
 });
 
+
 /**
  * Express middleware doing BrowserID authentication.
  *
@@ -25,44 +26,47 @@ exports.verify = require('browserid-verify')({
  * If the BrowserID assertion is parsed correctly, the user contained into this
  * one is set in the req.user property.
  */
-function isAuthenticated(req, res, next) {
-  var authorization, assertion, policy, splitted;
+function getMiddleware(audience, callback) {
+  function requireBrowserID(req, res, next) {
+    var authorization, assertion, policy, splitted;
 
-  function _unauthorized(message){
-    res.set('WWW-Authenticate', 'BrowserID');
-    res.json(401, message || "Unauthorized");
-  }
+    function _unauthorized(message){
+      res.set('WWW-Authenticate', 'BrowserID');
+      res.json(401, message || "Unauthorized");
+    }
 
-  authorization = req.headers.authorization;
+    authorization = req.headers.authorization;
 
-  if (authorization === undefined) {
-    _unauthorized();
-    return;
-  }
-
-  splitted = authorization.split(" ");
-  if (splitted.length !== 2) {
-    _unauthorized();
-    return;
-  }
-
-  policy = splitted[0];
-  assertion = splitted[1];
-
-  if (policy.toLowerCase() !== 'browserid') {
-    _unauthorized("Unsupported");
-    return;
-  }
-
-  exports.verify(assertion, "http://loop.services.mozilla.com",
-    function(err, email, response) {
-    if (err) {
-      _unauthorized(err);
+    if (authorization === undefined) {
+      _unauthorized();
       return;
     }
-    req.user = email;
-    next();
-  });
+
+    splitted = authorization.split(" ");
+    if (splitted.length !== 2) {
+      _unauthorized();
+      return;
+    }
+
+    policy = splitted[0];
+    assertion = splitted[1];
+
+    if (policy.toLowerCase() !== 'browserid') {
+      _unauthorized("Unsupported");
+      return;
+    }
+
+    exports.verify(assertion, audience,
+      function(err, email, response) {
+      if (err) {
+        _unauthorized(err);
+        return;
+      }
+      callback(req, res, response, next);
+    });
+  }
+
+  return requireBrowserID;
 }
 
-exports.isAuthenticated = isAuthenticated;
+exports.getMiddleware = getMiddleware;

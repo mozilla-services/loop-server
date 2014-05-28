@@ -53,7 +53,8 @@ describe("Storage", function() {
     describe(name, function() {
       beforeEach(function() {
         storage = createStorage({
-          tokenDuration: conf.get('tokBox').tokenDuration
+          tokenDuration: conf.get('tokBox').tokenDuration,
+          hawkSessionDuration: conf.get('hawkSessionDuration')
         });
       });
   
@@ -238,7 +239,7 @@ describe("Storage", function() {
 
       describe("#setHawkSession", function() {
         it("should return a valid hawk session", function(done) {
-          storage.setHawkSession("id", "key", function(err){
+          storage.setHawkSession("id", "key", function(err) {
             if (err) {
               throw err;
             }
@@ -247,6 +248,23 @@ describe("Storage", function() {
                 key: "key",
                 algorithm: "sha256"
               });
+              done();
+            });
+          });
+        });
+      });
+
+      describe("#setHawkUser, #getHawkUser", function() {
+        it("should store and retrieve an user hawk session", function(done) {
+          storage.setHawkUser("userhash", "tokenid", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getHawkUser("tokenid", function(err, result) {
+              if (err) {
+                throw err;
+              }
+              expect(result).to.eql("userhash");
               done();
             });
           });

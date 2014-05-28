@@ -107,8 +107,29 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Add an hawk id to the list of valid hawk ids for an user.
+   **/
+  setHawkUser: function(userHash, tokenId, callback) {
+    this._client.setex(
+      'hawkuser.' + tokenId,
+      this._settings.hawkSessionDuration,
+      userHash,
+      callback
+    );
+  },
+
+  getHawkUser: function(tokenId, callback) {
+    this._client.get('hawkuser.' + tokenId, callback);
+  },
+
   setHawkSession: function(tokenId, authKey, callback) {
-    this._client.set('hawk.' + tokenId, authKey, callback);
+    this._client.setex(
+      'hawk.' + tokenId,
+      this._settings.hawkSessionDuration,
+      authKey,
+      callback
+    );
   },
 
   getHawkSession: function(tokenId, callback) {

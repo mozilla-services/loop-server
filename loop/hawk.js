@@ -3,6 +3,36 @@
 var Hawk = require('hawk');
 var Token = require("./token").Token;
 
+/**
+ * Generate and store an hawk session. Storage is not handled by this function
+ * directly, but by the storeSession callback passed as a first argument.
+ *
+ * @param {Function} storeSession, This function knows how to store a new
+ * session. Implementation specifics are out of the scope of this module. The
+ * function signature is (tokenId, authKey, callback). Callback is triggered
+ * when the storage had been done (or can contain errors, passed as the first
+ * argument).
+ *
+ * @param {Function} callback, a callback that's given the information about
+ * the generated token. Signature is (err, tokenId, authKey, sessionToken).
+ *
+ **/
+function generateHawkSession(storeSession, callback) {
+  var token = new Token();
+  token.getCredentials(function(tokenId, authKey, sessionToken) {
+    storeSession(tokenId, authKey, function(err) {
+      callback(err, tokenId, authKey, sessionToken);
+    });
+  });
+}
+
+/**
+ * Sets the hawk headers in the given response.
+ **/
+function setHawkHeaders(res, sessionToken) {
+  res.setHeader('Hawk-Session-Token', sessionToken);
+}
+
 
 /**
  * Hawk middleware factory.
@@ -35,10 +65,17 @@ var Token = require("./token").Token;
  * when the storage had been done (or can contain errors, passed as the first
  * argument).
  *
+ * @param {Function} setUser, a callback function that's being passed the
+ * request, the response and the hawk id.
+ *
  * The ways to get/create the session are not defined inside this function
  * because we want to let this up to the server implementer.
  */
-function getMiddleware(getSession, createSession) {
+function getMiddleware(getSession, createSession, setUser) {
+  if (setUser === undefined) {
+    setUser = createSession;
+    createSession = undefined;
+  }
 
   function requireSession(req, res, next) {
     Hawk.server.authenticate(req, function(id, callback) {
@@ -51,21 +88,15 @@ function getMiddleware(getSession, createSession) {
           // logError(err, artifacts);
 
           if (createSession !== undefined) {
-            var token = new Token();
-            token.getCredentials(function(tokenId, authKey, sessionToken) {
-              createSession(tokenId, authKey, function(err) {
-                if (err) {
-                  res.json(503, "Service Unavailable");
-                  return;
-                }
+            generateHawkSession(createSession,
+            function(err, tokenId, authKey, sessionToken) {
+              if (err) {
+                res.json(503, "Service Unavailable");
+                return;
+              }
 
-                // If we have a session available, add it to headers so that
-                // it's easy to plug this middlware with already existing
-                // requests.
-                // XXX. Pass a sendSession parameter to the function
-                // optionally.
-                req.user = tokenId;
-                res.setHeader('Hawk-Session-Token', sessionToken);
+              setUser(req, res, tokenId, function() {
+                setHawkHeaders(res, sessionToken);
                 next();
               });
             });
@@ -81,34 +112,39 @@ function getMiddleware(getSession, createSession) {
         }
 
         if (credentials === null) {
-          res.json(403, "Forbidden");
+          res.setHeader("WWW-Authenticate", "Hawk");
+          res.json(401, "Unauthorized");
           return;
         }
-        req.user = req.hawk.id;
+        setUser(req, res, req.hawk.id, function() {
+          /* Make sure we don't decorate the writeHead more than one time. */
+          if (res._hawkEnabled) {
+            next();
+            return;
+          }
 
-        /* Make sure we don't decorate the writeHead more than one time. */
-        if (res._hawkEnabled) {
+          var writeHead = res.writeHead;
+          res._hawkEnabled = true;
+          res.writeHead = function hawkWriteHead() {
+            var header = Hawk.server.header(
+              credentials, artifacts, {
+                payload: res.body,
+                contentType: res.get('Content-Type')
+              });
+            // The server signs its responses so the client can check they're
+            // coming from there.
+            res.setHeader("Server-Authorization", header);
+            writeHead.apply(res, arguments);
+          };
           next();
-          return;
-        }
-
-        var writeHead = res.writeHead;
-        res._hawkEnabled = true;
-        res.writeHead = function hawkWriteHead() {
-          var header = Hawk.server.header(
-            credentials, artifacts, {
-              payload: res.body,
-              contentType: res.get('Content-Type')
-            });
-          res.setHeader("Server-Authorization", header);
-          writeHead.apply(res, arguments);
-        };
-        next();
+        });
       });
   }
   return requireSession;
 }
 
 module.exports = {
-  getMiddleware: getMiddleware 
+  getMiddleware: getMiddleware,
+  generateHawkSession: generateHawkSession,
+  setHawkHeaders: setHawkHeaders
 };
