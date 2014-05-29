@@ -321,6 +321,7 @@ app.post('/registration', authenticate, requireParams("simple_push_url"),
           res.json(503, "Service Unavailable");
           return;
         }
+        res.setHeader('Access-Control-Expose-Headers', 'Hawk-Session-Token');
         res.json(200, "ok");
       });
   });
