@@ -174,7 +174,6 @@ function authenticate(req, res, next) {
     // unauthenticated.
     attachOrCreateHawkSession(req, res, next);
   }
-  // In any case, we should add the hawk header.
 }
 
 

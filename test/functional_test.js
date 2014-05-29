@@ -100,7 +100,7 @@ describe("HTTP API exposed by the server", function() {
     // Mock the calls to the external BrowserID verifier.
     sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
       if (assertion === expectedAssertion) {
-        cb(null, user, {"fxa-verified-email": user});
+        cb(null, user, {"fxa-verifiedEmail": user});
       } else {
         cb("error");
       }

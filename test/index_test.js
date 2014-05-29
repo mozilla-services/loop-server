@@ -3,9 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 /* jshint expr: true */
 "use strict";
-var crypto = require("crypto");
 
 var expect = require("chai").expect;
+var crypto = require("crypto");
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
