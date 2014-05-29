@@ -1,11 +1,17 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/* jshint expr: true */
 "use strict";
 
 var expect = require("chai").expect;
-var supertest = require("supertest");
+var crypto = require("crypto");
+var addHawk = require("superagent-hawk");
+var supertest = addHawk(require("supertest"));
+var sinon = require("sinon");
 var tokenlib = require("../loop/tokenlib");
+var fxaAuth = require("../loop/fxa");
+var Token = require("../loop/token").Token;
 
 var app = require("../loop").app;
 var conf = require("../loop").conf;
@@ -13,7 +19,7 @@ var hmac = require("../loop").hmac;
 var storage = require("../loop").storage;
 var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
-
+var authenticate = require("../loop").authenticate;
 
 describe("index.js", function() {
   var jsonReq;
@@ -169,5 +175,103 @@ describe("index.js", function() {
         .expect(200)
         .end(done);
     });
+  });
+
+  describe("authentication middleware", function() {
+    var expectedAssertion, sandbox, user;
+    user = "alexis";
+
+    app.post("/with-authenticate", authenticate, function(req, res) {
+      res.json(200, {});
+    });
+
+    describe("BrowserID", function() {
+      beforeEach(function() {
+        sandbox = sinon.sandbox.create();
+        expectedAssertion = "BID-ASSERTION";
+
+        // Mock the calls to the external BrowserID verifier.
+        sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
+          if (assertion === expectedAssertion) {
+            cb(null, user, {"fxa-verifiedEmail": user});
+          } else {
+            cb("error");
+          }
+        });
+      });
+
+      afterEach(function() {
+        sandbox.restore();
+      });
+
+      it("should accept assertions and return hawk credentials",
+        function(done) {
+          supertest(app)
+            .post("/with-authenticate")
+            .set('Authorization', 'BrowserID ' + expectedAssertion)
+            .expect(200)
+            .end(function(err, res) {
+              expect(res.header['hawk-session-token']).to.not.be.undefined;
+              done();
+            });
+        });
+
+      it("shouldn't accept invalid assertions", function(done) {
+          supertest(app)
+            .post("/with-authenticate")
+            .set('Authorization', 'BrowserID wrongAssertion')
+            .expect(401)
+            .end(done);
+        });
+    });
+
+    describe("Hawk", function() {
+      var hawkCredentials;
+
+      beforeEach(function(done) {
+        // Generate Hawk credentials.
+        var token = new Token();
+        token.getCredentials(function(tokenId, authKey) {
+          hawkCredentials = {
+            id: tokenId,
+            key: authKey,
+            algorithm: "sha256"
+          };
+          storage.setHawkSession(tokenId, authKey, done);
+        });
+      });
+
+      it("should accept valid hawk sessions", function(done) {
+          supertest(app)
+            .post("/with-authenticate")
+            .hawk(hawkCredentials)
+            .expect(200)
+            .end(done);
+        });
+
+      it("shouldn't accept invalid hawk credentials", function(done) {
+          hawkCredentials.id = crypto.randomBytes(16).toString("hex");
+          supertest(app)
+            .post("/with-authenticate")
+            .hawk(hawkCredentials)
+            .expect(401)
+            .end(function(err, res) {
+              expect(res.header['www-authenticate']).to.eql('Hawk');
+              done();
+            });
+        });
+    });
+
+    it("should generate new hawk sessions if no authentication is provided",
+      function(done) {
+        supertest(app)
+          .post("/with-authenticate")
+          .expect(200)
+          .end(function(err, res) {
+            expect(res.header['hawk-session-token']).to.not.be.undefined;
+            expect(res.header['hawk-session-token']).to.length(64);
+            done();
+          });
+      });
   });
 });

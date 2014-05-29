@@ -171,6 +171,17 @@ var conf = convict({
     doc: "Date format of the logging line in development.",
     format: String,
     default: "%y/%b/%d %H:%M:%S"
+  },
+  fxaAudience: {
+    doc: "The domain of the website (for FxA verification)",
+    format: String,
+    env: "FXA_AUDIENCE",
+    default: undefined
+  },
+  hawkSessionDuration: {
+    doc: "The duration of hawk credentials (in seconds)",
+    format: Number,
+    default: 3600 * 24 * 30 // One month.
   }
 });
 

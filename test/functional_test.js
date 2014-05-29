@@ -5,7 +5,8 @@
 "use strict";
 
 var expect = require("chai").expect;
-var supertest = require("supertest");
+var addHawk = require("superagent-hawk");
+var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var crypto = require("crypto");
 var assert = sinon.assert;
@@ -18,17 +19,19 @@ var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
 var storage = require("../loop").storage;
 var statsdClient = require("../loop").statsdClient;
+var requireHawkSession = require("../loop").requireHawkSession;
+var authenticate = require("../loop").authenticate;
 
 
+var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
-var auth = require("../loop/authentication");
-var sessions = require("../loop/sessions");
+var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
 
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
-var userHmac = hmac(user, conf.get("userMacSecret"));
+var userHmac;
 var uuid = "1234";
 var callerId = 'natim@mozilla.com';
 
@@ -56,11 +59,10 @@ function expectFormatedError(body, location, name, description) {
   });
 }
 
-function register(url, assertion, cookie, cb) {
+function register(url, assertion, credentials, cb) {
   supertest(app)
     .post('/registration')
-    .set('Authorization', 'BrowserID ' + assertion)
-    .set('Cookie', cookie)
+    .hawk(credentials)
     .type('json')
     .send({'simple_push_url': url})
     .expect(200)
@@ -72,15 +74,9 @@ function register(url, assertion, cookie, cb) {
     });
 }
 
-// Create a route to retrieve cookies only
-app.get('/get-cookies', function(req, res) {
-  req.session.uid = user;
-  res.send(200);
-});
-
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, sessionCookie, fakeCallInfo,
+  var sandbox, expectedAssertion, pushURL, hawkCredentials, fakeCallInfo,
       genuineOrigins;
 
   var routes = {
@@ -102,9 +98,9 @@ describe("HTTP API exposed by the server", function() {
                                 'http://mozilla.com']);
 
     // Mock the calls to the external BrowserID verifier.
-    sandbox.stub(auth, "verify", function(assertion, audience, cb){
+    sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
       if (assertion === expectedAssertion) {
-        cb(null, user, {});
+        cb(null, user, {"fxa-verifiedEmail": user});
       } else {
         cb("error");
       }
@@ -115,9 +111,16 @@ describe("HTTP API exposed by the server", function() {
               'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
 
-    supertest(app).get('/get-cookies').end(function(err, res) {
-      sessionCookie = res.headers['set-cookie'][0];
-      done(err);
+    // Generate Hawk credentials.
+    var token = new Token();
+    token.getCredentials(function(tokenId, authKey) {
+      hawkCredentials = {
+        id: tokenId,
+        key: authKey,
+        algorithm: "sha256"
+      };
+      userHmac = hmac(tokenId, conf.get("userMacSecret"));
+      storage.setHawkSession(tokenId, authKey, done);
     });
   });
 
@@ -136,7 +139,6 @@ describe("HTTP API exposed by the server", function() {
           .set('Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE')
-          .expect('Access-Control-Allow-Credentials', 'true')
           .end(done);
       });
 
@@ -187,7 +189,6 @@ describe("HTTP API exposed by the server", function() {
           supertest(app)[method](route)
             .set('Origin', 'http://mozilla.org')
             .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
-            .expect('Access-Control-Allow-Credentials', 'true')
             .end(done);
         });
 
@@ -303,19 +304,14 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function() {
       jsonReq = supertest(app)
         .post('/call-url')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .set('Cookie', sessionCookie)
+        .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
     });
 
-    it.skip("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('post', '/call-url')).include(auth.isAuthenticated);
-    });
-
-    it("should have the requireSession middleware installed", function() {
+    it("should have the requireHawkSession middleware installed", function() {
       expect(getMiddlewares('post', '/call-url'))
-        .include(sessions.requireSession);
+        .include(requireHawkSession);
     });
 
     it("should require a callerId parameter", function(done) {
@@ -460,21 +456,16 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function() {
       jsonReq = supertest(app)
         .post('/registration')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .set('Cookie', sessionCookie)
+        .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
     });
 
-    it.skip("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('post', '/registration'))
-        .include(auth.isAuthenticated);
-    });
-
-    it("should have the attachSession middleware installed", function() {
-      expect(getMiddlewares('post', '/registration'))
-        .include(sessions.attachSession);
-    });
+    it("should have the authenticate middleware installed",
+      function() {
+        expect(getMiddlewares('post', '/registration'))
+          .include(authenticate);
+      });
 
     it("should require simple push url", function(done) {
       jsonReq
@@ -505,8 +496,7 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .post('/registration')
         .set('Accept', 'text/html')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .set('Cookie', sessionCookie)
+        .hawk(hawkCredentials)
         .expect(406).end(function(err, res) {
           if (err) throw err;
           expect(res.body).eql(["application/json"]);
@@ -519,7 +509,7 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .post('/call-url')
         .send({callerId: callerId})
-        .set('Cookie', sessionCookie)
+        .hawk(hawkCredentials)
         .type('application/json; charset=utf-8')
         .expect(200).end(done);
     });
@@ -533,7 +523,7 @@ describe("HTTP API exposed by the server", function() {
     it("should store push url", function(done) {
       jsonReq
         .send({'simple_push_url': pushURL})
-        .set('Cookie', sessionCookie)
+        .hawk(hawkCredentials)
         .expect(200).end(function(err, res) {
           if (err) {
             throw err;
@@ -542,7 +532,6 @@ describe("HTTP API exposed by the server", function() {
             if (err) {
               throw err;
             }
-            console.log(records);
             expect(records[0]).eql(pushURL);
             done();
           });
@@ -552,8 +541,8 @@ describe("HTTP API exposed by the server", function() {
     // XXX Bug 980289
     it.skip("should be able to store multiple push urls for one user",
       function(done) {
-        register(url1, expectedAssertion, sessionCookie, function() {
-          register(url2, expectedAssertion, sessionCookie, function() {
+        register(url1, expectedAssertion, hawkCredentials, function() {
+          register(url2, expectedAssertion, hawkCredentials, function() {
             storage.getUserSimplePushURLs(userHmac, function(err, records) {
               if (err) {
                 throw err;
@@ -566,8 +555,8 @@ describe("HTTP API exposed by the server", function() {
       });
 
     it("should be able to override an old SimplePush URL.", function(done) {
-      register(url1, expectedAssertion, sessionCookie, function() {
-        register(url2, expectedAssertion, sessionCookie, function() {
+      register(url1, expectedAssertion, hawkCredentials, function() {
+        register(url2, expectedAssertion, hawkCredentials, function() {
           storage.getUserSimplePushURLs(userHmac, function(err, records) {
             if (err) {
               throw err;
@@ -672,12 +661,11 @@ describe("HTTP API exposed by the server", function() {
       });
       token = tokenManager.encode({
         uuid: uuid,
-        user: user
+        user: hawkCredentials.id
       }).token;
       req = supertest(app)
         .del('/call-url/' + token)
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .set('Cookie', sessionCookie);
+        .hawk(hawkCredentials);
     });
 
     afterEach(function() {
@@ -711,8 +699,7 @@ describe("HTTP API exposed by the server", function() {
         }).token;
         req = supertest(app)
           .del('/call-url/' + token)
-          .set('Authorization', 'BrowserID ' + expectedAssertion)
-          .set('Cookie', sessionCookie)
+          .hawk(hawkCredentials)
           .expect(403).end(done);
       });
 
@@ -728,8 +715,7 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function(done) {
       req = supertest(app)
         .get('/calls')
-        .set('Authorization', 'BrowserID ' + expectedAssertion)
-        .set('Cookie', sessionCookie)
+        .hawk(hawkCredentials)
         .expect('Content-Type', /json/);
 
       calls = [
@@ -796,14 +782,8 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
-    it.skip("should have the authentication middleware installed", function() {
-      expect(getMiddlewares('get', '/calls'))
-        .include(auth.isAuthenticated);
-    });
-
-    it("should have the requireSession middleware installed", function() {
-      expect(getMiddlewares('get', '/calls'))
-        .include(sessions.requireSession);
+    it("should have the requireHawk middleware installed", function() {
+      expect(getMiddlewares('get', '/calls')).include(requireHawkSession);
     });
 
     it("should answer a 503 if the database isn't available", function(done) {
@@ -835,7 +815,7 @@ describe("HTTP API exposed by the server", function() {
 
       token = tokenManager.encode({
         uuid: uuid,
-        user: user,
+        user: hawkCredentials.id,
         callerId: callerId
       }).token;
 
@@ -894,8 +874,8 @@ describe("HTTP API exposed by the server", function() {
             var url1 = "http://www.example.org";
             var url2 = "http://www.mozilla.org";
 
-            register(url1, expectedAssertion, sessionCookie, function() {
-              register(url2, expectedAssertion, sessionCookie, function() {
+            register(url1, expectedAssertion, hawkCredentials, function() {
+              register(url2, expectedAssertion, hawkCredentials, function() {
                 jsonReq.end(function(err, res) {
                   if (err) {
                     throw err;
@@ -945,8 +925,6 @@ describe("HTTP API exposed by the server", function() {
                 }
                 expect(items.length).eql(1);
                 expect(items[0].callId).to.have.length(32);
-                // We don't want to compare this, it's added by mongo.
-                delete items[0]._id;
                 delete items[0].callId;
                 expect(items[0]).eql({
                   callerId: callerId,
@@ -1051,8 +1029,7 @@ describe("HTTP API exposed by the server", function() {
       it("should return a 404 on an already deleted call.", function(done) {
         supertest(app)
           .del('/calls/id/invalidUUID')
-          .set('Authorization', 'BrowserID ' + expectedAssertion)
-          .set('Cookie', sessionCookie)
+          .hawk(hawkCredentials)
           .expect(404)
           .end(done);
       });
