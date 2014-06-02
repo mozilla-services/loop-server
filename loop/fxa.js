@@ -5,6 +5,7 @@
 "use strict";
 
 var https = require('https');
+var conf = require('./config').conf;
 
 // Don't be limited by the default node.js HTTP agent.
 var agent = new https.Agent();
@@ -13,7 +14,8 @@ agent.maxSockets = 1000000;
 // Be sure to use the exported verifier so we can mock it in the tests.
 exports.verify = require('browserid-verify')({
   type: 'remote',
-  agent: agent
+  agent: agent,
+  url: conf.get('fxaVerifier')
 });
 
 

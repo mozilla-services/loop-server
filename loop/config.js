@@ -178,6 +178,12 @@ var conf = convict({
     env: "FXA_AUDIENCE",
     default: undefined
   },
+  fxaVerifier: {
+    doc: "The Firefox Accounts verifier url",
+    format: String,
+    env: "FXA_VERIFIER",
+    default: "https://verifier.accounts.firefox.com/v2",
+  },
   hawkSessionDuration: {
     doc: "The duration of hawk credentials (in seconds)",
     format: Number,
