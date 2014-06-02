@@ -3,12 +3,12 @@ language: node_js
 node_js:
   - "0.10"
 
-services: mongodb
+services: redis-server
 
 notifications:
   irc:
     channels:
-      - "irc.mozilla.org#media"
+      - "irc.mozilla.org#loop"
     use_notice: false
     skip_join: true
     on_success: change
