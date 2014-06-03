@@ -108,8 +108,10 @@ var attachOrCreateHawkSession = hawk.getMiddleware(
 
 var requireFxA = fxa.getMiddleware(conf.get('fxaAudience'),
   function(req, res, assertion, next) {
-    var identifier = assertion['fxa-verifiedMSISDN'] ||
-                     assertion['fxa-verifiedEmail'];
+    var idpClaims = assertion.idpClaims;
+
+    var identifier = idpClaims['fxa-verifiedEmail'] ||
+                     idpClaims['fxa-verifiedMSISDN'];
 
     if (identifier === undefined) {
       logError(new Error("Assertion is invalid: " + assertion));

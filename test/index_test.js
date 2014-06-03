@@ -194,7 +194,7 @@ describe("index.js", function() {
         // Mock the calls to the external BrowserID verifier.
         sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
           if (assertion === expectedAssertion) {
-            cb(null, user, {"fxa-verifiedEmail": user});
+            cb(null, user, {idpClaims: {"fxa-verifiedEmail": user}});
           } else {
             cb("error");
           }
