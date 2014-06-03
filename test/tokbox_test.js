@@ -40,7 +40,22 @@ describe("TokBox", function() {
         tokenDuration: 3600
       });
       assert.calledOnce(loopTokbox.OpenTok);
-      assert.calledWithExactly(loopTokbox.OpenTok, apiKey, apiSecret, undefined);
+      assert.calledWithExactly(loopTokbox.OpenTok, apiKey,
+                               apiSecret, undefined);
+    });
+
+    it("should create an OpenTok object and override the apiUrl", function() {
+      sandbox.stub(loopTokbox, "OpenTok");
+
+      new TokBox({
+        apiKey: apiKey,
+        apiSecret: apiSecret,
+        apiUrl: "http://test",
+        tokenDuration: 3600
+      });
+      assert.calledOnce(loopTokbox.OpenTok);
+      assert.calledWithExactly(loopTokbox.OpenTok, apiKey,
+                               apiSecret, "http://test");
     });
   });
 
