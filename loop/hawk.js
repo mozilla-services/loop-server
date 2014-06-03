@@ -31,6 +31,7 @@ function generateHawkSession(storeSession, callback) {
  **/
 function setHawkHeaders(res, sessionToken) {
   res.setHeader('Hawk-Session-Token', sessionToken);
+  res.setHeader('Access-Control-Expose-Headers', 'Hawk-Session-Token');
 }
 
 
