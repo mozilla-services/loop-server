@@ -6,7 +6,6 @@
   "userMacAlgorithm": "sha256",
   "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
   "sessionSecret": "this is not a secret",
-  "sessionDuration": 300,
   "useSSL": false,
   "tokBox": {
     "apiKey": "<put your apiKey here>",
