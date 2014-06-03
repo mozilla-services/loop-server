@@ -131,6 +131,14 @@ RedisStorage.prototype = {
     );
   },
 
+  touchHawkSession: function(tokenId, callback) {
+    this._client.expire(
+      'hawk.' + tokenId,
+      this._settings.hawkSessionDuration,
+      callback
+    );
+  },
+
   getHawkSession: function(tokenId, callback) {
     this._client.get('hawk.' + tokenId, function(err, result) {
       if (err) {
