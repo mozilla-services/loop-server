@@ -17,7 +17,7 @@ var assert = sinon.assert;
 describe("TokBox", function() {
   var sandbox, apiSecret, apiKey, serverIP, fakeCallInfo;
 
-	beforeEach(function() {
+  beforeEach(function() {
     sandbox = sinon.sandbox.create();
     var tokBoxConfig = conf.get('tokBox');
     fakeCallInfo = conf.get('fakeCallInfo');
