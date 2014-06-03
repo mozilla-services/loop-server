@@ -11,7 +11,7 @@ install:
 	@npm install
 
 .PHONY: lint
-lint: jshint
+lint: jshint eslint
 
 clean:
 	rm -rf .venv node_modules coverage lib-cov html-report
@@ -25,6 +25,10 @@ cover-mocha:
 .PHONY: jshint
 jshint:
 	@$(NODE_LOCAL_BIN)/jshint test loop/*.js
+
+.PHONY: eslint
+eslint:
+	@$(NODE_LOCAL_BIN)/eslint **/*.js
 
 .PHONY: mocha
 mocha:
