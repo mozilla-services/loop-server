@@ -15,12 +15,9 @@ exports.OpenTok = require('opentok');
 function TokBox(settings) {
   this.apiKey = settings.apiKey;
   this.tokenDuration = settings.tokenDuration;
+  this.serverURL = settings.apiUrl || "https://api.opentok.com";
   this._opentok = new exports.OpenTok(this.apiKey, settings.apiSecret,
-                                      settings.apiUrl);
-  this.serverURL = undefined;
-  if (this._opentok.client !== undefined) {
-    this.serverURL = this._opentok.client.c.apiUrl;
-  }
+                                      this.serverURL);
 }
 
 TokBox.prototype = {

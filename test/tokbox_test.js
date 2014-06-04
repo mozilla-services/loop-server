@@ -41,7 +41,7 @@ describe("TokBox", function() {
       });
       assert.calledOnce(loopTokbox.OpenTok);
       assert.calledWithExactly(loopTokbox.OpenTok, apiKey,
-                               apiSecret, undefined);
+                               apiSecret, "https://api.opentok.com");
     });
 
     it("should create an OpenTok object and override the apiUrl", function() {
