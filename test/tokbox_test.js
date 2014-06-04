@@ -74,7 +74,7 @@ describe("TokBox", function() {
     function(done) {
       sandbox.stub(tokBox._opentok, "createSession",
       function(options, cb) {
-        cb(null, fakeCallInfo.session1);
+        cb(null, {sessionId: fakeCallInfo.session1});
       });
 
       var generateTokenCalls = 0;
@@ -111,18 +111,6 @@ describe("TokBox", function() {
         done();
       });
     });
-
-    it("should error in a special way if the returned session is empty",
-      function(done) {
-        sandbox.stub(tokBox._opentok, "createSession",
-          function(options, cb) {
-            cb();
-          });
-        tokBox.getSessionTokens(function(error, info) {
-          expect(error).eql(/check your credentials/);
-          done();
-        });
-      });
   });
 });
 
