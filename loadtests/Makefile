@@ -12,7 +12,7 @@ build:
 	virtualenv --no-site-packages ./venv
 	$(INSTALL) pexpect
 	$(INSTALL) gevent
-	$(INSTALL) https://github.com/mozilla-services/loads/archive/master.zip
+	$(INSTALL) git+git://github.com/mozilla-services/loads.git
 	$(INSTALL) mohawk
 
 # Clean all the things installed by `make build`.
