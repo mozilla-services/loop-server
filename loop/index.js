@@ -76,6 +76,7 @@ function hmac(payload, secret, algorithm) {
 
 function setUser(req, res, tokenId, done) {
   storage.getHawkUser(tokenId, function(err, user) {
+    storage.touchHawkSession(tokenId);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
       req.user = user;
@@ -153,7 +154,6 @@ function authenticate(req, res, next) {
   if (authorization !== undefined) {
     var splitted = authorization.split(" ");
     var policy = splitted[0];
-    // var assertion = splitted[1];
 
     // Next, let's check which one the user wants to use.
     if (supported.map(function(s) { return s.toLowerCase(); })

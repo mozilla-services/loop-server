@@ -9,6 +9,7 @@ var crypto = require("crypto");
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
+var assert = sinon.assert;
 var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var Token = require("../loop/token").Token;
@@ -260,6 +261,21 @@ describe("index.js", function() {
               done();
             });
         });
+      it("should update session expiration time on auth", function(done) {
+        sandbox.spy(storage, "touchHawkSession");
+        supertest(app)
+          .post("/with-authenticate")
+          .hawk(hawkCredentials)
+          .expect(200)
+          .end(function(err) {
+            if (err) {
+              throw err;
+            }
+            assert.calledWithExactly(storage.touchHawkSession,
+                                     hawkCredentials.id);
+            done();
+          });
+      });
     });
 
     it("should generate new hawk sessions if no authentication is provided",
