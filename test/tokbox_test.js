@@ -131,6 +131,9 @@ describe("FakeTokBox", function() {
       sandbox.restore();
     });
 
+    it("should expose a apiKey property.", function() {
+      expect(tokbox.apiKey).eql('falseApiKey');
+    });
 
     it("should return new session and tokens.", function(done) {
       tokbox.getSessionTokens(function(err, credentials) {

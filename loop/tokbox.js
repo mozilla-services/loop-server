@@ -50,6 +50,7 @@ TokBox.prototype = {
 function FakeTokBox(serverURL) {
   this._counter = 0;
   this.serverURL = conf.get("fakeTokBoxURL");
+  this.apiKey = "falseApiKey";
 }
 
 FakeTokBox.prototype = {
