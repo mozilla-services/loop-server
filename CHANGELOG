@@ -3,10 +3,22 @@ Changelog
 
 This document describes changes between each past release.
 
-0.4.0 (unreleased)
+0.5.0 (unreleased)
 ------------------
 
-- No changes yet.
+- TBD.
+
+0.4.0 (2014-06-04)
+------------------
+
+- Add redis memory usage estimation
+- Improve configuratio handling
+- Use the master version of loads for load testing
+- Remove Mongodb backend
+- Implement authentication with Hawk
+- Add authentication with Firefox Accounts
+- Update CORS to support "*"
+- Implement new Tokbox SDK
 
 
 0.3.0 (2014-04-21)
