@@ -21,15 +21,10 @@
     "convict": "0.4.2",
     "cors": "2.2",
     "express": "3.x",
-<<<<<<< HEAD
-    "strftime": "0.8.0",
-    "opentok": "2.2.2",
-=======
     "hawk": "2.0",
     "hiredis": "0.1.16",
     "hkdf": "0.0.2",
-    "opentok": "1.0.2",
->>>>>>> 8431a28... initial commit of eslint rules
+    "opentok": "2.2.2",
     "raven": "0.6.2",
     "redis": "0.10.1",
     "request": "2.34.0",
