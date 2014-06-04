@@ -182,7 +182,7 @@ var conf = convict({
     doc: "The Firefox Accounts verifier url",
     format: String,
     env: "FXA_VERIFIER",
-    default: "https://verifier.accounts.firefox.com/v2",
+    default: "https://verifier.accounts.firefox.com/v2"
   },
   hawkSessionDuration: {
     doc: "The duration of hawk credentials (in seconds)",
@@ -196,7 +196,7 @@ var conf = convict({
 // files to process, which will be overlayed in order, in the CONFIG_FILES
 // environment variable. By default, the ../config/<env>.json file is loaded.
 
-var envConfig = path.join(__dirname + '/../config', conf.get('env') + '.json');
+var envConfig = path.join(__dirname, '..', 'config', conf.get('env') + '.json');
 var files = (envConfig + ',' + process.env.CONFIG_FILES)
     .split(',')
     .filter(fs.existsSync);

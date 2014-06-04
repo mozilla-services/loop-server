@@ -42,7 +42,7 @@ describe("TokenManager", function() {
     it("should throw an error if no configuration has been provided",
       function() {
       var failure = function() {
-        new tokenlib.TokenManager();
+        tokenManager = new tokenlib.TokenManager();
       };
       expect(failure).to.Throw(/TokenManager requires an object with options/);
     });
@@ -50,7 +50,7 @@ describe("TokenManager", function() {
     it("should throw an error if no macSecret has been provided",
       function() {
       var failure = function() {
-        new tokenlib.TokenManager({'some': 'value'});
+        tokenManager = new tokenlib.TokenManager({'some': 'value'});
       };
       expect(failure).to.Throw(/requires a 'macSecret' argument/);
     });
@@ -58,14 +58,14 @@ describe("TokenManager", function() {
     it("should throw an error if no encryptionSecret has been provided",
       function() {
       var failure = function() {
-        new tokenlib.TokenManager({'macSecret': 'value'});
+        tokenManager = new tokenlib.TokenManager({'macSecret': 'value'});
       };
       expect(failure).to.Throw(/requires an 'encryptionSecret' argument/);
     });
 
     it("should throw an error if the MAC size is too small", function() {
       var failure = function() {
-        new tokenlib.TokenManager({
+        tokenManager = new tokenlib.TokenManager({
           encryptionSecret: encryptionSecret,
           macSecret: macSecret,
           macSize: 16 / 8
@@ -77,9 +77,9 @@ describe("TokenManager", function() {
     it("should throw an error if the encryption secret size is too small",
     function() {
       var failure = function() {
-        new tokenlib.TokenManager({
+        tokenManager = new tokenlib.TokenManager({
           encryptionSecret: crypto.randomBytes(15),
-          macSecret: macSecret,
+          macSecret: macSecret
         });
       };
 
@@ -90,9 +90,9 @@ describe("TokenManager", function() {
     it("should throw an error if the MAC secret is shorter than the " +
        "encryption secret", function() {
       var failure = function() {
-        new tokenlib.TokenManager({
+        tokenManager = new tokenlib.TokenManager({
           encryptionSecret: crypto.randomBytes(16),
-          macSecret: crypto.randomBytes(15),
+          macSecret: crypto.randomBytes(15)
         });
       };
       expect(failure).to.Throw(/macSecret must be at least as long as/);
@@ -145,7 +145,7 @@ describe("TokenManager", function() {
         var token2 = (new tokenlib.TokenManager({
           encryptionSecret: encryptionSecret,
           macSecret: macSecret,
-          macSize: 128/8
+          macSize: 128 / 8
         })).encode({some: "data"}).token;
         expect(token1.length < token2.length).to.equal(true);
       });

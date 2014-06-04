@@ -2,7 +2,6 @@
 
 env:
   "amd": true
-  "browser": true
   "mocha": true
   "node": true
 

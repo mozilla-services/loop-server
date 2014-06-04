@@ -586,7 +586,7 @@ describe("HTTP API exposed by the server", function() {
         });
       jsonReq
         .send({
-          'simple_push_url': pushURL,
+          'simple_push_url': pushURL
         }).expect(503).end(done);
     });
 
@@ -596,7 +596,7 @@ describe("HTTP API exposed by the server", function() {
         .post('/registration')
         .type('json')
         .send({
-          'simple_push_url': pushURL,
+          'simple_push_url': pushURL
         }).expect(200).end(function(err, res) {
           if (err) {
             throw err;
@@ -616,7 +616,7 @@ describe("HTTP API exposed by the server", function() {
         sandbox.stub(statsdClient, "count");
         jsonReq
           .send({
-            'simple_push_url': pushURL,
+            'simple_push_url': pushURL
           }).expect(200).end(function(err, res) {
             if (err) {
               throw err;
