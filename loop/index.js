@@ -111,7 +111,7 @@ var requireFxA = fxa.getMiddleware(conf.get('fxaAudience'),
     var idpClaims = assertion.idpClaims;
 
     var identifier = idpClaims['fxa-verifiedEmail'] ||
-                     idpClaims['fxa-verifiedMSISDN'];
+                     idpClaims.verifiedMSISDN;
 
     if (identifier === undefined) {
       logError(new Error("Assertion is invalid: " + assertion));
