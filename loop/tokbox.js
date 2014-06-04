@@ -25,12 +25,12 @@ TokBox.prototype = {
     var self = this;
     this._opentok.createSession({
       mediaMode: 'relayed'
-    }, function(err, sessionId) {
-        if (err || sessionId === undefined || sessionId === null) {
-          cb(err || new Error("Got an empty sessionId from tokbox, check " +
-                              "your credentials."));
+    }, function(err, session) {
+        if (err !== null) {
+          cb(err);
           return;
         }
+        var sessionId = session.sessionId;
         var now = Math.round(new Date().getTime() / 1000.0);
         var expirationTime = now + self.tokenDuration;
         cb(null, {
