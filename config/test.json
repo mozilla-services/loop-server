@@ -18,7 +18,6 @@
   "tokBox": {
     "apiKey": "44687443",
     "apiSecret": "5379ba385ad44c83a2584840d095c08351cd9041",
-    "serverIP": "127.0.0.1",
     "tokenDuration": 86400
   },
   "webAppUrl": "http://localhost:3000/#call/{token}",

@@ -10,7 +10,6 @@
   "tokBox": {
     "apiKey": "<put your apiKey here>",
     "apiSecret": "<put your apiSecret here>",
-    "serverIP": "127.0.0.1",
     "tokenDuration": 86400
   },
   "webAppUrl": "http://localhost:3000/content/#call/{token}",

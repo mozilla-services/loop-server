@@ -4,42 +4,44 @@
 
 "use strict";
 
-var OpenTok = require('opentok');
 var crypto = require('crypto');
 var request = require('request');
 var conf = require('./config').conf;
 
+// Be sure to use the exported OpenTok so we can mock it in the
+// tests.
+exports.OpenTok = require('opentok');
+
 function TokBox(settings) {
-  this.serverIP = settings.serverIP;
   this.apiKey = settings.apiKey;
   this.tokenDuration = settings.tokenDuration;
-  this._opentok = new OpenTok.OpenTokSDK(this.apiKey, settings.apiSecret);
-  this.serverURL = 'https://' + this._opentok.api_url;
+  this.serverURL = settings.apiUrl || "https://api.opentok.com";
+  this._opentok = new exports.OpenTok(this.apiKey, settings.apiSecret,
+                                      this.serverURL);
 }
 
 TokBox.prototype = {
   getSessionTokens: function(cb) {
     var self = this;
-    this._opentok.createSession(
-      this.serverIP, {'p2p.preference': 'enabled'}, function(err, sessionId) {
-        if (err || sessionId === undefined || sessionId === null) {
-          cb(err || new Error("Got an empty sessionId from tokbox, check " +
-                              "your credentials."));
+    this._opentok.createSession({
+      mediaMode: 'relayed'
+    }, function(err, session) {
+        if (err !== null) {
+          cb(err);
           return;
         }
+        var sessionId = session.sessionId;
         var now = Math.round(new Date().getTime() / 1000.0);
         var expirationTime = now + self.tokenDuration;
         cb(null, {
           sessionId: sessionId,
-          callerToken: self._opentok.generateToken({
-            session_id: sessionId,
-            role: OpenTok.RoleConstants.PUBLISHER,
-            expire_time: expirationTime
+          callerToken: self._opentok.generateToken(sessionId, {
+            role: 'publisher',
+            expireTime: expirationTime
           }),
-          calleeToken: self._opentok.generateToken({
-            session_id: sessionId,
-            role: OpenTok.RoleConstants.PUBLISHER,
-            expire_time: expirationTime
+          calleeToken: self._opentok.generateToken(sessionId, {
+            role: 'publisher',
+            expireTime: expirationTime
           })
         });
       }
@@ -81,9 +83,8 @@ FakeTokBox.prototype = {
   }
 };
 
-module.exports = {
-  TokBox: TokBox,
-  FakeTokBox: FakeTokBox,
-  OpenTok: OpenTok,
-  request: request
-};
+
+exports.TokBox = TokBox;
+exports.FakeTokBox = FakeTokBox;
+exports.OpenTok = exports.OpenTok;
+exports.request = request;

@@ -128,7 +128,7 @@ var conf = convict({
   },
   tokBox: {
     doc: "TokBox service config",
-    format: validateKeys(["apiKey", "apiSecret", "serverIP", "tokenDuration"]),
+    format: validateKeys(["apiKey", "apiSecret", "tokenDuration"]),
     default: ""
   },
   webAppUrl: {

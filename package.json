@@ -22,7 +22,7 @@
     "cors": "2.2",
     "express": "3.x",
     "strftime": "0.8.0",
-    "opentok": "1.0.2",
+    "opentok": "2.2.2",
     "raven": "0.6.2",
     "request": "2.34.0",
     "urlsafe-base64": "0.0.2",
