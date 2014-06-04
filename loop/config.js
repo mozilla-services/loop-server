@@ -213,6 +213,11 @@ if (conf.get('encryptionSecret') === "")
 if (conf.get('allowedOrigins') === "") {
   throw "Please defined the list of allowed origins for CORS.";
 }
+
+if (conf.get('hawkSessionDuration') <
+    conf.get('callUrlMaxTimeout') * 60 * 60) {
+  throw "hawkSessionDuration should be longer or equal to callUrlMaxTimeout.";
+}
 module.exports = {
   conf: conf,
   hexKeyOfSize: hexKeyOfSize,
