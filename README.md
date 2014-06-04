@@ -4,17 +4,6 @@ Loop server
 This is the server part of the loop project. You can find more information on
 its APIs by looking at [the online documentation](https://docs.services.mozilla.com/loop/)
 
-Estimate Redis Memory Usage
----------------------------
-
-    usage = nbUsers * 280 + nbCallsPerDay * 1365 + nbUrlRevocationPerMonth * 150 + 600000 (bytes)
-
- - For 10M users and 100 000 calls a day we will need around 2.7 GB
- - For 250M users and 10M calls a day we will need around 78 GB
-
-The biggest AWS Elasticache Redis virtual machine is 68GB large so if we want to handle more that 150M users we will probably want to do some sharding to have one redis for calls and another one for user management.
-
-
 How to install?
 ---------------
 
@@ -50,13 +39,20 @@ How to run it?
 
 You can create your configuration file in `config/{NODE_ENV}.json`
 
-`dev` is the environment by default.
+`dev` is the environment by default. In order to run the server, you'll need to
+create a `dev.json` file in the config folder. You can do so by using this
+command:
+
+    cp config/{sample,dev}.json
+
+Be sure to edit the content of `config/dev.json`. You'll especially need to
+specify your tokbox credentials.
+
+Once that's done, you can do:
 
     make runserver
 
-this is equivalent to:
-
-    NODE_ENV=dev make runserver
+(which is equivalent to `NODE_ENV=dev make runserver`)
 
 
 How to run the tests?
@@ -72,6 +68,18 @@ Where to report bugs?
 
 You should report bugs/issues or feature requests via [the loop-server bugzilla
 component](https://bugzilla.mozilla.org/enter_bug.cgi?product=Loop&component=Server)
+
+
+Estimate Redis Memory Usage
+---------------------------
+
+    usage = nbUsers * 280 + nbCallsPerDay * 1365 + nbUrlRevocationPerMonth * 150 + 600000 (bytes)
+
+ - For 10M users and 100 000 calls a day we will need around 2.7 GB
+ - For 250M users and 10M calls a day we will need around 78 GB
+
+The biggest AWS Elasticache Redis virtual machine is 68GB large so if we want to handle more that 150M users we will probably want to do some sharding to have one redis for calls and another one for user management.
+
 
 License
 -------
