@@ -46,7 +46,8 @@
   "scripts": {
     "test": "make test",
     "start": "make runserver",
-    "lint": "eslint **/*.js"
+    "eslint": "eslint **/*.js",
+    "cover-mocha": "NODE_ENV=test istanbul cover _mocha -- --reporter spec test/* && open coverage/lcov-report/index.html"
   },
   "license": "MPL-2.0",
   "keywords": []

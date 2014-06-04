@@ -11,7 +11,7 @@ install:
 	@npm install
 
 .PHONY: lint
-lint: jshint eslint
+lint: jshint
 
 clean:
 	rm -rf .venv node_modules coverage lib-cov html-report
