@@ -106,7 +106,10 @@ var attachOrCreateHawkSession = hawk.getMiddleware(
   setUser
 );
 
-var requireFxA = fxa.getMiddleware(conf.get('fxaAudience'),
+var requireFxA = fxa.getMiddleware({
+    audience: conf.get('fxaAudience'),
+    trustedIssuers: conf.get('fxaTrustedIssuers')
+  },
   function(req, res, assertion, next) {
     var idpClaims = assertion.idpClaims;
 

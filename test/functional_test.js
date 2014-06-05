@@ -98,13 +98,14 @@ describe("HTTP API exposed by the server", function() {
                                 'http://mozilla.com']);
 
     // Mock the calls to the external BrowserID verifier.
-    sandbox.stub(fxaAuth, "verify", function(assertion, audience, cb){
-      if (assertion === expectedAssertion) {
-        cb(null, user, {idpClaims: {"fxa-verifiedEmail": user}});
-      } else {
-        cb("error");
-      }
-    });
+    sandbox.stub(fxaAuth, "verifyAssertion",
+      function(assertion, audience, trustedIssuers, cb){
+        if (assertion === expectedAssertion) {
+          cb(null, {idpClaims: {"fxa-verifiedEmail": user}});
+        } else {
+          cb("error");
+        }
+      });
 
     // Let's do the tests with a real URL.
     pushURL = 'https://push.services.mozilla.com/update/MGlYke2SrEmYE8ceyu' +

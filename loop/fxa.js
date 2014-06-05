@@ -5,18 +5,47 @@
 "use strict";
 
 var https = require('https');
+var request = require('request');
 var conf = require('./config').conf;
 
 // Don't be limited by the default node.js HTTP agent.
 var agent = new https.Agent();
 agent.maxSockets = 1000000;
 
-// Be sure to use the exported verifier so we can mock it in the tests.
-exports.verify = require('browserid-verify')({
-  type: 'remote',
-  agent: agent,
-  url: conf.get('fxaVerifier')
-});
+/**
+ * Verifies that the assertion is a valid one, given an audience and a set of
+ * trusted issuers.
+ *
+ * @param {String} assertion, Assertion to check the validity of.
+ * @param {String} audience, Audience of the given assertion.
+ * @param {Array} trustedIssuers, A list of trusted issuers.
+ * @param {Function} callback, a callback that's given the validated assertion.
+ * Signature is (err, assertion);
+ **/
+function verifyAssertion(assertion, audience, trustedIssuers, callback) {
+  request.post({
+    uri: conf.get('fxaVerifier'),
+    json: {
+      audience: audience,
+      assertion: assertion
+    }
+  }, function(err, message, data) {
+    if (err) {
+      callback(err);
+      return;
+    }
+    // Check the issuer is trusted.
+    if (data.status !== "okay") {
+      callback(data.reason);
+      return;
+    }
+    if (trustedIssuers.indexOf(data.issuer) === -1) {
+      callback("Issuer is not trusted");
+      return;
+    }
+    callback(null, data);
+  });
+}
 
 
 /**
@@ -28,7 +57,7 @@ exports.verify = require('browserid-verify')({
  * If the BrowserID assertion is parsed correctly, the user contained into this
  * one is set in the req.user property.
  */
-function getMiddleware(audience, callback) {
+function getMiddleware(conf, callback) {
   function requireBrowserID(req, res, next) {
     var authorization, assertion, policy, splitted;
 
@@ -58,17 +87,22 @@ function getMiddleware(audience, callback) {
       return;
     }
 
-    exports.verify(assertion, audience,
-      function(err, email, response) {
-      if (err) {
-        _unauthorized(err);
-        return;
-      }
-      callback(req, res, response, next);
-    });
+    module.exports.verifyAssertion(
+      assertion, conf.audience, conf.trustedIssuers,
+      function(err, data) {
+        if (err) {
+          _unauthorized(err);
+          return;
+        }
+        callback(req, res, data, next);
+      });
   }
 
   return requireBrowserID;
 }
 
-exports.getMiddleware = getMiddleware;
+module.exports = {
+  getMiddleware: getMiddleware,
+  verifyAssertion: verifyAssertion,
+  request: request
+};
