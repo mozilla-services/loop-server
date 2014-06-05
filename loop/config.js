@@ -184,6 +184,11 @@ var conf = convict({
     env: "FXA_VERIFIER",
     default: "https://verifier.accounts.firefox.com/v2",
   },
+  fxaTrustedIssuers: {
+    doc: "The list of Firefox Accounts trusted issuers",
+    format: Array,
+    default: ["api.accounts.firefox.com"]
+  },
   hawkSessionDuration: {
     doc: "The duration of hawk credentials (in seconds)",
     format: Number,

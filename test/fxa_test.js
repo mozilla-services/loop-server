@@ -11,7 +11,7 @@ var app = require("../loop").app;
 var fxa = require("../loop/fxa");
 var user = "alexis@notmyidea.org";
 
-describe("authentication middleware", function() {
+describe("fxa authentication middleware", function() {
   var jsonReq, expectedAssertion, sandbox;
 
   // Create a route with the auth middleware installed.
@@ -32,13 +32,14 @@ describe("authentication middleware", function() {
     expectedAssertion = "BID-ASSERTION";
 
     // Mock the calls to the external BrowserID verifier.
-    sandbox.stub(fxa, "verify", function(assertion, audience, cb){
-      if (assertion === expectedAssertion) {
-        cb(null, user, {email: user});
-      } else {
-        cb("error");
-      }
-    });
+    sandbox.stub(fxa, "verifyAssertion",
+      function(assertion, audience, trustedIssuers, cb){
+        if (assertion === expectedAssertion) {
+          cb(null, {email: user});
+        } else {
+          cb("error");
+        }
+      });
   });
 
   afterEach(function() {
