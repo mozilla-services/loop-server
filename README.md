@@ -1,6 +1,8 @@
 Loop server
 ===========
 
+[![Build Status](https://travis-ci.org/mozilla-services/loop-server.svg?branch=master)](https://travis-ci.org/mozilla-services/loop-server)
+
 This is the server part of the loop project. You can find more information on
 its APIs by looking at [the online documentation](https://docs.services.mozilla.com/loop/)
 
