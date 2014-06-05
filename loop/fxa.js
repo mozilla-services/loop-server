@@ -103,5 +103,6 @@ function getMiddleware(conf, callback) {
 
 module.exports = {
   getMiddleware: getMiddleware,
-  verifyAssertion: verifyAssertion
+  verifyAssertion: verifyAssertion,
+  request: request
 };
