@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+</head>
+
+<body>
+
+<div id="splash">
+  <header>
+    <h2>Loop Server</h2>
+    <div id="loggedin" style="display:none">
+      <button id="signup" type="submit">Sign Up</button>
+      <button id="signin" type="submit">Sign In</button>
+    </div>
+    <div id="loggedout" style="display:none">
+      <div id="userEmail"></div>
+      <button id="logout" type="submit">Logout</button>
+    </div>
+  </header>
+</div>
+
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script>
+
+  $('#signin').click(function(ev) {
+    window.location = '/fxa-oauth/login';
+  });
+
+  $('#signup').click(function(ev) {
+    window.location = '/fxa-oauth/signup';
+  });
+
+  $("#logout").click(function(ev) {
+    ev.preventDefault();
+    $.post('/fxa-oauth/logout', function() {
+      location.reload();
+    });
+  });
+
+  $.get('/fxa-oauth/auth_status', function(data) {
+    var loggedInEmail = JSON.parse(data).email;
+    if (loggedInEmail) {
+      $("#loggedout").show();
+      $("#userEmail").html(loggedInEmail);
+    } else {
+      $("#loggedin").show();
+    }
+  });
+</script>
+
+</body>
+</html>

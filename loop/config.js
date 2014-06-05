@@ -323,6 +323,18 @@ var conf = convict({
     doc: "The endpoint to use for the progressURL.",
     format: String,
     default: "/websocket"
+  },
+  fxaOauth: {
+    doc: "Firefox Accounts OAuth config",
+    format: validateKeys([
+      "client_id",
+      "client_secret",
+      "redirect_uri",
+      "oauth_uri",
+      "profile_uri",
+      "scopes"
+    ]),
+    default: ""
   }
 });
 
