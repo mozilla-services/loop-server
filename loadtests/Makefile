@@ -15,6 +15,8 @@ build:
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git
 	$(INSTALL) mohawk
 
+install: build
+
 # Clean all the things installed by `make build`.
 clean:
 	rm -rf ./venv *.pyc
@@ -34,3 +36,6 @@ megabench:
 # Purge any currently-running loadtest runs.
 purge:
 	./venv/bin/loads-runner --config=./config/megabench.ini --purge-broker
+
+attach:
+	./venv/bin/loads-runner --config=./config/megabench.ini --attach
