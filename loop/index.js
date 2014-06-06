@@ -294,7 +294,7 @@ app.get("/", function(req, res) {
     description: pjson.description,
     version: pjson.version,
     homepage: pjson.homepage,
-    endpoint: req.protocol + "://" + req.get('host')
+    endpoint: conf.get("protocol") + "://" + req.get('host')
   };
 
   if (!conf.get("displayVersion")) {
@@ -364,7 +364,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
       statsdClient.count('loop-call-urls-' + userMac, 1);
     }
     var tokenWrapper = tokenManager.encode(tokenPayload);
-    var host = req.protocol + "://" + req.get('host');
+    var host = conf.get("protocol") + "://" + req.get('host');
     res.json(200, {
       call_url: host + "/calls/" + tokenWrapper.token,
       expiresAt: tokenWrapper.payload.expires

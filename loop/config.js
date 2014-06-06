@@ -68,6 +68,12 @@ var conf = convict({
     default: 5000,
     env: "PORT"
   },
+  protocol: {
+    doc: "The server protocol. http by default.",
+    format: String,
+    default: "http",
+    end: "PROTOCOL"
+  },
   macSecret: {
     doc: "The secret for MAC tokens (32 bytes key encoded as hex)",
     format: hexKeyOfSize(32),
