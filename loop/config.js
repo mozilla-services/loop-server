@@ -188,7 +188,7 @@ var conf = convict({
     doc: "The Firefox Accounts verifier url",
     format: String,
     env: "FXA_VERIFIER",
-    default: "https://verifier.accounts.firefox.com/v2",
+    default: "https://verifier.accounts.firefox.com/v2"
   },
   fxaTrustedIssuers: {
     doc: "The list of Firefox Accounts trusted issuers",

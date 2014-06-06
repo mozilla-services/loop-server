@@ -31,9 +31,13 @@ class TestLoop(TestCase):
             self.server_url + '/registration',
             data={'simple_push_url': 'http://localhost/push'})
 
-        self.hawk_auth = HawkAuth(
-            self.server_url,
-            resp.headers['hawk-session-token'])
+        try:
+            self.hawk_auth = HawkAuth(
+                self.server_url,
+                resp.headers['hawk-session-token'])
+        except KeyError:
+            print resp
+            raise
 
     def generate_token(self):
         resp = self.session.post(
@@ -42,20 +46,35 @@ class TestLoop(TestCase):
             headers={'Content-type': 'application/json'},
             auth=self.hawk_auth
         )
-        call_url = resp.json()['call_url']
+        try:
+            data = resp.json()
+        except Exception:
+            print resp.text
+            raise
+        call_url = data['call_url']
         return urlparse(call_url).path.split('/')[-1]
 
     def initiate_call(self, token):
         # This happens when not authenticated.
-        res = self.session.post(self.server_url + '/calls/%s' % token).json()
-        return (res['callId'], res['sessionId'], res['sessionToken'],
-                res['apiKey'])
+        res = self.session.post(self.server_url + '/calls/%s' % token)
+        try:
+            data = res.json()
+        except Exception:
+            print res.text
+            raise
+        return (data['callId'], data['sessionId'], data['sessionToken'],
+                data['apiKey'])
 
     def list_pending_calls(self):
         resp = self.session.get(
             self.server_url + '/calls?version=200',
             auth=self.hawk_auth)
-        return resp.json()['calls']
+        try:
+            data = resp.json()
+        except Exception:
+            print resp.text
+            raise
+        return data['calls']
 
     def revoke_token(self, token):
         # You don't need to be authenticated to revoke a token.
