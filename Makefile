@@ -26,6 +26,10 @@ cover-mocha:
 jshint:
 	@$(NODE_LOCAL_BIN)/jshint test loop/*.js
 
+.PHONY: eslint
+eslint:
+	@$(NODE_LOCAL_BIN)/eslint **/*.js
+
 .PHONY: mocha
 mocha:
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec

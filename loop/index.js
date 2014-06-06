@@ -21,11 +21,12 @@ var StatsdClient = require('statsd-node').client;
 var hawk = require('./hawk');
 var fxa = require('./fxa');
 
+var TokBox;
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
-  var TokBox = require('./tokbox').FakeTokBox;
+  TokBox = require('./tokbox').FakeTokBox;
 } else {
-  var TokBox = require('./tokbox').TokBox;
+  TokBox = require('./tokbox').TokBox;
 }
 
 var getStorage = require('./storage');
