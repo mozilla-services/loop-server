@@ -21,13 +21,21 @@ function TokBox(settings) {
 }
 
 TokBox.prototype = {
-  getSessionTokens: function(cb) {
+  getSessionTokens: function(cb, retry) {
+    if (retry === undefined) {
+      retry = 3; // Retry on failure.
+    }
     var self = this;
     this._opentok.createSession({
       mediaMode: 'relayed'
     }, function(err, session) {
         if (err !== null) {
-          cb(err);
+          retry--;
+          if (retry <= 0) {
+            cb(err);
+            return;
+          }
+          self.getSessionTokens(cb, retry);
           return;
         }
         var sessionId = session.sessionId;

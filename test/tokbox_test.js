@@ -108,6 +108,7 @@ describe("TokBox", function() {
         });
       tokBox.getSessionTokens(function(error, info) {
         expect(error).eql("error");
+        assert.calledThrice(tokBox._opentok.createSession);
         done();
       });
     });
