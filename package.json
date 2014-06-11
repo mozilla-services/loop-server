@@ -29,7 +29,8 @@
     "redis": "0.10.1",
     "statsd-node": "0.2.1",
     "hawk": "2.0",
-    "hkdf": "0.0.2"
+    "hkdf": "0.0.2",
+    "atob": "1.1.2"
   },
   "devDependencies": {
     "awsbox": "0.6.x",

@@ -92,15 +92,19 @@ describe("fxa authentication", function() {
   });
 
   describe('#verifyAssertion', function() {
-    var assertion;
+    var audience, assertion;
     beforeEach(function() {
+      audience = "https://loop.firefox.com";
       assertion = {
-        "audience": "https://loop.firefox.com",
+        "audience": audience, 
         "expires": 1389791993675,
         "issuer": "msisdn.accounts.firefox.com",
         "email": "4c352927cd4f4a4aa03d7d1893d950b8@msisdn.accounts.firefox.com",
         "status": "okay"
       };
+      sandbox.stub(fxa, "getAssertionAudience", function(assertion) {
+        return audience;
+      });
     });
 
     it("should return an error if the verifier errored", function() {
@@ -150,5 +154,21 @@ describe("fxa authentication", function() {
           expect(data).eql(assertion);
         });
     });
+
+    it("should change the audience if only the scheme differs",
+      function(done) {
+        // Set the audience we return to app://
+        audience = "app://loop.firefox.com";
+
+        sandbox.stub(fxa.request, "post", function(opts, cb) {
+          // Should ask the verifier with the app:// scheme.
+          expect(opts.json.audience).eql('app://loop.firefox.com');
+          cb(null, null, assertion);
+        });
+
+        // Start the verification.
+        fxa.verifyAssertion(assertion, 'http://loop.firefox.com',
+          [assertion.issuer] , done);
+      });
   });
 });
