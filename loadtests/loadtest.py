@@ -26,10 +26,18 @@ class TestLoop(TestCase):
                 status = 404
             self.get_call_status(call['callId'], status)
 
+    def _get_json(self, resp):
+        try:
+            return resp.json()
+        except Exception:
+            print resp.text
+            raise
+
     def register(self):
         resp = self.session.post(
             self.server_url + '/registration',
             data={'simple_push_url': 'http://localhost/push'})
+        self.assertEquals(200, resp.status_code)
 
         try:
             self.hawk_auth = HawkAuth(
@@ -46,22 +54,17 @@ class TestLoop(TestCase):
             headers={'Content-type': 'application/json'},
             auth=self.hawk_auth
         )
-        try:
-            data = resp.json()
-        except Exception:
-            print resp.text
-            raise
+        self.assertEquals(resp.status_code, 200)
+        data = self._get_json(resp)
         call_url = data['call_url']
         return urlparse(call_url).path.split('/')[-1]
 
     def initiate_call(self, token):
         # This happens when not authenticated.
-        res = self.session.post(self.server_url + '/calls/%s' % token)
-        try:
-            data = res.json()
-        except Exception:
-            print res.text
-            raise
+        resp = self.session.post(self.server_url + '/calls/%s' % token)
+        self.assertEquals(resp.status_code, 200)
+
+        data = self._get_json(resp)
         return (data['callId'], data['sessionId'], data['sessionToken'],
                 data['apiKey'])
 
@@ -69,11 +72,7 @@ class TestLoop(TestCase):
         resp = self.session.get(
             self.server_url + '/calls?version=200',
             auth=self.hawk_auth)
-        try:
-            data = resp.json()
-        except Exception:
-            print resp.text
-            raise
+        data = self._get_json(resp)
         return data['calls']
 
     def revoke_token(self, token):
