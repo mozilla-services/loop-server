@@ -364,9 +364,8 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
       statsdClient.count('loop-call-urls-' + userMac, 1);
     }
     var tokenWrapper = tokenManager.encode(tokenPayload);
-    var host = conf.get("protocol") + "://" + req.get('host');
     res.json(200, {
-      call_url: host + "/calls/" + tokenWrapper.token,
+      call_url: conf.get("webAppUrl").replace("{token}", tokenWrapper.token),
       expiresAt: tokenWrapper.payload.expires
     });
   });
