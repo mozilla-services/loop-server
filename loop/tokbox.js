@@ -14,6 +14,10 @@ exports.OpenTok = require('opentok');
 
 function TokBox(settings) {
   this.apiKey = settings.apiKey;
+  if (settings.retryOnError === undefined) {
+    settings.retryOnError = 3;
+  }
+  this.retryOnError = settings.retryOnError;
   this.tokenDuration = settings.tokenDuration;
   this.serverURL = settings.apiUrl || "https://api.opentok.com";
   this._opentok = new exports.OpenTok(this.apiKey, settings.apiSecret,
@@ -23,7 +27,7 @@ function TokBox(settings) {
 TokBox.prototype = {
   getSessionTokens: function(cb, retry) {
     if (retry === undefined) {
-      retry = 3; // Retry on failure.
+      retry = this.retryOnError;
     }
     var self = this;
     this._opentok.createSession({
