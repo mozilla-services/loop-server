@@ -75,10 +75,14 @@ component](https://bugzilla.mozilla.org/enter_bug.cgi?product=Loop&component=Ser
 Estimate Redis Memory Usage
 ---------------------------
 
-    usage = nbUsers * 280 + nbCallsPerDay * 1365 + nbUrlRevocationPerMonth * 150 + 600000 (bytes)
+To estimate redis usage, checkout the repository and run the `redis_usage.py`
+file:
 
- - For 10M users and 100 000 calls a day we will need around 2.7 GB
- - For 250M users and 10M calls a day we will need around 78 GB
+    ./redis_usage.py [users] [daily-calls] [monthly-revocation]
+
+For instance (for 25k users and 10 calls per day per user)
+
+    ./redis_usage.py 25000 10
 
 The biggest AWS Elasticache Redis virtual machine is 68GB large so if we want to handle more that 150M users we will probably want to do some sharding to have one redis for calls and another one for user management.
 
