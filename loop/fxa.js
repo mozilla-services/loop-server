@@ -7,10 +7,23 @@
 var https = require('https');
 var request = require('request');
 var conf = require('./config').conf;
+var atob = require('atob');
 
 // Don't be limited by the default node.js HTTP agent.
 var agent = new https.Agent();
 agent.maxSockets = 1000000;
+
+/**
+ * Helper function. Get the audience from the given assertion.
+ *
+ * @param {String} assertion The assertion to unpack
+ *
+ * @return {Object} the audience of this assertion.
+ */
+exports.getAssertionAudience = function(assertion) {
+  var parts = assertion.split('.');
+  return JSON.parse(atob(parts[3])).aud;
+};
 
 /**
  * Verifies that the assertion is a valid one, given an audience and a set of
@@ -23,6 +36,12 @@ agent.maxSockets = 1000000;
  * Signature is (err, assertion);
  **/
 function verifyAssertion(assertion, audience, trustedIssuers, callback) {
+  var assertionAudience = exports.getAssertionAudience(assertion);
+  var matchScheme = /(.*):\/\//;
+  if (assertionAudience.replace(matchScheme, '') ===
+      audience.replace(matchScheme, '')) {
+    audience = assertionAudience;
+  }
   request.post({
     uri: conf.get('fxaVerifier'),
     json: {
@@ -101,8 +120,6 @@ function getMiddleware(conf, callback) {
   return requireBrowserID;
 }
 
-module.exports = {
-  getMiddleware: getMiddleware,
-  verifyAssertion: verifyAssertion,
-  request: request
-};
+exports.getMiddleware = getMiddleware;
+exports.verifyAssertion = verifyAssertion;
+exports.request = request;
