@@ -133,9 +133,26 @@ var conf = convict({
     default: "http://httpbin.org/deny"
   },
   tokBox: {
-    doc: "TokBox service config",
-    format: validateKeys(["apiKey", "apiSecret", "tokenDuration"]),
-    default: ""
+    apiKey: {
+      doc: 'api key for tokbox',
+      format: String,
+      default: ""
+    },
+    apiSecret: {
+      doc: 'api secret for tokbox',
+      format: String,
+      default: ""
+    },
+    tokenDuration: {
+      doc: 'how long api tokens are valid for in seconds',
+      format: "nat",
+      default: 24 * 3600
+    },
+    retryOnError: {
+      doc: 'how many times to retry on error',
+      format: "nat",
+      default: 3
+    }
   },
   webAppUrl: {
     doc: "Loop Web App Home Page.",
