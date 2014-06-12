@@ -4,9 +4,16 @@
 
 "use strict";
 
+var conf = require('./config').conf;
+
+// Configure http agents to use more than the default number of sockets.
+var http = require('http');
+var https = require('https');
+https.globalAgent.maxSockets = conf.get('maxHTTPSockets');
+http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
+
 var express = require('express');
 var tokenlib = require('./tokenlib');
-var conf = require('./config').conf;
 var hexKeyOfSize = require('./config').hexKeyOfSize;
 var crypto = require('crypto');
 var pjson = require('../package.json');

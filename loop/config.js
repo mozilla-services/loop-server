@@ -216,6 +216,11 @@ var conf = convict({
     doc: "The duration of hawk credentials (in seconds)",
     format: Number,
     default: 3600 * 24 * 30 // One month.
+  },
+  maxHTTPSockets: {
+    doc: "The maximum of HTTP sockets to use when doing requests",
+    format: Number,
+    default: 5
   }
 });
 
