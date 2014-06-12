@@ -133,6 +133,11 @@ var conf = convict({
     default: "http://httpbin.org/deny"
   },
   tokBox: {
+    apiUrl: {
+      doc: 'api endpoint for tokbox',
+      format: String,
+      default: "https://api.opentok.com"
+    },
     apiKey: {
       doc: 'api key for tokbox',
       format: String,
