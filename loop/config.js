@@ -225,6 +225,11 @@ var conf = convict({
     doc: "The maximum of HTTP sockets to use when doing requests",
     format: Number,
     default: 5
+  },
+  heartbeatTimeout: {
+    doc: "Timeout for requests when doing heartbeat checks (ms)",
+    format: Number,
+    default: 30
   }
 });
 
