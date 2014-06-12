@@ -220,7 +220,7 @@ var conf = convict({
   maxHTTPSockets: {
     doc: "The maximum of HTTP sockets to use when doing requests",
     format: Number,
-    default: 3
+    default: 5
   }
 });
 

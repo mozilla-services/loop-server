@@ -3,12 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
+
+var conf = require('./config').conf;
+
+// Configure http agents to use more than the default number of sockets.
 var http = require('http');
 var https = require('https');
+https.globalAgent.maxSockets = conf.get('maxHTTPSockets');
+http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
-var conf = require('./config').conf;
 var hexKeyOfSize = require('./config').hexKeyOfSize;
 var crypto = require('crypto');
 var pjson = require('../package.json');
@@ -42,10 +47,6 @@ var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
 }
-
-// Configure the http agent to use more than the default number of sockets.
-https.globalAgent.maxSockets = conf.get('maxHTTPSockets');
-http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 function logError(err) {
   console.log(err);
