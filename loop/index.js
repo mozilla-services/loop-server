@@ -235,16 +235,6 @@ function validateToken(req, res, next) {
   }
 }
 
-function validateSimplePushURL(req, res, next) {
-  req.simplePushURL = req.body.simple_push_url;
-  if (req.simplePushURL.indexOf('http') !== 0) {
-    res.sendError("body", "simple_push_url",
-                  "simple_push_url should be a valid url");
-    return;
-  }
-  next();
-}
-
 function requireParams() {
   var params = Array.prototype.slice.call(arguments);
   return function(req, res, next) {
@@ -267,6 +257,18 @@ function requireParams() {
     }
     next();
   };
+}
+
+function validateSimplePushURL(req, res, next) {
+  requireParams(["simple_push_url"])(req, res, function() {
+    req.simplePushURL = req.body.simple_push_url;
+    if (req.simplePushURL.indexOf('http') !== 0) {
+      res.sendError("body", "simple_push_url",
+                    "simple_push_url should be a valid url");
+      return;
+    }
+    next();
+  });
 }
 
 /**
@@ -316,8 +318,8 @@ app.get("/", function(req, res) {
 /**
  * Registers the given user with the given simple push url.
  **/
-app.post('/registration', authenticate, requireParams("simple_push_url"),
-  validateSimplePushURL, function(req, res) {
+app.post('/registration', authenticate, validateSimplePushURL,
+    function(req, res) {
     // XXX Bug 980289 —
     // With FxA we will want to handle many SimplePushUrls per user.
     var userHmac = hmac(req.user, conf.get('userMacSecret'));
@@ -336,18 +338,17 @@ app.post('/registration', authenticate, requireParams("simple_push_url"),
  * Deletes the given simple push URL (you need to have registered it to be able
  * to unregister).
  **/
-app.delete('/registration', requireHawkSession,
-  requireParams("simple_push_url"), validateSimplePushURL,
+app.delete('/registration', requireHawkSession, validateSimplePushURL,
   function(req, res) {
-    var userHmac = hmac(req.user, conf.get('userMacSecret'));
-    storage.removeSimplePushURL(userHmac, req.simplePushUrl, function(err) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
-      }
-      res.json(204, "");
-    });
+  var userHmac = hmac(req.user, conf.get('userMacSecret'));
+  storage.removeSimplePushURL(userHmac, req.simplePushUrl, function(err) {
+    if (err) {
+      logError(err);
+      res.json(503, "Service Unavailable");
+    }
+    res.json(204, "");
   });
+});
 
 
 /**
