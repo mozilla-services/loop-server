@@ -35,13 +35,18 @@ exports.getAssertionAudience = function(assertion) {
  * @param {Function} callback, a callback that's given the validated assertion.
  * Signature is (err, assertion);
  **/
-function verifyAssertion(assertion, audience, trustedIssuers, callback) {
+function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
   var assertionAudience = exports.getAssertionAudience(assertion);
-  var matchScheme = /(.*):\/\//;
-  if (assertionAudience.replace(matchScheme, '') ===
-      audience.replace(matchScheme, '')) {
-    audience = assertionAudience;
+  var audience;
+
+  // Check we trust the audience of the assertion.
+  var trustedAudienceIndex = audiences.indexOf(assertionAudience);
+  if (trustedAudienceIndex !== -1) {
+    audience = audiences[trustedAudienceIndex];
+  } else {
+    callback("Invalid audience");
   }
+
   request.post({
     uri: conf.get('fxaVerifier'),
     json: {
@@ -107,7 +112,7 @@ function getMiddleware(conf, callback) {
     }
 
     module.exports.verifyAssertion(
-      assertion, conf.audience, conf.trustedIssuers,
+      assertion, conf.audiences, conf.trustedIssuers,
       function(err, data) {
         if (err) {
           _unauthorized(err);

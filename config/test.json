@@ -32,5 +32,5 @@
   },
   "allowedOrigins": ["http://localhost:3000"],
   "statsdEnabled": true,
-  "fxaAudience": "http://localhost:5000"
+  "fxaAudiences": ["http://localhost:5000"]
 }

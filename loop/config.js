@@ -200,11 +200,10 @@ var conf = convict({
     format: String,
     default: "%y/%b/%d %H:%M:%S"
   },
-  fxaAudience: {
-    doc: "The domain of the website (for FxA verification)",
-    format: String,
-    env: "FXA_AUDIENCE",
-    default: undefined
+  fxaAudiences: {
+    doc: "List of accepted fxa audiences.",
+    format: Array,
+    default: []
   },
   fxaVerifier: {
     doc: "The Firefox Accounts verifier url",
@@ -249,7 +248,11 @@ if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
 
 if (conf.get('allowedOrigins') === "") {
-  throw "Please defined the list of allowed origins for CORS.";
+  throw "Please define the list of allowed origins for CORS.";
+}
+
+if (conf.get('fxaAudiences').length === 0) {
+  throw "Please define the list of allowed Firefox Accounts audiences";
 }
 
 if (conf.get('hawkSessionDuration') <
