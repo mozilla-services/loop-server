@@ -3,11 +3,14 @@ Changelog
 
 This document describes changes between each past release.
 
-0.6.0 (unreleased)
+0.6.0 (2014-13-06)
 ------------------
 
-- No changes yet.
-
+- Better exception handling in the loadtests
+- Retry on failure when tokbox servers fail
+- Added an HTTPS connection pool
+- Accepts multiple FxA audiences on registration
+- Provides an unregister mechanism when DELETE /registration
 
 0.5.0 (2014-06-06)
 ------------------
