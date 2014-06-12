@@ -14,6 +14,7 @@ var assert = sinon.assert;
 var app = require("../loop").app;
 var request = require('../loop').request;
 var validateToken = require("../loop").validateToken;
+var validateSimplePushURL = require("../loop").validateSimplePushURL;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
@@ -28,36 +29,16 @@ var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
 
+var getMiddlewares = require("./support").getMiddlewares;
+var intersection = require("./support").intersection;
+var expectFormatedError = require("./support").expectFormatedError;
+
 var ONE_MINUTE = 60 * 60 * 1000;
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
 var userHmac;
 var uuid = "1234";
 var callerId = 'natim@mozilla.com';
-
-function getMiddlewares(method, url) {
-  return app.routes[method].filter(function(e){
-    return e.path === url;
-  }).shift().callbacks;
-}
-
-function intersection(array1, array2) {
-  return array1.filter(function(n) {
-    return array2.indexOf(n) !== -1;
-  });
-}
-
-function expectFormatedError(body, location, name, description) {
-  if (typeof description === "undefined") {
-    description = "missing: " + name;
-  }
-  expect(body).eql({
-    status: "errors",
-    errors: [{location: location,
-              name: name,
-              description: description}]
-  });
-}
 
 function register(url, assertion, credentials, cb) {
   supertest(app)
@@ -311,7 +292,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should have the requireHawkSession middleware installed", function() {
-      expect(getMiddlewares('post', '/call-url'))
+      expect(getMiddlewares(app, 'post', '/call-url'))
         .include(requireHawkSession);
     });
 
@@ -464,34 +445,15 @@ describe("HTTP API exposed by the server", function() {
 
     it("should have the authenticate middleware installed",
       function() {
-        expect(getMiddlewares('post', '/registration'))
+        expect(getMiddlewares(app, 'post', '/registration'))
           .include(authenticate);
       });
 
-    it("should require simple push url", function(done) {
-      jsonReq
-        .send({}) // XXX sending nothing fails here, investigate
-        .expect(400)
-        .end(function(err, res) {
-          if (err) {
-            throw err;
-          }
-          expectFormatedError(res.body, "body", "simple_push_url");
-          done();
-        });
-    });
-
-    it("should validate the simple push url", function(done) {
-      jsonReq
-        .send({'simple_push_url': 'not-an-url'})
-        .expect(400)
-        .end(function(err, res) {
-          if (err) throw err;
-          expectFormatedError(res.body, "body", "simple_push_url",
-                              "simple_push_url should be a valid url");
-          done();
-        });
-    });
+    it("should have the validateSimplePushURL middleware installed",
+      function() {
+        expect(getMiddlewares(app, 'post', '/registration'))
+          .include(validateSimplePushURL);
+      });
 
     it("should reject non-JSON requests", function(done) {
       supertest(app)
@@ -628,6 +590,38 @@ describe("HTTP API exposed by the server", function() {
       });
   });
 
+  describe("DELETE /registration", function() {
+    var jsonReq;
+    var url = "http://www.mozilla.org";
+
+    beforeEach(function() {
+      jsonReq = supertest(app)
+        .del('/registration')
+        .hawk(hawkCredentials)
+        .type('json');
+    });
+
+    it("should have the requireHawkSession middleware installed",
+      function() {
+        expect(getMiddlewares(app, 'delete', '/registration'))
+          .include(requireHawkSession);
+      });
+
+    it("should have the validateSimplePushURL middleware installed",
+      function() {
+        expect(getMiddlewares(app, 'delete', '/registration'))
+          .include(validateSimplePushURL);
+      });
+
+    it("should remove an existing simple push url for an user", function(done) {
+      register(url, expectedAssertion, hawkCredentials, function() {
+        jsonReq.send({'simple_push_url': url})
+          .expect(204)
+          .end(done);
+      });
+    });
+  });
+
   describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
       var tokenManager = new tokenlib.TokenManager({
@@ -646,7 +640,8 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should have the validateToken middleware installed.", function() {
-      expect(getMiddlewares('get', '/calls/:token')).include(validateToken);
+      expect(getMiddlewares(app, 'get', '/calls/:token'))
+        .include(validateToken);
     });
   });
 
@@ -705,7 +700,7 @@ describe("HTTP API exposed by the server", function() {
       });
 
     it("should have the validateToken middleware installed", function() {
-      expect(getMiddlewares('delete', '/call-url/:token'))
+      expect(getMiddlewares(app, 'delete', '/call-url/:token'))
         .include(validateToken);
     });
   });
@@ -784,7 +779,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should have the requireHawk middleware installed", function() {
-      expect(getMiddlewares('get', '/calls')).include(requireHawkSession);
+      expect(getMiddlewares(app, 'get', '/calls')).include(requireHawkSession);
     });
 
     it("should answer a 503 if the database isn't available", function(done) {
@@ -841,7 +836,8 @@ describe("HTTP API exposed by the server", function() {
       });
 
       it("should have the token validation middleware installed", function() {
-        expect(getMiddlewares('post', '/calls/:token')).include(validateToken);
+        expect(getMiddlewares(app, 'post', '/calls/:token'))
+          .include(validateToken);
       });
 
       it("should return a 503 if tokbox API errors out", function(done) {

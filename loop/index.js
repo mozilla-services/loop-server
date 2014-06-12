@@ -235,6 +235,16 @@ function validateToken(req, res, next) {
   }
 }
 
+function validateSimplePushURL(req, res, next) {
+  req.simplePushURL = req.body.simple_push_url;
+  if (req.simplePushURL.indexOf('http') !== 0) {
+    res.sendError("body", "simple_push_url",
+                  "simple_push_url should be a valid url");
+    return;
+  }
+  next();
+}
+
 function requireParams() {
   var params = Array.prototype.slice.call(arguments);
   return function(req, res, next) {
@@ -307,18 +317,11 @@ app.get("/", function(req, res) {
  * Registers the given user with the given simple push url.
  **/
 app.post('/registration', authenticate, requireParams("simple_push_url"),
-  function(req, res) {
-    var simplePushURL = req.body.simple_push_url;
-    if (simplePushURL.indexOf('http') !== 0) {
-      res.sendError("body", "simple_push_url",
-                    "simple_push_url should be a valid url");
-      return;
-    }
-
+  validateSimplePushURL, function(req, res) {
     // XXX Bug 980289 —
     // With FxA we will want to handle many SimplePushUrls per user.
     var userHmac = hmac(req.user, conf.get('userMacSecret'));
-    storage.addUserSimplePushURL(userHmac, simplePushURL,
+    storage.addUserSimplePushURL(userHmac, req.simplePushURL,
       function(err, record) {
         if (err) {
           logError(err);
@@ -328,6 +331,24 @@ app.post('/registration', authenticate, requireParams("simple_push_url"),
         res.json(200, "ok");
       });
   });
+
+/**
+ * Deletes the given simple push URL (you need to have registered it to be able
+ * to unregister).
+ **/
+app.delete('/registration', requireHawkSession,
+  requireParams("simple_push_url"), validateSimplePushURL,
+  function(req, res) {
+    var userHmac = hmac(req.user, conf.get('userMacSecret'));
+    storage.removeSimplePushURL(userHmac, req.simplePushUrl, function(err) {
+      if (err) {
+        logError(err);
+        res.json(503, "Service Unavailable");
+      }
+      res.json(204, "");
+    });
+  });
+
 
 /**
  * Generates and return a call-url for the given callerId.
@@ -539,5 +560,6 @@ module.exports = {
   tokBox: tokBox,
   statsdClient: statsdClient,
   authenticate: authenticate,
-  requireHawkSession: requireHawkSession
+  requireHawkSession: requireHawkSession,
+  validateSimplePushURL: validateSimplePushURL
 };
