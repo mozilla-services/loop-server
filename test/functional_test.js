@@ -139,7 +139,8 @@ describe("HTTP API exposed by the server", function() {
           .options(route)
           .set('Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
-          .expect('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE')
+          .expect('Access-Control-Allow-Methods',
+                  'GET,HEAD,PUT,PATCH,POST,DELETE')
           .end(done);
       });
 
