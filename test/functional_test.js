@@ -404,7 +404,8 @@ describe("HTTP API exposed by the server", function() {
             var callUrl = res.body && res.body.call_url, token;
 
             expect(callUrl).to.not.equal(null);
-            expect(callUrl).to.match(/^http:\/\/127.0.0.1/);
+            var urlStart = conf.get('webAppUrl').replace('{token}', '');
+            expect(callUrl).to.contain(urlStart);
 
             token = callUrl.split("/").pop();
             var decoded = tokenManager.decode(token);
