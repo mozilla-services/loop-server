@@ -39,8 +39,10 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
   var assertionAudience = exports.getAssertionAudience(assertion);
   var audience;
 
-  if (audiences.indexOf(assertionAudience) !== -1) {
-    audience = assertionAudience;
+  // Check we trust the audience of the assertion.
+  var trustedAudienceIndex = audiences.indexOf(assertionAudience);
+  if (trustedAudienceIndex !== -1) {
+    audience = audiences[trustedAudienceIndex];
   } else {
     callback("Invalid audience");
   }
