@@ -80,11 +80,17 @@ file:
 
     ./redis_usage.py [users] [daily-calls] [monthly-revocation]
 
-For instance (for 25k users and 10 calls per day per user)
+For instance (for 2M users and 10 calls per day per user)
 
-    ./redis_usage.py 25000 10
+    $ ./redis_usage.py 2000000 10
 
-The biggest AWS Elasticache Redis virtual machine is 68GB large so if we want to handle more that 150M users we will probably want to do some sharding to have one redis for calls and another one for user management.
+    loop-server: v0.6.0-DEV
+    Usage for 2000000 users, with 10 daily calls per user and 0 monthly
+    revocations is 26569 MBytes
+
+The biggest AWS Elasticache Redis virtual machine is 68GB large so if we want
+to handle more that 150M users we will probably want to do some sharding to
+have one redis for calls and another one for user management.
 
 
 License
