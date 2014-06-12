@@ -277,8 +277,8 @@ describe("HTTP API exposed by the server", function() {
         .expect(200)
         .expect('Content-Type', /json/)
         .end(function(err, res) {
-          ["name", "description", "version", "homepage", "endpoint"]
-          .forEach(function(key) {
+          ["name", "description", "version", "homepage", "endpoint",
+           "fakeTokBox"].forEach(function(key) {
             expect(res.body).to.have.property(key);
           });
           done();
