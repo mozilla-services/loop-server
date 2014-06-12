@@ -144,18 +144,18 @@ RedisStorage.prototype = {
   },
 
   getHawkSession: function(tokenId, callback) {
-    this._client.get('hawk.' + tokenId, function(err, result) {
+    this._client.get('hawk.' + tokenId, function(err, key) {
       if (err) {
         callback(err);
         return;
       }
 
       var data = {
-        key: result,
+        key: key,
         algorithm: "sha256"
       };
 
-      callback(null, result === null ? null : data);
+      callback(null, key === null ? null : data);
     });
   },
 
