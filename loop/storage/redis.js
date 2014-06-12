@@ -47,6 +47,10 @@ RedisStorage.prototype = {
     });
   },
 
+  removeSimplePushURL: function(userMac, simplepushURL, callback) {
+    this._client.del('spurl.' + userMac, callback);
+  },
+
   addUserCall: function(userMac, call, callback) {
     var self = this;
     this._client.setex(

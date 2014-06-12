@@ -21,6 +21,9 @@ var storage = require("../loop").storage;
 var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
 var authenticate = require("../loop").authenticate;
+var validateSimplePushURL = require("../loop").validateSimplePushURL;
+
+var expectFormatedError = require("./support").expectFormatedError;
 
 describe("index.js", function() {
   var jsonReq;
@@ -115,6 +118,35 @@ describe("index.js", function() {
         .expect(200, /ok/)
         .end(done);
     });
+  });
+
+  describe("#validateSimplePushURL", function() {
+    // Create a route with the validateSimplePushURL middleware installed.
+    app.post('/validateSP/', validateSimplePushURL, function(req, res) {
+      res.json(200, "ok");
+    });
+
+    it("should validate the simple push url", function(done) {
+      jsonReq
+        .post('/validateSP/')
+        .send({'simple_push_url': 'not-an-url'})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res.body, "body", "simple_push_url",
+                              "simple_push_url should be a valid url");
+          done();
+        });
+    });
+
+    it("should work with a valid simple push url", function(done) {
+      jsonReq
+        .post('/validateSP/')
+        .send({'simple_push_url': 'http://this-is-an-url'})
+        .expect(200)
+        .end(done);
+    });
+
   });
 
   describe("#requireParams", function(){
