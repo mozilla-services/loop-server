@@ -107,7 +107,7 @@ var attachOrCreateHawkSession = hawk.getMiddleware(
 );
 
 var requireFxA = fxa.getMiddleware({
-    audience: conf.get('fxaAudience'),
+    audiences: conf.get('fxaAudiences'),
     trustedIssuers: conf.get('fxaTrustedIssuers')
   },
   function(req, res, assertion, next) {

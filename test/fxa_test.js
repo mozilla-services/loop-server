@@ -114,7 +114,7 @@ describe("fxa authentication", function() {
           reason: "something bad"
         });
       });
-      fxa.verifyAssertion("assertion", "audience", ["trustedIssuer"],
+      fxa.verifyAssertion("assertion", [audience], ["trustedIssuer"],
         function(err, data) {
           expect(err).eql("something bad");
         });
@@ -124,7 +124,7 @@ describe("fxa authentication", function() {
       sandbox.stub(fxa.request, "post", function(opts, cb) {
         cb("error", null, null);
       });
-      fxa.verifyAssertion("assertion", "audience", ["trusted-issuer"],
+      fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
         function(err, data) {
           expect(err).eql("error");
         });
@@ -136,7 +136,7 @@ describe("fxa authentication", function() {
         cb(null, null, assertion);
       });
 
-      fxa.verifyAssertion("assertion", "audience", ["trusted-issuer"],
+      fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
         function(err, data) {
           expect(err).eql("Issuer is not trusted");
         });
@@ -148,14 +148,14 @@ describe("fxa authentication", function() {
         cb(null, null, assertion);
       });
 
-      fxa.verifyAssertion("assertion", "audience", ["trusted-issuer"],
+      fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
         function(err, data) {
           expect(err).eql(null);
           expect(data).eql(assertion);
         });
     });
 
-    it("should change the audience if only the scheme differs",
+    it("should change the audience given to the verifier if it is valid",
       function(done) {
         // Set the audience we return to app://
         audience = "app://loop.firefox.com";
@@ -167,8 +167,25 @@ describe("fxa authentication", function() {
         });
 
         // Start the verification.
-        fxa.verifyAssertion(assertion, 'http://loop.firefox.com',
-          [assertion.issuer] , done);
+        var validAudiences = ['http://loop.firefox.com',
+                              'app://loop.firefox.com'];
+
+        fxa.verifyAssertion(assertion, validAudiences, [assertion.issuer],
+          done);
       });
+
+    it("should reject an invalid audience", function(done) {
+      audience = "invalid";
+
+      var validAudiences = ['http://loop.firefox.com',
+                            'app://loop.firefox.com'];
+
+      fxa.verifyAssertion(assertion, validAudiences, [assertion.issuer],
+        function(err) {
+          expect(err).to.eql("Invalid audience");
+          done();
+        });
+    });
+
   });
 });
