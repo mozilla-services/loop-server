@@ -3,6 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
+0.6.1 (2014-13-06)
+------------------
+
+- Fix Hawk implementation
+
 0.6.0 (2014-13-06)
 ------------------
 
