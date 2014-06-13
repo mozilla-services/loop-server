@@ -288,19 +288,20 @@ app.all('*', corsEnabled);
  **/
 app.get("/__heartbeat__", function(req, res) {
   storage.ping(function(storageStatus) {
-    request.get(tokBox.serverURL, function(requestError) {
-      var status;
-      if (storageStatus === true && requestError === null) {
-        status = 200;
-      } else {
-        status = 503;
-      }
+    request.get(tokBox.serverURL, {timeout: conf.get('heartbeatTimeout')},
+      function(requestError) {
+        var status;
+        if (storageStatus === true && requestError === null) {
+          status = 200;
+        } else {
+          status = 503;
+        }
 
-      res.json(status, {
-        storage: storageStatus,
-        provider: (requestError === null) ? true : false
+        res.json(status, {
+          storage: storageStatus,
+          provider: (requestError === null) ? true : false
+        });
       });
-    });
   });
 });
 

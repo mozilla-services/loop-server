@@ -189,7 +189,7 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /__hearbeat__", function() {
 
     it("should return a 503 if storage is down", function(done) {
-      sandbox.stub(request, "get", function(url, callback){
+      sandbox.stub(request, "get", function(url, options, callback){
         callback(null);
       });
       sandbox.stub(storage, "ping", function(callback) {
@@ -210,7 +210,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should return a 503 if provider service is down", function(done) {
-      sandbox.stub(request, "get", function(url, callback){
+      sandbox.stub(request, "get", function(url, options, callback){
         callback("error");
       });
       supertest(app)
@@ -227,7 +227,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should return a 200 if all dependencies are ok", function(done) {
-      sandbox.stub(request, "get", function(url, callback){
+      sandbox.stub(request, "get", function(url, options, callback){
         callback(null);
       });
       supertest(app)
