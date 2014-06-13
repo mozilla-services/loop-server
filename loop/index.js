@@ -313,7 +313,8 @@ app.get("/", function(req, res) {
     description: pjson.description,
     version: pjson.version,
     homepage: pjson.homepage,
-    endpoint: conf.get("protocol") + "://" + req.get('host')
+    endpoint: conf.get("protocol") + "://" + req.get('host'),
+    fakeTokBox: conf.get('fakeTokBox')
   };
 
   if (!conf.get("displayVersion")) {
