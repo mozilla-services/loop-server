@@ -7,7 +7,6 @@
 var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
-var crypto = require("crypto");
 
 var app = require("../loop").app;
 var hawk = require("../loop/hawk");
@@ -15,9 +14,10 @@ var Token = require("../loop/token").Token;
 
 describe("hawk middleware", function() {
 
+  var createSessionArguments, credentials;
   var _getExistingSession = function(tokenId, cb) {
     cb(null, {
-      key: crypto.randomBytes(16).toString("hex"),
+      key: credentials.key,
       algorithm: "sha256"
     });
   };
@@ -25,8 +25,6 @@ describe("hawk middleware", function() {
   var _getNonExistingSession = function(tokenId, cb) {
     cb(null, null);
   };
-
-  var createSessionArguments, credentials;
 
   var _createSession = function(id, key, cb) {
     createSessionArguments = arguments;
@@ -85,9 +83,16 @@ describe("hawk middleware", function() {
         .hawk(credentials)
         .expect(401)
         .end(function(err, res) {
-          expect(res.header['www-authenticate']).to.eql('Hawk');
           done();
         });
+    });
+
+    it("should 400 on malformed headers", function(done) {
+      supertest(app)
+        .post('/require-session')
+        .set('authorization', 'Hawk MALFORMED')
+        .expect(400)
+        .end(done);
     });
   });
 
@@ -117,7 +122,6 @@ describe("hawk middleware", function() {
         .hawk(credentials)
         .expect(401)
         .end(function(err, res) {
-          expect(res.header['www-authenticate']).to.eql('Hawk');
           done();
         });
     });

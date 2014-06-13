@@ -5,6 +5,8 @@
 "use strict";
 
 var Hawk = require('hawk');
+var Url = require('url');
+
 var Token = require("./token").Token;
 
 /**
@@ -83,35 +85,46 @@ function getMiddleware(getSession, createSession, setUser) {
   }
 
   function requireSession(req, res, next) {
+    // Required as the clients stripe out the querystrings…
+    req.url = Url.parse(req.url).pathname;
     Hawk.server.authenticate(req, function(id, callback) {
       getSession(id, callback);
     }, {},
       function(err, credentials, artifacts) {
         req.hawk = artifacts;
 
-        if (err && err.isMissing) {
-          // logError(err, artifacts);
+        if (err) {
+          if (err.isMissing) {
+            if (createSession !== undefined) {
+              generateHawkSession(createSession,
+              function(err, tokenId, authKey, sessionToken) {
+                if (err) {
+                  res.json(503, "Service Unavailable");
+                  return;
+                }
 
-          if (createSession !== undefined) {
-            generateHawkSession(createSession,
-            function(err, tokenId, authKey, sessionToken) {
-              if (err) {
-                res.json(503, "Service Unavailable");
-                return;
-              }
-
-              setUser(req, res, tokenId, function() {
-                setHawkHeaders(res, sessionToken);
-                next();
+                setUser(req, res, tokenId, function() {
+                  setHawkHeaders(res, sessionToken);
+                  next();
+                });
               });
-            });
-            return;
-          } else {
-            // In case no supported authentication was specified (and we
-            // don't need to create the session),  challenge the client.
-            res.setHeader("WWW-Authenticate",
-                          err.output.headers["WWW-Authenticate"]);
-            res.json(401, err.output.payload);
+              return;
+            } else {
+              // In case no supported authentication was specified (and we
+              // don't need to create the session),  challenge the client.
+              res.setHeader("WWW-Authenticate",
+                            err.output.headers["WWW-Authenticate"]);
+              res.json(401, err.output.payload);
+              return;
+            }
+          }
+          if (err.isBoom === true) {
+            if (err.output.headers) {
+              for (var header in err.output.headers) {
+                res.set(header, err.output.headers[header]);
+              }
+            }
+            res.json(err.output.statusCode, err.output.message);
             return;
           }
         }
