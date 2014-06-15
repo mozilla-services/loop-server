@@ -107,6 +107,13 @@ describe("fxa authentication", function() {
       });
     });
 
+    it("should throw if audiences is not an array", function() {
+      var failure = function() {
+        fxa.verifyAssertion("assertion", "not an array");
+      };
+      expect(failure).to.Throw(/should be an array/);
+    });
+
     it("should return an error if the verifier errored", function() {
       sandbox.stub(fxa.request, "post", function(opts, cb) {
         cb(null, "message", {

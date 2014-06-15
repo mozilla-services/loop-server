@@ -36,6 +36,10 @@ exports.getAssertionAudience = function(assertion) {
  * Signature is (err, assertion);
  **/
 function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
+  // ensure audiences is an array.
+  if (Object.prototype.toString.call(audiences) !== '[object Array]' ) {
+    throw new Error("The 'audiences' parameter should be an array");
+  }
   var assertionAudience = exports.getAssertionAudience(assertion);
   var audience;
 
