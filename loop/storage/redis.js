@@ -74,6 +74,11 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
+
+      if (members.length === 0) {
+        callback(null, []);
+        return;
+      }
       self._client.mget(members, function(err, calls) {
         if (err) {
           callback(err);

@@ -363,8 +363,7 @@ app.post('/registration', authenticate, validateSimplePushURL,
     function(req, res) {
     // XXX Bug 980289 —
     // With FxA we will want to handle many SimplePushUrls per user.
-    var userHmac = hmac(req.user, conf.get('userMacSecret'));
-    storage.addUserSimplePushURL(userHmac, req.simplePushURL,
+    storage.addUserSimplePushURL(req.user, req.simplePushURL,
       function(err, record) {
         if (err) {
           logError(err);
@@ -381,8 +380,7 @@ app.post('/registration', authenticate, validateSimplePushURL,
  **/
 app.delete('/registration', requireHawkSession, validateSimplePushURL,
   function(req, res) {
-  var userHmac = hmac(req.user, conf.get('userMacSecret'));
-  storage.removeSimplePushURL(userHmac, req.simplePushUrl, function(err) {
+  storage.removeSimplePushURL(req.user, req.simplePushUrl, function(err) {
     if (err) {
       logError(err);
       res.json(503, "Service Unavailable");
@@ -421,10 +419,9 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
       tokenPayload.expires = (Date.now() / tokenlib.ONE_HOUR) + expiresIn;
     }
 
-    var userMac = hmac(req.user, conf.get('userMacSecret'));
     if (statsdClient !== undefined) {
       statsdClient.count('loop-call-urls', 1);
-      statsdClient.count('loop-call-urls-' + userMac, 1);
+      statsdClient.count('loop-call-urls-' + req.user, 1);
     }
     var tokenWrapper = tokenManager.encode(tokenPayload);
     res.json(200, {
@@ -444,27 +441,26 @@ app.get("/calls", requireHawkSession, function(req, res) {
 
     var version = req.query.version;
 
-    storage.getUserCalls(hmac(req.user, conf.get('userMacSecret')),
-      function(err, records) {
-        if (err) {
-          logError(err);
-          res.json(503, "Service Unavailable");
-          return;
-        }
+    storage.getUserCalls(req.user, function(err, records) {
+      if (err) {
+        logError(err);
+        res.json(503, "Service Unavailable");
+        return;
+      }
 
-        var calls = records.filter(function(record) {
-          return record.timestamp >= version;
-        }).map(function(record) {
-          return {
-            callId: record.callId,
-            apiKey: tokBox.apiKey,
-            sessionId: record.sessionId,
-            sessionToken: record.calleeToken
-          };
-        });
-
-        res.json(200, {calls: calls});
+      var calls = records.filter(function(record) {
+        return record.timestamp >= version;
+      }).map(function(record) {
+        return {
+          callId: record.callId,
+          apiKey: tokBox.apiKey,
+          sessionId: record.sessionId,
+          sessionToken: record.calleeToken
+        };
       });
+
+      res.json(200, {calls: calls});
+    });
   });
 
 /**
@@ -507,12 +503,10 @@ app.post('/calls/:token', validateToken, function(req, res) {
       var currentTimestamp = new Date().getTime();
       var callId = crypto.randomBytes(16).toString("hex");
 
-      var userMac = hmac(req.token.user, conf.get("userMacSecret"));
-
-      storage.addUserCall(userMac, {
+      storage.addUserCall(req.token.user, {
         "callerId": req.token.callerId,
         "callId": callId,
-        "userMac": userMac,
+        "userMac": req.token.user,
         "sessionId": tokboxInfo.sessionId,
         "calleeToken": tokboxInfo.calleeToken,
         "timestamp": currentTimestamp
@@ -522,7 +516,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
           res.json(503, "Service Unavailable");
           return;
         }
-        storage.getUserSimplePushURLs(userMac, function(err, urls) {
+        storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
           if (err) {
             res.json(503, "Service Unavailable");
             return;

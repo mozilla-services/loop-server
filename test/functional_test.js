@@ -16,7 +16,6 @@ var request = require('../loop').request;
 var validateToken = require("../loop").validateToken;
 var validateSimplePushURL = require("../loop").validateSimplePushURL;
 var conf = require("../loop").conf;
-var hmac = require("../loop").hmac;
 var tokBox = require("../loop").tokBox;
 var storage = require("../loop").storage;
 var statsdClient = require("../loop").statsdClient;
@@ -97,7 +96,7 @@ describe("HTTP API exposed by the server", function() {
         key: authKey,
         algorithm: "sha256"
       };
-      userHmac = hmac(tokenId, conf.get("userMacSecret"));
+      userHmac = tokenId;
       storage.setHawkSession(tokenId, authKey, done);
     });
   });
@@ -809,11 +808,11 @@ describe("HTTP API exposed by the server", function() {
     });
 
     describe("POST /calls/:token", function() {
-      var emptyReq;
+      var emptyReq, addCallReq;
 
       beforeEach(function() {
         emptyReq = supertest(app).post('/calls/' + token);
-        jsonReq = supertest(app)
+        addCallReq = supertest(app)
           .post('/calls/' + token)
           .expect(200);
       });
@@ -827,7 +826,7 @@ describe("HTTP API exposed by the server", function() {
         sandbox.stub(tokBox, "getSessionTokens", function(cb) {
           cb("error");
         });
-        jsonReq
+        addCallReq 
           .expect(503)
           .end(done);
       });
@@ -845,7 +844,7 @@ describe("HTTP API exposed by the server", function() {
         });
 
         it("should accept valid call token", function(done) {
-          jsonReq.end(done);
+          addCallReq.end(done);
         });
 
         // XXX Bug 985387: Handle a SP Url per device
@@ -856,7 +855,7 @@ describe("HTTP API exposed by the server", function() {
 
             register(url1, expectedAssertion, hawkCredentials, function() {
               register(url2, expectedAssertion, hawkCredentials, function() {
-                jsonReq.end(function(err, res) {
+                addCallReq.end(function(err, res) {
                   if (err) throw err;
                   expect(intersection(requests.map(function(record) {
                     return record.url;
@@ -872,7 +871,7 @@ describe("HTTP API exposed by the server", function() {
 
         it("should return sessionId, apiKey and caller token info",
           function(done) {
-            jsonReq.end(function(err, res) {
+            addCallReq.end(function(err, res) {
               if (err) throw err;
 
               var body = res.body;
@@ -890,7 +889,7 @@ describe("HTTP API exposed by the server", function() {
 
         it("should store sessionId and callee token info in database",
           function(done) {
-            jsonReq.end(function(err, res) {
+            addCallReq.end(function(err, res) {
               if (err) throw err;
 
               storage.getUserCalls(userHmac, function(err, items) {
@@ -915,7 +914,7 @@ describe("HTTP API exposed by the server", function() {
             sandbox.stub(storage, "addUserCall", function(userMac, call, cb) {
               cb("error");
             });
-            jsonReq
+            addCallReq
               .expect(503)
               .end(done);
           });
@@ -924,7 +923,7 @@ describe("HTTP API exposed by the server", function() {
           sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, cb) {
             cb("error");
           });
-          jsonReq
+          addCallReq
             .expect(503)
             .end(done);
         });

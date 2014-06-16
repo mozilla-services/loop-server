@@ -192,6 +192,13 @@ describe("Storage", function() {
           });
         });
 
+        it("should return an empty list if no calls", function(done) {
+          storage.getUserCalls(userMac, function(err, results) {
+            expect(results).to.eql([]);
+            done(err);
+          });
+        });
+
         it("should handle storage errors correctly.", function(done) {
           sandbox.stub(storage._client, "smembers",
             function(key, cb){
