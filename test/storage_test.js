@@ -5,6 +5,7 @@
 "use strict";
 var expect = require("chai").expect;
 var crypto = require("crypto");
+var sinon = require("sinon");
 
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
@@ -167,6 +168,16 @@ describe("Storage", function() {
       });
 
       describe("#getUserCalls", function() {
+        var sandbox;
+
+        beforeEach(function() {
+          sandbox = sinon.sandbox.create();
+        });
+
+        afterEach(function() {
+          sandbox.restore();
+        });
+
         it("should keep a list of the user calls", function(done) {
           storage.addUserCall(userMac, calls[0], function() {
             storage.addUserCall(userMac, calls[1], function() {
@@ -178,6 +189,19 @@ describe("Storage", function() {
                 });
               });
             });
+          });
+        });
+
+        it("should handle storage errors correctly.", function(done) {
+          sandbox.stub(storage._client, "smembers",
+            function(key, cb){
+              cb("error");
+            });
+
+          storage.getUserCalls(userMac, function(err, results) {
+            expect(err).to.eql("error");
+            expect(typeof results).to.eql("undefined");
+            done();
           });
         });
       });
