@@ -24,6 +24,7 @@ var errors = require('connect-validation');
 var logging = require('./logging');
 var headers = require('./headers');
 var StatsdClient = require('statsd-node').client;
+var async = require('async');
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
@@ -41,6 +42,7 @@ var storage = getStorage(conf.get("storage"), {
   'hawkSessionDuration': conf.get('hawkSessionDuration')
 });
 
+var tokBox = new TokBox(conf.get('tokBox'));
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
 var statsdClient;
@@ -210,6 +212,55 @@ function authenticate(req, res, next) {
   }
 }
 
+/**
+ * Helper to store and trigger an user initiated call.
+ */
+function returnUserCallTokens(user, callerId, urls, res) {
+  tokBox.getSessionTokens(function(err, tokboxInfo) {
+    if (err) {
+      logError(err);
+      res.json(503, 'Service Unavailable');
+      return;
+    }
+
+    var currentTimestamp = Date.now();
+    var callId = crypto.randomBytes(16).toString('hex');
+
+    storage.addUserCall(user, {
+      'callerId': callerId,
+      'callId': callId,
+      'userMac': user,
+      'sessionId': tokboxInfo.sessionId,
+      'calleeToken': tokboxInfo.calleeToken,
+      'timestamp': currentTimestamp
+    }, function(err, record){
+      if (err) {
+        logError(err);
+        res.json(503, 'Service Unavailable');
+        return;
+      }
+
+      // Call SimplePush urls.
+      if (!Array.isArray(urls)) {
+        urls = [urls];
+      }
+
+      urls.forEach(function(simplePushUrl) {
+        request.put({
+          url: simplePushUrl,
+          form: { version: currentTimestamp }
+        });
+      });
+
+      res.json(200, {
+        callId: callId,
+        sessionId: tokboxInfo.sessionId,
+        sessionToken: tokboxInfo.callerToken,
+        apiKey: tokBox.apiKey
+      });
+    });
+  });
+}
 
 var app = express();
 
@@ -239,9 +290,6 @@ var tokenManager = new tokenlib.TokenManager({
   encryptionSecret: conf.get('encryptionSecret'),
   timeout: conf.get('callUrlTimeout')
 });
-
-
-var tokBox = new TokBox(conf.get('tokBox'));
 
 /**
  * Middleware that validates the given token is valid (should be included into
@@ -464,6 +512,61 @@ app.get("/calls", requireHawkSession, function(req, res) {
   });
 
 /**
+ * Add a call from a registered user to another registered user.
+ **/
+app.post('/calls', requireHawkSession, requireParams('calleeId'),
+  function(req, res) {
+
+    function callUser(callee) {
+      return function() {
+        // TODO: set caller ID. Bug 1025894.
+        returnUserCallTokens(callee, undefined, callees[callee], res);
+      }();
+    }
+
+    var calleeId = req.body.calleeId;
+    if (!Array.isArray(calleeId)) {
+      calleeId = [calleeId];
+    }
+
+    // We get all the Loop users that match any of the ids provided by the
+    // client. We may have none, one or multiple matches. If no match is found
+    // we throw an error, otherwise we will follow the call process, storing
+    // the call information and notifying to the correspoding matched users.
+    var callees;
+    async.each(calleeId, function(i, callback) {
+      var calleeMac = hmac(i, conf.get('userMacSecret'));
+      storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
+        if (err) {
+          callback(err);
+          return;
+        }
+
+        if (!callees) {
+          callees = {};
+        }
+        callees[calleeMac] = urls;
+
+        callback();
+      });
+    }, function(err) {
+      if (err) {
+        logError(err);
+        res.json(503, 'Service Unavailable');
+        return;
+      }
+
+      if (!callees) {
+        res.json(400, 'No user to call found');
+        return;
+      }
+
+      Object.keys(callees).forEach(callUser.bind(callees));
+    });
+
+  });
+
+/**
  * Do a redirect to the Web client.
  **/
 app.get('/calls/:token', validateToken, function(req, res) {
@@ -493,53 +596,22 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
  * Initiate a call with the user identified by the given token.
  **/
 app.post('/calls/:token', validateToken, function(req, res) {
-    tokBox.getSessionTokens(function(err, tokboxInfo) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
-        return;
-      }
+  storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
+    if (err) {
+      logError(err);
+      res.json(503, 'Service Unavailable');
+      return;
+    }
 
-      var currentTimestamp = Date.now();
-      var callId = crypto.randomBytes(16).toString("hex");
+    if (!urls) {
+      logError(err);
+      res.json(410, 'Gone');
+      return;
+    }
 
-      storage.addUserCall(req.token.user, {
-        "callerId": req.token.callerId,
-        "callId": callId,
-        "userMac": req.token.user,
-        "sessionId": tokboxInfo.sessionId,
-        "calleeToken": tokboxInfo.calleeToken,
-        "timestamp": currentTimestamp
-      }, function(err, record){
-        if (err) {
-          logError(err);
-          res.json(503, "Service Unavailable");
-          return;
-        }
-        storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
-          if (err) {
-            res.json(503, "Service Unavailable");
-            return;
-          }
-          // Call SimplePush urls.
-          urls.forEach(function(simplePushUrl) {
-            request.put({
-              url: simplePushUrl,
-              form: {version: currentTimestamp}
-            });
-          });
-          res.set("Access-Control-Allow-Origin", conf.get('allowedOrigins'));
-          res.set("Access-Control-Allow-Methods", "GET,POST");
-          res.json(200, {
-            callId: callId,
-            sessionId: tokboxInfo.sessionId,
-            sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey
-          });
-        });
-      });
-    });
+    returnUserCallTokens(req.token.user, req.token.callerId, urls, res);
   });
+});
 
 /**
  * Returns the status of a given call.
@@ -596,5 +668,6 @@ module.exports = {
   statsdClient: statsdClient,
   authenticate: authenticate,
   requireHawkSession: requireHawkSession,
-  validateSimplePushURL: validateSimplePushURL
+  validateSimplePushURL: validateSimplePushURL,
+  returnUserCallTokens: returnUserCallTokens
 };
