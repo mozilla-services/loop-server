@@ -70,6 +70,10 @@ RedisStorage.prototype = {
   getUserCalls: function(userMac, callback) {
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
       self._client.mget(members, function(err, calls) {
         if (err) {
           callback(err);
