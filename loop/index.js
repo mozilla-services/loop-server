@@ -81,6 +81,10 @@ function hmac(payload, secret, algorithm) {
   return _hmac.read().toString('hex');
 }
 
+/**
+ * Attach the identity of the user to the request if she is registered in the
+ * database.
+ **/
 function setUser(req, res, tokenId, done) {
   storage.getHawkUser(tokenId, function(err, user) {
     storage.touchHawkSession(tokenId);
@@ -95,11 +99,18 @@ function setUser(req, res, tokenId, done) {
   });
 }
 
+/**
+ * Middleware that requires a valid hawk session.
+ **/
 var requireHawkSession = hawk.getMiddleware(
   storage.getHawkSession.bind(storage),
   setUser
 );
 
+/**
+ * Middleware that uses a valid hawk session or create one if none already
+ * exist.
+ **/
 var attachOrCreateHawkSession = hawk.getMiddleware(
   storage.getHawkSession.bind(storage),
   function(tokenId, authKey, callback) {
@@ -113,6 +124,11 @@ var attachOrCreateHawkSession = hawk.getMiddleware(
   setUser
 );
 
+/**
+ * Middleware that requires a valid FxA assertion.
+ *
+ * In case of success, return an hawk session token in the headers.
+ **/
 var requireFxA = fxa.getMiddleware({
     audiences: conf.get('fxaAudiences'),
     trustedIssuers: conf.get('fxaTrustedIssuers')
@@ -152,6 +168,12 @@ var requireFxA = fxa.getMiddleware({
   }
 );
 
+/**
+ * Middleware that requires either BrowserID, Hawk, or nothing.
+ *
+ * In case no authenticate scheme is provided, creates and return a new hawk
+ * session.
+ **/
 function authenticate(req, res, next) {
   var supported = ["BrowserID", "Hawk"];
 
@@ -221,6 +243,10 @@ var tokenManager = new tokenlib.TokenManager({
 
 var tokBox = new TokBox(conf.get('tokBox'));
 
+/**
+ * Middleware that validates the given token is valid (should be included into
+ * the "token" parameter.
+ **/
 function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
@@ -242,6 +268,9 @@ function validateToken(req, res, next) {
   }
 }
 
+/**
+ * Middleware that requires the given parameters to be set.
+ **/
 function requireParams() {
   var params = Array.prototype.slice.call(arguments);
   return function(req, res, next) {
@@ -266,6 +295,9 @@ function requireParams() {
   };
 }
 
+/**
+ * Middleware that ensures a valid simple push url is present in the request.
+ **/
 function validateSimplePushURL(req, res, next) {
   requireParams(["simple_push_url"])(req, res, function() {
     req.simplePushURL = req.body.simple_push_url;
