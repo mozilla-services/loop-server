@@ -43,7 +43,7 @@ TokBox.prototype = {
           return;
         }
         var sessionId = session.sessionId;
-        var now = Math.round(new Date().getTime() / 1000.0);
+        var now = Math.round(Date.now() / 1000.0);
         var expirationTime = now + self.tokenDuration;
         cb(null, {
           sessionId: sessionId,

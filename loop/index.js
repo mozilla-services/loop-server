@@ -500,7 +500,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
         return;
       }
 
-      var currentTimestamp = new Date().getTime();
+      var currentTimestamp = Date.now();
       var callId = crypto.randomBytes(16).toString("hex");
 
       storage.addUserCall(req.token.user, {
