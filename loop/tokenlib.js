@@ -128,7 +128,7 @@ TokenManager.prototype = {
     payload = decipher.read();
 
     var data = JSON.parse(payload);
-    if (data.expires * ONE_HOUR < new Date().getTime())
+    if (data.expires * ONE_HOUR < Date.now())
       throw new Error("The token expired");
 
     return data;

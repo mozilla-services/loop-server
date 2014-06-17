@@ -504,7 +504,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
         return;
       }
 
-      var currentTimestamp = new Date().getTime();
+      var currentTimestamp = Date.now();
       var callId = crypto.randomBytes(16).toString("hex");
 
       var userMac = hmac(req.token.user, conf.get("userMacSecret"));
