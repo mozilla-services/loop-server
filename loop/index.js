@@ -24,6 +24,7 @@ var errors = require('connect-validation');
 var logging = require('./logging');
 var headers = require('./headers');
 var StatsdClient = require('statsd-node').client;
+var errorsMiddleware = require("./errors");
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
@@ -152,9 +153,7 @@ var requireFxA = fxa.getMiddleware({
     hawk.generateHawkSession(storage.setHawkSession.bind(storage),
       function(err, tokenId, authKey, sessionToken) {
         storage.setHawkUser(userHmac, tokenId, function(err) {
-          if (err) {
-            logError(err);
-            res.json(503, "Service unavailable");
+          if (res.error(err)) {
             return;
           }
 
@@ -220,6 +219,7 @@ app.use(headers);
 app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
+app.use(errorsMiddleware(logError));
 app.use(errors);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
@@ -251,9 +251,7 @@ function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
     storage.isURLRevoked(req.token.uuid, function(err, record) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service unavailable");
+      if (res.error(err)) {
         return;
       }
       if (record) {
@@ -365,9 +363,7 @@ app.post('/registration', authenticate, validateSimplePushURL,
     // With FxA we will want to handle many SimplePushUrls per user.
     storage.addUserSimplePushURL(req.user, req.simplePushURL,
       function(err, record) {
-        if (err) {
-          logError(err);
-          res.json(503, "Service Unavailable");
+        if (res.error(err)) {
           return;
         }
         res.json(200, "ok");
@@ -381,9 +377,8 @@ app.post('/registration', authenticate, validateSimplePushURL,
 app.delete('/registration', requireHawkSession, validateSimplePushURL,
   function(req, res) {
   storage.removeSimplePushURL(req.user, req.simplePushUrl, function(err) {
-    if (err) {
-      logError(err);
-      res.json(503, "Service Unavailable");
+    if (res.error(err)) {
+      return;
     }
     res.json(204, "");
   });
@@ -442,9 +437,7 @@ app.get("/calls", requireHawkSession, function(req, res) {
     var version = req.query.version;
 
     storage.getUserCalls(req.user, function(err, records) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
+      if (res.error(err)) {
         return;
       }
 
@@ -480,9 +473,7 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
       return;
     }
     storage.revokeURLToken(req.token, function(err, record) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
+      if (res.error(err)) {
         return;
       }
       res.json(204, "");
@@ -494,9 +485,7 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
  **/
 app.post('/calls/:token', validateToken, function(req, res) {
     tokBox.getSessionTokens(function(err, tokboxInfo) {
-      if (err) {
-        logError(err);
-        res.json(503, "Service Unavailable");
+      if (res.error(err)) {
         return;
       }
 
@@ -511,14 +500,11 @@ app.post('/calls/:token', validateToken, function(req, res) {
         "calleeToken": tokboxInfo.calleeToken,
         "timestamp": currentTimestamp
       }, function(err, record){
-        if (err) {
-          logError(err);
-          res.json(503, "Service Unavailable");
+        if (res.error(err)) {
           return;
         }
         storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
-          if (err) {
-            res.json(503, "Service Unavailable");
+          if (res.error(err)) {
             return;
           }
           // Call SimplePush urls.
@@ -547,9 +533,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
 app.get('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');
   storage.getCall(callId, function(err, result) {
-    if (err) {
-      logError(err);
-      res.json(503, "Service Unavailable");
+    if (res.error(err)) {
       return;
     }
     if (result === null) {
@@ -566,9 +550,7 @@ app.get('/calls/id/:callId', function(req, res) {
 app.delete('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');
   storage.deleteCall(callId, function(err, result) {
-    if (err) {
-      logError(err);
-      res.json(503, "Service Unavailable");
+    if (res.error(err)) {
       return;
     }
     if (result === false) {
