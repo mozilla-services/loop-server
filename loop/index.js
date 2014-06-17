@@ -29,6 +29,7 @@ var async = require('async');
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
+var websockets = require('./websockets')(conf, logError);
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -611,13 +612,17 @@ app.delete('/calls/id/:callId', function(req, res) {
   });
 });
 
-app.listen(conf.get('port'), conf.get('host'), function(){
+var server = http.createServer(app);
+server.listen(conf.get('port'), conf.get('host'), function(){
   console.log('Server listening on http://' +
               conf.get('host') + ':' + conf.get('port'));
 });
 
+websockets.register(server);
+
 module.exports = {
   app: app,
+  server: server,
   conf: conf,
   hmac: hmac,
   storage: storage,
