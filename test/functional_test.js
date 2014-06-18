@@ -11,16 +11,17 @@ var sinon = require("sinon");
 var crypto = require("crypto");
 var assert = sinon.assert;
 
-var app = require("../loop").app;
-var request = require('../loop').request;
-var validateToken = require("../loop").validateToken;
-var validateSimplePushURL = require("../loop").validateSimplePushURL;
-var conf = require("../loop").conf;
-var tokBox = require("../loop").tokBox;
-var storage = require("../loop").storage;
-var statsdClient = require("../loop").statsdClient;
-var requireHawkSession = require("../loop").requireHawkSession;
-var authenticate = require("../loop").authenticate;
+var loop = require("../loop");
+var app = loop.app;
+var request = loop.request;
+var validateToken = loop.validateToken;
+var validateSimplePushURL = loop.validateSimplePushURL;
+var conf = loop.conf;
+var tokBox = loop.tokBox;
+var storage = loop.storage;
+var statsdClient = loop.statsdClient;
+var requireHawkSession = loop.requireHawkSession;
+var authenticate = loop.authenticate;
 
 var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
@@ -28,7 +29,6 @@ var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
 
 var getMiddlewares = require("./support").getMiddlewares;
-var intersection = require("./support").intersection;
 var expectFormatedError = require("./support").expectFormatedError;
 
 var fakeNow = 1393595554796;
@@ -59,7 +59,7 @@ describe("HTTP API exposed by the server", function() {
     '/': ['get'],
     '/registration': ['post'],
     '/call-url': ['post', 'del'],
-    '/calls': ['get'],
+    '/calls': ['get', 'post'],
     '/calls/token': ['get', 'post'],
     '/calls/id/callId': ['get', 'del']
   };
@@ -822,15 +822,6 @@ describe("HTTP API exposed by the server", function() {
           .include(validateToken);
       });
 
-      it("should return a 503 if tokbox API errors out", function(done) {
-        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-          cb("error");
-        });
-        addCallReq 
-          .expect(503)
-          .end(done);
-      });
-
       describe("With working tokbox APIs", function() {
 
         beforeEach(function() {
@@ -847,78 +838,6 @@ describe("HTTP API exposed by the server", function() {
           addCallReq.end(done);
         });
 
-        // XXX Bug 985387: Handle a SP Url per device
-        it.skip("should trigger all the simple push URLs of the user",
-          function(done) {
-            var url1 = "http://www.example.org";
-            var url2 = "http://www.mozilla.org";
-
-            register(url1, expectedAssertion, hawkCredentials, function() {
-              register(url2, expectedAssertion, hawkCredentials, function() {
-                addCallReq.end(function(err, res) {
-                  if (err) throw err;
-                  expect(intersection(requests.map(function(record) {
-                    return record.url;
-                  }), [url1, url2]).length).eql(2);
-                  expect(requests.every(function(record) {
-                    return record.form.version === fakeNow;
-                  }));
-                  done();
-                });
-              });
-            });
-          });
-
-        it("should return sessionId, apiKey and caller token info",
-          function(done) {
-            addCallReq.end(function(err, res) {
-              if (err) throw err;
-
-              var body = res.body;
-              expect(body).to.have.property('callId');
-              delete body.callId;
-
-              expect(res.body).eql({
-                sessionId: tokBoxSessionId,
-                sessionToken: tokBoxCallerToken,
-                apiKey: tokBox.apiKey
-              });
-              done();
-            });
-          });
-
-        it("should store sessionId and callee token info in database",
-          function(done) {
-            addCallReq.end(function(err, res) {
-              if (err) throw err;
-
-              storage.getUserCalls(userHmac, function(err, items) {
-                if (err) throw err;
-                expect(items.length).eql(1);
-                expect(items[0].callId).to.have.length(32);
-                delete items[0].callId;
-                expect(items[0]).eql({
-                  callerId: callerId,
-                  userMac: userHmac,
-                  sessionId: tokBoxSessionId,
-                  calleeToken: tokBoxCalleeToken,
-                  timestamp: fakeNow
-                });
-                done();
-              });
-            });
-          });
-
-        it("should return a 503 if callsStore is not available",
-          function(done) {
-            sandbox.stub(storage, "addUserCall", function(userMac, call, cb) {
-              cb("error");
-            });
-            addCallReq
-              .expect(503)
-              .end(done);
-          });
-
         it("should return a 503 if urlsStore is not available", function(done) {
           sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, cb) {
             cb("error");
@@ -927,8 +846,81 @@ describe("HTTP API exposed by the server", function() {
             .expect(503)
             .end(done);
         });
+
+        it.skip("should call returnUserCallTokens", function(done) {
+          sandbox.stub(loop, "returnUserCallTokens");
+          addCallReq.end(function() {
+            assert.calledOnce(loop.returnUserCallTokens);
+          });
+        });
       });
     });
+
+    describe("POST /calls", function() {
+      var emptyReq, addCallReq;
+
+      beforeEach(function() {
+        emptyReq = supertest(app)
+          .post("/calls")
+          .hawk(hawkCredentials);
+        addCallReq = supertest(app)
+          .post("/calls")
+          .hawk(hawkCredentials)
+          .type("json")
+          .expect(200);
+      });
+
+      it("should return a 400 if no calleeId is provided", function(done) {
+        emptyReq
+          .expect(400)
+          .end(done);
+      });
+
+      it("should have the requireHawk middleware installed", function() {
+        expect(
+          getMiddlewares(app, "post", "/calls")).include(requireHawkSession);
+      });
+
+      describe("With working tokbox APIs", function() {
+
+        beforeEach(function() {
+          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+            cb(null, {
+              sessionId: tokBoxSessionId,
+              callerToken: tokBoxCallerToken,
+              calleeToken: tokBoxCalleeToken
+            });
+          });
+        });
+
+        it("should accept a valid call token", function(done) {
+          addCallReq
+            .send({"calleeId": user})
+            .end(done);
+        });
+
+        it("should return a 503 if urlsStore is not available", function(done) {
+          sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, cb) {
+            cb("error");
+          });
+          addCallReq
+            .send({"calleeId": user})
+            .expect(503)
+            .end(done);
+        });
+
+        it.skip("should call returnUserCallTokens", function(done) {
+          sandbox.stub(loop, "returnUserCallTokens");
+          addCallReq
+            .send({"calleeId": user})
+            .end(function() {
+            assert.calledOnce(loop.returnUserCallTokens);
+          });
+        });
+
+      });
+    });
+
 
     describe("GET /calls/id/:callId", function() {
       var baseReq;
