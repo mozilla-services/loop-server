@@ -21,10 +21,10 @@ var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
 var errors = require('connect-validation');
-var logging = require('./logging');
-var headers = require('./headers');
 var StatsdClient = require('statsd-node').client;
-var errorsMiddleware = require("./errors");
+var addHeaders = require('./middlewares').addHeaders;
+var handle503 = require("./middlewares").handle503;
+var logRequests = require('./middlewares').logRequests;
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
@@ -153,9 +153,7 @@ var requireFxA = fxa.getMiddleware({
     hawk.generateHawkSession(storage.setHawkSession.bind(storage),
       function(err, tokenId, authKey, sessionToken) {
         storage.setHawkUser(userHmac, tokenId, function(err) {
-          if (res.error(err)) {
-            return;
-          }
+          if (res.serverError(err)) return;
 
           // return hawk credentials.
           hawk.setHawkHeaders(res, sessionToken);
@@ -213,13 +211,13 @@ function authenticate(req, res, next) {
 var app = express();
 
 if (conf.get("env") === "dev") {
-  app.use(logging);
+  app.use(logRequests);
 }
-app.use(headers);
+app.use(addHeaders);
 app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
-app.use(errorsMiddleware(logError));
+app.use(handle503(logError));
 app.use(errors);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
@@ -251,9 +249,8 @@ function validateToken(req, res, next) {
   try {
     req.token = tokenManager.decode(req.param('token'));
     storage.isURLRevoked(req.token.uuid, function(err, record) {
-      if (res.error(err)) {
-        return;
-      }
+      if (res.serverError(err)) return;
+
       if (record) {
         res.sendError("url", "token", "invalid token");
         return;
@@ -363,9 +360,8 @@ app.post('/registration', authenticate, validateSimplePushURL,
     // With FxA we will want to handle many SimplePushUrls per user.
     storage.addUserSimplePushURL(req.user, req.simplePushURL,
       function(err, record) {
-        if (res.error(err)) {
-          return;
-        }
+        if (res.serverError(err)) return;
+
         res.json(200, "ok");
       });
   });
@@ -377,9 +373,8 @@ app.post('/registration', authenticate, validateSimplePushURL,
 app.delete('/registration', requireHawkSession, validateSimplePushURL,
   function(req, res) {
   storage.removeSimplePushURL(req.user, req.simplePushUrl, function(err) {
-    if (res.error(err)) {
-      return;
-    }
+    if (res.serverError(err)) return;
+
     res.json(204, "");
   });
 });
@@ -437,9 +432,7 @@ app.get("/calls", requireHawkSession, function(req, res) {
     var version = req.query.version;
 
     storage.getUserCalls(req.user, function(err, records) {
-      if (res.error(err)) {
-        return;
-      }
+      if (res.serverError(err)) return;
 
       var calls = records.filter(function(record) {
         return record.timestamp >= version;
@@ -473,9 +466,8 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
       return;
     }
     storage.revokeURLToken(req.token, function(err, record) {
-      if (res.error(err)) {
-        return;
-      }
+      if (res.serverError(err)) return;
+
       res.json(204, "");
     });
   });
@@ -485,9 +477,7 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
  **/
 app.post('/calls/:token', validateToken, function(req, res) {
     tokBox.getSessionTokens(function(err, tokboxInfo) {
-      if (res.error(err)) {
-        return;
-      }
+      if (res.serverError(err)) return;
 
       var currentTimestamp = new Date().getTime();
       var callId = crypto.randomBytes(16).toString("hex");
@@ -500,13 +490,11 @@ app.post('/calls/:token', validateToken, function(req, res) {
         "calleeToken": tokboxInfo.calleeToken,
         "timestamp": currentTimestamp
       }, function(err, record){
-        if (res.error(err)) {
-          return;
-        }
+        if (res.serverError(err)) return;
+
         storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
-          if (res.error(err)) {
-            return;
-          }
+          if (res.serverError(err)) return;
+
           // Call SimplePush urls.
           urls.forEach(function(simplePushUrl) {
             request.put({
@@ -533,9 +521,8 @@ app.post('/calls/:token', validateToken, function(req, res) {
 app.get('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');
   storage.getCall(callId, function(err, result) {
-    if (res.error(err)) {
-      return;
-    }
+    if (res.serverError(err)) return;
+
     if (result === null) {
       res.json(404, {error: "Call " + callId + " not found."});
       return;
@@ -550,9 +537,8 @@ app.get('/calls/id/:callId', function(req, res) {
 app.delete('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');
   storage.deleteCall(callId, function(err, result) {
-    if (res.error(err)) {
-      return;
-    }
+    if (res.serverError(err)) return;
+
     if (result === false) {
       res.json(404, {error: "Call " + callId + " not found."});
       return;
