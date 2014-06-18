@@ -129,6 +129,11 @@ var conf = convict({
       default: {}
     }
   },
+  pubsub: {
+    doc: "js object of options to pass to the pubsub engine",
+    format: Object,
+    default: {}
+  },
   fakeTokBox: {
     doc: "Mock TokBox calls",
     format: Boolean,
