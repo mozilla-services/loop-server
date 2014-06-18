@@ -233,8 +233,8 @@ var conf = convict({
     format: Number,
     default: 3600 * 24 * 30 // One month.
   },
-  callStatusDuration: {
-    doc: "The duration we want to store the call status info (in seconds)",
+  callStateDuration: {
+    doc: "The duration we want to store the call state info (in seconds)",
     format: Number,
     default: 30
   },

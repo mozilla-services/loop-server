@@ -56,7 +56,7 @@ describe("Storage", function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
           hawkSessionDuration: conf.get('hawkSessionDuration'),
-          callStatusDuration: conf.get('callStatusDuration')
+          callStateDuration: conf.get('callStateDuration')
         });
       });
   
@@ -303,23 +303,23 @@ describe("Storage", function() {
         });
       });
 
-      describe("#setCallStatus", function() {
-        it("should set the call status", function(done) {
-          storage.setCallStatus("12345", "init", function(err) {
+      describe("#setCallState", function() {
+        it("should set the call state", function(done) {
+          storage.setCallState("12345", "init", function(err) {
             if (err) throw err;
-            storage.getCallStatus("12345", function(err, status) {
-              expect(status).to.eql("init");
+            storage.getCallState("12345", function(err, state) {
+              expect(state).to.eql("init");
               done();
             });
           });
         });
       });
 
-      describe("#getCallStatus", function() {
-        it("should return null when no call status is set", function(done) {
-          storage.getCallStatus("12345", function(err, status) {
+      describe("#getCallState", function() {
+        it("should return null when no call state is set", function(done) {
+          storage.getCallState("12345", function(err, state) {
             if (err) throw err;
-            expect(status).to.eql(null);
+            expect(state).to.eql(null);
             done();
           });
         });

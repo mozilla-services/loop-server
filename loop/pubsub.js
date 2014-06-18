@@ -9,26 +9,15 @@ var redis = require("redis");
  * Pub/Sub implementation using Redis as a backend.
  **/
 function RedisPubSub(options) {
-  this._client = redis.createClient(
+  var _client = redis.createClient(
     options.port,
     options.host,
     options.options
   );
   if (options.db) {
-    this._client.select(options.db);
+    _client.select(options.db);
   }
+  return _client;
 }
-
-RedisPubSub.prototype = {
-  subscribe: function(channel, cb) {
-    this._client.subscribe(channel, cb);
-  },
-  unsubscribe: function(channel, cb) {
-    this._client.unsubscribe(channel, cb);
-  },
-  publish: function(channel, message, cb) {
-    this._client.publish(channel, cb);
-  }
-};
 
 module.exports = RedisPubSub;

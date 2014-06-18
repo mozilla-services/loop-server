@@ -42,7 +42,7 @@ var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
   'hawkSessionDuration': conf.get('hawkSessionDuration'),
-  'callStatusDuration': conf.get('callStatusDuration')
+  'callStateDuration': conf.get('callStateDuration')
 });
 
 var tokBox = new TokBox(conf.get('tokBox'));
@@ -92,6 +92,8 @@ function hmac(payload, secret, algorithm) {
  **/
 function setUser(req, res, tokenId, done) {
   storage.getHawkUser(tokenId, function(err, user) {
+    if (res.serverError(err)) return;
+
     storage.touchHawkSession(tokenId);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
@@ -582,7 +584,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
 });
 
 /**
- * Returns the status of a given call.
+ * Returns the state of a given call.
  **/
 app.get('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');

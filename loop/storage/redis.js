@@ -107,17 +107,17 @@ RedisStorage.prototype = {
     });
   },
 
-  setCallStatus: function(callId, status, callback) {
+  setCallState: function(callId, state, callback) {
     this._client.setex(
-      'callstatus.' + callId,
-      this._settings.callStatusDuration,
-      status,
+      'callstate.' + callId,
+      this._settings.callStateDuration,
+      state,
       callback
     );
   },
 
-  getCallStatus: function(callId, callback) {
-    this._client.get('callstatus.' + callId, callback);
+  getCallState: function(callId, callback) {
+    this._client.get('callstate.' + callId, callback);
   },
 
   getCall: function(callId, callback) {
