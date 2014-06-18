@@ -107,6 +107,19 @@ RedisStorage.prototype = {
     });
   },
 
+  setCallStatus: function(callId, status, callback) {
+    this._client.setex(
+      'callstatus.' + callId,
+      this._settings.callStatusDuration,
+      status,
+      callback
+    );
+  },
+
+  getCallStatus: function(callId, callback) {
+    this._client.get('callstatus.' + callId, callback);
+  },
+
   getCall: function(callId, callback) {
     this._client.get('call.' + callId, function(err, call) {
       callback(err, JSON.parse(call));

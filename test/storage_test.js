@@ -55,7 +55,8 @@ describe("Storage", function() {
       beforeEach(function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
-          hawkSessionDuration: conf.get('hawkSessionDuration')
+          hawkSessionDuration: conf.get('hawkSessionDuration'),
+          callStatusDuration: conf.get('callStatusDuration')
         });
       });
   
@@ -298,6 +299,28 @@ describe("Storage", function() {
               expect(result).to.eql("userhash");
               done();
             });
+          });
+        });
+      });
+
+      describe("#setCallStatus", function() {
+        it("should set the call status", function(done) {
+          storage.setCallStatus("12345", "init", function(err) {
+            if (err) throw err;
+            storage.getCallStatus("12345", function(err, status) {
+              expect(status).to.eql("init");
+              done();
+            });
+          });
+        });
+      });
+
+      describe("#getCallStatus", function() {
+        it("should return null when no call status is set", function(done) {
+          storage.getCallStatus("12345", function(err, status) {
+            if (err) throw err;
+            expect(status).to.eql(null);
+            done();
           });
         });
       });

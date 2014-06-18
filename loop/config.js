@@ -118,9 +118,16 @@ var conf = convict({
     format: Boolean
   },
   storage: {
-    doc: "storage config",
-    format: validateKeys(["engine", "settings"]),
-    default: {engine: "redis", settings: {}}
+    engine: {
+      doc: "engine type",
+      format: String,
+      default: "redis"
+    },
+    settings: {
+      doc: "js object of options to pass to the storage engine",
+      format: Object,
+      default: {}
+    }
   },
   fakeTokBox: {
     doc: "Mock TokBox calls",
@@ -220,6 +227,11 @@ var conf = convict({
     doc: "The duration of hawk credentials (in seconds)",
     format: Number,
     default: 3600 * 24 * 30 // One month.
+  },
+  callStatusDuration: {
+    doc: "The duration we want to store the call status info (in seconds)",
+    format: Number,
+    default: 30
   },
   maxHTTPSockets: {
     doc: "The maximum of HTTP sockets to use when doing requests",
