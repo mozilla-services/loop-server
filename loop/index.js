@@ -26,10 +26,10 @@ var addHeaders = require('./middlewares').addHeaders;
 var handle503 = require("./middlewares").handle503;
 var logRequests = require('./middlewares').logRequests;
 var async = require('async');
+var websockets = require('./websockets');
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
-var websockets = require('./websockets')(conf, logError);
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -619,7 +619,8 @@ server.listen(conf.get('port'), conf.get('host'), function(){
               conf.get('host') + ':' + conf.get('port'));
 });
 
-websockets.register(server);
+var ws = websockets(storage, logError, conf);
+ws.register(server);
 
 module.exports = {
   app: app,
