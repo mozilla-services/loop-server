@@ -25,7 +25,7 @@ function handle503(logError) {
 function addHeaders(req, res, next) {
   res.once('header', function() {
     if (res.statusCode === 200 || res.statusCode === 401) {
-      res.setHeader('Timestamp', new Date().getTime());
+      res.setHeader('Timestamp', Date.now());
     }
 
     if (res.statusCode === 503) {
