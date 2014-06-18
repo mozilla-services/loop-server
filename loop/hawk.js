@@ -98,10 +98,7 @@ function getMiddleware(getSession, createSession, setUser) {
             if (createSession !== undefined) {
               generateHawkSession(createSession,
               function(err, tokenId, authKey, sessionToken) {
-                if (err) {
-                  res.json(503, "Service Unavailable");
-                  return;
-                }
+                if (res.serverError(err)) return;
 
                 setUser(req, res, tokenId, function() {
                   setHawkHeaders(res, sessionToken);

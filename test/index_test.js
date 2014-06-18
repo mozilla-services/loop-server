@@ -329,6 +329,15 @@ describe("index.js", function() {
   describe("#returnUserCallTokens", function() {
     var sandbox;
 
+    app.post('/returnUserCallTokens', function(req, res) {
+      returnUserCallTokens(
+        req.body.callee,
+        req.body.callerId,
+        req.body.urls,
+        res
+      );
+    });
+
     beforeEach(function() {
       sandbox = sinon.sandbox.create();
     });
@@ -342,13 +351,11 @@ describe("index.js", function() {
         cb("error");
       });
 
-      returnUserCallTokens(null, null, null, {
-        json: function(code, message) {
-          expect(code).eql(503);
-          expect(message).eql('Service Unavailable');
-          done();
-        }
-      });
+      supertest(app)
+        .post('/returnUserCallTokens')
+        .send({})
+        .expect(503)
+        .end(done);
     });
 
     describe("With working tokbox APIs", function() {
@@ -373,72 +380,95 @@ describe("index.js", function() {
 
       it("should trigger all the simple push URLs of the user", function(done) {
         var stub = sandbox.stub(request, "put");
-        returnUserCallTokens(user, callerId, urls, {
-          json: function(code, result) {
+        supertest(app)
+          .post('/returnUserCallTokens')
+          .send({
+            callee: user,
+            callerId: callerId,
+            urls: urls
+          })
+          .expect(200)
+          .end(function(err, res) {
             assert.calledTwice(request.put);
             expect(stub.args[0][0].url).eql(urls[0]);
             expect(stub.args[1][0].url).eql(urls[1]);
             done();
-          }
-        });
+          });
       });
 
       it("should return callId, sessionId, apiKey and caller token info",
         function(done) {
-        sandbox.stub(request, "put");
-        returnUserCallTokens(user, callerId, urls, {
-          json: function(code, result) {
-            expect(code).eql(200);
-            expect(result).to.have.property('callId');
-            delete result.callId;
-            expect(result).eql({
-              sessionId: tokBoxSessionId,
-              sessionToken: tokBoxCallerToken,
-              apiKey: tokBox.apiKey
-            });
-            done();
-          }
-        });
-      });
-
-      it("should store sessionId and callee token info in database",
-        function(done) {
-        sandbox.stub(request, "put");
-        storage.drop();
-        returnUserCallTokens(user, callerId, urls, {
-          json: function(code, result) {
-            expect(code).eql(200);
-            storage.getUserCalls(user, function(err, items) {
-              if (err) throw err;
-              expect(items.length).eql(1);
-              expect(items[0].callId).to.have.length(32);
-              delete items[0].callId;
-              expect(items[0]).to.have.property('timestamp');
-              delete items[0].timestamp;
-              expect(items[0]).eql({
-                callerId: callerId,
-                userMac: user,
+          sandbox.stub(request, "put");
+          supertest(app)
+            .post('/returnUserCallTokens')
+            .send({
+              callee: user,
+              callerId: callerId,
+              urls: urls
+            })
+            .expect(200)
+            .end(function(err, res) {
+              expect(res.body).to.have.property('callId');
+              // Drop callId, we don't know its value.
+              delete res.body.callId;
+              expect(res.body).eql({
                 sessionId: tokBoxSessionId,
-                calleeToken: tokBoxCalleeToken,
+                sessionToken: tokBoxCallerToken,
+                apiKey: tokBox.apiKey
               });
               done();
             });
-          }
         });
-      });
+
+      it("should store sessionId and callee token info in database",
+        function(done) {
+          sandbox.stub(request, "put");
+          // Don't want to see the already created calls.
+          storage.drop();
+
+          supertest(app)
+            .post('/returnUserCallTokens')
+            .send({
+              callee: user,
+              callerId: callerId,
+              urls: urls
+            })
+            .expect(200)
+            .end(function(err, res) {
+              storage.getUserCalls(user, function(err, items) {
+                if (err) throw err;
+                expect(items.length).eql(1);
+                expect(items[0].callId).to.have.length(32);
+                delete items[0].callId;
+                expect(items[0]).to.have.property('timestamp');
+                delete items[0].timestamp;
+                expect(items[0]).eql({
+                  callerId: callerId,
+                  userMac: user,
+                  sessionId: tokBoxSessionId,
+                  calleeToken: tokBoxCalleeToken,
+                });
+                done();
+              });
+            });
+        });
 
       it("should return a 503 if callsStore is not available", function(done) {
         sandbox.stub(storage, "addUserCall", function(unused, alsounused, cb) {
           cb("error");
         });
-        returnUserCallTokens(user, callerId, urls, {
-          json: function(code) {
-            expect(code).eql(503);
-            done();
-          }
-        });
-      });
 
+        sandbox.stub(request, "put");
+        supertest(app)
+          .post('/returnUserCallTokens')
+          .send({
+            callee: user,
+            callerId: callerId,
+            urls: urls
+          })
+          .expect(503)
+          .end(done);
+      });
     });
   });
 
