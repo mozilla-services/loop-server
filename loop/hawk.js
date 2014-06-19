@@ -5,7 +5,6 @@
 "use strict";
 
 var Hawk = require('hawk');
-var Url = require('url');
 
 var Token = require("./token").Token;
 
@@ -85,8 +84,6 @@ function getMiddleware(getSession, createSession, setUser) {
   }
 
   function requireSession(req, res, next) {
-    // Required as the clients stripe out the querystrings…
-    req.url = Url.parse(req.url).pathname;
     Hawk.server.authenticate(req, function(id, callback) {
       getSession(id, callback);
     }, {},

@@ -690,7 +690,7 @@ describe("HTTP API exposed by the server", function() {
 
     beforeEach(function(done) {
       req = supertest(app)
-        .get('/calls')
+        .get('/calls?version=2')
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/);
 
@@ -738,11 +738,15 @@ describe("HTTP API exposed by the server", function() {
         };
       });
 
-      req.query({version: 0}).expect(200).end(function(err, res) {
-        if (err) throw err;
-        expect(res.body).to.deep.equal({calls: callsList});
-        done(err);
-      });
+      supertest(app)
+        .get('/calls?version=0')
+        .hawk(hawkCredentials)
+        .expect('Content-Type', /json/)
+        .expect(200).end(function(err, res) {
+          if (err) throw err;
+          expect(res.body).to.deep.equal({calls: callsList});
+          done(err);
+        });
     });
 
     it("should list calls more recent than a given version", function(done) {
@@ -753,7 +757,7 @@ describe("HTTP API exposed by the server", function() {
         sessionToken: calls[2].calleeToken
       }];
 
-      req.query({version: 2}).expect(200).end(function(err, res) {
+      req.expect(200).end(function(err, res) {
         if (err) throw err;
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
@@ -769,7 +773,7 @@ describe("HTTP API exposed by the server", function() {
         cb("error");
       });
 
-      req.query({version: 0}).expect(503).end(done);
+      req.expect(503).end(done);
     });
 
   });
