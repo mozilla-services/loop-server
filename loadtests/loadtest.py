@@ -57,7 +57,7 @@ class TestLoop(TestCase):
         self.assertEquals(resp.status_code, 200)
         data = self._get_json(resp)
         call_url = data['call_url']
-        return urlparse(call_url).path.split('/')[-1]
+        return call_url.split('/').pop()
 
     def initiate_call(self, token):
         # This happens when not authenticated.
