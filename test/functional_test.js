@@ -135,13 +135,14 @@ describe("HTTP API exposed by the server", function() {
   });
 
   // Test CORS is enabled in all routes for GET, POST and DELETE
+  var tokenManager = new tokenlib.TokenManager({
+    macSecret: conf.get('macSecret'),
+    encryptionSecret: conf.get('encryptionSecret')
+  });
+
   Object.keys(routes).forEach(function(route) {
     routes[route].forEach(function(method) {
       if (route.indexOf('token') !== -1) {
-        var tokenManager = new tokenlib.TokenManager({
-          macSecret: conf.get('macSecret'),
-          encryptionSecret: conf.get('encryptionSecret')
-        });
 
         var token = tokenManager.encode({
           uuid: uuid,

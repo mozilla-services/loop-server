@@ -516,8 +516,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
     // we throw an error, otherwise we will follow the call process, storing
     // the call information and notifying to the correspoding matched users.
     var callees;
-    async.each(calleeId, function(i, callback) {
-      var calleeMac = hmac(i, conf.get('userMacSecret'));
+    async.each(calleeId, function(identity, callback) {
+      var calleeMac = hmac(identity, conf.get('userMacSecret'));
       storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
         if (err) {
           callback(err);
@@ -622,7 +622,11 @@ server.listen(conf.get('port'), conf.get('host'), function(){
 });
 
 var ws = websockets(storage, logError, conf);
-ws.register(server);
+try {
+  ws.register(server);
+} catch (e) {
+  logError(e);
+}
 
 module.exports = {
   app: app,

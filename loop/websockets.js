@@ -31,10 +31,10 @@ MessageHandler.prototype = {
       cb(new Error("Unknown messageType"));
       return;
     }
-    var handler = this[handlers[messageType]];
-    handler(inboundMessage, function(outboundMessage) {
-      cb(null, this.encode(outboundMessage));
-    });
+    var handler = this[handlers[messageType]].bind(this);
+    handler(session, inboundMessage, function(err, outboundMessage) {
+      cb(err, this.encode(outboundMessage));
+    }.bind(this));
   },
 
   /**
@@ -55,29 +55,43 @@ MessageHandler.prototype = {
       return;
     }
 
-    // Check authentication
-    // XXX We want to sign messages with the hawkId + secret rather
     // than using it as a bearer token.
+    var self = this;
+
+    var authType = message.authType;
     var hawkId = message.auth;
+
     this.storage.getHawkSession(hawkId, function(err, hawkCredentials) {
-      if(err) throw new Error("bad authentication");
-      this.storage.getHawkUser(hawkId, function(err, user) {
+      if (err) throw err;
+
+      if (hawkCredentials === null){
+        cb(new Error("bad authentication"));
+        return;
+      }
+
+      self.storage.getHawkUser(hawkId, function(err, user) {
         if (user !== null) {
           session.user = user;
         } else {
           session.user = hawkId;
         }
 
-        this.storage.getCall(session.callId, function(err, call) {
+        self.storage.getCall(session.callId, function(err, call) {
           if (err) {
             cb(err);
             return;
           }
 
-          session.type = (call.userMac === session.user) ? "caller" : "caller";
+          if (call === null) {
+            cb(new Error("bad callId"));
+            return;
+          }
+
+          session.type = (call.userMac === session.user) ? "callee" : "caller";
+
 
           // Get current call state to answer hello message.
-          this.storage.getCallState(session.callId, function(err, state) {
+          self.storage.getCallState(session.callId, function(err, state) {
             if (err) {
               cb(err);
               return;
@@ -91,14 +105,14 @@ MessageHandler.prototype = {
           });
 
           // Alert clients on call state changes.
-          this.pubsub.on("message", function(channel, receivedState) {
+          self.pubsub.on("message", function(channel, receivedState) {
             if (channel !== session.callId) {
-              this.handleCallStateChange(session, receivedState, cb);
+              self.handleCallStateChange(session, receivedState, cb);
             }
           });
 
           // Subscribe to the channel to setup progress updates.
-          this.pubsub.subscribe(session.callId);
+          self.pubsub.subscribe(session.callId);
         });
       });
     });
@@ -283,6 +297,7 @@ module.exports = function(storage, logError, conf) {
               if (err) {
                 ws.send(messageHandler.createError(err.message));
                 ws.close();
+                return;
               }
 
               ws.send(outboundMessage);
