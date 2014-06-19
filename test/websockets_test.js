@@ -7,7 +7,7 @@ var expect = require("chai").expect;
 var ws = require('ws');
 var server = require("../loop").server;
 
-describe.skip('websockets', function() {
+describe.only('websockets', function() {
   var client;
   beforeEach(function(done) {
     client = new ws("ws://localhost:" + server.address().port);
@@ -28,7 +28,7 @@ describe.skip('websockets', function() {
   it('should reject bad authentication tokens', function(done) {
     client.on('open', function() {
       client.on('error', function(error) {
-        expect(error).eql('wrong authentication token');
+        expect(error).eql('bad authentication');
         done();
       });
       client.send(JSON.stringify({

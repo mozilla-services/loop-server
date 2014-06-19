@@ -59,50 +59,53 @@ MessageHandler.prototype = {
     // XXX We want to sign messages with the hawkId + secret rather
     // than using it as a bearer token.
     var hawkId = message.auth;
-
-    // Configure the current session with user information.
-    session.callId = message.callId;
-
-    this.storage.getHawkUser(hawkId, function(err, user) {
-      if (user !== null) {
-        session.user = user;
-      } else {
-        session.user = hawkId;
-      }
-
-      this.storage.getCall(session.callId, function(err, call) {
-        if (err) {
-          cb(err);
-          return;
+    this.storage.getHawkSession(hawkId, function(err, hawkCredentials) {
+      if(err) throw new Error("bad authentication");
+      this.storage.getHawkUser(hawkId, function(err, user) {
+        if (user !== null) {
+          session.user = user;
+        } else {
+          session.user = hawkId;
         }
 
-        session.type = (call.userMac === session.user) ? "caller" : "caller";
-
-        // Get current call state to answer hello message.
-        this.storage.getCallState(session.callId, function(err, state) {
+        this.storage.getCall(session.callId, function(err, call) {
           if (err) {
             cb(err);
             return;
           }
 
-          // Answer the hello message.
-          cb(null, {
-            messageType: "hello",
-            state: state
+          session.type = (call.userMac === session.user) ? "caller" : "caller";
+
+          // Get current call state to answer hello message.
+          this.storage.getCallState(session.callId, function(err, state) {
+            if (err) {
+              cb(err);
+              return;
+            }
+
+            // Answer the hello message.
+            cb(null, {
+              messageType: "hello",
+              state: state
+            });
           });
-        });
 
-        // Alert clients on call state changes.
-        this.pubsub.on("message", function(channel, receivedState) {
-          if (channel !== session.callId) {
-            this.handleCallStateChange(session, receivedState, cb);
-          }
-        });
+          // Alert clients on call state changes.
+          this.pubsub.on("message", function(channel, receivedState) {
+            if (channel !== session.callId) {
+              this.handleCallStateChange(session, receivedState, cb);
+            }
+          });
 
-        // Subscribe to the channel to setup progress updates.
-        this.pubsub.subscribe(session.callId);
+          // Subscribe to the channel to setup progress updates.
+          this.pubsub.subscribe(session.callId);
+        });
       });
     });
+
+    // Configure the current session with user information.
+    session.callId = message.callId;
+
   },
 
   /**
