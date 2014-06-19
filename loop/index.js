@@ -621,7 +621,7 @@ server.listen(conf.get('port'), conf.get('host'), function(){
               conf.get('host') + ':' + conf.get('port'));
 });
 
-var ws = websockets(storage, logError, conf);
+var ws = websockets(storage, tokenManager, logError, conf);
 try {
   ws.register(server);
 } catch (e) {

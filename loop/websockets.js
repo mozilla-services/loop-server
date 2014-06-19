@@ -7,9 +7,11 @@
 var WebSocket = require('ws');
 var PubSub = require('./pubsub');
 
-function MessageHandler(pubsub, storage) {
-  this.pubsub = pubsub;
+function MessageHandler(pub, sub, storage, tokenManager) {
+  this.pub = pub;
+  this.sub = sub;
   this.storage = storage;
+  this.tokenManager = tokenManager;
 }
 
 MessageHandler.prototype = {
@@ -49,77 +51,98 @@ MessageHandler.prototype = {
   handleHello: function(session, message, cb) {
     // Check that message contains requireParams, otherwise return an error.
     try {
-      this.requireParams(message, 'callId', 'auth');
+      this.requireParams(message, 'callId', 'authType', 'auth');
     } catch (e) {
       cb(e);
       return;
     }
 
-    // than using it as a bearer token.
-    var self = this;
-
-    var authType = message.authType;
-    var hawkId = message.auth;
-
-    this.storage.getHawkSession(hawkId, function(err, hawkCredentials) {
-      if (err) throw err;
-
-      if (hawkCredentials === null){
-        cb(new Error("bad authentication"));
-        return;
-      }
-
-      self.storage.getHawkUser(hawkId, function(err, user) {
-        if (user !== null) {
-          session.user = user;
-        } else {
-          session.user = hawkId;
-        }
-
-        self.storage.getCall(session.callId, function(err, call) {
-          if (err) {
-            cb(err);
-            return;
-          }
-
-          if (call === null) {
-            cb(new Error("bad callId"));
-            return;
-          }
-
-          session.type = (call.userMac === session.user) ? "callee" : "caller";
-
-
-          // Get current call state to answer hello message.
-          self.storage.getCallState(session.callId, function(err, state) {
-            if (err) {
-              cb(err);
-              return;
-            }
-
-            // Answer the hello message.
-            cb(null, {
-              messageType: "hello",
-              state: state
-            });
-          });
-
-          // Alert clients on call state changes.
-          self.pubsub.on("message", function(channel, receivedState) {
-            if (channel !== session.callId) {
-              self.handleCallStateChange(session, receivedState, cb);
-            }
-          });
-
-          // Subscribe to the channel to setup progress updates.
-          self.pubsub.subscribe(session.callId);
-        });
-      });
-    });
-
     // Configure the current session with user information.
     session.callId = message.callId;
 
+    var self = this;
+    var authType = message.authType.toLowerCase();
+    var tokenId = message.auth;
+
+    function processCall(call) {
+      session.type = (call.userMac === session.user) ? "callee" : "caller";
+
+      // Get current call state to answer hello message.
+      self.storage.getCallState(session.callId, function(err, state) {
+        if (err) throw err;
+
+        // Alert clients on call state changes.
+        self.sub.on("message", function(channel, receivedState) {
+          if (channel === session.callId) {
+            cb(null, {
+              messageType: "progress",
+              state: receivedState
+            });
+          }
+        });
+
+        // Subscribe to the channel to setup progress updates.
+        self.sub.subscribe(session.callId);
+
+        cb(null, {
+          messageType: "hello",
+          state: state
+        });
+
+        // After the hello phase and as soon the calle is connected,
+        // set the alerting state.
+        if (state === "init" && session.type === "callee") {
+          self.broadcastState(session.callId, "alerting", cb);
+        }
+      });
+    }
+
+    self.storage.getCall(session.callId, function(err, call) {
+      if (err) throw err;
+
+      if (call === null) {
+        cb(new Error("bad callId"));
+        return;
+      }
+
+      if (authType === "hawk") {
+        self.storage.getHawkSession(tokenId, function(err, hawkCredentials) {
+          if (err) throw err;
+
+          if (hawkCredentials === null) {
+            cb(new Error("bad authentication"));
+            return;
+          }
+
+          self.storage.getHawkUser(tokenId, function(err, user) {
+            if (err) throw err;
+
+            if (user !== null) {
+              session.user = user;
+            } else {
+              session.user = tokenId;
+            }
+
+            processCall(call);
+          });
+        });
+      } else if (authType === "token") {
+        var token;
+
+        try {
+          token = self.tokenManager.decode(tokenId);
+        } catch (e) {
+          cb(new Error("Bad token: " + e.message));
+          return;
+        }
+
+        if (token.user !== call.userMac) {
+          cb(new Error("Bad token for this callId."));
+          return;
+        }
+        processCall(call);
+      }
+    });
   },
 
   /**
@@ -140,6 +163,7 @@ MessageHandler.prototype = {
 
     var validEvents = ["accept", "media-up", "terminate"];
     var event = message.event;
+    var self = this;
 
     if (validEvents.indexOf(event) === -1) {
       cb(
@@ -151,12 +175,12 @@ MessageHandler.prototype = {
 
     // If terminate, close the call
     if (event === "terminate") {
-      this.broadcastState(session.callId, "terminated", cb);
+      self.broadcastState(session.callId, "terminated", cb);
       return;
     }
 
     // Get current state
-    this.storage.getCallState(session.callId, function(err, currentState) {
+    self.storage.getCallState(session.callId, function(err, currentState) {
 
       // Ensure half-connected is not send twice by the same party.
       var validateState = function(callId, currentState, event) {
@@ -196,11 +220,12 @@ MessageHandler.prototype = {
             if (validated === true) {
 
               // In case we're connected, close the connection.
-              var terminate;
+              self.broadcastState(session.callId, transition[1], cb);
+
               if (transition[1] === "connected") {
-                terminate = "closeConnection";
+                throw new Error("End of setup");
               }
-              this.broadcastState(session.callId, transition[1], terminate, cb);
+
             }
             return;
           }
@@ -218,22 +243,13 @@ MessageHandler.prototype = {
   /**
    * Broadcast the call-state data to the interested parties.
    **/
-  broadcastState: function(callId, state, closeConnection, cb) {
-    if (cb === undefined) {
-      cb = closeConnection;
-      closeConnection = undefined;
-    }
-
-    this.storage.setCallState(callId, state, function(err) {
+  broadcastState: function(callId, state, cb) {
+    var self = this;
+    self.storage.setCallState(callId, state, function(err) {
       if (err) throw err;
 
-      this.pubsub.publish(callId, state, function(err) {
+      self.pub.publish(callId, state, function(err) {
         if (err) throw err;
-
-        cb(null, {
-          messageType: "progress",
-          state: state
-        }, closeConnection);
       });
     });
   },
@@ -277,13 +293,14 @@ MessageHandler.prototype = {
   }
 };
 
-module.exports = function(storage, logError, conf) {
+module.exports = function(storage, tokenManager, logError, conf) {
   /**
    * Allow a server to register itself as a websocket provider.
    **/
   var register = function(server) {
-    var pubsub = new PubSub(conf.get('pubsub'));
-    var messageHandler = new MessageHandler(pubsub, storage);
+    var pub = new PubSub(conf.get('pubsub'));
+    var sub = new PubSub(conf.get('pubsub'));
+    var messageHandler = new MessageHandler(pub, sub, storage, tokenManager);
     var wss = new WebSocket.Server({server: server});
 
     wss.on('connection', function(ws) {

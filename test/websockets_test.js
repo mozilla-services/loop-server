@@ -17,6 +17,16 @@ var server = loop.server;
 var storage = loop.storage;
 var conf = loop.conf;
 
+function createCall(callId, user, cb) {
+  storage.addUserCall(user, {
+    'callerId': 'Alexis',
+    'callId': callId,
+    'userMac': user,
+    'sessionId': '1234',
+    'calleeToken': '1234',
+    'timestamp': Date.now()
+  }, cb);
+}
 
 describe('websockets', function() {
   var client, hawkCredentials, userHmac, sandbox;
@@ -54,17 +64,22 @@ describe('websockets', function() {
 
   it('should reject bad authentication tokens', function(done) {
     client.on('open', function() {
-      client.on('message', function(data) {
-        var error = JSON.parse(data);
-        expect(error.messageType).eql('error');
-        expect(error.reason).eql('bad authentication');
-        done();
+      var callId = crypto.randomBytes(16).toString('hex');
+      createCall(callId, hawkCredentials.id, function(err) {
+        if (err) throw err;
+        client.on('message', function(data) {
+          var error = JSON.parse(data);
+          expect(error.messageType).eql('error');
+          expect(error.reason).eql('bad authentication');
+          done();
+        });
+        client.send(JSON.stringify({
+          messageType: 'hello',
+          authType: 'Hawk',
+          auth: '1234',
+          callId: callId
+        }));
       });
-      client.send(JSON.stringify({
-        messageType: 'hello',
-        auth: '1234',
-        callId: '1234'
-      }));
     });
   });
 
@@ -80,6 +95,7 @@ describe('websockets', function() {
 
         client.send(JSON.stringify({
           messageType: 'hello',
+          authType: 'Hawk',
           auth: hawkCredentials.id,
           callId: '1234'
         }));
@@ -91,23 +107,15 @@ describe('websockets', function() {
       macSecret: conf.get('macSecret'),
       encryptionSecret: conf.get('encryptionSecret')
     });
-    var token = tokenManager.encode({
+    var tokenWrapper = tokenManager.encode({
       uuid: '1234',
       user: hawkCredentials.id,
       callerId: 'Alexis'
     });
-    var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
     client.on('open', function() {
-      storage.addUserCall(hawkCredentials.id, {
-        'callerId': 'Alexis',
-        'callId': callId,
-        'userMac': hawkCredentials.id,
-        'sessionId': '1234',
-        'calleeToken': '1234',
-        'timestamp': currentTimestamp
-      }, function(err) {
+      createCall(callId, hawkCredentials.id, function(err) {
         if (err) throw err;
         storage.setCallState(callId, "init", function(err) {
           if (err) throw err;
@@ -120,7 +128,8 @@ describe('websockets', function() {
 
           client.send(JSON.stringify({
             messageType: 'hello',
-            auth: token,
+            authType: "Token",
+            auth: tokenWrapper.token,
             callId: callId
           }));
         });
@@ -131,6 +140,8 @@ describe('websockets', function() {
   it('should return the state of the call', function(done) {
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
+
+    var messageCounter = 0;
 
     client.on('open', function() {
       storage.addUserCall(hawkCredentials.id, {
@@ -146,13 +157,20 @@ describe('websockets', function() {
           if (err) throw err;
           client.on('message', function(data) {
             var message = JSON.parse(data);
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
-            done();
+            if (messageCounter === 0) {
+              expect(message.messageType).eql("hello");
+              expect(message.state).eql("init");
+              messageCounter++;
+            } else {
+              expect(message.messageType).eql("progress");
+              expect(message.state).eql("alerting");
+              done();
+            }
           });
 
           client.send(JSON.stringify({
             messageType: 'hello',
+            authType: "Hawk",
             auth: hawkCredentials.id,
             callId: callId
           }));
