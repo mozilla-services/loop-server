@@ -3,6 +3,14 @@ Changelog
 
 This document describes changes between each past release.
 
+0.7.0 (2014-19-06)
+------------------
+
+- Make sure the FxA audiences parameter is an array;
+- Fix the load test script for the new stage deployment;
+- Add a possibility for an user to call multiple identities;
+- Fix hawk implementation to handle querystrings properly.
+
 0.6.1 (2014-13-06)
 ------------------
 
