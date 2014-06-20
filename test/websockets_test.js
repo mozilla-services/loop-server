@@ -167,7 +167,7 @@ describe('websockets', function() {
     });
   });
 
-  describe.only("with two clients", function() {
+  describe("with two clients", function() {
     var client2, token, callId, messageCounter;
 
     beforeEach(function(done) {
@@ -211,7 +211,7 @@ describe('websockets', function() {
 
     it('should broadcast alerting state to other interested parties',
       function(done) {
-        client2.on('error', function() {
+        client2.on('error', function(data) {
           throw new Error('Error: ' + data);
         });
 
@@ -243,13 +243,12 @@ describe('websockets', function() {
         }));
       });
 
-    it('should broadcast action change state to other interested parties',
+    it('should broadcast action change and handle race condition.',
       function(done) {
         var messageCounter2 = 0;
 
         client2.on('message', function(data) {
           var message = JSON.parse(data);
-          console.log(message);
           if (messageCounter2 === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");
@@ -263,15 +262,11 @@ describe('websockets', function() {
               messageType: 'action',
               event: 'media-up'
             }));
-          } else if (messageCounter2 === 3) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("half-connected");
-          } else if (messageCounter2 === 4) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");
           } else {
             expect(message.messageType).eql("progress");
-            expect(message.state).eql("terminate");
+            expect(message.state).eql("connected");
+          }
+          if (messageCounter2 === 4) {
             done();
           }
           messageCounter2++;
@@ -279,7 +274,6 @@ describe('websockets', function() {
 
         client.on('message', function(data) {
           var message = JSON.parse(data);
-          console.log(message);
           if (messageCounter === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");            
@@ -297,14 +291,85 @@ describe('websockets', function() {
               messageType: 'action',
               event: 'media-up'
             }));
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connected");            
+          }
+          messageCounter++;
+        });
+    
+    
+        client2.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+
+        client.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
+
+    it('should broadcast half-connected signal.',
+      function(done) {
+        var messageCounter2 = 0;
+
+        client2.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (messageCounter2 === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (messageCounter2 === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else if (messageCounter2 === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+            client2.send(JSON.stringify({
+              messageType: 'action',
+              event: 'media-up'
+            }));
+          } else if (messageCounter2 === 3) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("half-connected");
+            client.send(JSON.stringify({
+              messageType: 'action',
+              event: 'media-up'
+            }));            
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connected");
+            done();
+          }
+          messageCounter2++;
+        });
+
+        client.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (messageCounter === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");            
+          } else if (messageCounter === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+            client.send(JSON.stringify({
+              messageType: 'action',
+              event: 'accept'
+            }));
+          } else if (messageCounter === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
           } else if (messageCounter === 3) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("half-connected");            
           } else {
             expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");            
+            expect(message.state).eql("connected");
           }
-
           messageCounter++;
         });
     

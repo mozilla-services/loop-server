@@ -92,7 +92,7 @@ MessageHandler.prototype = {
         // After the hello phase and as soon the calle is connected,
         // set the alerting state.
         if (state === "init" && session.type === "callee") {
-          self.broadcastState(session.callId, "alerting", cb);
+          self.broadcastState(session.callId, "alerting");
         }
       });
     }
@@ -175,7 +175,7 @@ MessageHandler.prototype = {
 
     // If terminate, close the call
     if (event === "terminate") {
-      self.broadcastState(session.callId, "terminated", cb);
+      self.broadcastState(session.callId, "terminated");
       return;
     }
 
@@ -183,8 +183,12 @@ MessageHandler.prototype = {
     self.storage.getCallState(session.callId, function(err, currentState) {
 
       // Ensure half-connected is not send twice by the same party.
-      var validateState = function(callId, currentState, event) {
-        return true;
+      var validateState = function(currentState, transition) {
+        if (currentState === "connecting" ||
+            currentState === "half-connected") {
+          return "connected." + session.type;
+        }
+        return null;
       };
 
       var stateMachine = {
@@ -195,90 +199,71 @@ MessageHandler.prototype = {
         },
         "media-up": {
           transitions: [
-            ["connecting", "half-connected"],
-            ["half-connected", "connected"]
+            ["connecting"],
+            ["half-connected"]
           ],
           validator: validateState
         }
       };
 
-      console.log("event: ", event);
-      console.log("currentState: ", currentState);
+      var handled = false;
 
       if (stateMachine.hasOwnProperty(event)) {
         var eventConf = stateMachine[event];
 
-        var handleStateMachine = function(currentState) {
-          var validated = true;
-          var handled = false;
-  
-          eventConf.transitions.forEach(function(transition, key) {
-            if(transition[0] === currentState) {
-              handled = true;
-              var validator = eventConf.validator;
-              if (validator !== undefined) {
-                if (!validator(session.callId, currentState, event)) {
-                  validated = false;
-                }
-              }
-              if (validated === true) {
-  
-                // In case we're connected, close the connection.
-                self.broadcastState(session.callId, currentState, transition[1], 
-                                    handleStateMachine, cb);
-  
-                if (transition[1] === "connected") {
-                  throw new Error("End of setup");
-                }
-  
-              }
-              return;
-            }
-          });
-          if (!handled) {
-            cb(
-              new Error("No transition from " + currentState + " state with " +
-                        event + " event.")
-            );
-          }
-        }
+        var state;
 
-        handleStateMachine(currentState);
-        return;
+        eventConf.transitions.forEach(function(transition, key) {
+          if (transition[0] === currentState) {
+            handled = true;
+            var validator = eventConf.validator;
+            if (validator !== undefined) {
+              state = validator(currentState, transition);
+            } else {
+              state = transition[1];
+            }
+            if (state !== null) {
+              // In case we're connected, close the connection.
+              self.broadcastState(session.callId, state);
+                // function(err, redisCurrentState) {
+                //   if (redisCurrentState === "connected") {
+                //     throw new Error("End of setup");
+                //   }
+                // });
+            }
+            return;
+          }
+        });
       }
-      cb(
-        new Error("No " + event + " event.")
-      );
+      if (!handled) {
+        cb(
+          new Error("No transition from " + currentState + " state with " +
+                    event + " event.")
+        );
+      }
     });
   },
 
   /**
    * Broadcast the call-state data to the interested parties.
    **/
-  broadcastState: function(callId, currentState, state, replayTransaction, cb) {
+  broadcastState: function(callId, state, cb) {
     var self = this;
 
-    if (cb === undefined) {
-      cb = state;
-      state = currentState;
-      currentState = undefined;
-    }
-
-    function broadcast(err) {
+    self.storage.setCallState(callId, state, function(err) {
       if (err) throw err;
-      console.log("newState: ", state);
 
-      self.pub.publish(callId, state, function(err) {
+      self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (err) throw err;
-      });      
-    };
 
-    if (currentState === undefined) {
-      self.storage.setCallState(callId, state, broadcast);
-    } else {
-      self.storage.updateCallState(
-        callId, currentState, state, replayTransaction, broadcast);
-    }
+        self.pub.publish(callId, redisCurrentState, function(err) {
+          if (err) throw err;
+          if (cb !== undefined) {
+            cb(null, redisCurrentState);
+          }
+        });
+      });
+    });
   },
 
   /**

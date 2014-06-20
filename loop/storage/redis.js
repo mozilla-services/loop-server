@@ -107,66 +107,64 @@ RedisStorage.prototype = {
     });
   },
 
-  updateCallState: function(
-    callId, currentState, state, replayTransaction, callback) {
-      var self = this;
+  setCallState: function(callId, state, callback) {
+    var self = this;
+    var key = 'callstate.' + callId;
 
-      // Start the transaction
-      self._client.watch(callId, function(err) {
-        console.log("Watch", callId);
-        if (err) {
-          callback(err);
-          return;
-        }
+    if(state === "terminate") {
+      self._client.del(key, callback);
+      return;
+    }
 
-        self.getCallState(callId, function(err, redisCurrentState) {
+    self._client.sadd(key, state, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.expire(key, self._settings.callStateDuration, callback);
+    });
+  },
+
+  getCallState: function(callId, callback) {
+    var self = this;
+
+    // Order is init, alerting, connecting, half-connected, connected
+    // The key is dropped in case of terminate
+    self._client.scard('callstate.' + callId, function(err, score) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      switch (score) {
+      case 1:
+        callback(null, "init");
+        break;
+      case 2:
+        callback(null, "alerting");
+        break;
+      case 3:
+        callback(null, "connecting");
+        break;
+      case 4:
+        callback(null, "half-connected");
+        break;
+      case 5:
+        callback(null, "connected");
+        break;
+      default:
+        self.getCall(callId, function(err, result) {
           if (err) {
             callback(err);
             return;
           }
-          console.log("redisCurrentState", redisCurrentState);
-        
-          // If old redisCurrentState is still currentState
-          if (redisCurrentState === currentState) {
-            console.log("Same state start multi");
-            self._client.multi()
-              .setex(
-                'callstate.' + callId,
-                self._settings.callStateDuration,
-                state)
-              .exec(function(err, results) {
-                if (err) {
-                  callback(err);
-                  return;
-                }
-
-                console.log("EXEC", results);
-                if (results[0] === "OK") {
-                  callback(null);
-                } else {
-                  replayTransaction(redisCurrentState);
-                }
-              });
-          } else {
-            // Unwatch current transaction
-            self._client.discard();
-            replayTransaction(redisCurrentState);
+          if (result !== null) {
+            callback(null, "terminated");
+            return;
           }
+          callback(null, null);
         });
-      });
-  },
-
-  setCallState: function(callId, state, callback) {
-    this._client.setex(
-      'callstate.' + callId,
-      this._settings.callStateDuration,
-      state,
-      callback
-    );
-  },
-
-  getCallState: function(callId, callback) {
-    this._client.get('callstate.' + callId, callback);
+      }
+    });
   },
 
   getCall: function(callId, callback) {
