@@ -523,9 +523,15 @@ app.delete('/calls/id/:callId', function(req, res) {
   });
 });
 
-app.listen(conf.get('port'), conf.get('host'), function(){
+var server = app.listen(conf.get('port'), conf.get('host'), function(){
   console.log('Server listening on http://' +
               conf.get('host') + ':' + conf.get('port'));
+});
+
+process.on('SIGTERM', function() {
+  console.log('SIGTERM received, shutting down');
+  server.close();
+  process.exit(0);
 });
 
 module.exports = {
