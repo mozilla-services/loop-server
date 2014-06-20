@@ -107,6 +107,55 @@ RedisStorage.prototype = {
     });
   },
 
+  updateCallState: function(
+    callId, currentState, state, replayTransaction, callback) {
+      var self = this;
+
+      // Start the transaction
+      self._client.watch(callId, function(err) {
+        console.log("Watch", callId);
+        if (err) {
+          callback(err);
+          return;
+        }
+
+        self.getCallState(callId, function(err, redisCurrentState) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          console.log("redisCurrentState", redisCurrentState);
+        
+          // If old redisCurrentState is still currentState
+          if (redisCurrentState === currentState) {
+            console.log("Same state start multi");
+            self._client.multi()
+              .setex(
+                'callstate.' + callId,
+                self._settings.callStateDuration,
+                state)
+              .exec(function(err, results) {
+                if (err) {
+                  callback(err);
+                  return;
+                }
+
+                console.log("EXEC", results);
+                if (results[0] === "OK") {
+                  callback(null);
+                } else {
+                  replayTransaction(redisCurrentState);
+                }
+              });
+          } else {
+            // Unwatch current transaction
+            self._client.discard();
+            replayTransaction(redisCurrentState);
+          }
+        });
+      });
+  },
+
   setCallState: function(callId, state, callback) {
     this._client.setex(
       'callstate.' + callId,

@@ -167,34 +167,26 @@ describe('websockets', function() {
     });
   });
 
-  describe("with two clients", function() {
-    var client2;
+  describe.only("with two clients", function() {
+    var client2, token, callId, messageCounter;
 
     beforeEach(function(done) {
+      messageCounter = 0;
+      callId = crypto.randomBytes(16).toString('hex');
+      var tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+      var tokenWrapper = tokenManager.encode({
+        uuid: '1234',
+        user: hawkCredentials.id,
+        callerId: 'Alexis'
+      });
+      token = tokenWrapper.token;
+
       // Create the websocket second client.
       client2 = new ws("ws://localhost:" + server.address().port);
-      client2.on('open', function() { done(); });
-    });
-  
-    afterEach(function(done) {
-      client2.on('close', function() { done(); });
-      client2.close();
-    });
-
-    it('should broadcast call state to other interested parties',
-      function(done) {
-        var tokenManager = new tokenlib.TokenManager({
-          macSecret: conf.get('macSecret'),
-          encryptionSecret: conf.get('encryptionSecret')
-        });
-        var tokenWrapper = tokenManager.encode({
-          uuid: '1234',
-          user: hawkCredentials.id,
-          callerId: 'Alexis'
-        });
-        var callId = crypto.randomBytes(16).toString('hex');
-        var messageCounter = 0;
-        
+      client2.on('open', function() {
         storage.addUserCall(hawkCredentials.id, {
           'callerId': 'Remy',
           'callId': callId,
@@ -206,35 +198,130 @@ describe('websockets', function() {
           if (err) throw err;
           storage.setCallState(callId, "init", function(err) {
             if (err) throw err;
-        
-            client2.on('message', function(data) {
-              var message = JSON.parse(data);
-              if (messageCounter === 0) {
-                expect(message.messageType).eql("hello");
-                expect(message.state).eql("init");
-                messageCounter++;
-              } else {
-                expect(message.messageType).eql("progress");
-                expect(message.state).eql("alerting");
-                done();
-              }
-            });
-        
-            client2.send(JSON.stringify({
-              messageType: 'hello',
-              authType: "Token",
-              auth: tokenWrapper.token,
-              callId: callId
-            }));
-        
-            client.send(JSON.stringify({
-              messageType: 'hello',
-              authType: "Hawk",
-              auth: hawkCredentials.id,
-              callId: callId
-            }));
+            done();
           });
         });
+      });
+    });
+  
+    afterEach(function(done) {
+      client2.on('close', function() { done(); });
+      client2.close();
+    });
+
+    it('should broadcast alerting state to other interested parties',
+      function(done) {
+        client2.on('error', function() {
+          throw new Error('Error: ' + data);
+        });
+
+        client2.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (messageCounter === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+            messageCounter++;
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+            done();
+          }
+        });
+    
+        client2.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+    
+        client.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
+
+    it('should broadcast action change state to other interested parties',
+      function(done) {
+        var messageCounter2 = 0;
+
+        client2.on('message', function(data) {
+          var message = JSON.parse(data);
+          console.log(message);
+          if (messageCounter2 === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (messageCounter2 === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else if (messageCounter2 === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+            client2.send(JSON.stringify({
+              messageType: 'action',
+              event: 'media-up'
+            }));
+          } else if (messageCounter2 === 3) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("half-connected");
+          } else if (messageCounter2 === 4) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connected");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("terminate");
+            done();
+          }
+          messageCounter2++;
+        });
+
+        client.on('message', function(data) {
+          var message = JSON.parse(data);
+          console.log(message);
+          if (messageCounter === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");            
+          } else if (messageCounter === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+            client.send(JSON.stringify({
+              messageType: 'action',
+              event: 'accept'
+            }));
+          } else if (messageCounter === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+            client.send(JSON.stringify({
+              messageType: 'action',
+              event: 'media-up'
+            }));
+          } else if (messageCounter === 3) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("half-connected");            
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connected");            
+          }
+
+          messageCounter++;
+        });
+    
+    
+        client2.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+
+        client.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
       });
   });
 });

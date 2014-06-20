@@ -191,7 +191,7 @@ MessageHandler.prototype = {
         "accept": {
           transitions: [
             ["alerting", "connecting"]
-          ],
+          ]
         },
         "media-up": {
           transitions: [
@@ -202,56 +202,83 @@ MessageHandler.prototype = {
         }
       };
 
-      var handled = false;
+      console.log("event: ", event);
+      console.log("currentState: ", currentState);
 
       if (stateMachine.hasOwnProperty(event)) {
-        var validated = true;
-        var state = stateMachine[event];
+        var eventConf = stateMachine[event];
 
-        state.transitions.forEach(function(transition, key) {
-          if(transition[0] === currentState) {
-            handled = true;
-            var validator = stateMachine[event].validator;
-            if (validator !== undefined) {
-              if (!validator(session.callId, currentState, event)) {
-                validated = false;
+        var handleStateMachine = function(currentState) {
+          var validated = true;
+          var handled = false;
+  
+          eventConf.transitions.forEach(function(transition, key) {
+            if(transition[0] === currentState) {
+              handled = true;
+              var validator = eventConf.validator;
+              if (validator !== undefined) {
+                if (!validator(session.callId, currentState, event)) {
+                  validated = false;
+                }
               }
-            }
-            if (validated === true) {
-
-              // In case we're connected, close the connection.
-              self.broadcastState(session.callId, transition[1], cb);
-
-              if (transition[1] === "connected") {
-                throw new Error("End of setup");
+              if (validated === true) {
+  
+                // In case we're connected, close the connection.
+                self.broadcastState(session.callId, currentState, transition[1], 
+                                    handleStateMachine, cb);
+  
+                if (transition[1] === "connected") {
+                  throw new Error("End of setup");
+                }
+  
               }
-
+              return;
             }
-            return;
+          });
+          if (!handled) {
+            cb(
+              new Error("No transition from " + currentState + " state with " +
+                        event + " event.")
+            );
           }
-        });
+        }
+
+        handleStateMachine(currentState);
+        return;
       }
-      if (!handled) {
-        cb(
-          new Error("No transition from " + currentState + " state with " +
-                    event + " event.")
-        );
-      }
+      cb(
+        new Error("No " + event + " event.")
+      );
     });
   },
 
   /**
    * Broadcast the call-state data to the interested parties.
    **/
-  broadcastState: function(callId, state, cb) {
+  broadcastState: function(callId, currentState, state, replayTransaction, cb) {
     var self = this;
-    self.storage.setCallState(callId, state, function(err) {
+
+    if (cb === undefined) {
+      cb = state;
+      state = currentState;
+      currentState = undefined;
+    }
+
+    function broadcast(err) {
       if (err) throw err;
+      console.log("newState: ", state);
 
       self.pub.publish(callId, state, function(err) {
         if (err) throw err;
-      });
-    });
+      });      
+    };
+
+    if (currentState === undefined) {
+      self.storage.setCallState(callId, state, broadcast);
+    } else {
+      self.storage.updateCallState(
+        callId, currentState, state, replayTransaction, broadcast);
+    }
   },
 
   /**
