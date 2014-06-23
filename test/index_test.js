@@ -361,13 +361,13 @@ describe("index.js", function() {
     var sandbox;
 
     app.post('/returnUserCallTokens', function(req, res) {
-      returnUserCallTokens(
-        req.body.callee,
-        req.body.callerId,
-        req.body.urls,
-        req.body.callToken,
-        res
-      );
+      returnUserCallTokens({
+        user: req.body.callee,
+        callerId: req.body.callerId,
+        urls: req.body.urls,
+        calleeFriendlyName: req.body.calleeFriendlyName,
+        callToken: req.body.callToken
+      }, res);
     });
 
     beforeEach(function() {
@@ -394,6 +394,7 @@ describe("index.js", function() {
 
       var user = "user@arandomuri";
       var callerId = "aCallerId";
+      var calleeFriendlyName = "issuerName";
       var urls = ["url1", "url2"];
       var callToken = 'call-token';
       var tokBoxSessionId = "aTokboxSession";
@@ -418,7 +419,8 @@ describe("index.js", function() {
             callee: user,
             callerId: callerId,
             urls: urls,
-            callToken: callToken
+            callToken: callToken,
+            issuer: calleeFriendlyName
           })
           .expect(200)
           .end(function(err, res) {
@@ -438,7 +440,8 @@ describe("index.js", function() {
               callee: user,
               callerId: callerId,
               urls: urls,
-              callToken: callToken
+              callToken: callToken,
+              issuer: calleeFriendlyName
             })
             .expect(200)
             .end(function(err, res) {
@@ -466,7 +469,8 @@ describe("index.js", function() {
               callee: user,
               callerId: callerId,
               urls: urls,
-              callToken: callToken
+              callToken: callToken,
+              calleeFriendlyName: calleeFriendlyName
             })
             .expect(200)
             .end(function(err, res) {
@@ -479,6 +483,7 @@ describe("index.js", function() {
                 delete items[0].timestamp;
                 expect(items[0]).eql({
                   callerId: callerId,
+                  calleeFriendlyName: calleeFriendlyName,
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,

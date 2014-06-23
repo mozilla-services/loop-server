@@ -212,22 +212,31 @@ function authenticate(req, res, next) {
 
 /**
  * Helper to store and trigger an user initiated call.
+ *
+ * options is a javascript object which can have the following keys:
+ * - user: the identifier of the connected user.
+ * - callerId: the identifier for the caller.
+ * - urls: the list of simple push urls to notify of the new call.
+ * - calleeFriendlyName: the friendly name of the person called.
+ * - callToken: the call token that was used to initiate the call (if any)
  */
-function returnUserCallTokens(user, callerId, urls, callToken, res) {
+function returnUserCallTokens(options, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (res.serverError(err)) return;
 
+    var urls = options.urls;
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
-    storage.addUserCall(user, {
-      'callerId': callerId,
+    storage.addUserCall(options.user, {
+      'callerId': options.callerId,
+      'calleeFriendlyName': options.calleeFriendlyName,
       'callId': callId,
-      'userMac': user,
+      'userMac': options.user,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'timestamp': currentTimestamp,
-      'callToken': callToken
+      'callToken': options.callToken
     }, function(err, record){
       if (res.serverError(err)) return;
 
@@ -445,6 +454,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
     var tokenPayload = {
       user: req.user,
       uuid: uuid,
+      issuer: req.body.issuer || '',
       callerId: req.body.callerId
     };
     if (expiresIn !== undefined) {
@@ -481,6 +491,7 @@ app.get("/calls", requireHawkSession, function(req, res) {
       }).map(function(record) {
         return {
           callId: record.callId,
+          calleeId: record.calleeFriendlyName,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
@@ -501,8 +512,13 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
     function callUser(callee) {
       return function() {
         // TODO: set caller ID. Bug 1025894.
-        returnUserCallTokens(callee, undefined, callees[callee], undefined, 
-                             res);
+        returnUserCallTokens({
+          user: callee,
+          callerId: undefined,
+          urls: callees[callee],
+          callToken: undefined,
+          calleeFriendlyName: undefined
+        }, res);
       }();
     }
 
@@ -578,9 +594,13 @@ app.post('/calls/:token', validateToken, function(req, res) {
       res.json(410, 'Gone');
       return;
     }
-
-    returnUserCallTokens(req.token.user, req.token.callerId, urls, 
-                         req.param('token'), res);
+    returnUserCallTokens({
+      user: req.token.user,
+      callerId: req.token.callerId,
+      urls: urls,
+      callToken: req.param('token'),
+      calleeFriendlyName: req.token.issuer
+    }, res);
   });
 });
 
