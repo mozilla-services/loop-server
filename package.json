@@ -19,7 +19,7 @@
     "cors": "2.3.1",
     "express": "3.x",
     "strftime": "0.8.0",
-    "opentok": "2.2.2",
+    "opentok": "git://github.com/ametaireau/opentok-node.git#80dfa80044a97e47b5d22b1ba94970128f29c5f5",
     "raven": "0.6.3",
     "request": "2.36.0",
     "urlsafe-base64": "0.0.2",

@@ -420,7 +420,7 @@ app.all('*', corsEnabled);
  **/
 app.get("/__heartbeat__", function(req, res) {
   storage.ping(function(storageStatus) {
-    request.get(tokBox.serverURL, {timeout: conf.get('heartbeatTimeout')},
+    tokBox.getSessionTokens({retry: 0, timeout: conf.get('heartbeatTimeout')},
       function(requestError) {
         var status;
         if (storageStatus === true && requestError === null) {

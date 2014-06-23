@@ -112,6 +112,30 @@ describe("TokBox", function() {
         done();
       });
     });
+
+    it("should pass along the timeout argument to the createSession",
+      function(done) {
+        sandbox.stub(tokBox._opentok, "createSession", function(options, cb) {
+          expect(options.timeout).eql("1234");
+          cb("error");
+        });
+
+        tokBox.getSessionTokens({timeout: "1234"}, function(error, info) {
+          done();
+        });
+      });
+
+    it("should do a request call with a timeout argument", function(done) {
+      sinon.stub(request, 'post', function(options, cb) {
+        // Ensure opentok uses the passed timeout argument to request.
+        // see https://github.com/opentok/opentok-node/pull/48
+        expect(options.timeout).eql("1234");
+        cb("err");
+      });
+      tokBox.getSessionTokens({timeout: "1234"}, function(err, session) {
+        done();
+      });
+    });
   });
 });
 
@@ -124,7 +148,7 @@ describe("FakeTokBox", function() {
 
       requests = [];
       sandbox.stub(request, "get", function(options, cb) {
-        requests.push(options);
+        requests.push(options.url);
         cb(null);
       });
       tokbox = new FakeTokBox();

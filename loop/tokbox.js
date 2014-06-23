@@ -25,21 +25,29 @@ function TokBox(settings) {
 }
 
 TokBox.prototype = {
-  getSessionTokens: function(cb, retry) {
-    if (retry === undefined) {
-      retry = this.retryOnError;
+  getSessionTokens: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = undefined;
+    }
+
+    options = options || {};
+
+    if (options.retry === undefined) {
+      options.retry = this.retryOnError;
     }
     var self = this;
     this._opentok.createSession({
-      mediaMode: 'relayed'
+      mediaMode: 'relayed',
+      timeout: options.timeout
     }, function(err, session) {
         if (err !== null) {
-          retry--;
-          if (retry <= 0) {
+          options.retry--;
+          if (options.retry <= 0) {
             cb(err);
             return;
           }
-          self.getSessionTokens(cb, retry);
+          self.getSessionTokens(options, cb);
           return;
         }
         var sessionId = session.sessionId;
@@ -82,10 +90,17 @@ FakeTokBox.prototype = {
     this._token += 1;
     return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
   },
-  getSessionTokens: function(cb) {
+  getSessionTokens: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = {};
+    }
     var self = this;
     // Do a real HTTP call to have a realistic behavior.
-    request.get(self.serverURL, function(err) {
+    request.get({
+      url: self.serverURL,
+      timeout: options.timeout
+    }, function(err) {
       cb(err, {
         sessionId: self._fakeSessionId(),
         callerToken: self._generateFakeToken(),
