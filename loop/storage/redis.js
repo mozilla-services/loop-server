@@ -107,29 +107,45 @@ RedisStorage.prototype = {
     });
   },
 
-  setCallState: function(callId, state, callback) {
+  getCallTTL: function(callId, callback) {
+    this._client.ttl('callstate.' + callId, callback);
+  },
+
+  setCallState: function(callId, state, ttl, callback) {
     var self = this;
+
+    if (callback === undefined) {
+      callback = ttl;
+      ttl = self._settings.callStateDuration;
+    }
     var key = 'callstate.' + callId;
 
-    if(state === "terminate") {
+    if(state === "terminated") {
       self._client.del(key, callback);
       return;
     }
 
+    // Internally, this uses a redis set to be sure we don't store twice the
+    // same call state.
     self._client.sadd(key, state, function(err) {
       if (err) {
         callback(err);
         return;
       }
-      self._client.expire(key, self._settings.callStateDuration, callback);
+
+      self._client.expire(key, ttl, callback);
     });
   },
 
   getCallState: function(callId, callback) {
     var self = this;
 
-    // Order is init, alerting, connecting, half-connected, connected
-    // The key is dropped in case of terminate
+    // Get the state of a given call. Because of how we store this information
+    // (in a redis set), count the number of elements in the set to know what
+    // the current state is.
+    // State can be (in order) init, alerting, connecting, half-connected,
+    // connected. In case of terminate, nothing is stored in the database (the
+    // key is dropped).
     self._client.scard('callstate.' + callId, function(err, score) {
       if (err) {
         callback(err);
@@ -152,6 +168,7 @@ RedisStorage.prototype = {
         callback(null, "connected");
         break;
       default:
+        // Ensure a call exists if nothing is stored on this key.
         self.getCall(callId, function(err, result) {
           if (err) {
             callback(err);

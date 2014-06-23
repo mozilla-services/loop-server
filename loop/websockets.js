@@ -34,8 +34,8 @@ MessageHandler.prototype = {
       return;
     }
     var handler = this[handlers[messageType]].bind(this);
-    handler(session, inboundMessage, function(err, outboundMessage) {
-      cb(err, this.encode(outboundMessage));
+    handler(session, inboundMessage, function(err, outboundMessage, terminate) {
+      cb(err, this.encode(outboundMessage), terminate);
     }.bind(this));
   },
 
@@ -68,16 +68,21 @@ MessageHandler.prototype = {
       session.type = (call.userMac === session.user) ? "callee" : "caller";
 
       // Get current call state to answer hello message.
-      self.storage.getCallState(session.callId, function(err, state) {
+      self.storage.getCallState(session.callId, function(err, currentState) {
         if (err) throw err;
 
         // Alert clients on call state changes.
         self.sub.on("message", function(channel, receivedState) {
+          var terminate;
           if (channel === session.callId) {
+            if (receivedState === "terminated" ||
+                receivedState === "connected") {
+              terminate = "closeConnection";
+            }
             cb(null, {
               messageType: "progress",
               state: receivedState
-            });
+            }, terminate);
           }
         });
 
@@ -86,12 +91,13 @@ MessageHandler.prototype = {
 
         cb(null, {
           messageType: "hello",
-          state: state
+          state: currentState 
         });
 
-        // After the hello phase and as soon the calle is connected,
-        // set the alerting state.
-        if (state === "init" && session.type === "callee") {
+        // After the hello phase and as soon the callee is connected,
+        // the call changes to the "alerting" state.
+        // XXX Move this before returning the current state.
+        if (currentState === "init" && session.type === "callee") {
           self.broadcastState(session.callId, "alerting");
         }
       });
@@ -146,14 +152,13 @@ MessageHandler.prototype = {
   },
 
   /**
-   * Handles state changes submitted by the clients.
+   * Handle state changes submitted by the clients.
    *
    * Update the current state of the call using the information passed by the
    * clients. Once the new state is defined, broadcast it to the interested
    * parties using the pubsub.
    **/
   handleAction: function(session, message, cb) {
-    // We received a session changed
     try {
       this.requireParams(message, "event");
     } catch (e) {
@@ -167,7 +172,7 @@ MessageHandler.prototype = {
 
     if (validEvents.indexOf(event) === -1) {
       cb(
-        new Error(event + " state is invalid. Should be: " +
+        new Error(event + " state is invalid. Should be one of: " +
                   validEvents.join(", "))
       );
       return;
@@ -267,7 +272,7 @@ MessageHandler.prototype = {
   },
 
   /**
-   * Creates an error message to be consumed by the client.
+   * Create an error message to be consumed by the client.
    **/
   createError: function(errorMessage) {
     return this.encode({
@@ -330,6 +335,7 @@ module.exports = function(storage, tokenManager, logError, conf) {
               }
 
               ws.send(outboundMessage);
+              console.log(terminate);
               if (terminate === "closeConnection") {
                 ws.close();
               }

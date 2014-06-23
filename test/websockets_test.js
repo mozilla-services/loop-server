@@ -53,11 +53,14 @@ describe('websockets', function() {
 
   afterEach(function(done) {
     sandbox.restore();
+    if (client.isClosed === true) {
+      done();
+      return;
+    }
+
     client.on('close', function() { done(); });
     client.close();
   });
-
-  it('should listen on the same port the app does');
 
   it('should reject bad authentication tokens', function(done) {
     var callId = crypto.randomBytes(16).toString('hex');
@@ -95,52 +98,47 @@ describe('websockets', function() {
       }));
     });
 
-  it('should accept callers authenticating with the token url', function(done) {
-    var tokenManager = new tokenlib.TokenManager({
-      macSecret: conf.get('macSecret'),
-      encryptionSecret: conf.get('encryptionSecret')
-    });
-    var tokenWrapper = tokenManager.encode({
-      uuid: '1234',
-      user: hawkCredentials.id,
-      callerId: 'Alexis'
-    });
-    var callId = crypto.randomBytes(16).toString('hex');
+  it('should accept callers authenticating with a valid token url',
+    function(done) {
+      var tokenManager = new tokenlib.TokenManager({
+        macSecret: conf.get('macSecret'),
+        encryptionSecret: conf.get('encryptionSecret')
+      });
+      var tokenWrapper = tokenManager.encode({
+        uuid: '1234',
+        user: hawkCredentials.id,
+        callerId: 'Alexis'
+      });
+      var callId = crypto.randomBytes(16).toString('hex');
 
-    createCall(callId, hawkCredentials.id, function(err) {
-      if (err) throw err;
-      storage.setCallState(callId, "init", function(err) {
+      // Create a call and set its state to "init".
+      createCall(callId, hawkCredentials.id, function(err) {
         if (err) throw err;
-        client.on('message', function(data) {
-          var message = JSON.parse(data);
-          expect(message.messageType).eql("hello");
-          expect(message.state).eql("init");
-          done();
-        });
+        storage.setCallState(callId, "init", function(err) {
+          if (err) throw err;
+          client.on('message', function(data) {
+            var message = JSON.parse(data);
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+            done();
+          });
 
-        client.send(JSON.stringify({
-          messageType: 'hello',
-          authType: "Token",
-          auth: tokenWrapper.token,
-          callId: callId
-        }));
+          client.send(JSON.stringify({
+            messageType: 'hello',
+            authType: "token",
+            auth: tokenWrapper.token,
+            callId: callId
+          }));
+        });
       });
     });
-  });
 
   it('should return the state of the call', function(done) {
     var callId = crypto.randomBytes(16).toString('hex');
 
     var messageCounter = 0;
 
-    storage.addUserCall(hawkCredentials.id, {
-      'callerId': 'Remy',
-      'callId': callId,
-      'userMac': hawkCredentials.id,
-      'sessionId': '1234',
-      'calleeToken': '1234',
-      'timestamp': Date.now()
-    }, function(err) {
+    createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
       storage.setCallState(callId, "init", function(err) {
         if (err) throw err;
@@ -168,33 +166,35 @@ describe('websockets', function() {
   });
 
   describe("with two clients", function() {
-    var client2, token, callId, messageCounter;
+    var callee;
+    var caller, token, callId, calleeMsgCount;
 
     beforeEach(function(done) {
-      messageCounter = 0;
+      calleeMsgCount = 0;
       callId = crypto.randomBytes(16).toString('hex');
+
       var tokenManager = new tokenlib.TokenManager({
         macSecret: conf.get('macSecret'),
         encryptionSecret: conf.get('encryptionSecret')
       });
-      var tokenWrapper = tokenManager.encode({
+
+      token = tokenManager.encode({
         uuid: '1234',
         user: hawkCredentials.id,
         callerId: 'Alexis'
-      });
-      token = tokenWrapper.token;
+      }).token;
 
-      // Create the websocket second client.
-      client2 = new ws("ws://localhost:" + server.address().port);
-      client2.on('open', function() {
-        storage.addUserCall(hawkCredentials.id, {
-          'callerId': 'Remy',
-          'callId': callId,
-          'userMac': hawkCredentials.id,
-          'sessionId': '1234',
-          'calleeToken': '1234',
-          'timestamp': Date.now()
-        }, function(err) {
+      // Name the existing ws client "callee" for readability.
+      callee = client;
+
+      // Create the second websocket callee.
+      caller = new ws("ws://localhost:" + server.address().port);
+
+      // The on("open") needs to be defined right after the callee creation,
+      // otherwise the event might be lost.
+      caller.on('open', function() {
+        // Create a call and initialize its state to "init".
+        createCall(callId, hawkCredentials.id, function(err) {
           if (err) throw err;
           storage.setCallState(callId, "init", function(err) {
             if (err) throw err;
@@ -205,37 +205,45 @@ describe('websockets', function() {
     });
   
     afterEach(function(done) {
-      client2.on('close', function() { done(); });
-      client2.close();
+      if (caller.isClosed === true) {
+        done();
+        return;
+      }
+      caller.on('close', function() { done(); });
+      caller.close();
     });
 
     it('should broadcast alerting state to other interested parties',
       function(done) {
-        client2.on('error', function(data) {
+        caller.on('error', function(data) {
           throw new Error('Error: ' + data);
         });
 
-        client2.on('message', function(data) {
+        caller.on('message', function(data) {
           var message = JSON.parse(data);
-          if (messageCounter === 0) {
+          // First message should be "hello/init".
+          if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");
-            messageCounter++;
           } else {
+            // Second should be "progress/alerting".
             expect(message.messageType).eql("progress");
             expect(message.state).eql("alerting");
             done();
           }
+          calleeMsgCount++;
         });
     
-        client2.send(JSON.stringify({
+        // Caller registers to the socket.
+        caller.send(JSON.stringify({
           messageType: 'hello',
           authType: "Token",
           auth: token,
           callId: callId
         }));
     
-        client.send(JSON.stringify({
+        // Callee registers to the socket.
+        callee.send(JSON.stringify({
           messageType: 'hello',
           authType: "Hawk",
           auth: hawkCredentials.id,
@@ -245,68 +253,74 @@ describe('websockets', function() {
 
     it('should broadcast action change and handle race condition.',
       function(done) {
-        var messageCounter2 = 0;
+        var callerMsgCount = 0;
 
-        client2.on('message', function(data) {
+        caller.on('message', function(data) {
           var message = JSON.parse(data);
-          if (messageCounter2 === 0) {
+          if (callerMsgCount === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");
-          } else if (messageCounter2 === 1) {
+
+          } else if (callerMsgCount === 1) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("alerting");
-          } else if (messageCounter2 === 2) {
+
+          } else if (callerMsgCount === 2) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connecting");
-            client2.send(JSON.stringify({
+            caller.send(JSON.stringify({
               messageType: 'action',
               event: 'media-up'
             }));
+
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
           }
-          if (messageCounter2 === 4) {
+          if (callerMsgCount === 4) {
             done();
           }
-          messageCounter2++;
+          callerMsgCount++;
         });
 
-        client.on('message', function(data) {
+        callee.on('message', function(data) {
           var message = JSON.parse(data);
-          if (messageCounter === 0) {
+          if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");            
-          } else if (messageCounter === 1) {
+
+          } else if (calleeMsgCount === 1) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("alerting");
-            client.send(JSON.stringify({
+            callee.send(JSON.stringify({
               messageType: 'action',
               event: 'accept'
             }));
-          } else if (messageCounter === 2) {
+
+          } else if (calleeMsgCount === 2) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connecting");
-            client.send(JSON.stringify({
+            callee.send(JSON.stringify({
               messageType: 'action',
               event: 'media-up'
             }));
+
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");            
           }
-          messageCounter++;
+          calleeMsgCount++;
         });
     
     
-        client2.send(JSON.stringify({
+        caller.send(JSON.stringify({
           messageType: 'hello',
           authType: "Token",
           auth: token,
           callId: callId
         }));
 
-        client.send(JSON.stringify({
+        callee.send(JSON.stringify({
           messageType: 'hello',
           authType: "Hawk",
           auth: hawkCredentials.id,
@@ -316,77 +330,123 @@ describe('websockets', function() {
 
     it('should broadcast half-connected signal.',
       function(done) {
-        var messageCounter2 = 0;
+        var callerMsgCount = 0;
 
-        client2.on('message', function(data) {
+        caller.on('message', function(data) {
           var message = JSON.parse(data);
-          if (messageCounter2 === 0) {
+          if (callerMsgCount === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");
-          } else if (messageCounter2 === 1) {
+
+          } else if (callerMsgCount === 1) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("alerting");
-          } else if (messageCounter2 === 2) {
+
+          } else if (callerMsgCount === 2) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connecting");
-            client2.send(JSON.stringify({
+            caller.send(JSON.stringify({
               messageType: 'action',
               event: 'media-up'
             }));
-          } else if (messageCounter2 === 3) {
+
+          } else if (callerMsgCount === 3) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("half-connected");
-            client.send(JSON.stringify({
+            callee.send(JSON.stringify({
               messageType: 'action',
               event: 'media-up'
             }));            
+
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
             done();
           }
-          messageCounter2++;
+          callerMsgCount++;
         });
 
-        client.on('message', function(data) {
+        callee.on('message', function(data) {
           var message = JSON.parse(data);
-          if (messageCounter === 0) {
+          if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
             expect(message.state).eql("init");            
-          } else if (messageCounter === 1) {
+          } else if (calleeMsgCount === 1) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("alerting");
-            client.send(JSON.stringify({
+            callee.send(JSON.stringify({
               messageType: 'action',
               event: 'accept'
             }));
-          } else if (messageCounter === 2) {
+          } else if (calleeMsgCount === 2) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connecting");
-          } else if (messageCounter === 3) {
+          } else if (calleeMsgCount === 3) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("half-connected");            
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
           }
-          messageCounter++;
+          calleeMsgCount++;
         });
     
     
-        client2.send(JSON.stringify({
+        caller.send(JSON.stringify({
           messageType: 'hello',
           authType: "Token",
           auth: token,
           callId: callId
         }));
 
-        client.send(JSON.stringify({
+        callee.send(JSON.stringify({
           messageType: 'hello',
           authType: "Hawk",
           auth: hawkCredentials.id,
           callId: callId
         }));
       });
+
+    it("should close socket on progress/terminate message", function(done) {
+      caller.on('close', function() {
+        caller.isClosed = true;
+        done();
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (message.messageType === "hello") {
+          caller.send(JSON.stringify({
+            messageType: 'action',
+            event: 'terminate',
+            reason: 'cancel'
+          }));
+        }
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));
+    });
+
+    it("should close the socket on progress/connected message", function(done) {
+
+    });
+    it("should close the socket on storage error");
+    it("should not accept a non alphanumeric reason on action/terminate");
+    it("should proxy the reason on action/terminate");
+
+    it("should broadcast progress/terminate if call was initiated more than X seconds ago");
+    it("should not broadcast progress/terminate if callee subscribed in less than X seconds");
+
+    it("should broadcast progress/terminate if call is ringing for more than X seconds");
+    it("should not broadcast progress/terminate if call had been anwsered");
+
+    it("should broadcast progress/terminate if media not up for both parties after X seconds");
+    it("should not broadcast progress/terminate if media connected for both parties");
+    it("should reject invalid transitions");
   });
 });
