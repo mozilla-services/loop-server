@@ -317,6 +317,7 @@ module.exports = function(storage, tokenManager, logError, conf) {
   var register = function(server) {
     var pub = new PubSub(conf.get('pubsub'));
     var sub = new PubSub(conf.get('pubsub'));
+    sub.setMaxListeners(0);  // Make sure we can add numbers of listeners
     var messageHandler = new MessageHandler(pub, sub, storage, tokenManager);
     var wss = new WebSocket.Server({server: server});
 
@@ -334,8 +335,14 @@ module.exports = function(storage, tokenManager, logError, conf) {
                 return;
               }
 
-              ws.send(outboundMessage);
-              console.log(terminate);
+              try {
+                ws.send(outboundMessage);
+              } catch (e) {
+                // Socket already closed (i.e, in case of race condition
+                // where we don't receive half-connected but twice
+                // connected.
+              }
+
               if (terminate === "closeConnection") {
                 ws.close();
               }

@@ -255,6 +255,13 @@ describe('websockets', function() {
       function(done) {
         var callerMsgCount = 0;
 
+        caller.on('close', function() {
+          caller.isClosed = true;
+          if (callee.isClosed) {
+            done();
+          }
+        });
+
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
@@ -277,10 +284,14 @@ describe('websockets', function() {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
           }
-          if (callerMsgCount === 4) {
+          callerMsgCount++;
+        });
+
+        callee.on('close', function() {
+          callee.isClosed = true;
+          if (caller.isClosed) {
             done();
           }
-          callerMsgCount++;
         });
 
         callee.on('message', function(data) {
@@ -361,7 +372,8 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
-            done();
+            caller.isClosed = true;
+            if (callee.isClosed) done();
           }
           callerMsgCount++;
         });
@@ -387,6 +399,8 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
+            callee.isClosed = true;
+            if (caller.isClosed) done();
           }
           calleeMsgCount++;
         });
@@ -407,7 +421,62 @@ describe('websockets', function() {
         }));
       });
 
-    it("should close socket on progress/terminate message", function(done) {
+    it("should close socket on progress/connected message", function(done) {
+      callee.on('close', function() {
+        callee.isClosed = true;
+        if (caller.isClosed) {
+          done();
+        }
+      });
+
+      caller.on('close', function() {
+        caller.isClosed = true;
+        if (callee.isClosed) {
+          done();
+        }
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (message.state === "half-connected") {
+          caller.send(JSON.stringify({
+            messageType: 'action',
+            event: 'media-up'
+          }));
+        }
+      });
+
+      callee.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (message.state === "alerting") {
+          callee.send(JSON.stringify({
+            messageType: 'action',
+            event: 'accept'
+          }));
+        } else if (message.state === "connecting") {
+          callee.send(JSON.stringify({
+            messageType: 'action',
+            event: 'media-up'
+          }));
+        }
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));
+
+      callee.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Hawk",
+        auth: hawkCredentials.id,
+        callId: callId
+      }));
+    });
+
+    it("should close the socket on progress/terminate message", function(done) {
       caller.on('close', function() {
         caller.isClosed = true;
         done();
@@ -432,12 +501,121 @@ describe('websockets', function() {
       }));
     });
 
-    it("should close the socket on progress/connected message", function(done) {
+    it("should close the socket on storage error", function(done) {
+      sandbox.stub(storage, "getCallState", function(callId, callback) {
+        callback(new Error("Error with storage"));
+      });
 
+      caller.on('close', function() {
+        console.log("Closed");
+        done();
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        console.log(message);
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));
     });
-    it("should close the socket on storage error");
-    it("should not accept a non alphanumeric reason on action/terminate");
-    it("should proxy the reason on action/terminate");
+
+    it("should not accept a non alphanumeric reason on action/terminate", function(done) {
+      caller.on('close', function() {
+        caller.isClosed = true;
+        done();
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (message.messageType === "hello") {
+          caller.send(JSON.stringify({
+            messageType: 'action',
+            event: 'terminate',
+            reason: 't#i5-!s-the-@nd'
+          }));
+        } else {
+          expect(message.messageType).eql("error");
+          expect(message.reason).eql("Invalid reason");
+        }
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));      
+    });
+
+    it("should proxy the reason on action/terminate", function(done) {
+      caller.on('close', function() {
+        caller.isClosed = true;
+        done();
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (message.messageType === "hello") {
+          caller.send(JSON.stringify({
+            messageType: 'action',
+            event: 'terminate',
+            reason: 'cancel'
+          }));
+        } else {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("terminated");
+          expect(message.reason).eql("cancel");
+        }
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));
+    });
+
+    it("should reject invalid transitions", function(done) {
+      caller.on('close', function() {
+        caller.isClosed = true;
+        done();
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (message.messageType === "hello") return;
+        if (message.messageType === "progress") {
+          caller.send(JSON.stringify({
+            messageType: 'action',
+            event: 'media-up'
+          }));
+        } else {
+          expect(message.messageType).eql("error");
+          expect(message.reason).eql(
+            "No transition from alerting state with media-up event.");
+        }
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));
+
+      callee.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Hawk",
+        auth: hawkCredentials.id,
+        callId: callId
+      }));
+    });
 
     it("should broadcast progress/terminate if call was initiated more than X seconds ago");
     it("should not broadcast progress/terminate if callee subscribed in less than X seconds");
@@ -447,6 +625,5 @@ describe('websockets', function() {
 
     it("should broadcast progress/terminate if media not up for both parties after X seconds");
     it("should not broadcast progress/terminate if media connected for both parties");
-    it("should reject invalid transitions");
   });
 });
