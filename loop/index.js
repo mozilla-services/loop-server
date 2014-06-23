@@ -616,11 +616,16 @@ var server = app.listen(conf.get('port'), conf.get('host'), function(){
               conf.get('host') + ':' + conf.get('port'));
 });
 
-process.on('SIGTERM', function() {
-  console.log('SIGTERM received, shutting down');
-  server.close();
-  process.exit(0);
-});
+function shutdown(cb) {
+  server.close(function() {
+    process.exit(0);
+    if (cb !== undefined) {
+      cb();
+    }
+  });
+}
+
+process.on('SIGTERM', shutdown);
 
 module.exports = {
   app: app,
@@ -635,5 +640,7 @@ module.exports = {
   authenticate: authenticate,
   requireHawkSession: requireHawkSession,
   validateSimplePushURL: validateSimplePushURL,
-  returnUserCallTokens: returnUserCallTokens
+  returnUserCallTokens: returnUserCallTokens,
+  server: server,
+  shutdown: shutdown
 };

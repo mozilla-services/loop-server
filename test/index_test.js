@@ -17,6 +17,8 @@ var Token = require("../loop/token").Token;
 var app = require("../loop").app;
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
+var server = require("../loop").server;
+var shutdown = require("../loop").shutdown;
 var storage = require("../loop").storage;
 var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
@@ -56,6 +58,35 @@ describe("index.js", function() {
         conf.get("userMacSecret"),
         "sha1")).to.have.length(40);
       done();
+    });
+  });
+
+  describe("#shutdown", function () {
+    var sandbox;
+
+    beforeEach(function() {
+      sandbox = sinon.sandbox.create();
+      sandbox.stub(process, "exit");
+      sandbox.stub(server, "close", function(cb) { cb(); });
+    });
+
+    afterEach(function() {
+      sandbox.restore();
+    });
+
+    it("should call #close on the server object", function(done) {
+      shutdown(function() {
+        sinon.assert.calledOnce(server.close);
+        done();
+      });
+    });
+
+    it("should call exit(0) on the process object", function(done) {
+      shutdown(function() {
+        sinon.assert.calledOnce(process.exit);
+        sinon.assert.calledWithExactly(process.exit, 0);
+        done();
+      });
     });
   });
 
