@@ -365,6 +365,7 @@ describe("index.js", function() {
         req.body.callee,
         req.body.callerId,
         req.body.urls,
+        req.body.calleeFriendlyName,
         res
       );
     });
@@ -393,6 +394,7 @@ describe("index.js", function() {
 
       var user = "user@arandomuri";
       var callerId = "aCallerId";
+      var calleeFriendlyName = "issuerName";
       var urls = ["url1", "url2"];
 
       var tokBoxSessionId = "aTokboxSession";
@@ -416,7 +418,8 @@ describe("index.js", function() {
           .send({
             callee: user,
             callerId: callerId,
-            urls: urls
+            urls: urls,
+            issuer: calleeFriendlyName
           })
           .expect(200)
           .end(function(err, res) {
@@ -435,7 +438,8 @@ describe("index.js", function() {
             .send({
               callee: user,
               callerId: callerId,
-              urls: urls
+              urls: urls,
+              issuer: calleeFriendlyName
             })
             .expect(200)
             .end(function(err, res) {
@@ -462,7 +466,8 @@ describe("index.js", function() {
             .send({
               callee: user,
               callerId: callerId,
-              urls: urls
+              urls: urls,
+              calleeFriendlyName: calleeFriendlyName
             })
             .expect(200)
             .end(function(err, res) {
@@ -475,6 +480,7 @@ describe("index.js", function() {
                 delete items[0].timestamp;
                 expect(items[0]).eql({
                   callerId: callerId,
+                  calleeFriendlyName: calleeFriendlyName,
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,
