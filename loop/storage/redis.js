@@ -113,11 +113,23 @@ RedisStorage.prototype = {
 
   setCallState: function(callId, state, ttl, callback) {
     var self = this;
-
     if (callback === undefined) {
       callback = ttl;
       ttl = self._settings.callStateDuration;
     }
+
+    var validStates = [
+      "init", "alerting", "connecting", "connected.caller", "connected.callee",
+      "terminated"
+    ];
+
+    if (validStates.indexOf(state) === -1) {
+      callback(
+        new Error(state + " should be one of " + validStates.join(", "))
+      );
+      return;
+    }
+
     var key = 'callstate.' + callId;
 
     if(state === "terminated") {

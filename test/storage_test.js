@@ -21,7 +21,7 @@ var fakeCallInfo = conf.get("fakeCallInfo");
 
 describe("Storage", function() {
   function testStorage(name, createStorage) {
-    var storage, 
+    var storage,
         a_second = 1 / 3600,  // A second in hours.
         calls = [
         {
@@ -59,7 +59,7 @@ describe("Storage", function() {
           callStateDuration: conf.get('callStateDuration')
         });
       });
-  
+
       afterEach(function(done) {
         storage.drop(function(err) {
           // Remove the storage reference so tests blow up in an explicit way.
@@ -149,7 +149,7 @@ describe("Storage", function() {
           });
       });
 
-      
+
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {
@@ -313,6 +313,16 @@ describe("Storage", function() {
             });
           });
         });
+
+        it("should check the states are valid before storing them",
+          function(done) {
+            storage.setCallState("12345", "terminated:unauthorized",
+              function(err) {
+                expect(err).to.not.eql(null);
+                expect(err.message).match(/should be one of/);
+                done();
+              });
+          });
       });
 
       describe("#getCallState", function() {
