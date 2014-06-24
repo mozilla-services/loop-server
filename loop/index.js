@@ -212,7 +212,7 @@ function authenticate(req, res, next) {
 /**
  * Helper to store and trigger an user initiated call.
  */
-function returnUserCallTokens(user, callerId, urls, res) {
+function returnUserCallTokens(user, callerId, urls, callUrl, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (res.serverError(err)) return;
 
@@ -225,7 +225,8 @@ function returnUserCallTokens(user, callerId, urls, res) {
       'userMac': user,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
-      'timestamp': currentTimestamp
+      'timestamp': currentTimestamp,
+      'callUrl': callUrl
     }, function(err, record){
       if (res.serverError(err)) return;
 
@@ -481,7 +482,8 @@ app.get("/calls", requireHawkSession, function(req, res) {
           callId: record.callId,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
-          sessionToken: record.calleeToken
+          sessionToken: record.calleeToken,
+          callUrl: record.callUrl
         };
       });
 
@@ -498,7 +500,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
     function callUser(callee) {
       return function() {
         // TODO: set caller ID. Bug 1025894.
-        returnUserCallTokens(callee, undefined, callees[callee], res);
+        returnUserCallTokens(callee, undefined, callees[callee], undefined, 
+                             res);
       }();
     }
 
@@ -575,7 +578,8 @@ app.post('/calls/:token', validateToken, function(req, res) {
       return;
     }
 
-    returnUserCallTokens(req.token.user, req.token.callerId, urls, res);
+    returnUserCallTokens(req.token.user, req.token.callerId, urls, 
+                         req.param('token'), res);
   });
 });
 
