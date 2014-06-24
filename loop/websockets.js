@@ -7,6 +7,16 @@
 var WebSocket = require('ws');
 var PubSub = require('./pubsub');
 
+
+function serverError(error, callback) {
+  if (error) {
+    error.isCritical = true;
+    callback(error);
+    return true;
+  }
+  return false;
+}
+
 function MessageHandler(pub, sub, storage, tokenManager) {
   this.pub = pub;
   this.sub = sub;
@@ -19,7 +29,7 @@ MessageHandler.prototype = {
   /**
    * Parses a message and dispatches it to the right handler.
    **/
-  dispatch: function(session, data, cb) {
+  dispatch: function(session, data, callback) {
     var inboundMessage = this.decode(data);
 
     var handlers = {
@@ -30,12 +40,12 @@ MessageHandler.prototype = {
     var messageType = inboundMessage.messageType;
 
     if (!handlers.hasOwnProperty(messageType)) {
-      cb(new Error("Unknown messageType"));
+      callback(new Error("Unknown messageType"));
       return;
     }
     var handler = this[handlers[messageType]].bind(this);
     handler(session, inboundMessage, function(err, outboundMessage, terminate) {
-      cb(err, this.encode(outboundMessage), terminate);
+      callback(err, this.encode(outboundMessage), terminate);
     }.bind(this));
   },
 
@@ -48,12 +58,12 @@ MessageHandler.prototype = {
    * In addition to that, listens on the pubsub for forward events about this
    * call.
    **/
-  handleHello: function(session, message, cb) {
+  handleHello: function(session, message, callback) {
     // Check that message contains requireParams, otherwise return an error.
     try {
       this.requireParams(message, 'callId', 'authType', 'auth');
     } catch (e) {
-      cb(e);
+      callback(e);
       return;
     }
 
@@ -69,29 +79,39 @@ MessageHandler.prototype = {
 
       // Get current call state to answer hello message.
       self.storage.getCallState(session.callId, function(err, currentState) {
-        if (err) throw err;
+        if (serverError(err, callback)) return;
 
         // Alert clients on call state changes.
-        self.sub.on("message", function(channel, receivedState) {
+        self.sub.on("message", function listener(channel, data) {
+          var parts = data.split(":");
+          var receivedState = parts[0];
+          var reason = parts[1];
+
           var terminate;
           if (channel === session.callId) {
             if (receivedState === "terminated" ||
                 receivedState === "connected") {
               terminate = "closeConnection";
+              self.sub.removeListener("message", listener);
             }
-            cb(null, {
+            var message = {
               messageType: "progress",
               state: receivedState
-            }, terminate);
+            };
+            if (reason !== undefined) {
+              message.reason = reason;
+            }
+
+            callback(null, message, terminate);
           }
         });
 
         // Subscribe to the channel to setup progress updates.
         self.sub.subscribe(session.callId);
 
-        cb(null, {
+        callback(null, {
           messageType: "hello",
-          state: currentState 
+          state: currentState
         });
 
         // After the hello phase and as soon the callee is connected,
@@ -104,24 +124,24 @@ MessageHandler.prototype = {
     }
 
     self.storage.getCall(session.callId, function(err, call) {
-      if (err) throw err;
+      if (serverError(err, callback)) return;
 
       if (call === null) {
-        cb(new Error("bad callId"));
+        callback(new Error("bad callId"));
         return;
       }
 
       if (authType === "hawk") {
         self.storage.getHawkSession(tokenId, function(err, hawkCredentials) {
-          if (err) throw err;
+          if (serverError(err, callback)) return;
 
           if (hawkCredentials === null) {
-            cb(new Error("bad authentication"));
+            callback(new Error("bad authentication"));
             return;
           }
 
           self.storage.getHawkUser(tokenId, function(err, user) {
-            if (err) throw err;
+            if (serverError(err, callback)) return;
 
             if (user !== null) {
               session.user = user;
@@ -138,12 +158,12 @@ MessageHandler.prototype = {
         try {
           token = self.tokenManager.decode(tokenId);
         } catch (e) {
-          cb(new Error("Bad token: " + e.message));
+          callback(new Error("Bad token: " + e.message));
           return;
         }
 
         if (token.user !== call.userMac) {
-          cb(new Error("Bad token for this callId."));
+          callback(new Error("Bad token for this callId."));
           return;
         }
         processCall(call);
@@ -158,11 +178,11 @@ MessageHandler.prototype = {
    * clients. Once the new state is defined, broadcast it to the interested
    * parties using the pubsub.
    **/
-  handleAction: function(session, message, cb) {
+  handleAction: function(session, message, callback) {
     try {
       this.requireParams(message, "event");
     } catch (e) {
-      cb(e);
+      callback(e);
       return;
     }
 
@@ -171,21 +191,33 @@ MessageHandler.prototype = {
     var self = this;
 
     if (validEvents.indexOf(event) === -1) {
-      cb(
+      callback(
         new Error(event + " state is invalid. Should be one of: " +
                   validEvents.join(", "))
       );
       return;
     }
 
+
     // If terminate, close the call
     if (event === "terminate") {
-      self.broadcastState(session.callId, "terminated");
+      var state = "terminated";
+
+      // Check the reason is valid.
+      if (message.reason !== undefined) {
+        if (message.reason.match(/^[a-zA-Z0-9-]+$/) === null) {
+          callback(new Error("Invalid reason: should be alphanumeric"));
+          return;
+        }
+        state += ":" + message.reason;
+      }
+      self.broadcastState(session.callId, state);
       return;
     }
 
     // Get current state
     self.storage.getCallState(session.callId, function(err, currentState) {
+      if (serverError(err, callback)) return;
 
       // Ensure half-connected is not send twice by the same party.
       var validateState = function(currentState, transition) {
@@ -230,18 +262,13 @@ MessageHandler.prototype = {
             if (state !== null) {
               // In case we're connected, close the connection.
               self.broadcastState(session.callId, state);
-                // function(err, redisCurrentState) {
-                //   if (redisCurrentState === "connected") {
-                //     throw new Error("End of setup");
-                //   }
-                // });
             }
             return;
           }
         });
       }
       if (!handled) {
-        cb(
+        callback(
           new Error("No transition from " + currentState + " state with " +
                     event + " event.")
         );
@@ -252,19 +279,26 @@ MessageHandler.prototype = {
   /**
    * Broadcast the call-state data to the interested parties.
    **/
-  broadcastState: function(callId, state, cb) {
+  broadcastState: function(callId, stateData, callback) {
     var self = this;
+    var parts = stateData.split(":");
+    var state = parts[0];
 
     self.storage.setCallState(callId, state, function(err) {
-      if (err) throw err;
+      if (serverError(err, callback)) return;
 
       self.storage.getCallState(callId, function(err, redisCurrentState) {
-        if (err) throw err;
+        if (serverError(err, callback)) return;
+
+        if (redisCurrentState === "terminated" && parts[1] !== undefined) {
+          redisCurrentState += ":" + parts[1];
+        }
 
         self.pub.publish(callId, redisCurrentState, function(err) {
-          if (err) throw err;
-          if (cb !== undefined) {
-            cb(null, redisCurrentState);
+          if (serverError(err, callback)) return;
+
+          if (callback !== undefined) {
+            callback(null, redisCurrentState);
           }
         });
       });
@@ -317,7 +351,6 @@ module.exports = function(storage, tokenManager, logError, conf) {
   var register = function(server) {
     var pub = new PubSub(conf.get('pubsub'));
     var sub = new PubSub(conf.get('pubsub'));
-    sub.setMaxListeners(0);  // Make sure we can add numbers of listeners
     var messageHandler = new MessageHandler(pub, sub, storage, tokenManager);
     var wss = new WebSocket.Server({server: server});
 
@@ -330,7 +363,15 @@ module.exports = function(storage, tokenManager, logError, conf) {
             function(err, outboundMessage, terminate) {
               // Handle regular error.
               if (err) {
-                ws.send(messageHandler.createError(err.message));
+                var message;
+                // Log critical errors.
+                if (err.isCritical) {
+                  logError(err);
+                  message = "Service Unavailable";
+                } else {
+                  message = err.message;
+                }
+                ws.send(messageHandler.createError(message));
                 ws.close();
                 return;
               }

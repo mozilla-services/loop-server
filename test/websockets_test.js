@@ -203,7 +203,7 @@ describe('websockets', function() {
         });
       });
     });
-  
+
     afterEach(function(done) {
       if (caller.isClosed === true) {
         done();
@@ -233,7 +233,7 @@ describe('websockets', function() {
           }
           calleeMsgCount++;
         });
-    
+
         // Caller registers to the socket.
         caller.send(JSON.stringify({
           messageType: 'hello',
@@ -241,7 +241,7 @@ describe('websockets', function() {
           auth: token,
           callId: callId
         }));
-    
+
         // Callee registers to the socket.
         callee.send(JSON.stringify({
           messageType: 'hello',
@@ -298,7 +298,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");            
+            expect(message.state).eql("init");
 
           } else if (calleeMsgCount === 1) {
             expect(message.messageType).eql("progress");
@@ -318,12 +318,12 @@ describe('websockets', function() {
 
           } else {
             expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");            
+            expect(message.state).eql("connected");
           }
           calleeMsgCount++;
         });
-    
-    
+
+
         caller.send(JSON.stringify({
           messageType: 'hello',
           authType: "Token",
@@ -367,7 +367,7 @@ describe('websockets', function() {
             callee.send(JSON.stringify({
               messageType: 'action',
               event: 'media-up'
-            }));            
+            }));
 
           } else {
             expect(message.messageType).eql("progress");
@@ -382,7 +382,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");            
+            expect(message.state).eql("init");
           } else if (calleeMsgCount === 1) {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("alerting");
@@ -395,7 +395,7 @@ describe('websockets', function() {
             expect(message.state).eql("connecting");
           } else if (calleeMsgCount === 3) {
             expect(message.messageType).eql("progress");
-            expect(message.state).eql("half-connected");            
+            expect(message.state).eql("half-connected");
           } else {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("connected");
@@ -404,8 +404,8 @@ describe('websockets', function() {
           }
           calleeMsgCount++;
         });
-    
-    
+
+
         caller.send(JSON.stringify({
           messageType: 'hello',
           authType: "Token",
@@ -507,13 +507,8 @@ describe('websockets', function() {
       });
 
       caller.on('close', function() {
-        console.log("Closed");
+        caller.isClosed = true;
         done();
-      });
-
-      caller.on('message', function(data) {
-        var message = JSON.parse(data);
-        console.log(message);
       });
 
       caller.send(JSON.stringify({
@@ -524,33 +519,35 @@ describe('websockets', function() {
       }));
     });
 
-    it("should not accept a non alphanumeric reason on action/terminate", function(done) {
-      caller.on('close', function() {
-        caller.isClosed = true;
-        done();
-      });
+    it("should not accept a non-alphanumeric reason on action/terminate",
+      function(done) {
+        caller.on('close', function() {
+          caller.isClosed = true;
+          done();
+        });
 
-      caller.on('message', function(data) {
-        var message = JSON.parse(data);
-        if (message.messageType === "hello") {
-          caller.send(JSON.stringify({
-            messageType: 'action',
-            event: 'terminate',
-            reason: 't#i5-!s-the-@nd'
-          }));
-        } else {
-          expect(message.messageType).eql("error");
-          expect(message.reason).eql("Invalid reason");
-        }
-      });
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (message.messageType === "hello") {
+            caller.send(JSON.stringify({
+              messageType: 'action',
+              event: 'terminate',
+              reason: 't#i5-!s-the-@nd'
+            }));
+          } else {
+            expect(message.messageType).eql("error");
+            expect(message.reason)
+              .eql("Invalid reason: should be alphanumeric");
+          }
+        });
 
-      caller.send(JSON.stringify({
-        messageType: 'hello',
-        authType: "Token",
-        auth: token,
-        callId: callId
-      }));      
-    });
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+      });
 
     it("should proxy the reason on action/terminate", function(done) {
       caller.on('close', function() {
@@ -617,13 +614,19 @@ describe('websockets', function() {
       }));
     });
 
-    it("should broadcast progress/terminate if call was initiated more than X seconds ago");
-    it("should not broadcast progress/terminate if callee subscribed in less than X seconds");
+    it("should broadcast progress/terminate if call was initiated more than " +
+       "X seconds ago");
 
-    it("should broadcast progress/terminate if call is ringing for more than X seconds");
+    it("should not broadcast progress/terminate if callee subscribed in " +
+       "less than X seconds");
+
+    it("should broadcast progress/terminate if call is ringing for more " +
+       "than X seconds");
     it("should not broadcast progress/terminate if call had been anwsered");
 
-    it("should broadcast progress/terminate if media not up for both parties after X seconds");
-    it("should not broadcast progress/terminate if media connected for both parties");
+    it("should broadcast progress/terminate if media not up for both " +
+       "parties after X seconds");
+    it("should not broadcast progress/terminate if media connected for both " +
+       "parties");
   });
 });
