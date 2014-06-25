@@ -620,18 +620,34 @@ app.delete('/calls/id/:callId', function(req, res) {
   });
 });
 
+
+// Starts HTTP server.
 var server = http.createServer(app);
 server.listen(conf.get('port'), conf.get('host'), function(){
   console.log('Server listening on http://' +
               conf.get('host') + ':' + conf.get('port'));
 });
 
+
+// Handle websockets.
 var ws = websockets(storage, tokenManager, logError, conf);
 try {
   ws.register(server);
 } catch (e) {
   logError(e);
 }
+
+// Handle SIGTERM signal.
+function shutdown(cb) {
+  server.close(function() {
+    process.exit(0);
+    if (cb !== undefined) {
+      cb();
+    }
+  });
+}
+
+process.on('SIGTERM', shutdown);
 
 module.exports = {
   app: app,
@@ -647,5 +663,6 @@ module.exports = {
   authenticate: authenticate,
   requireHawkSession: requireHawkSession,
   validateSimplePushURL: validateSimplePushURL,
-  returnUserCallTokens: returnUserCallTokens
+  returnUserCallTokens: returnUserCallTokens,
+  shutdown: shutdown
 };

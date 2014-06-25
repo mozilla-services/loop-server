@@ -32,5 +32,4 @@ mocha:
 
 .PHONY: runserver
 runserver:
-	@env NODE_ENV=${NODE_ENV} PORT=5000 \
-		node loop/index.js
+	@env NODE_ENV=${NODE_ENV} node loop/index.js
