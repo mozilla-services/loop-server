@@ -703,13 +703,367 @@ describe('websockets', function() {
         }));
       });
 
-    it("should broadcast progress/terminate if call is ringing for more " +
-       "than X seconds");
-    it("should not broadcast progress/terminate if call had been anwsered");
+    it("should close the connection if ringing for too long.",
+      function(done) {
+        var callerMsgCount = 0;
 
-    it("should broadcast progress/terminate if media not up for both " +
-       "parties after X seconds");
-    it("should not broadcast progress/terminate if media connected for both " +
-       "parties");
+        callee.on('close', function() {
+          callee.isClosed = true;
+          if (caller.isClosed) {
+            done();
+          }
+        });
+
+        caller.on('close', function() {
+          caller.isClosed = true;
+          if (callee.isClosed) {
+            done();
+          }
+        });
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (callerMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (callerMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          }
+          callerMsgCount++;
+        });
+
+        callee.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (calleeMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (calleeMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+          calleeMsgCount++;
+        });
+
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+
+        // The callee connects!
+        callee.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
+
+    it("should not close the connection if call had been anwsered",
+      function(done) {
+        var callerMsgCount = 0;
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (callerMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (callerMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          }
+          callerMsgCount++;
+        });
+
+        callee.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (calleeMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+            callee.send(JSON.stringify({
+              messageType: "action",
+              event: "accept"
+            }));
+          } else if (calleeMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+            done();
+          }
+          calleeMsgCount++;
+        });
+
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+
+        // The callee connects!
+        callee.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
+
+    it("should close the connection if media-up not send by anybody.",
+      function(done) {
+        var callerMsgCount = 0;
+
+        callee.on('close', function() {
+          callee.isClosed = true;
+          if (caller.isClosed) {
+            done();
+          }
+        });
+
+        caller.on('close', function() {
+          caller.isClosed = true;
+          if (callee.isClosed) {
+            done();
+          }
+        });
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (callerMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (callerMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else if (callerMsgCount === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+          callerMsgCount++;
+        });
+
+        callee.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (calleeMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+            callee.send(JSON.stringify({
+              messageType: "action",
+              event: "accept"
+            }));
+          } else if (calleeMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else if (calleeMsgCount === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+          calleeMsgCount++;
+        });
+
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+
+        // The callee connects!
+        callee.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
+
+    it("should close the connection if media-up send by only one party.",
+      function(done) {
+        var callerMsgCount = 0;
+
+        callee.on('close', function() {
+          callee.isClosed = true;
+          if (caller.isClosed) {
+            done();
+          }
+        });
+
+        caller.on('close', function() {
+          caller.isClosed = true;
+          if (callee.isClosed) {
+            done();
+          }
+        });
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (callerMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+          } else if (callerMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else if (callerMsgCount === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+            callee.send(JSON.stringify({
+              messageType: "action",
+              event: "media-up"
+            }));
+          } else if (callerMsgCount === 3) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("half-connected");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+          callerMsgCount++;
+        });
+
+        callee.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (calleeMsgCount === 0) {
+            expect(message.messageType).eql("hello");
+            expect(message.state).eql("init");
+            caller.send(JSON.stringify({
+              messageType: "action",
+              event: "accept"
+            }));
+          } else if (calleeMsgCount === 1) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("alerting");
+          } else if (calleeMsgCount === 2) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("connecting");
+          } else if (calleeMsgCount === 3) {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("half-connected");
+          } else {
+            expect(message.messageType).eql("progress");
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+          calleeMsgCount++;
+        });
+
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+
+        // The callee connects!
+        callee.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
+
+    it("should not close if both parties got connected.", function(done) {
+      var callerMsgCount = 0;
+
+      callee.on('close', function() {
+        callee.isClosed = true;
+        if (caller.isClosed) {
+          done();
+        }
+      });
+
+      caller.on('close', function() {
+        caller.isClosed = true;
+        if (callee.isClosed) {
+          done();
+        }
+      });
+
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (callerMsgCount === 0) {
+          expect(message.messageType).eql("hello");
+          expect(message.state).eql("init");
+        } else if (callerMsgCount === 1) {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("alerting");
+        } else if (callerMsgCount === 2) {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("connecting");
+          caller.send(JSON.stringify({
+            messageType: "action",
+            event: "media-up"
+          }));
+        } else if (callerMsgCount === 3) {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("half-connected");
+        } else {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("connected");
+        }
+        callerMsgCount++;
+      });
+
+      callee.on('message', function(data) {
+        var message = JSON.parse(data);
+        if (calleeMsgCount === 0) {
+          expect(message.messageType).eql("hello");
+          expect(message.state).eql("init");
+          callee.send(JSON.stringify({
+            messageType: "action",
+            event: "accept"
+          }));
+        } else if (calleeMsgCount === 1) {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("alerting");
+        } else if (calleeMsgCount === 2) {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("connecting");
+        } else if (calleeMsgCount === 3) {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("half-connected");
+          callee.send(JSON.stringify({
+            messageType: "action",
+            event: "media-up"
+          }));
+        } else {
+          expect(message.messageType).eql("progress");
+          expect(message.state).eql("connected");
+        }
+        calleeMsgCount++;
+      });
+
+      caller.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Token",
+        auth: token,
+        callId: callId
+      }));
+
+      // The callee connects!
+      callee.send(JSON.stringify({
+        messageType: 'hello',
+        authType: "Hawk",
+        auth: hawkCredentials.id,
+        callId: callId
+      }));
+    });
   });
 });

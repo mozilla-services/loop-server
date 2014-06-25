@@ -17,11 +17,12 @@ function serverError(error, callback) {
   return false;
 }
 
-function MessageHandler(pub, sub, storage, tokenManager) {
+function MessageHandler(pub, sub, storage, tokenManager, conf) {
   this.pub = pub;
   this.sub = sub;
   this.storage = storage;
   this.tokenManager = tokenManager;
+  this.conf = conf;
 }
 
 MessageHandler.prototype = {
@@ -30,7 +31,13 @@ MessageHandler.prototype = {
    * Parses a message and dispatches it to the right handler.
    **/
   dispatch: function(session, data, callback) {
-    var inboundMessage = this.decode(data);
+    var inboundMessage;
+    try {
+      inboundMessage = this.decode(data);
+    } catch (e) {
+      callback(new Error("Malformed message."));
+      return;
+    }
 
     var handlers = {
       hello: "handleHello",
@@ -113,11 +120,7 @@ MessageHandler.prototype = {
           setTimeout(function() {
             self.storage.getCallStateTTL(session.callId, function(err, ttl) {
               if (ttl === -1) {
-                callback(null, {
-                  messageType: "progress",
-                  state: "terminated",
-                  reason: "timeout"
-                }, "closeConnection");
+                self.broadcastState(session.callId, "terminated:timeout");
               }
             });
           }, timeoutTTL * 1000);
@@ -144,7 +147,13 @@ MessageHandler.prototype = {
           } else if (currentState === "half-initiated") {
             self.broadcastState(session.callId, "init." + session.type);
             // We are now in "alterting" mode.
-
+            setTimeout(function() {
+              self.storage.getCallState(session.callId, function(err, state) {
+                if (state === "alerting") {
+                  self.broadcastState(session.callId, "terminated:timeout");
+                }
+              });
+            }, self.conf.ringingTimerDuration * 1000);
           }
         });
       });
@@ -259,7 +268,16 @@ MessageHandler.prototype = {
         "accept": {
           transitions: [
             ["alerting", "connecting"]
-          ]
+          ],
+          actuator: function() {
+            setTimeout(function() {
+              self.storage.getCallState(session.callId, function(err, state) {
+                if (state !== "connected") {
+                  self.broadcastState(session.callId, "terminated:timeout");
+                }
+              });
+            }, self.conf.connectionTimerDuration * 1000);
+          }
         },
         "media-up": {
           transitions: [
@@ -289,6 +307,11 @@ MessageHandler.prototype = {
             if (state !== null) {
               // In case we're connected, close the connection.
               self.broadcastState(session.callId, state);
+
+              // Handle specific actions on transitions.
+              if (eventConf.actuator !== undefined) {
+                eventConf.actuator();
+              }
             }
             return;
           }
@@ -377,7 +400,10 @@ module.exports = function(storage, tokenManager, logError, conf) {
     var pub = new PubSub(conf.get('pubsub'));
     var sub = new PubSub(conf.get('pubsub'));
     sub.setMaxListeners(0);
-    var messageHandler = new MessageHandler(pub, sub, storage, tokenManager);
+    var messageHandler = new MessageHandler(pub, sub, storage, tokenManager, {
+      ringingTimerDuration: conf.get("ringingTimerDuration"),
+      connectionTimerDuration: conf.get("connectionTimerDuration")
+    });
     var wss = new WebSocket.Server({server: server});
 
     wss.on('connection', function(ws) {
@@ -416,7 +442,8 @@ module.exports = function(storage, tokenManager, logError, conf) {
             });
         } catch(e) {
           // Handle programmation / uncatched errors.
-          ws.send(messageHandler.createError(new Error("Service Unavailable")));
+          logError(e);
+          ws.send(messageHandler.createError("Service Unavailable"));
           ws.close();
         }
       });
