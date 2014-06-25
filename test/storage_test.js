@@ -56,7 +56,7 @@ describe("Storage", function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
           hawkSessionDuration: conf.get('hawkSessionDuration'),
-          callStateDuration: conf.get('callStateDuration')
+          callDuration: conf.get('callDuration')
         });
       });
 
@@ -305,9 +305,10 @@ describe("Storage", function() {
 
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
-          storage.setCallState("12345", "init", function(err) {
+          storage.setCallState("12345", "init", 10, function(err) {
             if (err) throw err;
             storage.getCallState("12345", function(err, state) {
+              if (err) throw err;
               expect(state).to.eql("init");
               done();
             });

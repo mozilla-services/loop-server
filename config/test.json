@@ -32,5 +32,6 @@
   },
   "allowedOrigins": ["http://localhost:3000"],
   "statsdEnabled": true,
-  "fxaAudiences": ["http://localhost:5000"]
+  "fxaAudiences": ["http://localhost:5000"],
+  "supervisoryTimerDuration": 0.010
 }

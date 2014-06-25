@@ -453,8 +453,31 @@ describe("index.js", function() {
             });
         });
 
+      it("should set the call-state to init by default", function(done) {
+        sandbox.stub(request, "put");
+        sandbox.stub(storage, "addUserCall", function(_, __, cb) {
+          cb(null);
+        });
+        sandbox.stub(storage, "setCallState",
+          function(callId, state, expiricy, cb) {
+            expect(state).eql("init");
+            expect(expiricy).eql(conf.get("supervisoryTimerDuration"));
+            cb(null);
+          });
+
+        supertest(app)
+          .post('/returnUserCallTokens')
+          .send({
+            callee: user,
+            callerId: callerId,
+            urls: urls
+          })
+          .expect(200)
+          .end(done);
+      });
+
       it("should return a 503 if callsStore is not available", function(done) {
-        sandbox.stub(storage, "addUserCall", function(unused, alsounused, cb) {
+        sandbox.stub(storage, "addUserCall", function(_, __, cb) {
           cb("error");
         });
 

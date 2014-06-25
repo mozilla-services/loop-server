@@ -233,8 +233,8 @@ var conf = convict({
     format: Number,
     default: 3600 * 24 * 30 // One month.
   },
-  callStateDuration: {
-    doc: "The duration we want to store the call state info (in seconds)",
+  callDuration: {
+    doc: "The duration we want to store the call info (in seconds)",
     format: Number,
     default: 30
   },
@@ -247,7 +247,22 @@ var conf = convict({
     doc: "Timeout for requests when doing heartbeat checks (ms)",
     format: Number,
     default: 30
-  }
+  },
+  supervisoryTimerDuration: {
+    doc: "Websocket timeout for the supervisory timer (seconds)",
+    format: Number,
+    default: 10
+  },
+  ringingTimerDuration: {
+    doc: "Websocket timeout for the ringing timer (seconds)",
+    format: Number,
+    default: 30
+  },
+  connectionTimerDuration: {
+    doc: "Websocket timeout for the connection timer (seconds)",
+    format: Number,
+    default: 5
+  },
 });
 
 

@@ -98,7 +98,7 @@ describe('websockets', function() {
       }));
     });
 
-  it('should accept callers authenticating with a valid token url',
+  it('should accept caller authenticating with a valid token url',
     function(done) {
       var tokenManager = new tokenlib.TokenManager({
         macSecret: conf.get('macSecret'),
@@ -136,23 +136,15 @@ describe('websockets', function() {
   it('should return the state of the call', function(done) {
     var callId = crypto.randomBytes(16).toString('hex');
 
-    var messageCounter = 0;
-
     createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
       storage.setCallState(callId, "init", function(err) {
         if (err) throw err;
         client.on('message', function(data) {
           var message = JSON.parse(data);
-          if (messageCounter === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
-            messageCounter++;
-          } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
-            done();
-          }
+          expect(message.messageType).eql("hello");
+          expect(message.state).eql("init");
+          done();
         });
 
         client.send(JSON.stringify({
@@ -196,10 +188,11 @@ describe('websockets', function() {
         // Create a call and initialize its state to "init".
         createCall(callId, hawkCredentials.id, function(err) {
           if (err) throw err;
-          storage.setCallState(callId, "init", function(err) {
-            if (err) throw err;
-            done();
-          });
+          storage.setCallState(callId, "init",
+            conf.get("supervisoryTimerDuration"), function(err) {
+              if (err) throw err;
+              done();
+            });
         });
       });
     });
@@ -614,11 +607,101 @@ describe('websockets', function() {
       }));
     });
 
-    it("should broadcast progress/terminate if call was initiated more than " +
-       "X seconds ago");
+    it("should close the connection if callee doesn't connect.",
+      function(done) {
+        caller.on('close', function() {
+          caller.isClosed = true;
+          done();
+        });
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (message.messageType === "progress") {
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+        });
+
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+      });
+
+    it("should close the connection if caller doesn't connect.",
+      function(done) {
+        callee.on('close', function() {
+          callee.isClosed = true;
+          done();
+        });
+
+        callee.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (message.messageType === "progress") {
+            expect(message.state).eql("terminated");
+            expect(message.reason).eql("timeout");
+          }
+        });
+
+        callee.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
 
     it("should not broadcast progress/terminate if callee subscribed in " +
-       "less than X seconds");
+       "less than X seconds", function(done) {
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (message.messageType === "hello") {
+            // The callee connects!
+            callee.send(JSON.stringify({
+              messageType: 'hello',
+              authType: "Hawk",
+              auth: hawkCredentials.id,
+              callId: callId
+            }));
+          } else if (message.messageType === "progress"){
+            expect(message.state).not.eql("terminated");
+            done();
+          }
+        });
+        caller.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Token",
+          auth: token,
+          callId: callId
+        }));
+      });
+
+    it("should not broadcast progress/terminate if caller subscribed in " +
+       "less than X seconds", function(done) {
+        callee.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (message.messageType === "hello") {
+            // The callee connects!
+            caller.send(JSON.stringify({
+              messageType: 'hello',
+              authType: "Token",
+              auth: token,
+              callId: callId
+            }));
+          } else if (message.messageType === "progress"){
+            expect(message.state).not.eql("terminated");
+            done();
+          }
+        });
+        callee.send(JSON.stringify({
+          messageType: 'hello',
+          authType: "Hawk",
+          auth: hawkCredentials.id,
+          callId: callId
+        }));
+      });
 
     it("should broadcast progress/terminate if call is ringing for more " +
        "than X seconds");

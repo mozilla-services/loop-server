@@ -11,7 +11,7 @@ var PubSub = require('./pubsub');
 function serverError(error, callback) {
   if (error) {
     error.isCritical = true;
-    callback(error);
+    if (callback) callback(error);
     return true;
   }
   return false;
@@ -67,12 +67,14 @@ MessageHandler.prototype = {
       return;
     }
 
+
     // Configure the current session with user information.
     session.callId = message.callId;
 
     var self = this;
     var authType = message.authType.toLowerCase();
     var tokenId = message.auth;
+
 
     function processCall(call) {
       session.type = (call.userMac === session.user) ? "callee" : "caller";
@@ -106,20 +108,45 @@ MessageHandler.prototype = {
           }
         });
 
-        // Subscribe to the channel to setup progress updates.
-        self.sub.subscribe(session.callId);
+        self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
+          if (serverError(err, callback)) return;
+          setTimeout(function() {
+            self.storage.getCallStateTTL(session.callId, function(err, ttl) {
+              if (ttl === -1) {
+                callback(null, {
+                  messageType: "progress",
+                  state: "terminated",
+                  reason: "timeout"
+                }, "closeConnection");
+              }
+            });
+          }, timeoutTTL * 1000);
 
-        callback(null, {
-          messageType: "hello",
-          state: currentState
+          // Subscribe to the channel to setup progress updates.
+          self.sub.subscribe(session.callId);
+
+          var helloState = currentState;
+          if (currentState === "half-initiated") {
+            helloState = "init";
+          }
+
+          callback(null, {
+            messageType: "hello",
+            state: helloState
+          });
+
+          // After the hello phase and as soon the callee is connected,
+          // the call changes to the "alerting" state.
+          // XXX Move this before returning the current state.
+          if (currentState === "init") {
+            self.broadcastState(session.callId, "init." + session.type,
+              timeoutTTL);
+          } else if (currentState === "half-initiated") {
+            self.broadcastState(session.callId, "init." + session.type);
+            // We are now in "alterting" mode.
+
+          }
         });
-
-        // After the hello phase and as soon the callee is connected,
-        // the call changes to the "alerting" state.
-        // XXX Move this before returning the current state.
-        if (currentState === "init" && session.type === "callee") {
-          self.broadcastState(session.callId, "alerting");
-        }
       });
     }
 
@@ -279,28 +306,26 @@ MessageHandler.prototype = {
   /**
    * Broadcast the call-state data to the interested parties.
    **/
-  broadcastState: function(callId, stateData, callback) {
+  broadcastState: function(callId, stateData, ttl) {
     var self = this;
     var parts = stateData.split(":");
     var state = parts[0];
 
-    self.storage.setCallState(callId, state, function(err) {
-      if (serverError(err, callback)) return;
+    self.storage.setCallState(callId, state, ttl, function(err) {
+      if (serverError(err)) return;
 
       self.storage.getCallState(callId, function(err, redisCurrentState) {
-        if (serverError(err, callback)) return;
+        if (serverError(err)) return;
 
         if (redisCurrentState === "terminated" && parts[1] !== undefined) {
           redisCurrentState += ":" + parts[1];
         }
 
-        self.pub.publish(callId, redisCurrentState, function(err) {
-          if (serverError(err, callback)) return;
-
-          if (callback !== undefined) {
-            callback(null, redisCurrentState);
-          }
-        });
+        if (redisCurrentState !== "half-initiated") {
+          self.pub.publish(callId, redisCurrentState, function(err) {
+            if (serverError(err)) return;
+          });
+        }
       });
     });
   },
@@ -351,6 +376,7 @@ module.exports = function(storage, tokenManager, logError, conf) {
   var register = function(server) {
     var pub = new PubSub(conf.get('pubsub'));
     var sub = new PubSub(conf.get('pubsub'));
+    sub.setMaxListeners(0);
     var messageHandler = new MessageHandler(pub, sub, storage, tokenManager);
     var wss = new WebSocket.Server({server: server});
 

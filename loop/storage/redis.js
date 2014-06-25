@@ -55,7 +55,7 @@ RedisStorage.prototype = {
     var self = this;
     this._client.setex(
       'call.' + call.callId,
-      this._settings.tokenDuration,
+      this._settings.callDuration,
       JSON.stringify(call),
       function(err) {
         if (err) {
@@ -107,20 +107,44 @@ RedisStorage.prototype = {
     });
   },
 
-  getCallTTL: function(callId, callback) {
-    this._client.ttl('callstate.' + callId, callback);
+  /**
+   * Returns the expiricy of the call state (in seconds).
+   * In case the call is already expired, returns -1.
+   **/
+  getCallStateTTL: function(callId, callback) {
+    this._client.pttl('callstate.' + callId, function(err, ttl) {
+      if (err){
+        callback(err);
+        return;
+      }
+      if (ttl <= 1) {
+        ttl = -1;
+      } else {
+        ttl = ttl / 1000;
+      }
+      callback(null, ttl);
+    });
   },
 
   setCallState: function(callId, state, ttl, callback) {
     var self = this;
-    if (callback === undefined) {
-      callback = ttl;
-      ttl = self._settings.callStateDuration;
+
+    // In case we don't have a TTL, get the one from the call.
+    if (ttl === undefined || callback === undefined) {
+      if (callback === undefined) callback = ttl;
+      this._client.ttl('call.' + callId, function(err, res) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self.setCallState(callId, state, res, callback);
+      });
+      return;
     }
 
     var validStates = [
-      "init", "alerting", "connecting", "connected.caller", "connected.callee",
-      "terminated"
+      "init", "init.caller", "init.callee", "connecting",
+      "connected.caller", "connected.callee", "terminated"
     ];
 
     if (validStates.indexOf(state) === -1) {
@@ -144,8 +168,7 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-
-      self._client.expire(key, ttl, callback);
+      self._client.pexpire(key, ttl * 1000, callback);
     });
   },
 
@@ -168,15 +191,18 @@ RedisStorage.prototype = {
         callback(null, "init");
         break;
       case 2:
-        callback(null, "alerting");
+        callback(null, "half-initiated");
         break;
       case 3:
-        callback(null, "connecting");
+        callback(null, "alerting");
         break;
       case 4:
-        callback(null, "half-connected");
+        callback(null, "connecting");
         break;
       case 5:
+        callback(null, "half-connected");
+        break;
+      case 6:
         callback(null, "connected");
         break;
       default:

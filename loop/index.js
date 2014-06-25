@@ -42,7 +42,7 @@ var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
   'hawkSessionDuration': conf.get('hawkSessionDuration'),
-  'callStateDuration': conf.get('callStateDuration')
+  'callDuration': conf.get('callDuration')
 });
 
 var tokBox = new TokBox(conf.get('tokBox'));
@@ -230,27 +230,32 @@ function returnUserCallTokens(user, callerId, urls, res) {
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'timestamp': currentTimestamp
-    }, function(err, record){
+    }, function(err) {
       if (res.serverError(err)) return;
 
-      // Call SimplePush urls.
-      if (!Array.isArray(urls)) {
-        urls = [urls];
-      }
+      storage.setCallState(callId, "init",
+        conf.get("supervisoryTimerDuration"), function() {
+          if (res.serverError(err)) return;
 
-      urls.forEach(function(simplePushUrl) {
-        request.put({
-          url: simplePushUrl,
-          form: { version: currentTimestamp }
+          // Call SimplePush urls.
+          if (!Array.isArray(urls)) {
+            urls = [urls];
+          }
+
+          urls.forEach(function(simplePushUrl) {
+            request.put({
+              url: simplePushUrl,
+              form: { version: currentTimestamp }
+            });
+          });
+
+          res.json(200, {
+            callId: callId,
+            sessionId: tokboxInfo.sessionId,
+            sessionToken: tokboxInfo.callerToken,
+            apiKey: tokBox.apiKey
+          });
         });
-      });
-
-      res.json(200, {
-        callId: callId,
-        sessionId: tokboxInfo.sessionId,
-        sessionToken: tokboxInfo.callerToken,
-        apiKey: tokBox.apiKey
-      });
     });
   });
 }
