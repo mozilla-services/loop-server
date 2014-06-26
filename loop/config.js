@@ -102,6 +102,11 @@ var conf = convict({
     default: "sha256",
     env: "USER_MAC_ALGORITHM"
   },
+  callUrlTokenSize: {
+    doc: "The callUrl short token size.",
+    format: Number,
+    default: 10
+  },
   callUrlTimeout: {
     doc: "How much time a token is valid for (in hours)",
     format: Number,

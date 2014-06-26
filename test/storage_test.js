@@ -10,6 +10,7 @@ var sinon = require("sinon");
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
+var getShortToken = require("../loop/tokenlib").getShortToken;
 
 var uuid = "1234";
 var user = "alexis@notmyidea.com";
@@ -49,7 +50,22 @@ describe("Storage", function() {
           timestamp:    2
         }
       ],
-      call = calls[0];
+      call = calls[0],
+      urls = [
+        {
+          urlId:      getShortToken(conf.get("callUrlTokenSize")),
+          timestamp:  0
+        },            
+        {
+          urlId:      getShortToken(conf.get("callUrlTokenSize")),
+          timestamp:  1
+        },            
+        {
+          urlId:      getShortToken(conf.get("callUrlTokenSize")),
+          timestamp:  2
+        }
+      ],
+      urlData = urls[0];
 
     describe(name, function() {
       beforeEach(function() {
@@ -148,6 +164,93 @@ describe("Storage", function() {
           });
       });
 
+      describe("#addUserUrls", function() {
+        it("should be able to add one call-url to the store", function(done) {
+          storage.addUserCallUrl(userMac, urlData, function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getUserUrls(userMac, function(err, results) {
+              if (err) {
+                throw err;
+              }
+              expect(results).to.have.length(1);
+              expect(results).to.eql([urlData]);
+              done();
+            });
+          });
+        });
+      });
+
+      describe("#getUserUrls", function() {
+        var sandbox;
+
+        beforeEach(function() {
+          sandbox = sinon.sandbox.create();
+        });
+
+        afterEach(function() {
+          sandbox.restore();
+        });
+
+        it("should keep a list of the user urls", function(done) {
+          storage.addUserCallUrl(userMac, urls[0], function() {
+            storage.addUserCallUrl(userMac, urls[1], function() {
+              storage.addUserCallUrl(userMac, urls[2], function() {
+                storage.getUserUrls(userMac, function(err, results) {
+                  expect(results).to.have.length(3);
+                  expect(results).to.eql(urls);
+                  done(err);
+                });
+              });
+            });
+          });
+        });
+
+        it("should return an empty list if no urls", function(done) {
+          storage.getUserUrls(userMac, function(err, results) {
+            expect(results).to.eql([]);
+            done(err);
+          });
+        });
+
+        it("should handle storage errors correctly.", function(done) {
+          sandbox.stub(storage._client, "smembers",
+            function(key, cb){
+              cb("error");
+            });
+
+          storage.getUserUrls(userMac, function(err, results) {
+            expect(err).to.eql("error");
+            expect(typeof results).to.eql("undefined");
+            done();
+          });
+        });
+      });
+
+      describe("#getCallUrl", function() {
+        it("should be able to list a call-url by its id", function(done) {
+          storage.addUserCallUrl(userMac, urlData, function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getCallUrl(urlData.urlId, function(err, result) {
+              if (err) {
+                throw err;
+              }
+              expect(result).to.eql(urlData);
+              done();
+            });
+          });
+        });
+
+        it("should return null if the call-url doesn't exist", function(done) {
+          storage.getCall("does-not-exist", function(err, call) {
+            expect(call).to.eql(null);
+            done();
+          });
+        });
+      });
       
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {

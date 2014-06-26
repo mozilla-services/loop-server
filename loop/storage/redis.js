@@ -51,6 +51,73 @@ RedisStorage.prototype = {
     this._client.del('spurl.' + userMac, callback);
   },
 
+  addUserCallUrl: function(userMac, urlData, callback) {
+    // In that case use setex to add the metadata of the url.
+    var self = this;
+    this._client.setex(
+      'callurl.' + urlData.urlId,
+      this._settings.tokenDuration,
+      JSON.stringify(urlData),
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.sadd('userUrls.' + userMac,
+                          'callurl.' + urlData.urlId, callback);
+      });
+  },
+
+  getCallUrl: function(urlId, callback) {
+    this._client.get('callurl.' + urlId, function(err, url) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, JSON.parse(url));
+    });
+  },
+
+  getUserUrls: function(userMac, callback) {
+    var self = this;
+    this._client.smembers('userUrls.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (members.length === 0) {
+        callback(null, []);
+        return;
+      }
+      self._client.mget(members, function(err, urls) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var expired = urls.map(function(val, index) {
+          return (val === null) ? index : null;
+        }).filter(function(val) {
+          return val !== null;
+        });
+
+        var pendingUrls = urls.filter(function(val) {
+          return val !== null;
+        }).map(JSON.parse).sort(function(a, b) {
+          return a.timestamp - b.timestamp;
+        });
+
+        if (expired.length > 0) {
+          self._client.srem(expired, function(err, res) {
+            callback(null, pendingUrls);
+          });
+          return;
+        }
+        callback(null, pendingUrls);
+      });
+    });
+  },
+
   addUserCall: function(userMac, call, callback) {
     var self = this;
     this._client.setex(
@@ -109,13 +176,21 @@ RedisStorage.prototype = {
 
   getCall: function(callId, callback) {
     this._client.get('call.' + callId, function(err, call) {
-      callback(err, JSON.parse(call));
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, JSON.parse(call));
     });
   },
 
   deleteCall: function(callId, callback) {
     this._client.del('call.' + callId, function(err, result) {
-      callback(err, result !== 0);
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, result !== 0);
     });
   },
 
