@@ -365,7 +365,7 @@ describe("index.js", function() {
         req.body.callee,
         req.body.callerId,
         req.body.urls,
-        req.body.callUrl,
+        req.body.callToken,
         res
       );
     });
@@ -395,7 +395,7 @@ describe("index.js", function() {
       var user = "user@arandomuri";
       var callerId = "aCallerId";
       var urls = ["url1", "url2"];
-      var callUrl = 'http://call.m.org';
+      var callToken = 'call-token';
       var tokBoxSessionId = "aTokboxSession";
       var tokBoxCallerToken = "aToken";
       var tokBoxCalleeToken = "anotherToken";
@@ -418,7 +418,7 @@ describe("index.js", function() {
             callee: user,
             callerId: callerId,
             urls: urls,
-            callUrl: callUrl
+            callToken: callToken
           })
           .expect(200)
           .end(function(err, res) {
@@ -438,7 +438,7 @@ describe("index.js", function() {
               callee: user,
               callerId: callerId,
               urls: urls,
-              callUrl: callUrl
+              callToken: callToken
             })
             .expect(200)
             .end(function(err, res) {
@@ -466,7 +466,7 @@ describe("index.js", function() {
               callee: user,
               callerId: callerId,
               urls: urls,
-              callUrl: callUrl
+              callToken: callToken
             })
             .expect(200)
             .end(function(err, res) {
@@ -482,7 +482,7 @@ describe("index.js", function() {
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,
-                  callUrl: callUrl
+                  callToken: callToken
                 });
                 done();
               });
@@ -501,7 +501,7 @@ describe("index.js", function() {
             callee: user,
             callerId: callerId,
             urls: urls,
-            callUrl: callUrl
+            callToken: callToken
           })
           .expect(503)
           .end(done);

@@ -36,7 +36,7 @@ var user = "alexis@notmyidea.org";
 var userHmac;
 var uuid = "1234";
 var callerId = 'natim@mozilla.com';
-var callUrl = 'http://call.mozilla.com/xxx';
+var callToken = 'call-token';
 
 
 function register(url, assertion, credentials, cb) {
@@ -704,7 +704,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           timestamp:    0,
-          callUrl:      callUrl
+          callToken:    callToken
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -713,7 +713,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           timestamp:    1,
-          callUrl:      callUrl
+          callToken:    callToken
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -722,7 +722,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
           timestamp:    2,
-          callUrl:      callUrl
+          callToken:    callToken
         }
       ];
 
@@ -741,7 +741,7 @@ describe("HTTP API exposed by the server", function() {
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken,
-          callUrl: call.callUrl
+          callToken: call.callToken
         };
       });
 
@@ -762,7 +762,7 @@ describe("HTTP API exposed by the server", function() {
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken,
-        callUrl: calls[2].callUrl
+        callToken: calls[2].callToken
       }];
 
       req.expect(200).end(function(err, res) {

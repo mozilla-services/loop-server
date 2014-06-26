@@ -212,7 +212,7 @@ function authenticate(req, res, next) {
 /**
  * Helper to store and trigger an user initiated call.
  */
-function returnUserCallTokens(user, callerId, urls, callUrl, res) {
+function returnUserCallTokens(user, callerId, urls, callToken, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (res.serverError(err)) return;
 
@@ -226,7 +226,7 @@ function returnUserCallTokens(user, callerId, urls, callUrl, res) {
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'timestamp': currentTimestamp,
-      'callUrl': callUrl
+      'callToken': callToken
     }, function(err, record){
       if (res.serverError(err)) return;
 
@@ -483,7 +483,7 @@ app.get("/calls", requireHawkSession, function(req, res) {
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
-          callUrl: record.callUrl
+          callToken: record.callToken
         };
       });
 
