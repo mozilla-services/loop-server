@@ -36,6 +36,8 @@ var user = "alexis@notmyidea.org";
 var userHmac;
 var uuid = "1234";
 var callerId = 'natim@mozilla.com';
+var callToken = 'call-token';
+
 
 function register(url, assertion, credentials, cb) {
   supertest(app)
@@ -701,7 +703,8 @@ describe("HTTP API exposed by the server", function() {
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
-          timestamp:    0
+          timestamp:    0,
+          callToken:    callToken
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -709,7 +712,8 @@ describe("HTTP API exposed by the server", function() {
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
-          timestamp:    1
+          timestamp:    1,
+          callToken:    callToken
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -717,7 +721,8 @@ describe("HTTP API exposed by the server", function() {
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
-          timestamp:    2
+          timestamp:    2,
+          callToken:    callToken
         }
       ];
 
@@ -726,6 +731,7 @@ describe("HTTP API exposed by the server", function() {
           storage.addUserCall(userHmac, calls[2], done);
         });
       });
+
     });
 
     it("should list existing calls", function(done) {
@@ -734,7 +740,8 @@ describe("HTTP API exposed by the server", function() {
           callId: call.callId,
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
-          sessionToken: call.calleeToken
+          sessionToken: call.calleeToken,
+          callToken: call.callToken
         };
       });
 
@@ -754,7 +761,8 @@ describe("HTTP API exposed by the server", function() {
         callId: calls[2].callId,
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
-        sessionToken: calls[2].calleeToken
+        sessionToken: calls[2].calleeToken,
+        callToken: calls[2].callToken
       }];
 
       req.expect(200).end(function(err, res) {
