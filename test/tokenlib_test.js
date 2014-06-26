@@ -245,5 +245,24 @@ describe("TokenManager", function() {
       expect(failure).to.Throw(/The token expired/);
     });
   });
+});
 
+describe("tokenlib #getShortToken", function() {
+  it("should return a token of size lengths.", function() {
+    var shortToken, s = 10;
+    while (s > 0) {
+      shortToken = tokenlib.getShortToken(s);
+      expect(shortToken).to.have.length(s);
+      s--;
+    }
+  });
+
+  it("should return a token of [a-zA-Z0-9_-].", function() {
+    var shortToken, s = 10;
+    while (s > 0) {
+      shortToken = tokenlib.getShortToken(s);
+      expect(shortToken).to.match(/^[a-zA-Z0-9\-_]+$/);
+      s--;
+    }
+  });
 });

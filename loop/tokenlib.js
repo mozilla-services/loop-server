@@ -135,8 +135,21 @@ TokenManager.prototype = {
   }
 };
 
+/**
+ * Return a short code of [a-zA-Z0-9-_] character and size length.
+ */
+function getShortToken(size) {
+  return crypto.randomBytes(size)
+    .toString("base64")
+    .replace(/\=/g, '')
+    .replace(/\//g, '_')
+    .replace(/\+/g, '-')
+    .substr(0, size);
+}
+
 
 module.exports = {
   TokenManager: TokenManager,
+  getShortToken: getShortToken,
   ONE_HOUR: ONE_HOUR
 };
