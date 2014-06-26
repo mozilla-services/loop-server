@@ -45,7 +45,11 @@ RedisStorage.prototype = {
         // And add it back.
         self._client.lpush('spurl.' + userMac, simplepushURL, function(err) {
           // Keep the 10 most recent URLs.
-          self._client.ltrim('spurl.' + userMac, 0, 9, callback);
+          self._client.ltrim(
+            'spurl.' + userMac,
+            0,
+            self._settings.maxSimplePushUrls - 1,
+            callback);
         });
       });
   },

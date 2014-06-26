@@ -55,7 +55,8 @@ describe("Storage", function() {
       beforeEach(function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
-          hawkSessionDuration: conf.get('hawkSessionDuration')
+          hawkSessionDuration: conf.get('hawkSessionDuration'),
+          maxSimplePushUrls: conf.get('maxSimplePushUrls')
         });
       });
   
@@ -106,7 +107,7 @@ describe("Storage", function() {
         });
       });
 
-      describe.only("#addUserSimplePushURL", function() {
+      describe("#addUserSimplePushURL", function() {
         it("should be able to add a user simple push URL", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
             if (err) {
@@ -133,6 +134,36 @@ describe("Storage", function() {
               });
           });
         });
+
+        it("should dedupe URLs", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL,
+              function(err) {
+                storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                  expect(urls).to.have.length(1);
+                  expect(urls).to.contain(simplePushURL);
+                  done(err);
+                });
+              });
+          });
+        });
+
+        it("should not store more than X records", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                storage.addUserSimplePushURL(userMac, simplePushURL + "3",
+                  function(err) {
+                    storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                      expect(urls).to.have.length(2);
+                      expect(urls).to.not.contain(simplePushURL);
+                      done(err);
+                    });
+                  });
+              });
+          });
+        });
+
       });
 
       describe("#getUserSimplePushURLs", function() {
