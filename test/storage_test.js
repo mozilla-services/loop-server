@@ -106,7 +106,7 @@ describe("Storage", function() {
         });
       });
 
-      describe("#addUserSimplePushURL", function() {
+      describe.only("#addUserSimplePushURL", function() {
         it("should be able to add a user simple push URL", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
             if (err) {
@@ -120,13 +120,14 @@ describe("Storage", function() {
           });
         });
 
-        it("should overwrite existing simple push URLs", function(done) {
+        it("should not overwrite existing simple push URLs", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
             storage.addUserSimplePushURL(userMac, simplePushURL + '2',
               function(err) {
                 storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                  expect(urls).to.have.length(1);
-                  expect(urls).to.eql([simplePushURL + '2']);
+                  expect(urls).to.have.length(2);
+                  expect(urls).to.contain(simplePushURL);
+                  expect(urls).to.contain(simplePushURL + '2');
                   done(err);
                 });
               });

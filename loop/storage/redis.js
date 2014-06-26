@@ -34,17 +34,24 @@ RedisStorage.prototype = {
   },
 
   addUserSimplePushURL: function(userMac, simplepushURL, callback) {
-    this._client.set('spurl.' + userMac, simplepushURL, callback);
+    // delete the SP url if it exists
+    var self = this;
+    self._client.lrem('spurl.' + userMac, 0, simplepushURL,
+      function(err, deleted) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        // And add it back.
+        self._client.lpush('spurl.' + userMac, simplepushURL, function(err) {
+          // Keep the 10 most recent URLs.
+          self._client.ltrim('spurl.' + userMac, 0, 9, callback);
+        });
+      });
   },
 
   getUserSimplePushURLs: function(userMac, callback) {
-    this._client.get('spurl.' + userMac, function(err, result) {
-      var simplePushURL = [];
-      if (result !== null) {
-        simplePushURL.push(result);
-      }
-      callback(err, simplePushURL);
-    });
+    this._client.lrange('spurl.' + userMac, 0, 9, callback);
   },
 
   removeSimplePushURL: function(userMac, simplepushURL, callback) {
