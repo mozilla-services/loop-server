@@ -591,7 +591,7 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
       var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-      storage.addUserCallUrl(user, {
+      storage.addUserCallUrlData(user, {
         urlId: token,
         timestamp: Date.now(),
         expires: Date.now() + conf.get("callUrlTimeout")
@@ -616,7 +616,7 @@ describe("HTTP API exposed by the server", function() {
       clock = sinon.useFakeTimers(fakeNow);
 
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-      storage.addUserCallUrl(userHmac, {
+      storage.addUserCallUrlData(userHmac, {
         urlId: token,
         userMac: userHmac,
         timestamp: Date.now(),
@@ -654,7 +654,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should return a 403 if the token doesn't belong to the user",
       function(done){
-        storage.addUserCallUrl(userHmac, {
+        storage.addUserCallUrlData(userHmac, {
           urlId: token,
           userMac: "h4x0r",
           timestamp: Date.now(),
@@ -792,7 +792,7 @@ describe("HTTP API exposed by the server", function() {
 
       var timestamp = Date.now();
 
-      storage.addUserCallUrl(userHmac, {
+      storage.addUserCallUrlData(userHmac, {
         urlId: token,
         userMac: userHmac,
         callerId: callerId,

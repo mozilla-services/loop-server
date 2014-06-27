@@ -145,7 +145,7 @@ describe("Storage", function() {
 
       describe("#addUserUrls", function() {
         it("should be able to add one call-url to the store", function(done) {
-          storage.addUserCallUrl(userMac, urlData, function(err) {
+          storage.addUserCallUrlData(userMac, urlData, function(err) {
             if (err) {
               throw err;
             }
@@ -173,9 +173,9 @@ describe("Storage", function() {
         });
 
         it("should keep a list of the user urls", function(done) {
-          storage.addUserCallUrl(userMac, urls[0], function() {
-            storage.addUserCallUrl(userMac, urls[1], function() {
-              storage.addUserCallUrl(userMac, urls[2], function() {
+          storage.addUserCallUrlData(userMac, urls[0], function() {
+            storage.addUserCallUrlData(userMac, urls[1], function() {
+              storage.addUserCallUrlData(userMac, urls[2], function() {
                 storage.getUserCallUrls(userMac, function(err, results) {
                   expect(results).to.have.length(3);
                   expect(results).to.eql(urls);
@@ -209,7 +209,7 @@ describe("Storage", function() {
 
       describe("#getCallUrlData", function() {
         it("should be able to list a call-url by its id", function(done) {
-          storage.addUserCallUrl(userMac, urlData, function(err) {
+          storage.addUserCallUrlData(userMac, urlData, function(err) {
             if (err) {
               throw err;
             }

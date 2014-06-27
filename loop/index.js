@@ -443,7 +443,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
       statsdClient.count('loop-call-urls-' + req.user, 1);
     }
 
-    storage.addUserCallUrl(req.user, urlData, function(err) {
+    storage.addUserCallUrlData(req.user, urlData, function(err) {
       if (res.serverError(err)) return;
 
       res.json(200, {

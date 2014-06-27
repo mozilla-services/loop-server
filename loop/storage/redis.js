@@ -36,7 +36,7 @@ RedisStorage.prototype = {
     this._client.del('spurl.' + userMac, callback);
   },
 
-  addUserCallUrl: function(userMac, urlData, callback) {
+  addUserCallUrlData: function(userMac, urlData, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
       return;
