@@ -190,7 +190,7 @@ describe("index.js", function() {
       res.json(200, "ok");
     });
 
-    it("should validate the callType an empty callType", function(done) {
+    it("should error on empty callType", function(done) {
       jsonReq
         .post('/validateCallType/')
         .send({})
@@ -203,7 +203,7 @@ describe("index.js", function() {
         });
     });
 
-    it("should validate a wrong callType", function(done) {
+    it("should error on wrong callType", function(done) {
       jsonReq
         .post('/validateCallType/')
         .send({'callType': 'wrong-type'})
@@ -216,7 +216,7 @@ describe("index.js", function() {
         });
     });
 
-    it("should work with the valid 'audio' callType", function(done) {
+    it("should accept a valid 'audio' callType", function(done) {
       jsonReq
         .post('/validateCallType/')
         .send({callType: 'audio'})
@@ -224,7 +224,7 @@ describe("index.js", function() {
         .end(done);
     });
 
-    it("should work with the valid 'audio-video' callType", function(done) {
+    it("should accept a valid'audio-video' callType", function(done) {
       jsonReq
         .post('/validateCallType/')
         .send({callType: 'audio-video'})
