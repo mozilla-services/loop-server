@@ -607,7 +607,7 @@ describe('websockets', function() {
       }));
     });
 
-    it("should close the connection if callee doesn't connect.",
+    it("should close the connection if callee doesn't connect",
       function(done) {
         caller.on('close', function() {
           caller.isClosed = true;
@@ -630,7 +630,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should close the connection if caller doesn't connect.",
+    it("should close the connection if caller doesn't connect",
       function(done) {
         callee.on('close', function() {
           callee.isClosed = true;
@@ -703,7 +703,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should close the connection if ringing for too long.",
+    it("should close the connection if ringing for too long",
       function(done) {
         var callerMsgCount = 0;
 
@@ -817,7 +817,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should close the connection if media-up not send by anybody.",
+    it("should close the connection if media-up not send by anybody",
       function(done) {
         var callerMsgCount = 0;
 
@@ -893,7 +893,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should close the connection if media-up send by only one party.",
+    it("should close the connection if media-up send by only one party",
       function(done) {
         var callerMsgCount = 0;
 
@@ -979,7 +979,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should not close if both parties got connected.", function(done) {
+    it("should not close if both parties got connected", function(done) {
       var callerMsgCount = 0;
 
       callee.on('close', function() {
