@@ -103,7 +103,7 @@ var conf = convict({
     env: "USER_MAC_ALGORITHM"
   },
   callUrlTokenSize: {
-    doc: "The callUrl short token size.",
+    doc: "The callUrl token size.",
     format: Number,
     default: 10
   },

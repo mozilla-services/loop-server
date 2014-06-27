@@ -18,21 +18,6 @@ function RedisStorage(options, settings) {
 }
 
 RedisStorage.prototype = {
-  revokeURLToken: function(token, callback) {
-    var ttl = (token.expires * 60 * 60 * 1000);
-    this._client.psetex('urlRevoked.' + token.uuid, ttl, "ok", callback);
-  },
-
-  isURLRevoked: function(urlId, callback) {
-    this._client.get('urlRevoked.' + urlId, function(err, result) {
-      if(result === null) {
-        callback(err, false);
-      } else {
-        callback(err, true);
-      }
-    });
-  },
-
   addUserSimplePushURL: function(userMac, simplepushURL, callback) {
     this._client.set('spurl.' + userMac, simplepushURL, callback);
   },
@@ -56,7 +41,7 @@ RedisStorage.prototype = {
     var self = this;
     this._client.setex(
       'callurl.' + urlData.urlId,
-      this._settings.tokenDuration,
+      urlData.expires - urlData.timestamp,
       JSON.stringify(urlData),
       function(err) {
         if (err) {
@@ -68,7 +53,7 @@ RedisStorage.prototype = {
       });
   },
 
-  getCallUrl: function(urlId, callback) {
+  getCallUrlData: function(urlId, callback) {
     this._client.get('callurl.' + urlId, function(err, url) {
       if (err) {
         callback(err);
@@ -78,7 +63,11 @@ RedisStorage.prototype = {
     });
   },
 
-  getUserUrls: function(userMac, callback) {
+  revokeURLToken: function(urlId, callback) {
+    this._client.del('callurl.' + urlId, callback);
+  },
+
+  getUserCallUrls: function(userMac, callback) {
     var self = this;
     this._client.smembers('userUrls.' + userMac, function(err, members) {
       if (err) {

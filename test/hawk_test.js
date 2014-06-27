@@ -44,10 +44,10 @@ describe("hawk middleware", function() {
   app.post('/require-or-create-session',
     hawk.getMiddleware(_getExistingSession, _createSession, setUser), ok_200);
 
-  app.post('/require-invalid-session', 
+  app.post('/require-invalid-session',
     hawk.getMiddleware(_getNonExistingSession, setUser), ok_200);
 
-  app.post('/require-or-create-invalid-session', 
+  app.post('/require-or-create-invalid-session',
     hawk.getMiddleware(_getNonExistingSession, _createSession, setUser),
     ok_200);
 

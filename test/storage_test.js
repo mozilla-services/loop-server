@@ -10,7 +10,7 @@ var sinon = require("sinon");
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
-var getShortToken = require("../loop/tokenlib").getShortToken;
+var generateToken = require("../loop/tokenlib").generateToken;
 
 var uuid = "1234";
 var user = "alexis@notmyidea.com";
@@ -22,7 +22,7 @@ var fakeCallInfo = conf.get("fakeCallInfo");
 
 describe("Storage", function() {
   function testStorage(name, createStorage) {
-    var storage, 
+    var storage,
         a_second = 1 / 3600,  // A second in hours.
         calls = [
         {
@@ -53,16 +53,19 @@ describe("Storage", function() {
       call = calls[0],
       urls = [
         {
-          urlId:      getShortToken(conf.get("callUrlTokenSize")),
-          timestamp:  0
-        },            
+          urlId:      generateToken(conf.get("callUrlTokenSize")),
+          timestamp:  0,
+          expires: conf.get("callUrlTimeout")
+        },
         {
-          urlId:      getShortToken(conf.get("callUrlTokenSize")),
-          timestamp:  1
-        },            
+          urlId:      generateToken(conf.get("callUrlTokenSize")),
+          timestamp:  1,
+          expires: conf.get("callUrlTimeout")
+        },
         {
-          urlId:      getShortToken(conf.get("callUrlTokenSize")),
-          timestamp:  2
+          urlId:      generateToken(conf.get("callUrlTokenSize")),
+          timestamp:  2,
+          expires: conf.get("callUrlTimeout")
         }
       ],
       urlData = urls[0];
@@ -74,7 +77,7 @@ describe("Storage", function() {
           hawkSessionDuration: conf.get('hawkSessionDuration')
         });
       });
-  
+
       afterEach(function(done) {
         storage.drop(function(err) {
           // Remove the storage reference so tests blow up in an explicit way.
@@ -90,35 +93,11 @@ describe("Storage", function() {
               if (err)  {
                 throw err;
               }
-              storage.isURLRevoked(uuid, function(err, value){
-                expect(value).to.equal(true);
+              storage.getCallUrlData(uuid, function(err, value){
+                expect(value).to.equal(null);
                 done(err);
               });
             });
-        });
-      });
-
-      describe('isURLRevoked', function() {
-        it("should not return an expired token", function(done) {
-          storage.revokeURLToken({uuid: uuid, expires: a_second / 100},
-            function(err) {
-              setTimeout(function() {
-                storage.isURLRevoked(uuid, function(err, value) {
-                  if (err) {
-                    throw err;
-                  }
-                  expect(value).to.equal(false);
-                  done();
-                });
-              }, 20);
-            });
-        });
-
-        it("should not return a non existing token", function(done) {
-          storage.isURLRevoked("does-not-exist", function(err, value) {
-            expect(value).to.equal(false);
-            done(err);
-          });
         });
       });
 
@@ -170,7 +149,7 @@ describe("Storage", function() {
             if (err) {
               throw err;
             }
-            storage.getUserUrls(userMac, function(err, results) {
+            storage.getUserCallUrls(userMac, function(err, results) {
               if (err) {
                 throw err;
               }
@@ -182,7 +161,7 @@ describe("Storage", function() {
         });
       });
 
-      describe("#getUserUrls", function() {
+      describe("#getUserCallUrls", function() {
         var sandbox;
 
         beforeEach(function() {
@@ -197,7 +176,7 @@ describe("Storage", function() {
           storage.addUserCallUrl(userMac, urls[0], function() {
             storage.addUserCallUrl(userMac, urls[1], function() {
               storage.addUserCallUrl(userMac, urls[2], function() {
-                storage.getUserUrls(userMac, function(err, results) {
+                storage.getUserCallUrls(userMac, function(err, results) {
                   expect(results).to.have.length(3);
                   expect(results).to.eql(urls);
                   done(err);
@@ -208,7 +187,7 @@ describe("Storage", function() {
         });
 
         it("should return an empty list if no urls", function(done) {
-          storage.getUserUrls(userMac, function(err, results) {
+          storage.getUserCallUrls(userMac, function(err, results) {
             expect(results).to.eql([]);
             done(err);
           });
@@ -220,7 +199,7 @@ describe("Storage", function() {
               cb("error");
             });
 
-          storage.getUserUrls(userMac, function(err, results) {
+          storage.getUserCallUrls(userMac, function(err, results) {
             expect(err).to.eql("error");
             expect(typeof results).to.eql("undefined");
             done();
@@ -228,13 +207,13 @@ describe("Storage", function() {
         });
       });
 
-      describe("#getCallUrl", function() {
+      describe("#getCallUrlData", function() {
         it("should be able to list a call-url by its id", function(done) {
           storage.addUserCallUrl(userMac, urlData, function(err) {
             if (err) {
               throw err;
             }
-            storage.getCallUrl(urlData.urlId, function(err, result) {
+            storage.getCallUrlData(urlData.urlId, function(err, result) {
               if (err) {
                 throw err;
               }
@@ -251,7 +230,7 @@ describe("Storage", function() {
           });
         });
       });
-      
+
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {

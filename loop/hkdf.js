@@ -7,7 +7,7 @@
 var HKDF = require('hkdf');
 
 // This namespace identifies how the Hawk credentials are being used (derived
-// etc.). 
+// etc.).
 // XXX This shouldn't be here but defined on the hawk middlware.
 var NAMESPACE = 'identity.mozilla.com/picl/v1/';
 

@@ -275,32 +275,20 @@ var corsEnabled = cors({
   }
 });
 
-var tokenManager = new tokenlib.TokenManager({
-  macSecret: conf.get('macSecret'),
-  encryptionSecret: conf.get('encryptionSecret'),
-  timeout: conf.get('callUrlTimeout')
-});
-
 /**
  * Middleware that validates the given token is valid (should be included into
  * the "token" parameter.
  **/
 function validateToken(req, res, next) {
-  try {
-    req.token = tokenManager.decode(req.param('token'));
-    storage.isURLRevoked(req.token.uuid, function(err, record) {
-      if (res.serverError(err)) return;
-
-      if (record) {
-        res.sendError("url", "token", "invalid token");
-        return;
-      }
-      next();
-    });
-  } catch(err) {
-    res.sendError("url", "token", "invalid token");
-    return;
-  }
+  storage.getCallUrlData(req.param('token'), function(err, urlData) {
+    if (res.serverError(err)) return;
+    if (urlData === null) {
+      res.sendError("url", "token", "invalid token");
+      return;
+    }
+    req.token = urlData;
+    next();
+  });
 }
 
 /**
@@ -325,6 +313,7 @@ function requireParams() {
         res.addError("body", item, "missing: " + item);
       });
       res.sendError();
+      return;
     }
     next();
   };
@@ -425,7 +414,7 @@ app.delete('/registration', requireHawkSession, validateSimplePushURL,
  **/
 app.post('/call-url', requireHawkSession, requireParams('callerId'),
   function(req, res) {
-    var expiresIn,
+    var expiresIn = conf.get('callUrlTimeout'),
         maxTimeout = conf.get('callUrlMaxTimeout');
 
     if (req.body.hasOwnProperty("expiresIn")) {
@@ -439,24 +428,28 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
         return;
       }
     }
-    var uuid = crypto.randomBytes(4).toString("hex");
-    var tokenPayload = {
-      user: req.user,
-      uuid: uuid,
-      callerId: req.body.callerId
+    var urlData = {
+      urlId: tokenlib.generateToken(conf.get("callUrlTokenSize")),
+      userMac: req.user,
+      callerId: req.body.callerId,
+      timestamp: parseInt(Date.now() / 1000)
     };
     if (expiresIn !== undefined) {
-      tokenPayload.expires = (Date.now() / tokenlib.ONE_HOUR) + expiresIn;
+      urlData.expires = urlData.timestamp + expiresIn * tokenlib.ONE_HOUR;
     }
 
     if (statsdClient !== undefined) {
       statsdClient.count('loop-call-urls', 1);
       statsdClient.count('loop-call-urls-' + req.user, 1);
     }
-    var tokenWrapper = tokenManager.encode(tokenPayload);
-    res.json(200, {
-      call_url: conf.get("webAppUrl").replace("{token}", tokenWrapper.token),
-      expiresAt: tokenWrapper.payload.expires
+
+    storage.addUserCallUrl(req.user, urlData, function(err) {
+      if (res.serverError(err)) return;
+
+      res.json(200, {
+        call_url: conf.get("webAppUrl").replace("{token}", urlData.urlId),
+        expiresAt: urlData.expires
+      });
     });
   });
 
@@ -552,11 +545,11 @@ app.get('/calls/:token', validateToken, function(req, res) {
  **/
 app.delete('/call-url/:token', requireHawkSession, validateToken,
   function(req, res) {
-    if (req.token.user !== req.user) {
+    if (req.token.userMac !== req.user) {
       res.json(403, "Forbidden");
       return;
     }
-    storage.revokeURLToken(req.token, function(err, record) {
+    storage.revokeURLToken(req.token.urlId, function(err, record) {
       if (res.serverError(err)) return;
 
       res.json(204, "");
@@ -567,7 +560,7 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
  * Initiate a call with the user identified by the given token.
  **/
 app.post('/calls/:token', validateToken, function(req, res) {
-  storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
+  storage.getUserSimplePushURLs(req.token.userMac, function(err, urls) {
     if (res.serverError(err)) return;
 
     if (!urls) {
@@ -575,7 +568,7 @@ app.post('/calls/:token', validateToken, function(req, res) {
       return;
     }
 
-    returnUserCallTokens(req.token.user, req.token.callerId, urls, res);
+    returnUserCallTokens(req.token.userMac, req.token.callerId, urls, res);
   });
 });
 
