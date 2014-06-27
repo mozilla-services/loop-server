@@ -28,7 +28,7 @@ function createCall(callId, user, cb) {
   }, cb);
 }
 
-describe('websockets', function() {
+describe.only('websockets', function() {
   var client, hawkCredentials, userHmac, sandbox;
 
   beforeEach(function(done) {
@@ -189,7 +189,7 @@ describe('websockets', function() {
         createCall(callId, hawkCredentials.id, function(err) {
           if (err) throw err;
           storage.setCallState(callId, "init",
-            conf.get("supervisoryTimerDuration"), function(err) {
+            conf.get("timers").supervisoryDuration, function(err) {
               if (err) throw err;
               done();
             });

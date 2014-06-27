@@ -492,7 +492,7 @@ describe("index.js", function() {
         sandbox.stub(storage, "setCallState",
           function(callId, state, expiricy, cb) {
             expect(state).eql("init");
-            expect(expiricy).eql(conf.get("supervisoryTimerDuration"));
+            expect(expiricy).eql(conf.get("timers").supervisoryDuration);
             cb(null);
           });
 

@@ -234,7 +234,7 @@ function returnUserCallTokens(user, callerId, urls, res) {
       if (res.serverError(err)) return;
 
       storage.setCallState(callId, "init",
-        conf.get("supervisoryTimerDuration"), function() {
+        conf.get("timers").supervisoryDuration, function() {
           if (res.serverError(err)) return;
 
           // Call SimplePush urls.

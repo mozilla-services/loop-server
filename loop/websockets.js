@@ -153,7 +153,7 @@ MessageHandler.prototype = {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
               });
-            }, self.conf.ringingTimerDuration * 1000);
+            }, self.conf.ringingDuration * 1000);
           }
         });
       });
@@ -276,7 +276,7 @@ MessageHandler.prototype = {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
               });
-            }, self.conf.connectionTimerDuration * 1000);
+            }, self.conf.connectionDuration * 1000);
           }
         },
         "media-up": {
@@ -400,10 +400,8 @@ module.exports = function(storage, tokenManager, logError, conf) {
     var pub = new PubSub(conf.get('pubsub'));
     var sub = new PubSub(conf.get('pubsub'));
     sub.setMaxListeners(0);
-    var messageHandler = new MessageHandler(pub, sub, storage, tokenManager, {
-      ringingTimerDuration: conf.get("ringingTimerDuration"),
-      connectionTimerDuration: conf.get("connectionTimerDuration")
-    });
+    var messageHandler = new MessageHandler(pub, sub, storage, tokenManager,
+      conf.get('timers'));
     var wss = new WebSocket.Server({server: server});
 
     wss.on('connection', function(ws) {

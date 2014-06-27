@@ -33,7 +33,9 @@
   "allowedOrigins": ["http://localhost:3000"],
   "statsdEnabled": true,
   "fxaAudiences": ["http://localhost:5000"],
-  "supervisoryTimerDuration": 0.100,
-  "ringingTimerDuration": 0.100,
-  "connectionTimerDuration": 0.100
+  "timers": {
+    "supervisoryDuration": 0.100,
+    "ringingDuration": 0.100,
+    "connectionDuration": 0.100
+  }
 }

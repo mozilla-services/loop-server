@@ -248,21 +248,23 @@ var conf = convict({
     format: Number,
     default: 30
   },
-  supervisoryTimerDuration: {
-    doc: "Websocket timeout for the supervisory timer (seconds)",
-    format: Number,
-    default: 10
-  },
-  ringingTimerDuration: {
-    doc: "Websocket timeout for the ringing timer (seconds)",
-    format: Number,
-    default: 30
-  },
-  connectionTimerDuration: {
-    doc: "Websocket timeout for the connection timer (seconds)",
-    format: Number,
-    default: 5
-  },
+  timers: {
+    supervisoryDuration: {
+      doc: "Websocket timeout for the supervisory timer (seconds)",
+      format: Number,
+      default: 10
+    },
+    ringingDuration: {
+      doc: "Websocket timeout for the ringing timer (seconds)",
+      format: Number,
+      default: 30
+    },
+    connectionDuration: {
+      doc: "Websocket timeout for the connection timer (seconds)",
+      format: Number,
+      default: 5
+    }
+  }
 });
 
 
