@@ -60,7 +60,8 @@ RedisStorage.prototype = {
   },
 
   getUserSimplePushURLs: function(userMac, callback) {
-    this._client.lrange('spurl.' + userMac, 0, 9, callback);
+    this._client.lrange('spurl.' + userMac,
+      0, this._settings.maxSimplePushUrls, callback);
   },
 
   removeSimplePushURL: function(userMac, simplepushURL, callback) {
