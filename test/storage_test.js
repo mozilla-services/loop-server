@@ -30,6 +30,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
+          callState:    "init",
           timestamp:    0
         },
         {
@@ -38,6 +39,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
+          callState:    "init",
           timestamp:    1
         },
         {
@@ -46,6 +48,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
+          callState:    "terminated",
           timestamp:    2
         }
       ],
@@ -180,13 +183,20 @@ describe("Storage", function() {
         });
 
         it("should keep a list of the user calls", function(done) {
-          storage.addUserCall(userMac, calls[0], function() {
-            storage.addUserCall(userMac, calls[1], function() {
-              storage.addUserCall(userMac, calls[2], function() {
+          storage.addUserCall(userMac, calls[0], function(err) {
+            if (err) throw err;
+            storage.addUserCall(userMac, calls[1], function(err) {
+              if (err) throw err;
+              storage.addUserCall(userMac, calls[2], function(err) {
+                if (err) throw err;
                 storage.getUserCalls(userMac, function(err, results) {
+                  if (err) throw err;
                   expect(results).to.have.length(3);
-                  expect(results).to.eql(calls);
-                  done(err);
+                  expect(results).to.eql(calls.map(function(call, key) {
+                    call.callState = (key === 2) ? "terminated" : "init";
+                    return call;
+                  }));
+                  done();
                 });
               });
             });

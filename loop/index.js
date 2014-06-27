@@ -229,6 +229,7 @@ function returnUserCallTokens(user, callerId, urls, res) {
       'userMac': user,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
+      'callState': "init",
       'timestamp': currentTimestamp
     }, function(err) {
       if (res.serverError(err)) return;
