@@ -37,8 +37,12 @@ RedisStorage.prototype = {
   },
 
   addUserCallUrl: function(userMac, urlData, callback) {
-    // In that case use setex to add the metadata of the url.
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
     var self = this;
+    // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + urlData.urlId,
       urlData.expires - urlData.timestamp,
@@ -108,6 +112,10 @@ RedisStorage.prototype = {
   },
 
   addUserCall: function(userMac, call, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
     var self = this;
     this._client.setex(
       'call.' + call.callId,
@@ -124,6 +132,10 @@ RedisStorage.prototype = {
   },
 
   getUserCalls: function(userMac, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
       if (err) {

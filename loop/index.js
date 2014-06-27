@@ -567,7 +567,6 @@ app.post('/calls/:token', validateToken, function(req, res) {
       res.json(410, 'Gone');
       return;
     }
-
     returnUserCallTokens(req.token.userMac, req.token.callerId, urls, res);
   });
 });

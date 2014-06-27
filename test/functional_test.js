@@ -794,7 +794,7 @@ describe("HTTP API exposed by the server", function() {
 
       storage.addUserCallUrl(userHmac, {
         urlId: token,
-        user: userHmac,
+        userMac: userHmac,
         callerId: callerId,
         timestamp: timestamp,
         expires: timestamp + conf.get("callUrlTimeout")
