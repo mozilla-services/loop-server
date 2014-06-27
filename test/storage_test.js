@@ -171,16 +171,36 @@ describe("Storage", function() {
           function(done) {
             storage.getUserSimplePushURLs("does-not-exist",
               function(err, urls) {
-                if (err) {
-                  throw err;
-                }
+                if (err) throw err;
                 expect(urls).to.eql([]);
                 done();
               });
           });
       });
 
-      
+      describe("#removeSimplePushURL", function() {
+        it("should delete an existing simple push URL", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                if (err) throw err;
+                storage.removeSimplePushURL(userMac, simplePushURL,
+                  function(err) {
+                    if (err) throw err;
+                    storage.getUserSimplePushURLs(userMac,
+                      function(err, urls) {
+                        if (err) throw err;
+                        expect(urls.length).to.eql(1);
+                        expect(urls).to.not.contain(simplePushURL);
+                        done();
+                      });
+                  });
+              });
+          });
+        });
+      });
+
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {

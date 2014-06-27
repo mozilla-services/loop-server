@@ -64,7 +64,7 @@ RedisStorage.prototype = {
   },
 
   removeSimplePushURL: function(userMac, simplepushURL, callback) {
-    this._client.del('spurl.' + userMac, callback);
+    this._client.lrem('spurl.' + userMac, 0, simplepushURL, callback);
   },
 
   addUserCall: function(userMac, call, callback) {
