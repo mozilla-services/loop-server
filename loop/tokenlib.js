@@ -10,15 +10,13 @@ var ONE_HOUR = 60 * 60;
 /**
  * Return a url token of [a-zA-Z0-9-_] character and size length.
  */
-function generateToken(size) {
-  return crypto.randomBytes(size)
+function generateToken(bytes) {
+  return crypto.randomBytes(bytes)
     .toString("base64")
     .replace(/\=/g, '')
     .replace(/\//g, '_')
-    .replace(/\+/g, '-')
-    .substr(0, size);
+    .replace(/\+/g, '-');
 }
-
 
 module.exports = {
   generateToken: generateToken,

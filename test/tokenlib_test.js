@@ -8,15 +8,6 @@ var tokenlib = require("../loop/tokenlib");
 
 describe("tokenlib", function() {
   describe("#generateToken", function() {
-    it("should return a token of size lengths.", function() {
-      var shortToken, s = 10;
-      while (s > 0) {
-        shortToken = tokenlib.generateToken(s);
-        expect(shortToken).to.have.length(s);
-        s--;
-      }
-    });
-
     it("should return a token of [a-zA-Z0-9_-].", function() {
       var shortToken, s = 10;
       while (s > 0) {
