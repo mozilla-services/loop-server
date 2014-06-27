@@ -84,8 +84,7 @@ describe("index.js", function() {
     });
 
     it("should return a 404 if the token had been revoked", function(done) {
-      storage.addUserCallUrlData("natim", {
-        urlId: "1234",
+      storage.addUserCallUrlData("natim", "1234", {
         timestamp: Date.now(),
         expires: Date.now() + conf.get("callUrlTimeout")
       }, function(err) {
@@ -101,8 +100,7 @@ describe("index.js", function() {
     });
 
     it("should return a 200 if the token is valid.", function(done) {
-      storage.addUserCallUrlData("natim", {
-        urlId: "1234",
+      storage.addUserCallUrlData("natim", "1234", {
         timestamp: Date.now(),
         expires: Date.now() + conf.get("callUrlTimeout")
       }, function(err) {

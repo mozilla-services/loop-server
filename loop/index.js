@@ -280,13 +280,14 @@ var corsEnabled = cors({
  * the "token" parameter.
  **/
 function validateToken(req, res, next) {
-  storage.getCallUrlData(req.param('token'), function(err, urlData) {
+  req.token = req.param('token');
+  storage.getCallUrlData(req.token, function(err, urlData) {
     if (res.serverError(err)) return;
     if (urlData === null) {
       res.send(404, "Not found");
       return;
     }
-    req.token = urlData;
+    req.callUrlData = urlData;
     next();
   });
 }
@@ -428,8 +429,8 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
         return;
       }
     }
+    var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
     var urlData = {
-      urlId: tokenlib.generateToken(conf.get("callUrlTokenSize")),
       userMac: req.user,
       callerId: req.body.callerId,
       timestamp: parseInt(Date.now() / 1000)
@@ -443,11 +444,11 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
       statsdClient.count('loop-call-urls-' + req.user, 1);
     }
 
-    storage.addUserCallUrlData(req.user, urlData, function(err) {
+    storage.addUserCallUrlData(req.user, token, urlData, function(err) {
       if (res.serverError(err)) return;
 
       res.json(200, {
-        call_url: conf.get("webAppUrl").replace("{token}", urlData.urlId),
+        call_url: conf.get("webAppUrl").replace("{token}", token),
         expiresAt: urlData.expires
       });
     });
@@ -545,11 +546,11 @@ app.get('/calls/:token', validateToken, function(req, res) {
  **/
 app.delete('/call-url/:token', requireHawkSession, validateToken,
   function(req, res) {
-    if (req.token.userMac !== req.user) {
+    if (req.callUrlData.userMac !== req.user) {
       res.json(403, "Forbidden");
       return;
     }
-    storage.revokeURLToken(req.token.urlId, function(err, record) {
+    storage.revokeURLToken(req.token, function(err, record) {
       if (res.serverError(err)) return;
 
       res.json(204, "");
@@ -560,14 +561,16 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
  * Initiate a call with the user identified by the given token.
  **/
 app.post('/calls/:token', validateToken, function(req, res) {
-  storage.getUserSimplePushURLs(req.token.userMac, function(err, urls) {
+  storage.getUserSimplePushURLs(req.callUrlData.userMac, function(err, urls) {
     if (res.serverError(err)) return;
 
     if (!urls) {
       res.json(410, 'Gone');
       return;
     }
-    returnUserCallTokens(req.token.userMac, req.token.callerId, urls, res);
+    returnUserCallTokens(
+      req.callUrlData.userMac, req.callUrlData.callerId, urls, res
+    );
   });
 });
 

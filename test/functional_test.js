@@ -358,7 +358,7 @@ describe("HTTP API exposed by the server", function() {
 
           storage.getCallUrlData(token, function(err, urlData) {
             if (err) throw err;
-            expect(urlData.urlId).not.eql(undefined);
+            expect(urlData.userMac).not.eql(undefined);
             done();
           });
         });
@@ -591,8 +591,7 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
       var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-      storage.addUserCallUrlData(user, {
-        urlId: token,
+      storage.addUserCallUrlData(user, token, {
         timestamp: Date.now(),
         expires: Date.now() + conf.get("callUrlTimeout")
       }, function(err) {
@@ -616,8 +615,7 @@ describe("HTTP API exposed by the server", function() {
       clock = sinon.useFakeTimers(fakeNow);
 
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-      storage.addUserCallUrlData(userHmac, {
-        urlId: token,
+      storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
         timestamp: Date.now(),
         expires: Date.now() + conf.get("callUrlTimeout")
@@ -654,8 +652,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should return a 403 if the token doesn't belong to the user",
       function(done){
-        storage.addUserCallUrlData(userHmac, {
-          urlId: token,
+        storage.addUserCallUrlData(userHmac, token, {
           userMac: "h4x0r",
           timestamp: Date.now(),
           expires: Date.now() + conf.get("callUrlTimeout")
@@ -792,8 +789,7 @@ describe("HTTP API exposed by the server", function() {
 
       var timestamp = Date.now();
 
-      storage.addUserCallUrlData(userHmac, {
-        urlId: token,
+      storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
         callerId: callerId,
         timestamp: timestamp,

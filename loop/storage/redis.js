@@ -36,7 +36,7 @@ RedisStorage.prototype = {
     this._client.del('spurl.' + userMac, callback);
   },
 
-  addUserCallUrlData: function(userMac, urlData, callback) {
+  addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
       return;
@@ -44,7 +44,7 @@ RedisStorage.prototype = {
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
-      'callurl.' + urlData.urlId,
+      'callurl.' + callUrlId,
       urlData.expires - urlData.timestamp,
       JSON.stringify(urlData),
       function(err) {
@@ -53,12 +53,12 @@ RedisStorage.prototype = {
           return;
         }
         self._client.sadd('userUrls.' + userMac,
-                          'callurl.' + urlData.urlId, callback);
+                          'callurl.' + callUrlId, callback);
       });
   },
 
-  getCallUrlData: function(urlId, callback) {
-    this._client.get('callurl.' + urlId, function(err, url) {
+  getCallUrlData: function(callUrlId, callback) {
+    this._client.get('callurl.' + callUrlId, function(err, url) {
       if (err) {
         callback(err);
         return;
@@ -67,8 +67,8 @@ RedisStorage.prototype = {
     });
   },
 
-  revokeURLToken: function(urlId, callback) {
-    this._client.del('callurl.' + urlId, callback);
+  revokeURLToken: function(callUrlId, callback) {
+    this._client.del('callurl.' + callUrlId, callback);
   },
 
   getUserCallUrls: function(userMac, callback) {
