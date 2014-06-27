@@ -76,14 +76,14 @@ describe("index.js", function() {
         .end(done);
     });
 
-    it("should return a 400 if the token is invalid.", function(done) {
+    it("should return a 404 if the token is invalid.", function(done) {
       jsonReq
         .get('/validateToken/invalidToken')
-        .expect(400, /invalid token/)
+        .expect(404)
         .end(done);
     });
 
-    it("should return a 400 if the token had been revoked", function(done) {
+    it("should return a 404 if the token had been revoked", function(done) {
       storage.addUserCallUrlData("natim", {
         urlId: "1234",
         timestamp: Date.now(),
@@ -94,7 +94,7 @@ describe("index.js", function() {
           if (err) throw err;
           jsonReq
             .get('/validateToken/1234')
-            .expect(400, /invalid token/)
+            .expect(404)
             .end(done);
         });
       });
