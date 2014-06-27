@@ -420,7 +420,7 @@ describe("index.js", function() {
             callerId: callerId,
             urls: urls,
             callToken: callToken,
-            issuer: calleeFriendlyName
+            calleeFriendlyName: calleeFriendlyName
           })
           .expect(200)
           .end(function(err, res) {
@@ -441,7 +441,7 @@ describe("index.js", function() {
               callerId: callerId,
               urls: urls,
               callToken: callToken,
-              issuer: calleeFriendlyName
+              calleeFriendlyName: calleeFriendlyName
             })
             .expect(200)
             .end(function(err, res) {
