@@ -475,6 +475,7 @@ describe("index.js", function() {
                 delete items[0].timestamp;
                 expect(items[0]).eql({
                   callerId: callerId,
+                  callState: "init",
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,

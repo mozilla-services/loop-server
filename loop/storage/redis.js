@@ -4,6 +4,7 @@
 
 "use strict";
 var redis = require("redis");
+var async = require('async');
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -53,6 +54,10 @@ RedisStorage.prototype = {
 
   addUserCall: function(userMac, call, callback) {
     var self = this;
+    // Clone the args to prevent from modifying it.
+    var callCopy = JSON.parse(JSON.stringify(call));
+    var state = callCopy.callState;
+    delete callCopy.callState;
     this._client.setex(
       'call.' + call.callId,
       this._settings.callDuration,
@@ -62,8 +67,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        self._client.sadd('userCalls.' + userMac,
-                          'call.' + call.callId, callback);
+        self.setCallState(call.callId, state, function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          self._client.sadd('userCalls.' + userMac,
+                            'call.' + call.callId, callback);
+        });
       });
   },
 
@@ -96,13 +107,28 @@ RedisStorage.prototype = {
           return a.timestamp - b.timestamp;
         });
 
+        function getState() {
+          async.map(pendingCalls, function(call, cb) {
+            self.getCallState(call.callId, function(err, state) {
+              if (err) {
+                cb(err);
+                return;
+              }
+              call.callState = state;
+              cb(null, call);
+            });
+          }, function(err, results) {
+            callback(null, results);
+          });
+        }
+
         if (expired.length > 0) {
           self._client.srem(expired, function(err, res) {
-            callback(null, pendingCalls);
+            getState();
           });
           return;
         }
-        callback(null, pendingCalls);
+        getState();
       });
     });
   },
