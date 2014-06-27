@@ -34,8 +34,8 @@
   "statsdEnabled": true,
   "fxaAudiences": ["http://localhost:5000"],
   "timers": {
-    "supervisoryDuration": 0.100,
-    "ringingDuration": 0.100,
-    "connectionDuration": 0.100
+    "supervisoryDuration": 0.050,
+    "ringingDuration": 0.050,
+    "connectionDuration": 0.050
   }
 }
