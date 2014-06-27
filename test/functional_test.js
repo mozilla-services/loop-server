@@ -507,12 +507,12 @@ describe("HTTP API exposed by the server", function() {
         });
       });
 
-    it("should be able to override an old SimplePush URL.", function(done) {
+    it("should not override old SimplePush URLs.", function(done) {
       register(url1, expectedAssertion, hawkCredentials, function() {
         register(url2, expectedAssertion, hawkCredentials, function() {
           storage.getUserSimplePushURLs(userHmac, function(err, records) {
             if (err) throw err;
-            expect(records.length).eql(1);
+            expect(records.length).eql(2);
             done();
           });
         });

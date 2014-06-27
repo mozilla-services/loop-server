@@ -55,7 +55,8 @@ describe("Storage", function() {
       beforeEach(function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
-          hawkSessionDuration: conf.get('hawkSessionDuration')
+          hawkSessionDuration: conf.get('hawkSessionDuration'),
+          maxSimplePushUrls: conf.get('maxSimplePushUrls')
         });
       });
   
@@ -120,18 +121,49 @@ describe("Storage", function() {
           });
         });
 
-        it("should overwrite existing simple push URLs", function(done) {
+        it("should not overwrite existing simple push URLs", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
             storage.addUserSimplePushURL(userMac, simplePushURL + '2',
               function(err) {
                 storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                  expect(urls).to.have.length(1);
-                  expect(urls).to.eql([simplePushURL + '2']);
+                  expect(urls).to.have.length(2);
+                  expect(urls).to.contain(simplePushURL);
+                  expect(urls).to.contain(simplePushURL + '2');
                   done(err);
                 });
               });
           });
         });
+
+        it("should dedupe URLs", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL,
+              function(err) {
+                storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                  expect(urls).to.have.length(1);
+                  expect(urls).to.contain(simplePushURL);
+                  done(err);
+                });
+              });
+          });
+        });
+
+        it("should not store more than X records", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                storage.addUserSimplePushURL(userMac, simplePushURL + "3",
+                  function(err) {
+                    storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                      expect(urls).to.have.length(2);
+                      expect(urls).to.not.contain(simplePushURL);
+                      done(err);
+                    });
+                  });
+              });
+          });
+        });
+
       });
 
       describe("#getUserSimplePushURLs", function() {
@@ -139,16 +171,36 @@ describe("Storage", function() {
           function(done) {
             storage.getUserSimplePushURLs("does-not-exist",
               function(err, urls) {
-                if (err) {
-                  throw err;
-                }
+                if (err) throw err;
                 expect(urls).to.eql([]);
                 done();
               });
           });
       });
 
-      
+      describe("#removeSimplePushURL", function() {
+        it("should delete an existing simple push URL", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                if (err) throw err;
+                storage.removeSimplePushURL(userMac, simplePushURL,
+                  function(err) {
+                    if (err) throw err;
+                    storage.getUserSimplePushURLs(userMac,
+                      function(err, urls) {
+                        if (err) throw err;
+                        expect(urls.length).to.eql(1);
+                        expect(urls).to.not.contain(simplePushURL);
+                        done();
+                      });
+                  });
+              });
+          });
+        });
+      });
+
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {

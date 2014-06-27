@@ -230,6 +230,11 @@ var conf = convict({
     doc: "Timeout for requests when doing heartbeat checks (ms)",
     format: Number,
     default: 30
+  },
+  maxSimplePushUrls: {
+    doc: "The maximum number of simple-push urls stored for an user",
+    format: Number,
+    default: 10
   }
 });
 

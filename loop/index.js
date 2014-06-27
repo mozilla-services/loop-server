@@ -40,7 +40,8 @@ if (conf.get("fakeTokBox") === true) {
 var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
-  'hawkSessionDuration': conf.get('hawkSessionDuration')
+  'hawkSessionDuration': conf.get('hawkSessionDuration'),
+  'maxSimplePushUrls': conf.get('maxSimplePushUrls')
 });
 
 var tokBox = new TokBox(conf.get('tokBox'));
