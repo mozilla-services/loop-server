@@ -24,6 +24,7 @@ var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
 var authenticate = require("../loop").authenticate;
 var validateSimplePushURL = require("../loop").validateSimplePushURL;
+var validateCallType = require("../loop").validateCallType;
 var returnUserCallTokens = require("../loop").returnUserCallTokens;
 var tokBox = require("../loop").tokBox;
 var request = require("../loop").request;
@@ -177,6 +178,56 @@ describe("index.js", function() {
       jsonReq
         .post('/validateSP/')
         .send({'simple_push_url': 'http://this-is-an-url'})
+        .expect(200)
+        .end(done);
+    });
+
+  });
+
+  describe("#validateCallType", function() {
+    // Create a route with the validateSimplePushURL middleware installed.
+    app.post('/validateCallType/', validateCallType, function(req, res) {
+      res.json(200, "ok");
+    });
+
+    it("should validate the callType an empty callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res.body, "body", "callType",
+                              "missing: callType");
+          done();
+        });
+    });
+
+    it("should validate a wrong callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({'callType': 'wrong-type'})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res.body, "body", "callType",
+                              "Should be 'audio' or 'audio-video'");
+          done();
+        });
+    });
+
+    it("should work with the valid 'audio' callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({callType: 'audio'})
+        .expect(200)
+        .end(done);
+    });
+
+    it("should work with the valid 'audio-video' callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({callType: 'audio-video'})
         .expect(200)
         .end(done);
     });
@@ -366,7 +417,8 @@ describe("index.js", function() {
         callerId: req.body.callerId,
         urls: req.body.urls,
         calleeFriendlyName: req.body.calleeFriendlyName,
-        callToken: req.body.callToken
+        callToken: req.body.callToken,
+        callType: req.body.callType
       }, res);
     });
 
@@ -385,7 +437,7 @@ describe("index.js", function() {
 
       supertest(app)
         .post('/returnUserCallTokens')
-        .send({})
+        .send({callType: "audio"})
         .expect(503)
         .end(done);
     });
@@ -420,7 +472,8 @@ describe("index.js", function() {
             callerId: callerId,
             urls: urls,
             callToken: callToken,
-            calleeFriendlyName: calleeFriendlyName
+            calleeFriendlyName: calleeFriendlyName,
+            callType: "audio"
           })
           .expect(200)
           .end(function(err, res) {
@@ -441,7 +494,8 @@ describe("index.js", function() {
               callerId: callerId,
               urls: urls,
               callToken: callToken,
-              calleeFriendlyName: calleeFriendlyName
+              calleeFriendlyName: calleeFriendlyName,
+              callType: "audio"
             })
             .expect(200)
             .end(function(err, res) {
@@ -470,7 +524,8 @@ describe("index.js", function() {
               callerId: callerId,
               urls: urls,
               callToken: callToken,
-              calleeFriendlyName: calleeFriendlyName
+              calleeFriendlyName: calleeFriendlyName,
+              callType: "audio"
             })
             .expect(200)
             .end(function(err, res) {
@@ -487,7 +542,8 @@ describe("index.js", function() {
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,
-                  callToken: callToken
+                  callToken: callToken,
+                  callType: "audio"
                 });
                 done();
               });
@@ -505,13 +561,13 @@ describe("index.js", function() {
           .send({
             callee: user,
             callerId: callerId,
-            urls: urls,
-            callToken: callToken
+            callToken: callToken,
+            callType: "audio",
+            urls: urls
           })
           .expect(503)
           .end(done);
       });
     });
   });
-
 });

@@ -236,7 +236,8 @@ function returnUserCallTokens(options, res) {
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'timestamp': currentTimestamp,
-      'callToken': options.callToken
+      'callToken': options.callToken,
+      'callType': options.callType
     }, function(err, record){
       if (res.serverError(err)) return;
 
@@ -345,11 +346,24 @@ function requireParams() {
  * Middleware that ensures a valid simple push url is present in the request.
  **/
 function validateSimplePushURL(req, res, next) {
-  requireParams(["simple_push_url"])(req, res, function() {
+  requireParams("simple_push_url")(req, res, function() {
     req.simplePushURL = req.body.simple_push_url;
     if (req.simplePushURL.indexOf('http') !== 0) {
       res.sendError("body", "simple_push_url",
                     "simple_push_url should be a valid url");
+      return;
+    }
+    next();
+  });
+}
+
+/**
+ * Middleware that ensures a valid callType is present in the request.
+ **/
+function validateCallType(req, res, next) {
+  requireParams("callType")(req, res, function() {
+    if (req.body.callType !== "audio" && req.body.callType !== "audio-video") {
+      res.sendError("body", "callType", "Should be 'audio' or 'audio-video'");
       return;
     }
     next();
@@ -475,7 +489,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
 /**
  * List all the pending calls for the authenticated user.
  **/
-app.get("/calls", requireHawkSession, function(req, res) {
+app.get('/calls', requireHawkSession, function(req, res) {
     if (!req.query.hasOwnProperty('version')) {
       res.sendError("querystring", "version", "missing: version");
       return;
@@ -495,7 +509,8 @@ app.get("/calls", requireHawkSession, function(req, res) {
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
-          callToken: record.callToken
+          callToken: record.callToken,
+          callType: record.callType
         };
       });
 
@@ -507,7 +522,7 @@ app.get("/calls", requireHawkSession, function(req, res) {
  * Add a call from a registered user to another registered user.
  **/
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
-  function(req, res) {
+  validateCallType, function(req, res) {
 
     function callUser(callee) {
       return function() {
@@ -517,7 +532,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
           callerId: undefined,
           urls: callees[callee],
           callToken: undefined,
-          calleeFriendlyName: undefined
+          calleeFriendlyName: undefined,
+          callType: req.body.callType
         }, res);
       }();
     }
@@ -586,7 +602,7 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
 /**
  * Initiate a call with the user identified by the given token.
  **/
-app.post('/calls/:token', validateToken, function(req, res) {
+app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
   storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
     if (res.serverError(err)) return;
 
@@ -599,7 +615,8 @@ app.post('/calls/:token', validateToken, function(req, res) {
       callerId: req.token.callerId,
       urls: urls,
       callToken: req.param('token'),
-      calleeFriendlyName: req.token.issuer
+      calleeFriendlyName: req.token.issuer,
+      callType: req.token.callType
     }, res);
   });
 });
@@ -665,6 +682,7 @@ module.exports = {
   authenticate: authenticate,
   requireHawkSession: requireHawkSession,
   validateSimplePushURL: validateSimplePushURL,
+  validateCallType: validateCallType,
   returnUserCallTokens: returnUserCallTokens,
   server: server,
   shutdown: shutdown
