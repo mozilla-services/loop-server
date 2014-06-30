@@ -10,7 +10,6 @@ var crypto = require("crypto");
 var ws = require('ws');
 
 var Token = require("../loop/token").Token;
-var tokenlib = require("../loop/tokenlib");
 
 var loop = require("../loop");
 var server = loop.server;
