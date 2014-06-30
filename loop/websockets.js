@@ -111,7 +111,7 @@ MessageHandler.prototype = {
         if (serverError(err, callback)) return;
 
         // Alert clients on call state changes.
-        self.sub.on("message", function listener(channel, data) {
+        var listener = function(channel, data) {
           var parts = data.split(":");
           var receivedState = parts[0];
           var reason = parts[1];
@@ -121,7 +121,6 @@ MessageHandler.prototype = {
             if (receivedState === "terminated" ||
                 receivedState === "connected") {
               terminate = "closeConnection";
-              self.sub.removeListener("message", listener);
             }
             if (session.receivedState !== receivedState) {
               session.receivedState = receivedState;
@@ -137,7 +136,11 @@ MessageHandler.prototype = {
               callback(null, message, terminate);
             }
           }
-        });
+        };
+
+        self.sub.on("message", listener);
+        // keep track of the active listeners
+        session.subListeners.push(listener);
 
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
@@ -369,6 +372,12 @@ MessageHandler.prototype = {
     if (missingParams.length > 0) {
       throw new Error("Missing parameters: " + missingParams.join(', '));
     }
+  },
+  clearSession: function(session) {
+    var self = this;
+    session.subListeners.forEach(function(listener) {
+      self.sub.removeListener("message", listener);
+    });
   }
 };
 
@@ -388,7 +397,9 @@ module.exports = function(storage, tokenManager, logError, conf) {
 
     wss.on('connection', function(ws) {
       // We have a different session for each connection.
-      var session = {};
+      var session = {
+        subListeners: []
+      };
       ws.on('message', function(data) {
         try {
           messageHandler.dispatch(session, data,
@@ -418,6 +429,7 @@ module.exports = function(storage, tokenManager, logError, conf) {
 
               if (terminate === "closeConnection") {
                 ws.close();
+                messageHandler.clearSession(session);
               }
             });
         } catch(e) {
@@ -425,10 +437,12 @@ module.exports = function(storage, tokenManager, logError, conf) {
           logError(e);
           ws.send(messageHandler.createError("Service Unavailable"));
           ws.close();
+          messageHandler.clearSession(session);
         }
       });
       ws.on('close', function() {
         ws.close();
+        messageHandler.clearSession(session);
       });
       ws.on('error', console.log);
     });
