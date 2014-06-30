@@ -68,7 +68,7 @@ MessageHandler.prototype = {
   handleHello: function(session, message, callback) {
     // Check that message contains requireParams, otherwise return an error.
     try {
-      this.requireParams(message, 'callId', 'authType', 'auth');
+      this.requireParams(message, 'callId', 'auth');
     } catch (e) {
       callback(e);
       return;
@@ -79,12 +79,24 @@ MessageHandler.prototype = {
     session.callId = message.callId;
 
     var self = this;
-    var authType = message.authType.toLowerCase();
     var tokenId = message.auth;
 
+    self.storage.getCall(session.callId, function(err, call) {
+      if (serverError(err, callback)) return;
 
-    function processCall(call) {
-      session.type = (call.userMac === session.user) ? "callee" : "caller";
+      if (call === null) {
+        callback(new Error("bad callId"));
+        return;
+      }
+
+      if (call.wsCalleeToken === tokenId) {
+        session.type = "callee";
+      } else if (call.wsCallerToken === tokenId) {
+        session.type = "caller";
+      } else {
+        callback(new Error("bad authentication"));
+        return;
+      }
 
       // Get current call state to answer hello message.
       self.storage.getCallState(session.callId, function(err, currentState) {
@@ -103,15 +115,19 @@ MessageHandler.prototype = {
               terminate = "closeConnection";
               self.sub.removeListener("message", listener);
             }
-            var message = {
-              messageType: "progress",
-              state: receivedState
-            };
-            if (reason !== undefined) {
-              message.reason = reason;
-            }
+            if (session.receivedState !== receivedState) {
+              session.receivedState = receivedState;
 
-            callback(null, message, terminate);
+              var message = {
+                messageType: "progress",
+                state: receivedState
+              };
+              if (reason !== undefined) {
+                message.reason = reason;
+              }
+
+              callback(null, message, terminate);
+            }
           }
         });
 
@@ -157,53 +173,6 @@ MessageHandler.prototype = {
           }
         });
       });
-    }
-
-    self.storage.getCall(session.callId, function(err, call) {
-      if (serverError(err, callback)) return;
-
-      if (call === null) {
-        callback(new Error("bad callId"));
-        return;
-      }
-
-      if (authType === "hawk") {
-        self.storage.getHawkSession(tokenId, function(err, hawkCredentials) {
-          if (serverError(err, callback)) return;
-
-          if (hawkCredentials === null) {
-            callback(new Error("bad authentication"));
-            return;
-          }
-
-          self.storage.getHawkUser(tokenId, function(err, user) {
-            if (serverError(err, callback)) return;
-
-            if (user !== null) {
-              session.user = user;
-            } else {
-              session.user = tokenId;
-            }
-
-            processCall(call);
-          });
-        });
-      } else if (authType === "token") {
-        var token;
-
-        try {
-          token = self.tokenManager.decode(tokenId);
-        } catch (e) {
-          callback(new Error("Bad token: " + e.message));
-          return;
-        }
-
-        if (token.user !== call.userMac) {
-          callback(new Error("Bad token for this callId."));
-          return;
-        }
-        processCall(call);
-      }
     });
   },
 

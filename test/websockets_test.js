@@ -24,6 +24,8 @@ function createCall(callId, user, cb) {
     'userMac': user,
     'sessionId': '1234',
     'calleeToken': '1234',
+    'wsCallerToken': "callerToken",
+    'wsCalleeToken': "calleeToken",
     'timestamp': Date.now()
   }, cb);
 }
@@ -74,8 +76,7 @@ describe('websockets', function() {
       });
       client.send(JSON.stringify({
         messageType: 'hello',
-        authType: 'Hawk',
-        auth: '1234',
+        auth: 'wrongCalleeToken',
         callId: callId
       }));
     });
@@ -92,23 +93,13 @@ describe('websockets', function() {
 
       client.send(JSON.stringify({
         messageType: 'hello',
-        authType: 'Hawk',
-        auth: hawkCredentials.id,
+        auth: "calleeToken",
         callId: '1234'
       }));
     });
 
   it('should accept caller authenticating with a valid token url',
     function(done) {
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
-      });
-      var tokenWrapper = tokenManager.encode({
-        uuid: '1234',
-        user: hawkCredentials.id,
-        callerId: 'Alexis'
-      });
       var callId = crypto.randomBytes(16).toString('hex');
 
       // Create a call and set its state to "init".
@@ -125,8 +116,7 @@ describe('websockets', function() {
 
           client.send(JSON.stringify({
             messageType: 'hello',
-            authType: "token",
-            auth: tokenWrapper.token,
+            auth: "callerToken",
             callId: callId
           }));
         });
@@ -149,8 +139,7 @@ describe('websockets', function() {
 
         client.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -214,6 +203,7 @@ describe('websockets', function() {
 
         caller.on('message', function(data) {
           var message = JSON.parse(data);
+          console.log(message);
           // First message should be "hello/init".
           if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
@@ -230,16 +220,14 @@ describe('websockets', function() {
         // Caller registers to the socket.
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         // Callee registers to the socket.
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -319,15 +307,13 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -401,15 +387,13 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -456,15 +440,13 @@ describe('websockets', function() {
 
       caller.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Token",
-        auth: token,
+        auth: "callerToken",
         callId: callId
       }));
 
       callee.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Hawk",
-        auth: hawkCredentials.id,
+        auth: "calleeToken",
         callId: callId
       }));
     });
@@ -488,8 +470,7 @@ describe('websockets', function() {
 
       caller.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Token",
-        auth: token,
+        auth: "callerToken",
         callId: callId
       }));
     });
@@ -506,8 +487,7 @@ describe('websockets', function() {
 
       caller.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Token",
-        auth: token,
+        auth: "callerToken",
         callId: callId
       }));
     });
@@ -536,8 +516,7 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
       });
@@ -565,8 +544,7 @@ describe('websockets', function() {
 
       caller.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Token",
-        auth: token,
+        auth: "callerToken",
         callId: callId
       }));
     });
@@ -594,15 +572,13 @@ describe('websockets', function() {
 
       caller.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Token",
-        auth: token,
+        auth: "callerToken",
         callId: callId
       }));
 
       callee.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Hawk",
-        auth: hawkCredentials.id,
+        auth: "calleeToken",
         callId: callId
       }));
     });
@@ -624,8 +600,7 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
       });
@@ -647,8 +622,7 @@ describe('websockets', function() {
 
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -661,8 +635,7 @@ describe('websockets', function() {
             // The callee connects!
             callee.send(JSON.stringify({
               messageType: 'hello',
-              authType: "Hawk",
-              auth: hawkCredentials.id,
+              auth: "calleeToken",
               callId: callId
             }));
           } else if (message.messageType === "progress"){
@@ -672,8 +645,7 @@ describe('websockets', function() {
         });
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
       });
@@ -686,8 +658,7 @@ describe('websockets', function() {
             // The callee connects!
             caller.send(JSON.stringify({
               messageType: 'hello',
-              authType: "Token",
-              auth: token,
+              auth: "callerToken",
               callId: callId
             }));
           } else if (message.messageType === "progress"){
@@ -697,8 +668,7 @@ describe('websockets', function() {
         });
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -751,16 +721,14 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -803,16 +771,14 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -879,16 +845,14 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -965,16 +929,14 @@ describe('websockets', function() {
 
         caller.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Token",
-          auth: token,
+          auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
           messageType: 'hello',
-          authType: "Hawk",
-          auth: hawkCredentials.id,
+          auth: "calleeToken",
           callId: callId
         }));
       });
@@ -1052,16 +1014,14 @@ describe('websockets', function() {
 
       caller.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Token",
-        auth: token,
+        auth: "callerToken",
         callId: callId
       }));
 
       // The callee connects!
       callee.send(JSON.stringify({
         messageType: 'hello',
-        authType: "Hawk",
-        auth: hawkCredentials.id,
+        auth: "calleeToken",
         callId: callId
       }));
     });
