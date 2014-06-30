@@ -37,6 +37,7 @@ var user = "alexis@notmyidea.org";
 var userHmac;
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
+var urlCreationDate = 1404139145;
 
 
 function register(url, assertion, credentials, cb) {
@@ -332,7 +333,7 @@ describe("HTTP API exposed by the server", function() {
         .send({callerId: callerId, expiresIn: 5})
         .end(function(err, res) {
           if (err) throw err;
-          var callUrl = res.body.call_url,
+          var callUrl = res.body.callUrl,
               token;
 
           token = callUrl.split("/").pop();
@@ -351,7 +352,7 @@ describe("HTTP API exposed by the server", function() {
         .send({callerId: callerId})
         .end(function(err, res) {
           if (err) throw err;
-          var callUrl = res.body.call_url, token;
+          var callUrl = res.body.callUrl, token;
 
           expect(callUrl).to.not.equal(null);
           var urlStart = conf.get('webAppUrl').replace('{token}', '');
@@ -691,6 +692,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           callToken:    callToken,
+          urlCreationDate:      urlCreationDate,
           callType:     'audio',
           timestamp:    0
         },
@@ -701,6 +703,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           callToken:    callToken,
+          urlCreationDate:      urlCreationDate,
           callType:     'audio-video',
           timestamp:    1
         },
@@ -711,6 +714,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
           callToken:    callToken,
+          urlCreationDate:      urlCreationDate,
           callType:     'audio-video',
           timestamp:    2
         }
@@ -731,7 +735,8 @@ describe("HTTP API exposed by the server", function() {
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken,
-          callToken: call.callToken,
+          callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
+          urlCreationDate: call.urlCreationDate,
           callType: call.callType,
         };
       });
@@ -753,7 +758,8 @@ describe("HTTP API exposed by the server", function() {
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken,
-        callToken: calls[2].callToken,
+        callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
+        urlCreationDate: calls[2].urlCreationDate,
         callType: calls[2].callType
       }];
 
