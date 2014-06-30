@@ -223,12 +223,17 @@ function returnUserCallTokens(user, callerId, urls, res) {
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
+    var wsCalleeToken = crypto.randomBytes(16).toString('hex');
+    var wsCallerToken = crypto.randomBytes(16).toString('hex');
+
     storage.addUserCall(user, {
       'callerId': callerId,
       'callId': callId,
       'userMac': user,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
+      'wsCallerToken': wsCallerToken,
+      'wsCalleeToken': wsCalleeToken,
       'timestamp': currentTimestamp
     }, function(err) {
       if (res.serverError(err)) return;
@@ -251,6 +256,7 @@ function returnUserCallTokens(user, callerId, urls, res) {
 
           res.json(200, {
             callId: callId,
+            websocketToken: wsCallerToken,
             sessionId: tokboxInfo.sessionId,
             sessionToken: tokboxInfo.callerToken,
             apiKey: tokBox.apiKey
@@ -472,7 +478,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
 /**
  * List all the pending calls for the authenticated user.
  **/
-app.get("/calls", requireHawkSession, function(req, res) {
+app.get('/calls', requireHawkSession, function(req, res) {
     if (!req.query.hasOwnProperty('version')) {
       res.sendError("querystring", "version", "missing: version");
       return;
@@ -488,6 +494,7 @@ app.get("/calls", requireHawkSession, function(req, res) {
       }).map(function(record) {
         return {
           callId: record.callId,
+          websocketToken: record.wsCalleeToken,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken

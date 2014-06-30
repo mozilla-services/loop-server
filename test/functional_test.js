@@ -697,28 +697,34 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userHmac,
-          sessionId:    fakeCallInfo.session1,
-          calleeToken:  fakeCallInfo.token1,
-          timestamp:    0
+          callId:        crypto.randomBytes(16).toString("hex"),
+          wsCallerToken: crypto.randomBytes(16).toString("hex"),
+          wsCalleeToken: crypto.randomBytes(16).toString("hex"),
+          callerId:      callerId,
+          userMac:       userHmac,
+          sessionId:     fakeCallInfo.session1,
+          calleeToken:   fakeCallInfo.token1,
+          timestamp:     0
         },
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userHmac,
-          sessionId:    fakeCallInfo.session2,
-          calleeToken:  fakeCallInfo.token2,
-          timestamp:    1
+          callId:        crypto.randomBytes(16).toString("hex"),
+          wsCallerToken: crypto.randomBytes(16).toString("hex"),
+          wsCalleeToken: crypto.randomBytes(16).toString("hex"),
+          callerId:      callerId,
+          userMac:       userHmac,
+          sessionId:     fakeCallInfo.session2,
+          calleeToken:   fakeCallInfo.token2,
+          timestamp:     1
         },
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userHmac,
-          sessionId:    fakeCallInfo.session3,
-          calleeToken:  fakeCallInfo.token2,
-          timestamp:    2
+          callId:        crypto.randomBytes(16).toString("hex"),
+          wsCallerToken: crypto.randomBytes(16).toString("hex"),
+          wsCalleeToken: crypto.randomBytes(16).toString("hex"),
+          callerId:      callerId,
+          userMac:       userHmac,
+          sessionId:     fakeCallInfo.session3,
+          calleeToken:   fakeCallInfo.token2,
+          timestamp:     2
         }
       ];
 
@@ -733,6 +739,7 @@ describe("HTTP API exposed by the server", function() {
       var callsList = calls.map(function(call) {
         return {
           callId: call.callId,
+          websocketToken: call.wsCalleeToken,
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken
@@ -753,6 +760,7 @@ describe("HTTP API exposed by the server", function() {
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
         callId: calls[2].callId,
+        websocketToken: calls[2].wsCalleeToken,
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken
