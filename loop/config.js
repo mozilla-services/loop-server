@@ -274,7 +274,12 @@ var conf = convict({
     doc: "The maximum number of simple-push urls stored for an user",
     format: Number,
     default: 10
-  }
+  },
+  metrics: {
+    doc: "When activated, will dump metrics in the stdout",
+    default: false,
+    format: Boolean
+  },
 });
 
 

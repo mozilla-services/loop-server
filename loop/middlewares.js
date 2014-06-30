@@ -5,7 +5,11 @@
 "use strict";
 
 var conf = require("./config").conf;
-var strftime = require('strftime');
+var pjson = require('../package.json');
+var os = require("os");
+
+// We make the assumption that this won't change once launched.
+var hostname = os.hostname();
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
@@ -35,23 +39,40 @@ function addHeaders(req, res, next) {
   next();
 }
 
-function logRequests(req, res, next) {
-  var start =  new Date();
-  res.on('finish', function() {
-    var length = res._headers['content-length'] || "";
-    var stop = new Date();
 
-    console.log(
-      '[%s] "%s %s HTTP/%s.%s" %s %s — (%s ms)',
-      strftime(conf.get("consoleDateFormat"), start),
-      req.method, req.url, req.httpVersionMajor, req.httpVersionMinor,
-      res.statusCode, length, stop - start);
-  });
+function logMetrics(req, res, next) {
+  if (conf.get('metrics') === true) {
+    var start =  new Date();
+
+    res.on('finish', function() {
+    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    var line = {
+      op: 'request.summary',
+      code: res.statusCode,
+      path: req.path,
+      query: req.query,
+      agent: req.headers['user-agent'],
+      t: Date.now() - start,
+      user: req.user,
+      token: req.token,
+      callUrlData: req.callUrlData,
+      v: pjson.version,
+      name: pjson.name,
+      hostname: hostname,
+      lang: req.headers["accept-language"],
+      ip: ip
+    };
+
+    console.log(JSON.stringify(line));
+    });
+  }
   next();
 }
+
 
 module.exports = {
   handle503: handle503,
   addHeaders: addHeaders,
-  logRequests: logRequests
+  logMetrics: logMetrics
 };

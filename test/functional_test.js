@@ -10,6 +10,7 @@ var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var crypto = require("crypto");
 var assert = sinon.assert;
+var chai = require("chai");
 
 var loop = require("../loop");
 var app = loop.app;
@@ -38,6 +39,7 @@ var userHmac;
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
+
 
 
 function register(url, assertion, credentials, cb) {
@@ -881,12 +883,52 @@ describe("HTTP API exposed by the server", function() {
           });
         });
       });
+
+      describe("with the metrics middleware", function() {
+        var _logs = [];
+        var old_metrics;
+
+        beforeEach(function() {
+          old_metrics = conf.get('metrics');
+          conf.set('metrics', true);
+          var fakeCallInfo = conf.get("fakeCallInfo");
+
+          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+            cb(null, {
+              sessionId: fakeCallInfo.session1,
+              callerToken: fakeCallInfo.token1,
+              calleeToken: fakeCallInfo.token2
+            });
+          });
+
+          sandbox.stub(console, "log", function(log) {
+            try {
+              _logs.push(JSON.parse(log));
+            } catch (e) {
+            }
+          });
+        });
+
+        afterEach(function() {
+          _logs = [];
+          conf.set('metrics', old_metrics);
+        });
+
+        it("should output the token into the stdout", function(done) {
+          addCallReq.end(function () {
+            chai.assert.equal(_logs[0].token, token);
+            done();
+          });
+        });
+      });
+
     });
 
     describe("POST /calls", function() {
       var emptyReq, addCallReq;
 
       beforeEach(function() {
+
         emptyReq = supertest(app)
           .post("/calls")
           .hawk(hawkCredentials)
@@ -897,6 +939,7 @@ describe("HTTP API exposed by the server", function() {
           .type("json")
           .expect(200);
       });
+
 
       it("should have the requireHawk middleware installed", function() {
         expect(
@@ -910,8 +953,17 @@ describe("HTTP API exposed by the server", function() {
         });
 
       describe("With working tokbox APIs", function() {
+        var _logs = [];
 
         beforeEach(function() {
+          conf.set('metrics', true);
+          sandbox.stub(console, "log", function(log) {
+            try {
+              _logs.push(JSON.parse(log));
+            } catch (e) {
+            }
+          });
+
           sandbox.stub(tokBox, "getSessionTokens", function(cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
@@ -919,6 +971,20 @@ describe("HTTP API exposed by the server", function() {
               calleeToken: tokBoxCalleeToken
             });
           });
+        });
+
+        afterEach(function() {
+          _logs = [];
+          conf.set('metrics', false);
+        });
+
+        it("should log metrics with the user hash", function(done) {
+          addCallReq
+            .send({calleeId: user, callType: 'audio'})
+            .end(function () {
+              chai.assert.equal(_logs[0].user, userHmac);
+              done();
+            });
         });
 
         it("should accept a valid call token", function(done) {
@@ -945,6 +1011,7 @@ describe("HTTP API exposed by the server", function() {
             assert.calledOnce(loop.setUserCall);
           });
         });
+
 
       });
     });

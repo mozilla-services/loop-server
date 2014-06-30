@@ -24,10 +24,9 @@ var errors = require('connect-validation');
 var StatsdClient = require('statsd-node').client;
 var addHeaders = require('./middlewares').addHeaders;
 var handle503 = require("./middlewares").handle503;
-var logRequests = require('./middlewares').logRequests;
+var logMetrics = require('./middlewares').logMetrics;
 var async = require('async');
 var websockets = require('./websockets');
-
 var hawk = require('./hawk');
 var fxa = require('./fxa');
 
@@ -282,9 +281,7 @@ function returnUserCallTokens(options, res) {
 
 var app = express();
 
-if (conf.get("env") === "dev") {
-  app.use(logRequests);
-}
+app.use(logMetrics);
 app.use(addHeaders);
 app.disable('x-powered-by');
 app.use(express.json());
