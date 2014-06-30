@@ -4,6 +4,7 @@
 
 "use strict";
 var redis = require("redis");
+var async = require('async');
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -137,17 +138,27 @@ RedisStorage.prototype = {
       return;
     }
     var self = this;
+    // Clone the args to prevent from modifying it.
+    call = JSON.parse(JSON.stringify(call));
+    var state = call.callState;
+    delete call.callState;
     this._client.setex(
       'call.' + call.callId,
-      this._settings.tokenDuration,
+      this._settings.callDuration,
       JSON.stringify(call),
       function(err) {
         if (err) {
           callback(err);
           return;
         }
-        self._client.sadd('userCalls.' + userMac,
-                          'call.' + call.callId, callback);
+        self.setCallState(call.callId, state, function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          self._client.sadd('userCalls.' + userMac,
+                            'call.' + call.callId, callback);
+        });
       });
   },
 
@@ -184,24 +195,189 @@ RedisStorage.prototype = {
           return a.timestamp - b.timestamp;
         });
 
+        function getState() {
+          async.map(pendingCalls, function(call, cb) {
+            self.getCallState(call.callId, function(err, state) {
+              if (err) {
+                cb(err);
+                return;
+              }
+              call.callState = state;
+              cb(null, call);
+            });
+          }, function(err, results) {
+            callback(null, results);
+          });
+        }
+
         if (expired.length > 0) {
           self._client.srem(expired, function(err, res) {
-            callback(null, pendingCalls);
+            getState();
           });
           return;
         }
-        callback(null, pendingCalls);
+        getState();
       });
     });
   },
 
-  getCall: function(callId, callback) {
-    this._client.get('call.' + callId, function(err, call) {
+  /**
+   * Returns the expiricy of the call state (in seconds).
+   * In case the call is already expired, returns -1.
+   **/
+  getCallStateTTL: function(callId, callback) {
+    this._client.pttl('callstate.' + callId, function(err, ttl) {
+      if (err){
+        callback(err);
+        return;
+      }
+      if (ttl <= 1) {
+        ttl = -1;
+      } else {
+        ttl = ttl / 1000;
+      }
+      callback(null, ttl);
+    });
+  },
+
+  /**
+   * Sets the call state to the given state.
+   *
+   * In case no TTL is given, fetches the one of the call so the expiration
+   * is the same for the call and for its state.
+   **/
+  setCallState: function(callId, state, ttl, callback) {
+    var self = this;
+
+    // In case we don't have a TTL, get the one from the call.
+    if (ttl === undefined || callback === undefined) {
+      if (callback === undefined) callback = ttl;
+      this._client.ttl('call.' + callId, function(err, res) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self.setCallState(callId, state, res, callback);
+      });
+      return;
+    }
+
+    var validStates = [
+      "init", "init.caller", "init.callee", "connecting",
+      "connected.caller", "connected.callee", "terminated"
+    ];
+
+    if (validStates.indexOf(state) === -1) {
+      callback(
+        new Error(state + " should be one of " + validStates.join(", "))
+      );
+      return;
+    }
+
+    var key = 'callstate.' + callId;
+
+    if(state === "terminated") {
+      self._client.del(key, callback);
+      return;
+    }
+
+    // Internally, this uses a redis set to be sure we don't store twice the
+    // same call state.
+    self._client.sadd(key, state, function(err) {
       if (err) {
         callback(err);
         return;
       }
-      callback(null, JSON.parse(call));
+      self._client.pexpire(key, ttl * 1000, callback);
+    });
+  },
+
+  /**
+   * Gets the state of a call.
+   *
+   * Returns one of "init", "half-initiated", "alerting", "connecting",
+   * "half-connected" and "connected".
+   **/
+  getCallState: function(callId, callback) {
+    var self = this;
+
+    // Get the state of a given call. Because of how we store this information
+    // (in a redis set), count the number of elements in the set to know what
+    // the current state is.
+    // State can be (in order) init, alerting, connecting, half-connected,
+    // connected. In case of terminate, nothing is stored in the database (the
+    // key is dropped).
+    self._client.scard('callstate.' + callId, function(err, score) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      switch (score) {
+      case 1:
+        callback(null, "init");
+        break;
+      case 2:
+        callback(null, "half-initiated");
+        break;
+      case 3:
+        callback(null, "alerting");
+        break;
+      case 4:
+        callback(null, "connecting");
+        break;
+      case 5:
+        callback(null, "half-connected");
+        break;
+      case 6:
+        callback(null, "connected");
+        break;
+      default:
+        // Ensure a call exists if nothing is stored on this key.
+        self.getCall(callId, false, function(err, result) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (result !== null) {
+            callback(null, "terminated");
+            return;
+          }
+          callback(null, null);
+        });
+      }
+    });
+  },
+
+  /**
+   * Get a call from its id.
+   *
+   * By default, returns the state of the call. You can set getState to false
+   * to deactivate this behaviour.
+   **/
+  getCall: function(callId, getState, callback) {
+    if (callback === undefined) {
+      callback = getState;
+      getState = true;
+    }
+    var self = this;
+    this._client.get('call.' + callId, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      var call = JSON.parse(data);
+      if (call !== null && getState === true) {
+        self.getCallState(callId, function(err, state) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          call.callState = state;
+          callback(err, call);
+        });
+        return;
+      }
+      callback(err, call);
     });
   },
 

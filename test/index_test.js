@@ -490,8 +490,10 @@ describe("index.js", function() {
             .expect(200)
             .end(function(err, res) {
               expect(res.body).to.have.property('callId');
+              expect(res.body).to.have.property('websocketToken');
               // Drop callId, we don't know its value.
               delete res.body.callId;
+              delete res.body.websocketToken;
               expect(res.body).eql({
                 sessionId: tokBoxSessionId,
                 sessionToken: tokBoxCallerToken,
@@ -524,10 +526,15 @@ describe("index.js", function() {
                 expect(items.length).eql(1);
                 expect(items[0].callId).to.have.length(32);
                 delete items[0].callId;
+                expect(items[0].wsCallerToken).to.have.length(32);
+                delete items[0].wsCallerToken;
+                expect(items[0].wsCalleeToken).to.have.length(32);
+                delete items[0].wsCalleeToken;
                 expect(items[0]).to.have.property('timestamp');
                 delete items[0].timestamp;
                 expect(items[0]).eql({
                   callerId: callerId,
+                  callState: "init",
                   calleeFriendlyName: calleeFriendlyName,
                   userMac: user,
                   sessionId: tokBoxSessionId,
@@ -540,8 +547,31 @@ describe("index.js", function() {
             });
         });
 
+      it("should set the call-state to init by default", function(done) {
+        sandbox.stub(request, "put");
+        sandbox.stub(storage, "addUserCall", function(_, __, cb) {
+          cb(null);
+        });
+        sandbox.stub(storage, "setCallState",
+          function(callId, state, expiricy, cb) {
+            expect(state).eql("init");
+            expect(expiricy).eql(conf.get("timers").supervisoryDuration);
+            cb(null);
+          });
+
+        supertest(app)
+          .post('/returnUserCallTokens')
+          .send({
+            callee: user,
+            callerId: callerId,
+            urls: urls
+          })
+          .expect(200)
+          .end(done);
+      });
+
       it("should return a 503 if callsStore is not available", function(done) {
-        sandbox.stub(storage, "addUserCall", function(unused, alsounused, cb) {
+        sandbox.stub(storage, "addUserCall", function(_, __, cb) {
           cb("error");
         });
 

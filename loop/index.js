@@ -26,6 +26,7 @@ var addHeaders = require('./middlewares').addHeaders;
 var handle503 = require("./middlewares").handle503;
 var logRequests = require('./middlewares').logRequests;
 var async = require('async');
+var websockets = require('./websockets');
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
@@ -41,6 +42,7 @@ var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
   'hawkSessionDuration': conf.get('hawkSessionDuration'),
+  'callDuration': conf.get('callDuration'),
   'maxSimplePushUrls': conf.get('maxSimplePushUrls')
 });
 
@@ -91,6 +93,8 @@ function hmac(payload, secret, algorithm) {
  **/
 function setUser(req, res, tokenId, done) {
   storage.getHawkUser(tokenId, function(err, user) {
+    if (res.serverError(err)) return;
+
     storage.touchHawkSession(tokenId);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
@@ -228,6 +232,9 @@ function returnUserCallTokens(options, res) {
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
+    var wsCalleeToken = crypto.randomBytes(16).toString('hex');
+    var wsCallerToken = crypto.randomBytes(16).toString('hex');
+
     storage.addUserCall(options.user, {
       'callerId': options.callerId,
       'calleeFriendlyName': options.calleeFriendlyName,
@@ -235,31 +242,40 @@ function returnUserCallTokens(options, res) {
       'userMac': options.user,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
+      'wsCallerToken': wsCallerToken,
+      'wsCalleeToken': wsCalleeToken,
+      'callState': "init",
       'timestamp': currentTimestamp,
       'callToken': options.callToken,
       'urlCreationDate': options.urlCreationDate,
       'callType': options.callType
-    }, function(err, record){
+    }, function(err) {
       if (res.serverError(err)) return;
 
-      // Call SimplePush urls.
-      if (!Array.isArray(urls)) {
-        urls = [urls];
-      }
+      storage.setCallState(callId, "init",
+        conf.get("timers").supervisoryDuration, function() {
+          if (res.serverError(err)) return;
 
-      urls.forEach(function(simplePushUrl) {
-        request.put({
-          url: simplePushUrl,
-          form: { version: currentTimestamp }
+          // Call SimplePush urls.
+          if (!Array.isArray(urls)) {
+            urls = [urls];
+          }
+
+          urls.forEach(function(simplePushUrl) {
+            request.put({
+              url: simplePushUrl,
+              form: { version: currentTimestamp }
+            });
+          });
+
+          res.json(200, {
+            callId: callId,
+            websocketToken: wsCallerToken,
+            sessionId: tokboxInfo.sessionId,
+            sessionToken: tokboxInfo.callerToken,
+            apiKey: tokBox.apiKey
+          });
         });
-      });
-
-      res.json(200, {
-        callId: callId,
-        sessionId: tokboxInfo.sessionId,
-        sessionToken: tokboxInfo.callerToken,
-        apiKey: tokBox.apiKey
-      });
     });
   });
 }
@@ -501,6 +517,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
         return {
           callId: record.callId,
           calleeId: record.calleeFriendlyName,
+          websocketToken: record.wsCalleeToken,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
@@ -541,8 +558,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
     // we throw an error, otherwise we will follow the call process, storing
     // the call information and notifying to the correspoding matched users.
     var callees;
-    async.each(calleeId, function(i, callback) {
-      var calleeMac = hmac(i, conf.get('userMacSecret'));
+    async.each(calleeId, function(identity, callback) {
+      var calleeMac = hmac(identity, conf.get('userMacSecret'));
       storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
         if (err) {
           callback(err);
@@ -616,7 +633,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
 });
 
 /**
- * Returns the status of a given call.
+ * Returns the state of a given call.
  **/
 app.get('/calls/id/:callId', function(req, res) {
   var callId = req.param('callId');
@@ -647,11 +664,24 @@ app.delete('/calls/id/:callId', function(req, res) {
   });
 });
 
-var server = app.listen(conf.get('port'), conf.get('host'), function(){
+
+// Starts HTTP server.
+var server = http.createServer(app);
+server.listen(conf.get('port'), conf.get('host'), function(){
   console.log('Server listening on http://' +
               conf.get('host') + ':' + conf.get('port'));
 });
 
+
+// Handle websockets.
+var ws = websockets(storage, logError, conf);
+try {
+  ws.register(server);
+} catch (e) {
+  logError(e);
+}
+
+// Handle SIGTERM signal.
 function shutdown(cb) {
   server.close(function() {
     process.exit(0);
@@ -665,6 +695,7 @@ process.on('SIGTERM', shutdown);
 
 module.exports = {
   app: app,
+  server: server,
   conf: conf,
   hmac: hmac,
   storage: storage,
@@ -678,6 +709,5 @@ module.exports = {
   validateSimplePushURL: validateSimplePushURL,
   validateCallType: validateCallType,
   returnUserCallTokens: returnUserCallTokens,
-  server: server,
   shutdown: shutdown
 };

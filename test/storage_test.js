@@ -31,6 +31,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
+          callState:    "init",
           timestamp:    0
         },
         {
@@ -39,6 +40,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
+          callState:    "init",
           timestamp:    1
         },
         {
@@ -47,6 +49,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
+          callState:    "terminated",
           timestamp:    2
         }
       ],
@@ -73,6 +76,7 @@ describe("Storage", function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
           hawkSessionDuration: conf.get('hawkSessionDuration'),
+          callDuration: conf.get('callDuration'),
           maxSimplePushUrls: conf.get('maxSimplePushUrls')
         });
       });
@@ -336,13 +340,20 @@ describe("Storage", function() {
         });
 
         it("should keep a list of the user calls", function(done) {
-          storage.addUserCall(userMac, calls[0], function() {
-            storage.addUserCall(userMac, calls[1], function() {
-              storage.addUserCall(userMac, calls[2], function() {
+          storage.addUserCall(userMac, calls[0], function(err) {
+            if (err) throw err;
+            storage.addUserCall(userMac, calls[1], function(err) {
+              if (err) throw err;
+              storage.addUserCall(userMac, calls[2], function(err) {
+                if (err) throw err;
                 storage.getUserCalls(userMac, function(err, results) {
+                  if (err) throw err;
                   expect(results).to.have.length(3);
-                  expect(results).to.eql(calls);
-                  done(err);
+                  expect(results).to.eql(calls.map(function(call, key) {
+                    call.callState = (key === 2) ? "terminated" : "init";
+                    return call;
+                  }));
+                  done();
                 });
               });
             });
@@ -457,6 +468,39 @@ describe("Storage", function() {
               expect(result).to.eql("userhash");
               done();
             });
+          });
+        });
+      });
+
+      describe("#setCallState", function() {
+        it("should set the call state", function(done) {
+          storage.setCallState("12345", "init", 10, function(err) {
+            if (err) throw err;
+            storage.getCallState("12345", function(err, state) {
+              if (err) throw err;
+              expect(state).to.eql("init");
+              done();
+            });
+          });
+        });
+
+        it("should check the states are valid before storing them",
+          function(done) {
+            storage.setCallState("12345", "terminated:unauthorized",
+              function(err) {
+                expect(err).to.not.eql(null);
+                expect(err.message).match(/should be one of/);
+                done();
+              });
+          });
+      });
+
+      describe("#getCallState", function() {
+        it("should return null when no call state is set", function(done) {
+          storage.getCallState("12345", function(err, state) {
+            if (err) throw err;
+            expect(state).to.eql(null);
+            done();
           });
         });
       });

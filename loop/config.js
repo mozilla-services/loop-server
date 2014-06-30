@@ -123,9 +123,21 @@ var conf = convict({
     format: Boolean
   },
   storage: {
-    doc: "storage config",
-    format: validateKeys(["engine", "settings"]),
-    default: {engine: "redis", settings: {}}
+    engine: {
+      doc: "engine type",
+      format: String,
+      default: "redis"
+    },
+    settings: {
+      doc: "js object of options to pass to the storage engine",
+      format: Object,
+      default: {}
+    }
+  },
+  pubsub: {
+    doc: "js object of options to pass to the pubsub engine",
+    format: Object,
+    default: {}
   },
   fakeTokBox: {
     doc: "Mock TokBox calls",
@@ -226,6 +238,11 @@ var conf = convict({
     format: Number,
     default: 3600 * 24 * 30 // One month.
   },
+  callDuration: {
+    doc: "The duration we want to store the call info (in seconds)",
+    format: Number,
+    default: 30
+  },
   maxHTTPSockets: {
     doc: "The maximum of HTTP sockets to use when doing requests",
     format: Number,
@@ -235,6 +252,23 @@ var conf = convict({
     doc: "Timeout for requests when doing heartbeat checks (ms)",
     format: Number,
     default: 30
+  },
+  timers: {
+    supervisoryDuration: {
+      doc: "Websocket timeout for the supervisory timer (seconds)",
+      format: Number,
+      default: 10
+    },
+    ringingDuration: {
+      doc: "Websocket timeout for the ringing timer (seconds)",
+      format: Number,
+      default: 30
+    },
+    connectionDuration: {
+      doc: "Websocket timeout for the connection timer (seconds)",
+      format: Number,
+      default: 5
+    }
   },
   maxSimplePushUrls: {
     doc: "The maximum number of simple-push urls stored for an user",

@@ -7,6 +7,11 @@ NODE_LOCAL_BIN=./node_modules/.bin
 .PHONY: test
 test: lint cover-mocha spaceleft
 
+.PHONY: travis
+travis: lint
+	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
+	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
+
 install:
 	@npm install
 
@@ -32,7 +37,7 @@ mocha:
 
 .PHONY: spaceleft
 spaceleft:
-	if which grin ack-grep 2>&1 >/dev/null; \
+	@if which grin 2>&1 >/dev/null; \
 	then \
 	  grin " $$" loop/ test/ config/; \
 	fi

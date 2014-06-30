@@ -137,7 +137,6 @@ describe("HTTP API exposed by the server", function() {
     });
   });
 
-  // Test CORS is enabled in all routes for GET, POST and DELETE
   Object.keys(routes).forEach(function(route) {
     routes[route].forEach(function(method) {
       if (route.indexOf('token') !== -1) {
@@ -686,38 +685,47 @@ describe("HTTP API exposed by the server", function() {
 
       calls = [
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userHmac,
-          sessionId:    fakeCallInfo.session1,
-          calleeToken:  fakeCallInfo.token1,
-          callToken:    callToken,
-          urlCreationDate:      urlCreationDate,
-          callType:     'audio',
-          timestamp:    0
+          callId:          crypto.randomBytes(16).toString("hex"),
+          wsCallerToken:   crypto.randomBytes(16).toString("hex"),
+          wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+          callerId:        callerId,
+          userMac:         userHmac,
+          sessionId:       fakeCallInfo.session1,
+          calleeToken:     fakeCallInfo.token1,
+          callToken:       callToken,
+          callType:        'audio',
+          urlCreationDate: urlCreationDate,
+          callState:       "init",
+          timestamp:       0
         },
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userHmac,
-          sessionId:    fakeCallInfo.session2,
-          calleeToken:  fakeCallInfo.token2,
-          callToken:    callToken,
-          urlCreationDate:      urlCreationDate,
-          callType:     'audio-video',
-          timestamp:    1
+          callId:          crypto.randomBytes(16).toString("hex"),
+          wsCallerToken:   crypto.randomBytes(16).toString("hex"),
+          wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+          callerId:        callerId,
+          userMac:         userHmac,
+          sessionId:       fakeCallInfo.session2,
+          calleeToken:     fakeCallInfo.token2,
+          callToken:       callToken,
+          callType:        'audio-video',
+          urlCreationDate: urlCreationDate,
+          callState:       "init",
+          timestamp:       1
         },
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userHmac,
-          sessionId:    fakeCallInfo.session3,
-          calleeToken:  fakeCallInfo.token2,
-          callToken:    callToken,
-          urlCreationDate:      urlCreationDate,
-          callType:     'audio-video',
-          timestamp:    2
-        }
+          callId:          crypto.randomBytes(16).toString("hex"),
+          wsCallerToken:   crypto.randomBytes(16).toString("hex"),
+          wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+          callerId:        callerId,
+          userMac:         userHmac,
+          sessionId:       fakeCallInfo.session3,
+          calleeToken:     fakeCallInfo.token2,
+          callState:       "terminated",
+          callToken:       callToken,
+          callType:        'audio-video',
+          urlCreationDate: urlCreationDate,
+          timestamp:       2
+        },
       ];
 
       storage.addUserCall(userHmac, calls[0], function() {
@@ -732,6 +740,7 @@ describe("HTTP API exposed by the server", function() {
       var callsList = calls.map(function(call) {
         return {
           callId: call.callId,
+          websocketToken: call.wsCalleeToken,
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken,
@@ -755,6 +764,7 @@ describe("HTTP API exposed by the server", function() {
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
         callId: calls[2].callId,
+        websocketToken: calls[2].wsCalleeToken,
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken,

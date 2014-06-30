@@ -33,5 +33,10 @@
   "allowedOrigins": ["http://localhost:3000"],
   "statsdEnabled": true,
   "fxaAudiences": ["http://localhost:5000"],
+  "timers": {
+    "supervisoryDuration": 0.050,
+    "ringingDuration": 0.050,
+    "connectionDuration": 0.050
+  },
   "maxSimplePushUrls": 2
 }
