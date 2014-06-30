@@ -5,7 +5,7 @@
 NODE_LOCAL_BIN=./node_modules/.bin
 
 .PHONY: test
-test: lint cover-mocha
+test: lint cover-mocha spaceleft
 
 install:
 	@npm install
@@ -29,6 +29,13 @@ jshint:
 .PHONY: mocha
 mocha:
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec
+
+.PHONY: spaceleft
+spaceleft:
+	if which grin ack-grep 2>&1 >/dev/null; \
+	then \
+	  grin " $$" loop/ test/ config/; \
+	fi
 
 .PHONY: runserver
 runserver:

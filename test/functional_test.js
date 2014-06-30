@@ -35,7 +35,6 @@ var expectFormatedError = require("./support").expectFormatedError;
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
 var userHmac;
-var uuid = "1234";
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 
@@ -141,17 +140,7 @@ describe("HTTP API exposed by the server", function() {
   Object.keys(routes).forEach(function(route) {
     routes[route].forEach(function(method) {
       if (route.indexOf('token') !== -1) {
-        var tokenManager = new tokenlib.TokenManager({
-          macSecret: conf.get('macSecret'),
-          encryptionSecret: conf.get('encryptionSecret')
-        });
-
-        var token = tokenManager.encode({
-          uuid: uuid,
-          user: user,
-          callerId: callerId
-        });
-
+        var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
         route = route.replace('token', token);
       }
 
@@ -337,80 +326,75 @@ describe("HTTP API exposed by the server", function() {
           });
       });
 
-    describe("with a tokenManager", function() {
-      var tokenManager;
+    it("should accept an expiresIn parameter", function(done) {
+      jsonReq
+        .expect(200)
+        .send({callerId: callerId, expiresIn: 5})
+        .end(function(err, res) {
+          if (err) throw err;
+          var callUrl = res.body.call_url,
+              token;
 
-      beforeEach(function() {
-        tokenManager = new tokenlib.TokenManager({
-          macSecret: conf.get('macSecret'),
-          encryptionSecret: conf.get('encryptionSecret')
+          token = callUrl.split("/").pop();
+
+          storage.getCallUrlData(token, function(err, urlData) {
+            if (err) throw err;
+            expect(urlData.expires).not.eql(undefined);
+            done();
+          });
         });
-      });
+    });
 
-      it("should accept an expiresIn parameter", function(done) {
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId, expiresIn: 5})
-          .end(function(err, res) {
+    it("should generate a valid call-url", function(done) {
+      jsonReq
+        .expect(200)
+        .send({callerId: callerId})
+        .end(function(err, res) {
+          if (err) throw err;
+          var callUrl = res.body.call_url, token;
+
+          expect(callUrl).to.not.equal(null);
+          var urlStart = conf.get('webAppUrl').replace('{token}', '');
+          expect(callUrl).to.contain(urlStart);
+
+          token = callUrl.split("/").pop();
+
+          storage.getCallUrlData(token, function(err, urlData) {
             if (err) throw err;
-            var callUrl = res.body && res.body.call_url,
-                token;
-
-            token = callUrl.split("/").pop();
-            var decoded = tokenManager.decode(token);
-            expect(decoded.expires).not.eql(undefined);
-            done(err);
-          });
-      });
-
-      it("should generate a valid call-url", function(done) {
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId})
-          .end(function(err, res) {
-            if (err) throw err;
-            var callUrl = res.body && res.body.call_url, token;
-
-            expect(callUrl).to.not.equal(null);
-            var urlStart = conf.get('webAppUrl').replace('{token}', '');
-            expect(callUrl).to.contain(urlStart);
-
-            token = callUrl.split("/").pop();
-            var decoded = tokenManager.decode(token);
-            expect(decoded.hasOwnProperty('uuid'));
-            done(err);
-          });
-      });
-
-      it("should return the expiration date of the call-url", function(done) {
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId})
-          .end(function(err, res) {
-            if (err) throw err;
-            var expiresAt = res.body && res.body.expiresAt;
-            expect(expiresAt).not.eql(undefined);
+            expect(urlData.userMac).not.eql(undefined);
             done();
           });
-      });
+        });
+    });
 
-      it("should count new url generation using statsd", function(done) {
-        sandbox.stub(statsdClient, "count");
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId})
-          .end(function(err, res) {
-            if (err) throw err;
-            assert.calledTwice(statsdClient.count);
-            assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
-            assert.calledWithExactly(
-              statsdClient.count,
-              "loop-call-urls-" + userHmac,
-              1
-            );
-            done();
-          });
-      });
+    it("should return the expiration date of the call-url", function(done) {
+      jsonReq
+        .expect(200)
+        .send({callerId: callerId})
+        .end(function(err, res) {
+          if (err) throw err;
+          var expiresAt = res.body.expiresAt;
+          expect(expiresAt).not.eql(undefined);
+          done();
+        });
+    });
+
+    it("should count new url generation using statsd", function(done) {
+      sandbox.stub(statsdClient, "count");
+      jsonReq
+        .expect(200)
+        .send({callerId: callerId})
+        .end(function(err, res) {
+          if (err) throw err;
+          assert.calledTwice(statsdClient.count);
+          assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
+          assert.calledWithExactly(
+            statsdClient.count,
+            "loop-call-urls-" + userHmac,
+            1
+          );
+          done();
+        });
     });
   });
 
@@ -609,19 +593,16 @@ describe("HTTP API exposed by the server", function() {
 
   describe("GET /calls/:token", function() {
     it("should return a 302 to the WebApp page", function(done) {
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
+      var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      storage.addUserCallUrlData(user, token, {
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        supertest(app)
+          .get('/calls/' + token)
+          .expect("Location", conf.get("webAppUrl").replace("{token}", token))
+          .expect(302).end(done);
       });
-      var token = tokenManager.encode({
-        uuid: uuid,
-        user: user,
-        callerId: callerId
-      }).token;
-      supertest(app)
-        .get('/calls/' + token)
-        .expect("Location", conf.get("webAppUrl").replace("{token}", token))
-        .expect(302).end(done);
     });
 
     it("should have the validateToken middleware installed.", function() {
@@ -631,40 +612,42 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("DELETE /call-url/:token", function() {
-    var token, tokenManager, req, clock;
-    beforeEach(function() {
+    var token, req, clock;
+
+    beforeEach(function(done) {
       clock = sinon.useFakeTimers(fakeNow);
 
-      tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret'),
-        timeout: 1 // Token expires in 1 hour.
+      token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      storage.addUserCallUrlData(userHmac, token, {
+        userMac: userHmac,
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        req = supertest(app)
+          .del('/call-url/' + token)
+          .hawk(hawkCredentials);
+        done();
       });
-      token = tokenManager.encode({
-        uuid: uuid,
-        user: hawkCredentials.id
-      }).token;
-      req = supertest(app)
-        .del('/call-url/' + token)
-        .hawk(hawkCredentials);
     });
 
     afterEach(function() {
       clock.restore();
     });
 
-    it("should add the token uuid in the revocation list", function(done) {
+    it("should remove the call-url", function(done) {
       req.expect(204).end(function(err, res) {
         if (err) throw err;
-        storage.isURLRevoked(uuid, function(err, record) {
-          expect(record).eql(true);
-          done(err);
+        storage.getCallUrlData(token, function(err, record) {
+          if (err) throw err;
+          expect(record).eql(null);
+          done();
         });
       });
     });
 
     it("should return a 503 is the database is not available", function(done) {
-      sandbox.stub(storage, "isURLRevoked", function(urlId, cb) {
+      sandbox.stub(storage, "getCallUrlData", function(urlId, cb) {
         cb("error");
       });
       req.expect(503).end(done);
@@ -672,14 +655,17 @@ describe("HTTP API exposed by the server", function() {
 
     it("should return a 403 if the token doesn't belong to the user",
       function(done){
-        var token = tokenManager.encode({
-          uuid: "1234",
-          user: "h4x0r"
-        }).token;
-        req = supertest(app)
-          .del('/call-url/' + token)
-          .hawk(hawkCredentials)
-          .expect(403).end(done);
+        storage.addUserCallUrlData(userHmac, token, {
+          userMac: "h4x0r",
+          timestamp: Date.now(),
+          expires: Date.now() + conf.get("callUrlTimeout")
+        }, function(err) {
+          if (err) throw err;
+          req = supertest(app)
+            .del('/call-url/' + token)
+            .hawk(hawkCredentials)
+            .expect(403).end(done);
+        });
       });
 
     it("should have the validateToken middleware installed", function() {
@@ -793,27 +779,16 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("with tokens", function() {
-    var requests, tokenManager, token, jsonReq, tokBoxSessionId,
+    var requests, token, jsonReq, tokBoxSessionId,
         tokBoxCallerToken, tokBoxCalleeToken;
 
-    beforeEach(function () {
+    beforeEach(function (done) {
       requests = [];
       var fakeCallInfo = conf.get("fakeCallInfo");
       sandbox.useFakeTimers(fakeNow);
       tokBoxSessionId = fakeCallInfo.session1;
       tokBoxCalleeToken = fakeCallInfo.token1;
       tokBoxCallerToken = fakeCallInfo.token2;
-
-      tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
-      });
-
-      token = tokenManager.encode({
-        uuid: uuid,
-        user: hawkCredentials.id,
-        callerId: callerId
-      }).token;
 
       sandbox.stub(request, "put", function(options) {
         requests.push(options);
@@ -823,6 +798,17 @@ describe("HTTP API exposed by the server", function() {
         .post('/calls/' + token)
         .send()
         .expect(200);
+
+      token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+
+      var timestamp = Date.now();
+
+      storage.addUserCallUrlData(userHmac, token, {
+        userMac: userHmac,
+        callerId: callerId,
+        timestamp: timestamp,
+        expires: timestamp + conf.get("callUrlTimeout")
+      }, done);
     });
 
     describe("POST /calls/:token", function() {

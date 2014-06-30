@@ -18,21 +18,6 @@ function RedisStorage(options, settings) {
 }
 
 RedisStorage.prototype = {
-  revokeURLToken: function(token, callback) {
-    var ttl = (token.expires * 60 * 60 * 1000);
-    this._client.psetex('urlRevoked.' + token.uuid, ttl, "ok", callback);
-  },
-
-  isURLRevoked: function(urlId, callback) {
-    this._client.get('urlRevoked.' + urlId, function(err, result) {
-      if(result === null) {
-        callback(err, false);
-      } else {
-        callback(err, true);
-      }
-    });
-  },
-
   addUserSimplePushURL: function(userMac, simplepushURL, callback) {
     // delete the SP url if it exists
     var self = this;
@@ -68,7 +53,89 @@ RedisStorage.prototype = {
     this._client.lrem('spurl.' + userMac, 0, simplepushURL, callback);
   },
 
+  addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    } else if (urlData.timestamp === undefined) {
+      callback(new Error("urlData should have a timestamp property."));
+      return;
+    }
+    var self = this;
+    // In that case use setex to add the metadata of the url.
+    this._client.setex(
+      'callurl.' + callUrlId,
+      urlData.expires - urlData.timestamp,
+      JSON.stringify(urlData),
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.sadd('userUrls.' + userMac,
+                          'callurl.' + callUrlId, callback);
+      });
+  },
+
+  getCallUrlData: function(callUrlId, callback) {
+    this._client.get('callurl.' + callUrlId, function(err, url) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, JSON.parse(url));
+    });
+  },
+
+  revokeURLToken: function(callUrlId, callback) {
+    this._client.del('callurl.' + callUrlId, callback);
+  },
+
+  getUserCallUrls: function(userMac, callback) {
+    var self = this;
+    this._client.smembers('userUrls.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (members.length === 0) {
+        callback(null, []);
+        return;
+      }
+      self._client.mget(members, function(err, urls) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var expired = urls.map(function(val, index) {
+          return (val === null) ? index : null;
+        }).filter(function(val) {
+          return val !== null;
+        });
+
+        var pendingUrls = urls.filter(function(val) {
+          return val !== null;
+        }).map(JSON.parse).sort(function(a, b) {
+          return a.timestamp - b.timestamp;
+        });
+
+        if (expired.length > 0) {
+          self._client.srem(expired, function(err, res) {
+            callback(null, pendingUrls);
+          });
+          return;
+        }
+        callback(null, pendingUrls);
+      });
+    });
+  },
+
   addUserCall: function(userMac, call, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
     var self = this;
     this._client.setex(
       'call.' + call.callId,
@@ -85,6 +152,10 @@ RedisStorage.prototype = {
   },
 
   getUserCalls: function(userMac, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
       if (err) {
@@ -126,13 +197,21 @@ RedisStorage.prototype = {
 
   getCall: function(callId, callback) {
     this._client.get('call.' + callId, function(err, call) {
-      callback(err, JSON.parse(call));
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, JSON.parse(call));
     });
   },
 
   deleteCall: function(callId, callback) {
     this._client.del('call.' + callId, function(err, result) {
-      callback(err, result !== 0);
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, result !== 0);
     });
   },
 

@@ -10,7 +10,6 @@ var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var assert = sinon.assert;
-var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var Token = require("../loop/token").Token;
 
@@ -109,49 +108,40 @@ describe("index.js", function() {
         .end(done);
     });
 
-    it("should return a 400 if the token is invalid.", function(done) {
+    it("should return a 404 if the token is invalid.", function(done) {
       jsonReq
-        .get('/validateToken/invalidToken/')
-        .expect(400, /invalid token/)
+        .get('/validateToken/invalidToken')
+        .expect(404)
         .end(done);
     });
 
-    it("should return a 400 if the token had been revoked", function(done) {
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
-      });
-      var tokenWrapper = tokenManager.encode({
-        uuid: "1234",
-        user: "natim"
-      });
-      storage.revokeURLToken(tokenWrapper.payload, function(err) {
-        if (err) {
-          throw err;
-        }
-        jsonReq
-          .get('/validateToken/' + tokenWrapper.token)
-          .expect(400, /invalid token/)
-          .end(done);
+    it("should return a 404 if the token had been revoked", function(done) {
+      storage.addUserCallUrlData("natim", "1234", {
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        storage.revokeURLToken("1234", function(err) {
+          if (err) throw err;
+          jsonReq
+            .get('/validateToken/1234')
+            .expect(404)
+            .end(done);
+        });
       });
     });
 
     it("should return a 200 if the token is valid.", function(done) {
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
+      storage.addUserCallUrlData("natim", "1234", {
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        jsonReq
+          .get('/validateToken/1234')
+          .expect(200, /ok/)
+          .end(done);
       });
-
-      var token = tokenManager.encode({
-        uuid: "1234",
-        user: "natim",
-        callerId: "alexis"
-      }).token;
-
-      jsonReq
-        .get('/validateToken/' + token)
-        .expect(200, /ok/)
-        .end(done);
     });
   });
 

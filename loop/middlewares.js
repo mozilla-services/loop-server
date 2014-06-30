@@ -17,7 +17,7 @@ function handle503(logError) {
       }
       return false;
     };
-    
+
     next();
   };
 }

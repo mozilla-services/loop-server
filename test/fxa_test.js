@@ -96,7 +96,7 @@ describe("fxa authentication", function() {
     beforeEach(function() {
       audience = "https://loop.firefox.com";
       assertion = {
-        "audience": audience, 
+        "audience": audience,
         "expires": 1389791993675,
         "issuer": "msisdn.accounts.firefox.com",
         "email": "4c352927cd4f4a4aa03d7d1893d950b8@msisdn.accounts.firefox.com",
