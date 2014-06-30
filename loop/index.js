@@ -237,7 +237,7 @@ function returnUserCallTokens(options, res) {
       'calleeToken': tokboxInfo.calleeToken,
       'timestamp': currentTimestamp,
       'callToken': options.callToken,
-      'urlDate': options.urlDate,
+      'urlCreationDate': options.urlCreationDate,
       'callType': options.callType
     }, function(err, record){
       if (res.serverError(err)) return;
@@ -505,7 +505,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
-          urlDate: record.urlDate,
+          urlCreationDate: record.urlCreationDate,
           callType: record.callType
         };
       });
@@ -608,7 +608,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       callerId: req.token.callerId,
       urls: urls,
       callToken: req.token,
-      urlDate: req.callUrlData.timestamp,
+      urlCreationDate: req.callUrlData.timestamp,
       calleeFriendlyName: req.token.issuer,
       callType: req.token.callType
     }, res);

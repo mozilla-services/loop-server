@@ -37,7 +37,7 @@ var user = "alexis@notmyidea.org";
 var userHmac;
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
-var urlDate = 1404139145;
+var urlCreationDate = 1404139145;
 
 
 function register(url, assertion, credentials, cb) {
@@ -692,7 +692,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           callToken:    callToken,
-          urlDate:      urlDate,
+          urlCreationDate:      urlCreationDate,
           callType:     'audio',
           timestamp:    0
         },
@@ -703,7 +703,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           callToken:    callToken,
-          urlDate:      urlDate,
+          urlCreationDate:      urlCreationDate,
           callType:     'audio-video',
           timestamp:    1
         },
@@ -714,7 +714,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
           callToken:    callToken,
-          urlDate:      urlDate,
+          urlCreationDate:      urlCreationDate,
           callType:     'audio-video',
           timestamp:    2
         }
@@ -736,7 +736,7 @@ describe("HTTP API exposed by the server", function() {
           sessionId: call.sessionId,
           sessionToken: call.calleeToken,
           callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
-          urlDate: call.urlDate,
+          urlCreationDate: call.urlCreationDate,
           callType: call.callType,
         };
       });
@@ -759,7 +759,7 @@ describe("HTTP API exposed by the server", function() {
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken,
         callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
-        urlDate: calls[2].urlDate,
+        urlCreationDate: calls[2].urlCreationDate,
         callType: calls[2].callType
       }];
 
