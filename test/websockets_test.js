@@ -19,14 +19,15 @@ var conf = loop.conf;
 
 function createCall(callId, user, cb) {
   storage.addUserCall(user, {
-    'callerId': 'Alexis',
-    'callId': callId,
-    'userMac': user,
-    'sessionId': '1234',
-    'calleeToken': '1234',
-    'wsCallerToken': "callerToken",
-    'wsCalleeToken': "calleeToken",
-    'timestamp': Date.now()
+    callerId: 'Alexis',
+    callId: callId,
+    userMac: user,
+    sessionId: '1234',
+    calleeToken: '1234',
+    callState: "init",
+    timestamp: Date.now(),
+    wsCallerToken: "callerToken",
+    wsCalleeToken: "calleeToken"
   }, cb);
 }
 

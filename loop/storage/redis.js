@@ -4,6 +4,7 @@
 
 "use strict";
 var redis = require("redis");
+var async = require('async');
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -53,6 +54,10 @@ RedisStorage.prototype = {
 
   addUserCall: function(userMac, call, callback) {
     var self = this;
+    // Clone the args to prevent from modifying it.
+    call = JSON.parse(JSON.stringify(call));
+    var state = call.callState;
+    delete call.callState;
     this._client.setex(
       'call.' + call.callId,
       this._settings.callDuration,
@@ -62,8 +67,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        self._client.sadd('userCalls.' + userMac,
-                          'call.' + call.callId, callback);
+        self.setCallState(call.callId, state, function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          self._client.sadd('userCalls.' + userMac,
+                            'call.' + call.callId, callback);
+        });
       });
   },
 
@@ -96,13 +107,28 @@ RedisStorage.prototype = {
           return a.timestamp - b.timestamp;
         });
 
+        function getState() {
+          async.map(pendingCalls, function(call, cb) {
+            self.getCallState(call.callId, function(err, state) {
+              if (err) {
+                cb(err);
+                return;
+              }
+              call.callState = state;
+              cb(null, call);
+            });
+          }, function(err, results) {
+            callback(null, results);
+          });
+        }
+
         if (expired.length > 0) {
           self._client.srem(expired, function(err, res) {
-            callback(null, pendingCalls);
+            getState();
           });
           return;
         }
-        callback(null, pendingCalls);
+        getState();
       });
     });
   },
@@ -126,6 +152,12 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Sets the call state to the given state.
+   *
+   * In case no TTL is given, fetches the one of the call so the expiration
+   * is the same for the call and for its state.
+   **/
   setCallState: function(callId, state, ttl, callback) {
     var self = this;
 
@@ -172,6 +204,12 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Gets the state of a call.
+   *
+   * Returns one of "init", "half-initiated", "alerting", "connecting",
+   * "half-connected" and "connected".
+   **/
   getCallState: function(callId, callback) {
     var self = this;
 
@@ -207,7 +245,7 @@ RedisStorage.prototype = {
         break;
       default:
         // Ensure a call exists if nothing is stored on this key.
-        self.getCall(callId, function(err, result) {
+        self.getCall(callId, false, function(err, result) {
           if (err) {
             callback(err);
             return;
@@ -222,9 +260,36 @@ RedisStorage.prototype = {
     });
   },
 
-  getCall: function(callId, callback) {
-    this._client.get('call.' + callId, function(err, call) {
-      callback(err, JSON.parse(call));
+  /**
+   * Get a call from its id.
+   *
+   * By default, returns the state of the call. You can set getState to false
+   * to deactivate this behaviour.
+   **/
+  getCall: function(callId, getState, callback) {
+    if (callback === undefined) {
+      callback = getState;
+      getState = true;
+    }
+    var self = this;
+    this._client.get('call.' + callId, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      var call = JSON.parse(data);
+      if (call !== null && getState === true) {
+        self.getCallState(callId, function(err, state) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          call.callState = state;
+          callback(err, call);
+        });
+        return;
+      }
+      callback(err, call);
     });
   },
 

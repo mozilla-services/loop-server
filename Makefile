@@ -7,6 +7,11 @@ NODE_LOCAL_BIN=./node_modules/.bin
 .PHONY: test
 test: lint cover-mocha
 
+.PHONY: travis
+travis: lint
+	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
+	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
+
 install:
 	@npm install
 

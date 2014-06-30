@@ -704,6 +704,7 @@ describe("HTTP API exposed by the server", function() {
           userMac:       userHmac,
           sessionId:     fakeCallInfo.session1,
           calleeToken:   fakeCallInfo.token1,
+          callState:     "init",
           timestamp:     0
         },
         {
@@ -714,6 +715,7 @@ describe("HTTP API exposed by the server", function() {
           userMac:       userHmac,
           sessionId:     fakeCallInfo.session2,
           calleeToken:   fakeCallInfo.token2,
+          callState:     "init",
           timestamp:     1
         },
         {
@@ -724,6 +726,7 @@ describe("HTTP API exposed by the server", function() {
           userMac:       userHmac,
           sessionId:     fakeCallInfo.session3,
           calleeToken:   fakeCallInfo.token2,
+          callState:     "terminated",
           timestamp:     2
         }
       ];

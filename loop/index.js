@@ -234,6 +234,7 @@ function returnUserCallTokens(user, callerId, urls, res) {
       'calleeToken': tokboxInfo.calleeToken,
       'wsCallerToken': wsCallerToken,
       'wsCalleeToken': wsCalleeToken,
+      'callState': "init",
       'timestamp': currentTimestamp
     }, function(err) {
       if (res.serverError(err)) return;
