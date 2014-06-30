@@ -7,7 +7,11 @@
 var WebSocket = require('ws');
 var PubSub = require('./pubsub');
 
-
+/**
+ * Sends an error to the given callback, if there is any.
+ *
+ * Attaches an "isCritical" property, set to true in case of error.
+ **/
 function serverError(error, callback) {
   if (error) {
     error.isCritical = true;
@@ -17,6 +21,11 @@ function serverError(error, callback) {
   return false;
 }
 
+/**
+ * Handles the messages coming from the transport layer, and answers to them.
+ *
+ * Transport is defined outside the message handler itself.
+ **/
 function MessageHandler(pub, sub, storage, tokenManager, conf) {
   this.pub = pub;
   this.sub = sub;
@@ -28,7 +37,8 @@ function MessageHandler(pub, sub, storage, tokenManager, conf) {
 MessageHandler.prototype = {
 
   /**
-   * Parses a message and dispatches it to the right handler.
+   * Parses a message and dispatches it to the right handler (method) of this
+   * class.
    **/
   dispatch: function(session, data, callback) {
     var inboundMessage;
@@ -59,8 +69,7 @@ MessageHandler.prototype = {
   /**
    * Handles the hello message.
    *
-   * Does authentication (checks that the passed hawk credentials are valid,
-   * and answers with the status of the call.
+   * Checks authentication and answers with the status of the call.
    *
    * In addition to that, listens on the pubsub for forward events about this
    * call.
@@ -74,14 +83,12 @@ MessageHandler.prototype = {
       return;
     }
 
-
     // Configure the current session with user information.
     session.callId = message.callId;
 
     var self = this;
     var authType = message.authType.toLowerCase();
     var tokenId = message.auth;
-
 
     function processCall(call) {
       session.type = (call.userMac === session.user) ? "callee" : "caller";
@@ -95,8 +102,8 @@ MessageHandler.prototype = {
           var parts = data.split(":");
           var receivedState = parts[0];
           var reason = parts[1];
-
           var terminate;
+
           if (channel === session.callId) {
             if (receivedState === "terminated" ||
                 receivedState === "connected") {
@@ -128,6 +135,8 @@ MessageHandler.prototype = {
           // Subscribe to the channel to setup progress updates.
           self.sub.subscribe(session.callId);
 
+          // Don't publish the half-initiated state, it's only for internal
+          // use.
           var helloState = currentState;
           if (currentState === "half-initiated") {
             helloState = "init";
@@ -140,7 +149,6 @@ MessageHandler.prototype = {
 
           // After the hello phase and as soon the callee is connected,
           // the call changes to the "alerting" state.
-          // XXX Move this before returning the current state.
           if (currentState === "init") {
             self.broadcastState(session.callId, "init." + session.type,
               timeoutTTL);
@@ -233,7 +241,6 @@ MessageHandler.prototype = {
       );
       return;
     }
-
 
     // If terminate, close the call
     if (event === "terminate") {
@@ -328,6 +335,9 @@ MessageHandler.prototype = {
 
   /**
    * Broadcast the call-state data to the interested parties.
+   *
+   * In case there a reason to broadcast, it's specified as
+   * "terminated:{reason}".
    **/
   broadcastState: function(callId, stateData, ttl) {
     var self = this;
@@ -399,14 +409,16 @@ module.exports = function(storage, tokenManager, logError, conf) {
   var register = function(server) {
     var pub = new PubSub(conf.get('pubsub'));
     var sub = new PubSub(conf.get('pubsub'));
+
+    // We need to max-out the number of listeners on the pub/sub.
     sub.setMaxListeners(0);
     var messageHandler = new MessageHandler(pub, sub, storage, tokenManager,
       conf.get('timers'));
     var wss = new WebSocket.Server({server: server});
 
     wss.on('connection', function(ws) {
+      // We have a different session for each connection.
       var session = {};
-      // Check authentication with hawk.
       ws.on('message', function(data) {
         try {
           messageHandler.dispatch(session, data,

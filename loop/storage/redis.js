@@ -126,6 +126,12 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Sets the call state to the given state.
+   *
+   * In case no TTL is given, fetches the one of the call so the expiration
+   * is the same for the call and for its state.
+   **/
   setCallState: function(callId, state, ttl, callback) {
     var self = this;
 
@@ -172,6 +178,12 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Gets the state of a call.
+   *
+   * Returns one of "init", "half-initiated", "alerting", "connecting",
+   * "half-connected" and "connected".
+   **/
   getCallState: function(callId, callback) {
     var self = this;
 
