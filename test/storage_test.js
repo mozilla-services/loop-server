@@ -141,7 +141,7 @@ describe("Storage", function() {
           });
       });
 
-      describe("#addUserUrls", function() {
+      describe("#addUserCallUrlData", function() {
         it("should be able to add one call-url to the store", function(done) {
           storage.addUserCallUrlData(userMac, token, urlData, function(err) {
             if (err) {
@@ -157,6 +157,18 @@ describe("Storage", function() {
             });
           });
         });
+
+        it("should require a timestamp property for the urlData",
+          function(done) {
+            var invalidData = JSON.parse(JSON.stringify(urlData));
+            invalidData.timestamp = undefined;
+            storage.addUserCallUrlData(userMac, token, invalidData,
+              function(err) {
+                expect(err.message)
+                  .eql("urlData should have a timestamp property.");
+                done();
+              });
+          });
       });
 
       describe("#getUserCallUrls", function() {

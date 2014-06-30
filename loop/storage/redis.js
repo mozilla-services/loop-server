@@ -40,6 +40,9 @@ RedisStorage.prototype = {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
       return;
+    } else if (urlData.timestamp === undefined) {
+      callback(new Error("urlData should have a timestamp property."));
+      return;
     }
     var self = this;
     // In that case use setex to add the metadata of the url.
