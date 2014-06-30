@@ -15,6 +15,7 @@ var loop = require("../loop");
 var app = loop.app;
 var request = loop.request;
 var validateToken = loop.validateToken;
+var validateCallType = loop.validateCallType;
 var validateSimplePushURL = loop.validateSimplePushURL;
 var conf = loop.conf;
 var tokBox = loop.tokBox;
@@ -703,8 +704,9 @@ describe("HTTP API exposed by the server", function() {
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
-          timestamp:    0,
-          callToken:    callToken
+          callToken:    callToken,
+          callType:     'audio',
+          timestamp:    0
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -712,8 +714,9 @@ describe("HTTP API exposed by the server", function() {
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
-          timestamp:    1,
-          callToken:    callToken
+          callToken:    callToken,
+          callType:     'audio-video',
+          timestamp:    1
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -721,8 +724,9 @@ describe("HTTP API exposed by the server", function() {
           userMac:      userHmac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
-          timestamp:    2,
-          callToken:    callToken
+          callToken:    callToken,
+          callType:     'audio-video',
+          timestamp:    2
         }
       ];
 
@@ -741,7 +745,8 @@ describe("HTTP API exposed by the server", function() {
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken,
-          callToken: call.callToken
+          callToken: call.callToken,
+          callType: call.callType,
         };
       });
 
@@ -762,7 +767,8 @@ describe("HTTP API exposed by the server", function() {
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken,
-        callToken: calls[2].callToken
+        callToken: calls[2].callToken,
+        callType: calls[2].callType
       }];
 
       req.expect(200).end(function(err, res) {
@@ -826,6 +832,7 @@ describe("HTTP API exposed by the server", function() {
         emptyReq = supertest(app).post('/calls/' + token);
         addCallReq = supertest(app)
           .post('/calls/' + token)
+          .send({callType: 'audio-video'})
           .expect(200);
       });
 
@@ -833,6 +840,12 @@ describe("HTTP API exposed by the server", function() {
         expect(getMiddlewares(app, 'post', '/calls/:token'))
           .include(validateToken);
       });
+
+      it("should have the validateCallType middleware installed",
+        function() {
+          expect(getMiddlewares(app, 'post', '/calls'))
+            .include(validateCallType);
+        });
 
       describe("With working tokbox APIs", function() {
 
@@ -859,10 +872,10 @@ describe("HTTP API exposed by the server", function() {
             .end(done);
         });
 
-        it.skip("should call returnUserCallTokens", function(done) {
-          sandbox.stub(loop, "returnUserCallTokens");
+        it.skip("should call setUserCall", function(done) {
+          sandbox.stub(loop, "setUserCall");
           addCallReq.end(function() {
-            assert.calledOnce(loop.returnUserCallTokens);
+            assert.calledOnce(loop.setUserCall);
           });
         });
       });
@@ -874,7 +887,8 @@ describe("HTTP API exposed by the server", function() {
       beforeEach(function() {
         emptyReq = supertest(app)
           .post("/calls")
-          .hawk(hawkCredentials);
+          .hawk(hawkCredentials)
+          .type("json");
         addCallReq = supertest(app)
           .post("/calls")
           .hawk(hawkCredentials)
@@ -882,16 +896,16 @@ describe("HTTP API exposed by the server", function() {
           .expect(200);
       });
 
-      it("should return a 400 if no calleeId is provided", function(done) {
-        emptyReq
-          .expect(400)
-          .end(done);
-      });
-
       it("should have the requireHawk middleware installed", function() {
         expect(
           getMiddlewares(app, "post", "/calls")).include(requireHawkSession);
       });
+
+      it("should have the validateCallType middleware installed",
+        function() {
+          expect(getMiddlewares(app, 'post', '/calls'))
+            .include(validateCallType);
+        });
 
       describe("With working tokbox APIs", function() {
 
@@ -907,7 +921,7 @@ describe("HTTP API exposed by the server", function() {
 
         it("should accept a valid call token", function(done) {
           addCallReq
-            .send({"calleeId": user})
+            .send({calleeId: user, callType: 'audio'})
             .end(done);
         });
 
@@ -916,17 +930,17 @@ describe("HTTP API exposed by the server", function() {
             cb("error");
           });
           addCallReq
-            .send({"calleeId": user})
+            .send({calleeId: user, callType: "audio"})
             .expect(503)
             .end(done);
         });
 
-        it.skip("should call returnUserCallTokens", function(done) {
-          sandbox.stub(loop, "returnUserCallTokens");
+        it.skip("should call setUserCall", function(done) {
+          sandbox.stub(loop, "setUserCall");
           addCallReq
-            .send({"calleeId": user})
+            .send({calleeId: user})
             .end(function() {
-            assert.calledOnce(loop.returnUserCallTokens);
+            assert.calledOnce(loop.setUserCall);
           });
         });
 
@@ -948,7 +962,7 @@ describe("HTTP API exposed by the server", function() {
 
         baseReq = supertest(app)
           .post('/calls/' + token)
-          .send({nickname: "foo"})
+          .send({callerId: "foo", callType: "audio"})
           .expect(200);
       });
 
@@ -974,12 +988,12 @@ describe("HTTP API exposed by the server", function() {
       });
 
       it("should return a 200 if the call exists.", function(done) {
-        baseReq.end(function(req, res) {
-            supertest(app)
-              .get('/calls/id/' + res.body.callId)
-              .expect(200)
-              .end(done);
-          });
+        baseReq.expect(200).end(function(req, res) {
+          supertest(app)
+            .get('/calls/id/' + res.body.callId)
+            .expect(200)
+            .end(done);
+        });
       });
     });
 
@@ -997,7 +1011,7 @@ describe("HTTP API exposed by the server", function() {
         });
         createCall = supertest(app)
           .post('/calls/' + token)
-          .send({nickname: "foo"})
+          .send({callerId: "foo", callType: "audio"})
           .expect(200);
       });
 

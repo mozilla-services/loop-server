@@ -293,8 +293,10 @@ describe("Storage", function() {
         it("should delete an existing call", function(done) {
           storage.addUserCall(userMac, call, function(err) {
             storage.deleteCall(call.callId, function(err, result) {
+              if (err) throw err;
               expect(result).to.eql(true);
               storage.getCall(call.callId, function(err, result) {
+                if (err) throw err;
                 expect(result).to.equal(null);
                 done(err);
               });
