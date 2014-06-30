@@ -247,6 +247,7 @@ function returnUserCallTokens(options, res) {
       'callState': "init",
       'timestamp': currentTimestamp,
       'callToken': options.callToken,
+      'urlCreationDate': options.urlCreationDate,
       'callType': options.callType
     }, function(err) {
       if (res.serverError(err)) return;
@@ -490,7 +491,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
       if (res.serverError(err)) return;
 
       res.json(200, {
-        call_url: conf.get("webAppUrl").replace("{token}", token),
+        callUrl: conf.get("webAppUrl").replace("{token}", token),
         expiresAt: urlData.expires
       });
     });
@@ -520,7 +521,8 @@ app.get('/calls', requireHawkSession, function(req, res) {
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
-          callToken: record.callToken,
+          callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
+          urlCreationDate: record.urlCreationDate,
           callType: record.callType
         };
       });
@@ -540,10 +542,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         // TODO: set caller ID. Bug 1025894.
         returnUserCallTokens({
           user: callee,
-          callerId: undefined,
           urls: callees[callee],
-          callToken: undefined,
-          calleeFriendlyName: undefined,
           callType: req.body.callType
         }, res);
       }();
@@ -625,7 +624,8 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       user: req.callUrlData.userMac,
       callerId: req.token.callerId,
       urls: urls,
-      callToken: req.param('token'),
+      callToken: req.token,
+      urlCreationDate: req.callUrlData.timestamp,
       calleeFriendlyName: req.token.issuer,
       callType: req.token.callType
     }, res);
