@@ -37,5 +37,6 @@
     "supervisoryDuration": 0.050,
     "ringingDuration": 0.050,
     "connectionDuration": 0.050
-  }
+  },
+  "maxSimplePushUrls": 2
 }

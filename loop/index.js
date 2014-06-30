@@ -42,7 +42,8 @@ var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
   'hawkSessionDuration': conf.get('hawkSessionDuration'),
-  'callDuration': conf.get('callDuration')
+  'callDuration': conf.get('callDuration'),
+  'maxSimplePushUrls': conf.get('maxSimplePushUrls')
 });
 
 var tokBox = new TokBox(conf.get('tokBox'));
@@ -215,27 +216,38 @@ function authenticate(req, res, next) {
 
 /**
  * Helper to store and trigger an user initiated call.
+ *
+ * options is a javascript object which can have the following keys:
+ * - user: the identifier of the connected user.
+ * - callerId: the identifier for the caller.
+ * - urls: the list of simple push urls to notify of the new call.
+ * - calleeFriendlyName: the friendly name of the person called.
+ * - callToken: the call token that was used to initiate the call (if any)
  */
-function returnUserCallTokens(user, callerId, urls, res) {
+function returnUserCallTokens(options, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
     if (res.serverError(err)) return;
 
+    var urls = options.urls;
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
     var wsCalleeToken = crypto.randomBytes(16).toString('hex');
     var wsCallerToken = crypto.randomBytes(16).toString('hex');
 
-    storage.addUserCall(user, {
-      'callerId': callerId,
+    storage.addUserCall(options.user, {
+      'callerId': options.callerId,
+      'calleeFriendlyName': options.calleeFriendlyName,
       'callId': callId,
-      'userMac': user,
+      'userMac': options.user,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'wsCallerToken': wsCallerToken,
       'wsCalleeToken': wsCalleeToken,
       'callState': "init",
-      'timestamp': currentTimestamp
+      'timestamp': currentTimestamp,
+      'callToken': options.callToken,
+      'callType': options.callType
     }, function(err) {
       if (res.serverError(err)) return;
 
@@ -291,32 +303,21 @@ var corsEnabled = cors({
   }
 });
 
-var tokenManager = new tokenlib.TokenManager({
-  macSecret: conf.get('macSecret'),
-  encryptionSecret: conf.get('encryptionSecret'),
-  timeout: conf.get('callUrlTimeout')
-});
-
 /**
  * Middleware that validates the given token is valid (should be included into
  * the "token" parameter.
  **/
 function validateToken(req, res, next) {
-  try {
-    req.token = tokenManager.decode(req.param('token'));
-    storage.isURLRevoked(req.token.uuid, function(err, record) {
-      if (res.serverError(err)) return;
-
-      if (record) {
-        res.sendError("url", "token", "invalid token");
-        return;
-      }
-      next();
-    });
-  } catch(err) {
-    res.sendError("url", "token", "invalid token");
-    return;
-  }
+  req.token = req.param('token');
+  storage.getCallUrlData(req.token, function(err, urlData) {
+    if (res.serverError(err)) return;
+    if (urlData === null) {
+      res.send(404, "Not found");
+      return;
+    }
+    req.callUrlData = urlData;
+    next();
+  });
 }
 
 /**
@@ -341,6 +342,7 @@ function requireParams() {
         res.addError("body", item, "missing: " + item);
       });
       res.sendError();
+      return;
     }
     next();
   };
@@ -350,11 +352,24 @@ function requireParams() {
  * Middleware that ensures a valid simple push url is present in the request.
  **/
 function validateSimplePushURL(req, res, next) {
-  requireParams(["simple_push_url"])(req, res, function() {
+  requireParams("simple_push_url")(req, res, function() {
     req.simplePushURL = req.body.simple_push_url;
     if (req.simplePushURL.indexOf('http') !== 0) {
       res.sendError("body", "simple_push_url",
                     "simple_push_url should be a valid url");
+      return;
+    }
+    next();
+  });
+}
+
+/**
+ * Middleware that ensures a valid callType is present in the request.
+ **/
+function validateCallType(req, res, next) {
+  requireParams("callType")(req, res, function() {
+    if (req.body.callType !== "audio" && req.body.callType !== "audio-video") {
+      res.sendError("body", "callType", "Should be 'audio' or 'audio-video'");
       return;
     }
     next();
@@ -441,7 +456,7 @@ app.delete('/registration', requireHawkSession, validateSimplePushURL,
  **/
 app.post('/call-url', requireHawkSession, requireParams('callerId'),
   function(req, res) {
-    var expiresIn,
+    var expiresIn = conf.get('callUrlTimeout'),
         maxTimeout = conf.get('callUrlMaxTimeout');
 
     if (req.body.hasOwnProperty("expiresIn")) {
@@ -455,24 +470,29 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
         return;
       }
     }
-    var uuid = crypto.randomBytes(4).toString("hex");
-    var tokenPayload = {
-      user: req.user,
-      uuid: uuid,
-      callerId: req.body.callerId
+    var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+    var urlData = {
+      userMac: req.user,
+      callerId: req.body.callerId,
+      timestamp: parseInt(Date.now() / 1000),
+      issuer: req.body.issuer || ''
     };
     if (expiresIn !== undefined) {
-      tokenPayload.expires = (Date.now() / tokenlib.ONE_HOUR) + expiresIn;
+      urlData.expires = urlData.timestamp + expiresIn * tokenlib.ONE_HOUR;
     }
 
     if (statsdClient !== undefined) {
       statsdClient.count('loop-call-urls', 1);
       statsdClient.count('loop-call-urls-' + req.user, 1);
     }
-    var tokenWrapper = tokenManager.encode(tokenPayload);
-    res.json(200, {
-      call_url: conf.get("webAppUrl").replace("{token}", tokenWrapper.token),
-      expiresAt: tokenWrapper.payload.expires
+
+    storage.addUserCallUrlData(req.user, token, urlData, function(err) {
+      if (res.serverError(err)) return;
+
+      res.json(200, {
+        call_url: conf.get("webAppUrl").replace("{token}", token),
+        expiresAt: urlData.expires
+      });
     });
   });
 
@@ -495,10 +515,13 @@ app.get('/calls', requireHawkSession, function(req, res) {
       }).map(function(record) {
         return {
           callId: record.callId,
+          calleeId: record.calleeFriendlyName,
           websocketToken: record.wsCalleeToken,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
-          sessionToken: record.calleeToken
+          sessionToken: record.calleeToken,
+          callToken: record.callToken,
+          callType: record.callType
         };
       });
 
@@ -510,12 +533,19 @@ app.get('/calls', requireHawkSession, function(req, res) {
  * Add a call from a registered user to another registered user.
  **/
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
-  function(req, res) {
+  validateCallType, function(req, res) {
 
     function callUser(callee) {
       return function() {
         // TODO: set caller ID. Bug 1025894.
-        returnUserCallTokens(callee, undefined, callees[callee], res);
+        returnUserCallTokens({
+          user: callee,
+          callerId: undefined,
+          urls: callees[callee],
+          callToken: undefined,
+          calleeFriendlyName: undefined,
+          callType: req.body.callType
+        }, res);
       }();
     }
 
@@ -569,7 +599,7 @@ app.get('/calls/:token', validateToken, function(req, res) {
  **/
 app.delete('/call-url/:token', requireHawkSession, validateToken,
   function(req, res) {
-    if (req.token.user !== req.user) {
+    if (req.callUrlData.userMac !== req.user) {
       res.json(403, "Forbidden");
       return;
     }
@@ -583,16 +613,22 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
 /**
  * Initiate a call with the user identified by the given token.
  **/
-app.post('/calls/:token', validateToken, function(req, res) {
-  storage.getUserSimplePushURLs(req.token.user, function(err, urls) {
+app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
+  storage.getUserSimplePushURLs(req.callUrlData.userMac, function(err, urls) {
     if (res.serverError(err)) return;
 
     if (!urls) {
       res.json(410, 'Gone');
       return;
     }
-
-    returnUserCallTokens(req.token.user, req.token.callerId, urls, res);
+    returnUserCallTokens({
+      user: req.callUrlData.userMac,
+      callerId: req.token.callerId,
+      urls: urls,
+      callToken: req.param('token'),
+      calleeFriendlyName: req.token.issuer,
+      callType: req.token.callType
+    }, res);
   });
 });
 
@@ -638,7 +674,7 @@ server.listen(conf.get('port'), conf.get('host'), function(){
 
 
 // Handle websockets.
-var ws = websockets(storage, tokenManager, logError, conf);
+var ws = websockets(storage, logError, conf);
 try {
   ws.register(server);
 } catch (e) {
@@ -671,6 +707,7 @@ module.exports = {
   authenticate: authenticate,
   requireHawkSession: requireHawkSession,
   validateSimplePushURL: validateSimplePushURL,
+  validateCallType: validateCallType,
   returnUserCallTokens: returnUserCallTokens,
   shutdown: shutdown
 };

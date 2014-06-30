@@ -10,6 +10,7 @@ var sinon = require("sinon");
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
 var hmac = require("../loop").hmac;
+var generateToken = require("../loop/tokenlib").generateToken;
 
 var uuid = "1234";
 var user = "alexis@notmyidea.com";
@@ -52,14 +53,31 @@ describe("Storage", function() {
           timestamp:    2
         }
       ],
-      call = calls[0];
+      call = calls[0],
+      urls = [
+        {
+          timestamp:  0,
+          expires: conf.get("callUrlTimeout")
+        },
+        {
+          timestamp:  1,
+          expires: conf.get("callUrlTimeout")
+        },
+        {
+          timestamp:  2,
+          expires: conf.get("callUrlTimeout")
+        }
+      ],
+    urlData = urls[0],
+    token = generateToken(conf.get("callUrlTokenSize"));
 
     describe(name, function() {
       beforeEach(function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
           hawkSessionDuration: conf.get('hawkSessionDuration'),
-          callDuration: conf.get('callDuration')
+          callDuration: conf.get('callDuration'),
+          maxSimplePushUrls: conf.get('maxSimplePushUrls')
         });
       });
 
@@ -78,35 +96,11 @@ describe("Storage", function() {
               if (err)  {
                 throw err;
               }
-              storage.isURLRevoked(uuid, function(err, value){
-                expect(value).to.equal(true);
+              storage.getCallUrlData(uuid, function(err, value){
+                expect(value).to.equal(null);
                 done(err);
               });
             });
-        });
-      });
-
-      describe('isURLRevoked', function() {
-        it("should not return an expired token", function(done) {
-          storage.revokeURLToken({uuid: uuid, expires: a_second / 100},
-            function(err) {
-              setTimeout(function() {
-                storage.isURLRevoked(uuid, function(err, value) {
-                  if (err) {
-                    throw err;
-                  }
-                  expect(value).to.equal(false);
-                  done();
-                });
-              }, 20);
-            });
-        });
-
-        it("should not return a non existing token", function(done) {
-          storage.isURLRevoked("does-not-exist", function(err, value) {
-            expect(value).to.equal(false);
-            done(err);
-          });
         });
       });
 
@@ -124,18 +118,49 @@ describe("Storage", function() {
           });
         });
 
-        it("should overwrite existing simple push URLs", function(done) {
+        it("should not overwrite existing simple push URLs", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
             storage.addUserSimplePushURL(userMac, simplePushURL + '2',
               function(err) {
                 storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                  expect(urls).to.have.length(1);
-                  expect(urls).to.eql([simplePushURL + '2']);
+                  expect(urls).to.have.length(2);
+                  expect(urls).to.contain(simplePushURL);
+                  expect(urls).to.contain(simplePushURL + '2');
                   done(err);
                 });
               });
           });
         });
+
+        it("should dedupe URLs", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL,
+              function(err) {
+                storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                  expect(urls).to.have.length(1);
+                  expect(urls).to.contain(simplePushURL);
+                  done(err);
+                });
+              });
+          });
+        });
+
+        it("should not store more than X records", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                storage.addUserSimplePushURL(userMac, simplePushURL + "3",
+                  function(err) {
+                    storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                      expect(urls).to.have.length(2);
+                      expect(urls).to.not.contain(simplePushURL);
+                      done(err);
+                    });
+                  });
+              });
+          });
+        });
+
       });
 
       describe("#getUserSimplePushURLs", function() {
@@ -143,15 +168,147 @@ describe("Storage", function() {
           function(done) {
             storage.getUserSimplePushURLs("does-not-exist",
               function(err, urls) {
-                if (err) {
-                  throw err;
-                }
+                if (err) throw err;
                 expect(urls).to.eql([]);
                 done();
               });
           });
       });
 
+      describe("#removeSimplePushURL", function() {
+        it("should delete an existing simple push URL", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                if (err) throw err;
+                storage.removeSimplePushURL(userMac, simplePushURL,
+                  function(err) {
+                    if (err) throw err;
+                    storage.getUserSimplePushURLs(userMac,
+                      function(err, urls) {
+                        if (err) throw err;
+                        expect(urls.length).to.eql(1);
+                        expect(urls).to.not.contain(simplePushURL);
+                        done();
+                      });
+                  });
+              });
+          });
+        });
+      });
+
+      describe("#addUserCallUrlData", function() {
+        it("should be able to add one call-url to the store", function(done) {
+          storage.addUserCallUrlData(userMac, token, urlData, function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getUserCallUrls(userMac, function(err, results) {
+              if (err) {
+                throw err;
+              }
+              expect(results).to.have.length(1);
+              expect(results).to.eql([urlData]);
+              done();
+            });
+          });
+        });
+
+        it("should require a timestamp property for the urlData",
+          function(done) {
+            var invalidData = JSON.parse(JSON.stringify(urlData));
+            invalidData.timestamp = undefined;
+            storage.addUserCallUrlData(userMac, token, invalidData,
+              function(err) {
+                expect(err.message)
+                  .eql("urlData should have a timestamp property.");
+                done();
+              });
+          });
+      });
+
+      describe("#getUserCallUrls", function() {
+        var sandbox;
+
+        beforeEach(function() {
+          sandbox = sinon.sandbox.create();
+        });
+
+        afterEach(function() {
+          sandbox.restore();
+        });
+
+        it("should keep a list of the user urls", function(done) {
+          storage.addUserCallUrlData(
+            userMac,
+            generateToken(conf.get("callUrlTokenSize")),
+            urls[0],
+            function() {
+              storage.addUserCallUrlData(
+                userMac,
+                generateToken(conf.get("callUrlTokenSize")),
+                urls[1],
+                function() {
+                  storage.addUserCallUrlData(
+                    userMac,
+                    generateToken(conf.get("callUrlTokenSize")),
+                    urls[2],
+                    function() {
+                      storage.getUserCallUrls(userMac, function(err, results) {
+                        expect(results).to.have.length(3);
+                        expect(results).to.eql(urls);
+                        done(err);
+                      });
+                    });
+                });
+            });
+        });
+
+        it("should return an empty list if no urls", function(done) {
+          storage.getUserCallUrls(userMac, function(err, results) {
+            expect(results).to.eql([]);
+            done(err);
+          });
+        });
+
+        it("should handle storage errors correctly.", function(done) {
+          sandbox.stub(storage._client, "smembers",
+            function(key, cb){
+              cb("error");
+            });
+
+          storage.getUserCallUrls(userMac, function(err, results) {
+            expect(err).to.eql("error");
+            expect(typeof results).to.eql("undefined");
+            done();
+          });
+        });
+      });
+
+      describe("#getCallUrlData", function() {
+        it("should be able to list a call-url by its id", function(done) {
+          storage.addUserCallUrlData(userMac, token, urlData, function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getCallUrlData(token, function(err, result) {
+              if (err) {
+                throw err;
+              }
+              expect(result).to.eql(urlData);
+              done();
+            });
+          });
+        });
+
+        it("should return null if the call-url doesn't exist", function(done) {
+          storage.getCall("does-not-exist", function(err, call) {
+            expect(call).to.eql(null);
+            done();
+          });
+        });
+      });
 
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
@@ -252,8 +409,10 @@ describe("Storage", function() {
         it("should delete an existing call", function(done) {
           storage.addUserCall(userMac, call, function(err) {
             storage.deleteCall(call.callId, function(err, result) {
+              if (err) throw err;
               expect(result).to.eql(true);
               storage.getCall(call.callId, function(err, result) {
+                if (err) throw err;
                 expect(result).to.equal(null);
                 done(err);
               });

@@ -150,23 +150,12 @@ describe('websockets', function() {
 
   describe("with two clients", function() {
     var callee;
-    var caller, token, callId, calleeMsgCount;
+    var caller, callId, calleeMsgCount;
 
     beforeEach(function(done) {
       this.timeout(5000);
       calleeMsgCount = 0;
       callId = crypto.randomBytes(16).toString('hex');
-
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
-      });
-
-      token = tokenManager.encode({
-        uuid: '1234',
-        user: hawkCredentials.id,
-        callerId: 'Alexis'
-      }).token;
 
       // Name the existing ws client "callee" for readability.
       callee = client;

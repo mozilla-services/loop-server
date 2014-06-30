@@ -26,11 +26,10 @@ function serverError(error, callback) {
  *
  * Transport is defined outside the message handler itself.
  **/
-function MessageHandler(pub, sub, storage, tokenManager, conf) {
+function MessageHandler(pub, sub, storage, conf) {
   this.pub = pub;
   this.sub = sub;
   this.storage = storage;
-  this.tokenManager = tokenManager;
   this.conf = conf;
 }
 
@@ -381,7 +380,7 @@ MessageHandler.prototype = {
   }
 };
 
-module.exports = function(storage, tokenManager, logError, conf) {
+module.exports = function(storage, logError, conf) {
   /**
    * Allow a server to register itself as a websocket provider.
    **/
@@ -391,7 +390,7 @@ module.exports = function(storage, tokenManager, logError, conf) {
 
     // We need to max-out the number of listeners on the pub/sub.
     sub.setMaxListeners(0);
-    var messageHandler = new MessageHandler(pub, sub, storage, tokenManager,
+    var messageHandler = new MessageHandler(pub, sub, storage,
       conf.get('timers'));
     var wss = new WebSocket.Server({server: server});
 

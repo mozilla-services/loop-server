@@ -10,7 +10,6 @@ var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var assert = sinon.assert;
-var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var Token = require("../loop/token").Token;
 
@@ -24,6 +23,7 @@ var validateToken = require("../loop").validateToken;
 var requireParams = require("../loop").requireParams;
 var authenticate = require("../loop").authenticate;
 var validateSimplePushURL = require("../loop").validateSimplePushURL;
+var validateCallType = require("../loop").validateCallType;
 var returnUserCallTokens = require("../loop").returnUserCallTokens;
 var tokBox = require("../loop").tokBox;
 var request = require("../loop").request;
@@ -108,49 +108,40 @@ describe("index.js", function() {
         .end(done);
     });
 
-    it("should return a 400 if the token is invalid.", function(done) {
+    it("should return a 404 if the token is invalid.", function(done) {
       jsonReq
-        .get('/validateToken/invalidToken/')
-        .expect(400, /invalid token/)
+        .get('/validateToken/invalidToken')
+        .expect(404)
         .end(done);
     });
 
-    it("should return a 400 if the token had been revoked", function(done) {
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
-      });
-      var tokenWrapper = tokenManager.encode({
-        uuid: "1234",
-        user: "natim"
-      });
-      storage.revokeURLToken(tokenWrapper.payload, function(err) {
-        if (err) {
-          throw err;
-        }
-        jsonReq
-          .get('/validateToken/' + tokenWrapper.token)
-          .expect(400, /invalid token/)
-          .end(done);
+    it("should return a 404 if the token had been revoked", function(done) {
+      storage.addUserCallUrlData("natim", "1234", {
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        storage.revokeURLToken("1234", function(err) {
+          if (err) throw err;
+          jsonReq
+            .get('/validateToken/1234')
+            .expect(404)
+            .end(done);
+        });
       });
     });
 
     it("should return a 200 if the token is valid.", function(done) {
-      var tokenManager = new tokenlib.TokenManager({
-        macSecret: conf.get('macSecret'),
-        encryptionSecret: conf.get('encryptionSecret')
+      storage.addUserCallUrlData("natim", "1234", {
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        jsonReq
+          .get('/validateToken/1234')
+          .expect(200, /ok/)
+          .end(done);
       });
-
-      var token = tokenManager.encode({
-        uuid: "1234",
-        user: "natim",
-        callerId: "alexis"
-      }).token;
-
-      jsonReq
-        .get('/validateToken/' + token)
-        .expect(200, /ok/)
-        .end(done);
     });
   });
 
@@ -177,6 +168,56 @@ describe("index.js", function() {
       jsonReq
         .post('/validateSP/')
         .send({'simple_push_url': 'http://this-is-an-url'})
+        .expect(200)
+        .end(done);
+    });
+
+  });
+
+  describe("#validateCallType", function() {
+    // Create a route with the validateSimplePushURL middleware installed.
+    app.post('/validateCallType/', validateCallType, function(req, res) {
+      res.json(200, "ok");
+    });
+
+    it("should error on empty callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res.body, "body", "callType",
+                              "missing: callType");
+          done();
+        });
+    });
+
+    it("should error on wrong callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({'callType': 'wrong-type'})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res.body, "body", "callType",
+                              "Should be 'audio' or 'audio-video'");
+          done();
+        });
+    });
+
+    it("should accept a valid 'audio' callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({callType: 'audio'})
+        .expect(200)
+        .end(done);
+    });
+
+    it("should accept a valid'audio-video' callType", function(done) {
+      jsonReq
+        .post('/validateCallType/')
+        .send({callType: 'audio-video'})
         .expect(200)
         .end(done);
     });
@@ -361,12 +402,14 @@ describe("index.js", function() {
     var sandbox;
 
     app.post('/returnUserCallTokens', function(req, res) {
-      returnUserCallTokens(
-        req.body.callee,
-        req.body.callerId,
-        req.body.urls,
-        res
-      );
+      returnUserCallTokens({
+        user: req.body.callee,
+        callerId: req.body.callerId,
+        urls: req.body.urls,
+        calleeFriendlyName: req.body.calleeFriendlyName,
+        callToken: req.body.callToken,
+        callType: req.body.callType
+      }, res);
     });
 
     beforeEach(function() {
@@ -384,7 +427,7 @@ describe("index.js", function() {
 
       supertest(app)
         .post('/returnUserCallTokens')
-        .send({})
+        .send({callType: "audio"})
         .expect(503)
         .end(done);
     });
@@ -393,8 +436,9 @@ describe("index.js", function() {
 
       var user = "user@arandomuri";
       var callerId = "aCallerId";
+      var calleeFriendlyName = "issuerName";
       var urls = ["url1", "url2"];
-
+      var callToken = 'call-token';
       var tokBoxSessionId = "aTokboxSession";
       var tokBoxCallerToken = "aToken";
       var tokBoxCalleeToken = "anotherToken";
@@ -416,7 +460,10 @@ describe("index.js", function() {
           .send({
             callee: user,
             callerId: callerId,
-            urls: urls
+            urls: urls,
+            callToken: callToken,
+            calleeFriendlyName: calleeFriendlyName,
+            callType: "audio"
           })
           .expect(200)
           .end(function(err, res) {
@@ -435,7 +482,10 @@ describe("index.js", function() {
             .send({
               callee: user,
               callerId: callerId,
-              urls: urls
+              urls: urls,
+              callToken: callToken,
+              calleeFriendlyName: calleeFriendlyName,
+              callType: "audio"
             })
             .expect(200)
             .end(function(err, res) {
@@ -464,7 +514,10 @@ describe("index.js", function() {
             .send({
               callee: user,
               callerId: callerId,
-              urls: urls
+              urls: urls,
+              callToken: callToken,
+              calleeFriendlyName: calleeFriendlyName,
+              callType: "audio"
             })
             .expect(200)
             .end(function(err, res) {
@@ -482,9 +535,12 @@ describe("index.js", function() {
                 expect(items[0]).eql({
                   callerId: callerId,
                   callState: "init",
+                  calleeFriendlyName: calleeFriendlyName,
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,
+                  callToken: callToken,
+                  callType: "audio"
                 });
                 done();
               });
@@ -525,6 +581,8 @@ describe("index.js", function() {
           .send({
             callee: user,
             callerId: callerId,
+            callToken: callToken,
+            callType: "audio",
             urls: urls
           })
           .expect(503)
@@ -532,5 +590,4 @@ describe("index.js", function() {
       });
     });
   });
-
 });

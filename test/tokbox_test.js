@@ -161,6 +161,6 @@ describe("FakeTokBox", function() {
         expect(requests[0]).to.equal(conf.get("fakeTokBoxURL"));
         done();
       });
-    });    
+    });
   });
 });
