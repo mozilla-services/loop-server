@@ -37,7 +37,7 @@ mocha:
 
 .PHONY: spaceleft
 spaceleft:
-	if which grin ack-grep 2>&1 >/dev/null; \
+	@if which grin 2>&1 >/dev/null; \
 	then \
 	  grin " $$" loop/ test/ config/; \
 	fi
