@@ -34,6 +34,7 @@ describe('websockets', function() {
   var client, hawkCredentials, userHmac, sandbox;
 
   beforeEach(function(done) {
+    this.timeout(5000);
     sandbox = sinon.sandbox.create();
 
     // Create the websocket client.
@@ -151,6 +152,7 @@ describe('websockets', function() {
     var caller, token, callId, calleeMsgCount;
 
     beforeEach(function(done) {
+      this.timeout(5000);
       calleeMsgCount = 0;
       callId = crypto.randomBytes(16).toString('hex');
 
@@ -203,7 +205,6 @@ describe('websockets', function() {
 
         caller.on('message', function(data) {
           var message = JSON.parse(data);
-          console.log(message);
           // First message should be "hello/init".
           if (calleeMsgCount === 0) {
             expect(message.messageType).eql("hello");
