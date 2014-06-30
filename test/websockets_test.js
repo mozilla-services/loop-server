@@ -29,7 +29,7 @@ function createCall(callId, user, cb) {
   }, cb);
 }
 
-describe.only('websockets', function() {
+describe('websockets', function() {
   var client, hawkCredentials, userHmac, sandbox;
 
   beforeEach(function(done) {

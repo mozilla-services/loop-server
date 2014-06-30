@@ -55,9 +55,9 @@ RedisStorage.prototype = {
   addUserCall: function(userMac, call, callback) {
     var self = this;
     // Clone the args to prevent from modifying it.
-    var callCopy = JSON.parse(JSON.stringify(call));
-    var state = callCopy.callState;
-    delete callCopy.callState;
+    call = JSON.parse(JSON.stringify(call));
+    var state = call.callState;
+    delete call.callState;
     this._client.setex(
       'call.' + call.callId,
       this._settings.callDuration,
@@ -245,7 +245,7 @@ RedisStorage.prototype = {
         break;
       default:
         // Ensure a call exists if nothing is stored on this key.
-        self.getCall(callId, function(err, result) {
+        self.getCall(callId, false, function(err, result) {
           if (err) {
             callback(err);
             return;
@@ -260,9 +260,36 @@ RedisStorage.prototype = {
     });
   },
 
-  getCall: function(callId, callback) {
-    this._client.get('call.' + callId, function(err, call) {
-      callback(err, JSON.parse(call));
+  /**
+   * Get a call from its id.
+   *
+   * By default, returns the state of the call. You can set getState to false
+   * to deactivate this behaviour.
+   **/
+  getCall: function(callId, getState, callback) {
+    if (callback === undefined) {
+      callback = getState;
+      getState = true;
+    }
+    var self = this;
+    this._client.get('call.' + callId, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      var call = JSON.parse(data);
+      if (call !== null && getState === true) {
+        self.getCallState(callId, function(err, state) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          call.callState = state;
+          callback(err, call);
+        });
+        return;
+      }
+      callback(err, call);
     });
   },
 
