@@ -15,6 +15,7 @@ var loop = require("../loop");
 var app = loop.app;
 var request = loop.request;
 var validateToken = loop.validateToken;
+var validateCallType = loop.validateCallType;
 var validateSimplePushURL = loop.validateSimplePushURL;
 var conf = loop.conf;
 var tokBox = loop.tokBox;
@@ -840,6 +841,12 @@ describe("HTTP API exposed by the server", function() {
           .include(validateToken);
       });
 
+      it("should have the validateCallType middleware installed",
+        function() {
+          expect(getMiddlewares(app, 'post', '/calls'))
+            .include(validateCallType);
+        });
+
       describe("With working tokbox APIs", function() {
 
         beforeEach(function() {
@@ -889,17 +896,16 @@ describe("HTTP API exposed by the server", function() {
           .expect(200);
       });
 
-      it("should return a 400 if no calleeId is provided", function(done) {
-        emptyReq
-          .send({callType: 'audio'})
-          .expect(400)
-          .end(done);
-      });
-
       it("should have the requireHawk middleware installed", function() {
         expect(
           getMiddlewares(app, "post", "/calls")).include(requireHawkSession);
       });
+
+      it("should have the validateCallType middleware installed",
+        function() {
+          expect(getMiddlewares(app, 'post', '/calls'))
+            .include(validateCallType);
+        });
 
       describe("With working tokbox APIs", function() {
 
@@ -911,13 +917,6 @@ describe("HTTP API exposed by the server", function() {
               calleeToken: tokBoxCalleeToken
             });
           });
-        });
-
-        it("should return a 400 if no callType is provided", function(done) {
-          emptyReq
-            .send({calleeId: user})
-            .expect(400)
-            .end(done);
         });
 
         it("should accept a valid call token", function(done) {
