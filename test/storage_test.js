@@ -201,13 +201,9 @@ describe("Storage", function() {
       describe("#addUserCallUrlData", function() {
         it("should be able to add one call-url to the store", function(done) {
           storage.addUserCallUrlData(userMac, token, urlData, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getUserCallUrls(userMac, function(err, results) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(results).to.have.length(1);
               expect(results).to.eql([urlData]);
               done();
@@ -226,6 +222,40 @@ describe("Storage", function() {
                 done();
               });
           });
+      });
+
+      describe.only("#updateUserCallUrlData", function() {
+        it("should error in case there is no existing calls for this user",
+          function(done) {
+            storage.updateUserCallUrlData(userMac, token, urlData,
+            function(err) {
+              expect(err.notFound).to.eql(true);
+              done();
+            });
+          });
+
+        it("should update an existing call", function(done) {
+          storage.addUserCallUrlData(userMac, token, urlData, function(err) {
+            if (err) throw err;
+            var updatedData = JSON.parse(JSON.stringify(urlData));
+            updatedData.callerId = "natim@moz";
+            updatedData.issuer = "alexis@moz";
+            storage.updateUserCallUrlData(userMac, token, updatedData,
+              function(err) {
+                expect(err).to.eql(null);
+                storage.getCallUrlData(token, function(err, data) {
+                  if (err) throw err;
+                  expect(data).eql({
+                    callerId: "natim@moz",
+                    issuer: "alexis@moz",
+                    expires: 720,
+                    timestamp: 0
+                  });
+                  done();
+                });
+              });
+          });
+        });
       });
 
       describe("#getUserCallUrls", function() {
