@@ -602,12 +602,12 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
     }
     returnUserCallTokens({
       user: req.callUrlData.userMac,
-      callerId: req.token.callerId,
+      callerId: req.callUrlData.callerId,
       urls: urls,
       callToken: req.token,
       urlCreationDate: req.callUrlData.timestamp,
-      calleeFriendlyName: req.token.issuer,
-      callType: req.token.callType
+      calleeFriendlyName: req.callUrlData.issuer,
+      callType: req.callUrlData.callType
     }, res);
   });
 });
