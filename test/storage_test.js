@@ -472,6 +472,23 @@ describe("Storage", function() {
         });
       });
 
+      describe("#setUserId, #getUserId", function() {
+        it("should store and retrieve an user hawk session", function(done) {
+          storage.setUserId("tokenId", "userId", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getUserId("tokenId", function(err, result) {
+              if (err) {
+                throw err;
+              }
+              expect(result).to.eql("userId");
+              done();
+            });
+          });
+        });
+      });
+
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
           storage.setCallState("12345", "init", 10, function(err) {

@@ -26,6 +26,7 @@ var handle503 = require("./middlewares").handle503;
 var logRequests = require('./middlewares').logRequests;
 var async = require('async');
 var websockets = require('./websockets');
+var encrypt = require("./encrypt").encrypt;
 
 var hawk = require('./hawk');
 var hmac = require('./hmac');
@@ -132,15 +133,22 @@ var requireFxA = fxa.getMiddleware({
     var userHmac = hmac(identifier, conf.get('hawkIdSecret'));
 
     // generate the hawk session.
-    hawk.generateHawkSession(storage.setHawkSession.bind(storage),
-      function(err, hawkHmacId, authKey, sessionToken) {
+    hawk.generateHawkSession(function(tokenId, authKey, callback) {
+      var hawkHmacId = buildHmacId(tokenId);
+      storage.setHawkSession(hawkHmacId, authKey, callback);
+    }, function(err, tokenId, authKey, sessionToken) {
+        var hawkHmacId = buildHmacId(tokenId);
+        var encryptedIdentifier = encrypt(tokenId, identifier);
         storage.setHawkUser(userHmac, hawkHmacId, function(err) {
           if (res.serverError(err)) return;
+          storage.setUserId(hawkHmacId, encryptedIdentifier, function(err) {
+            if (res.serverError(err)) return;
 
-          // return hawk credentials.
-          hawk.setHawkHeaders(res, sessionToken);
-          req.user = userHmac;
-          next();
+            // return hawk credentials.
+            hawk.setHawkHeaders(res, sessionToken);
+            req.user = userHmac;
+            next();
+          });
         });
       }
     );
@@ -403,12 +411,9 @@ app.get("/", function(req, res) {
  **/
 app.post('/registration', authenticate, validateSimplePushURL,
     function(req, res) {
-    // XXX Bug 980289 —
-    // With FxA we will want to handle many SimplePushUrls per user.
     storage.addUserSimplePushURL(req.user, req.simplePushURL,
-      function(err, record) {
+      function(err) {
         if (res.serverError(err)) return;
-
         res.json(200, "ok");
       });
   });

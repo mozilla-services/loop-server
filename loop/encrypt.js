@@ -7,15 +7,15 @@ var sodium = require("sodium");
 
 
 /**
- * Take an hawkId and an id and encrypt them as a string
+ * Take an passphrase and a string and encrypt it as a string
  */
-function encrypt(hawkId, id) {
+function encrypt(passphrase, text) {
   // Handle null
-  if (id === null) {
+  if (text === null) {
     return null;
   }
-  var box = new sodium.SecretBox(hawkId);
-  var encrypted = box.encrypt(id, "utf8");
+  var box = new sodium.SecretBox(passphrase);
+  var encrypted = box.encrypt(text, "utf8");
   var data = {
     cipherText: encrypted.cipherText.toString("base64"),
     nonce: encrypted.nonce.toString("base64")
@@ -24,9 +24,9 @@ function encrypt(hawkId, id) {
 }
 
 /**
- * Take an hawkId and an encrypted string and decrypt them
+ * Take an passphrase and an encrypted string and decrypt it
  */
-function decrypt(hawkId, encryptedString) {
+function decrypt(passphrase, encryptedString) {
   // Handle null
   if (encryptedString === null) {
     return null;
@@ -36,7 +36,7 @@ function decrypt(hawkId, encryptedString) {
   var data = {};
   data.cipherText = new Buffer(encrypted.cipherText, "base64");
   data.nonce = new Buffer(encrypted.nonce, "base64");
-  var box = new sodium.SecretBox(hawkId);
+  var box = new sodium.SecretBox(passphrase);
   return box.decrypt(data, "utf8");
 }
 

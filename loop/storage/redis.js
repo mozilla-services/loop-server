@@ -407,6 +407,19 @@ RedisStorage.prototype = {
     this._client.get('hawkuser.' + hawkHmacId, callback);
   },
 
+  setUserId: function(hawkHmacId, encryptedUserId, callback) {
+    this._client.setex(
+      'userid.' + hawkHmacId,
+      this._settings.hawkSessionDuration,
+      encryptedUserId,
+      callback
+    );
+  },
+
+  getUserId: function(hawkHmacId, callback) {
+    this._client.get('userid.' + hawkHmacId, callback);
+  },
+
   setHawkSession: function(hawkHmacId, authKey, callback) {
     this._client.setex(
       'hawk.' + hawkHmacId,
@@ -417,11 +430,21 @@ RedisStorage.prototype = {
   },
 
   touchHawkSession: function(hawkHmacId, callback) {
-    this._client.expire(
-      'hawk.' + hawkHmacId,
-      this._settings.hawkSessionDuration,
-      callback
-    );
+    var self = this;
+    self._client.expire(
+      'userid.' + hawkHmacId,
+      self._settings.hawkSessionDuration,
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.expire(
+          'hawk.' + hawkHmacId,
+          self._settings.hawkSessionDuration,
+          callback
+        );
+      });
   },
 
   getHawkSession: function(hawkHmacId, callback) {
