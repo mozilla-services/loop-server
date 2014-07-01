@@ -28,6 +28,7 @@ var async = require('async');
 var websockets = require('./websockets');
 var encrypt = require("./encrypt").encrypt;
 var decrypt = require("./encrypt").decrypt;
+var getProgressURL = require('./utils').getProgressURL;
 
 var hawk = require('./hawk');
 var hmac = require('./hmac');
@@ -199,11 +200,12 @@ function authenticate(req, res, next) {
  * Helper to store and trigger an user initiated call.
  *
  * options is a javascript object which can have the following keys:
- * - user: the identifier of the connected user.
- * - callerId: the identifier for the caller.
- * - urls: the list of simple push urls to notify of the new call.
- * - calleeFriendlyName: the friendly name of the person called.
- * - callToken: the call token that was used to initiate the call (if any)
+ * - user: the identifier of the connected user;
+ * - callerId: the identifier for the caller;
+ * - urls: the list of simple push urls to notify of the new call;
+ * - calleeFriendlyName: the friendly name of the person called;
+ * - callToken: the call token that was used to initiate the call (if any;
+ * - progressURL: the progress URL that will be used by the web sockets.
  */
 function returnUserCallTokens(options, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
@@ -258,7 +260,8 @@ function returnUserCallTokens(options, res) {
             websocketToken: wsCallerToken,
             sessionId: tokboxInfo.sessionId,
             sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey
+            apiKey: tokBox.apiKey,
+            progressURL: options.progressURL
           });
         });
     });
@@ -505,7 +508,8 @@ app.get('/calls', requireHawkSession, function(req, res) {
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
-          urlCreationDate: record.urlCreationDate
+          urlCreationDate: record.urlCreationDate,
+          progressURL: getProgressURL(req.get("host"))
         };
       });
 
@@ -533,6 +537,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
             callType: req.body.callType,
             callerId: userId,
             user: calleeMac,
+            progressURL: getProgressURL(req.get("host")),
             urls: callees[calleeMac]
           }, res);
         }();
@@ -626,6 +631,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
         calleeFriendlyName: req.callUrlData.issuer,
         callToken: req.token,
         urlCreationDate: req.callUrlData.timestamp,
+        progressURL: getProgressURL(req.get("host")),
         urls: urls
       }, res);
     });
