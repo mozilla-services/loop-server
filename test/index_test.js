@@ -406,7 +406,7 @@ describe("index.js", function() {
         user: req.body.callee,
         callerId: req.body.callerId,
         urls: req.body.urls,
-        calleeFriendlyName: req.body.calleeFriendlyName,
+        calleeId: req.body.calleeId,
         callToken: req.body.callToken,
         callType: req.body.callType
       }, res);
@@ -436,7 +436,7 @@ describe("index.js", function() {
 
       var user = "user@arandomuri";
       var callerId = "aCallerId";
-      var calleeFriendlyName = "issuerName";
+      var calleeId = "issuerName";
       var urls = ["url1", "url2"];
       var callToken = 'call-token';
       var tokBoxSessionId = "aTokboxSession";
@@ -462,7 +462,7 @@ describe("index.js", function() {
             callerId: callerId,
             urls: urls,
             callToken: callToken,
-            calleeFriendlyName: calleeFriendlyName,
+            calleeId: calleeId,
             callType: "audio"
           })
           .expect(200)
@@ -484,7 +484,7 @@ describe("index.js", function() {
               callerId: callerId,
               urls: urls,
               callToken: callToken,
-              calleeFriendlyName: calleeFriendlyName,
+              calleeId: calleeId,
               callType: "audio"
             })
             .expect(200)
@@ -497,7 +497,8 @@ describe("index.js", function() {
               expect(res.body).eql({
                 sessionId: tokBoxSessionId,
                 sessionToken: tokBoxCallerToken,
-                apiKey: tokBox.apiKey
+                apiKey: tokBox.apiKey,
+                calleeId: calleeId
               });
               done();
             });
@@ -516,7 +517,7 @@ describe("index.js", function() {
               callerId: callerId,
               urls: urls,
               callToken: callToken,
-              calleeFriendlyName: calleeFriendlyName,
+              calleeId: calleeId,
               callType: "audio"
             })
             .expect(200)
@@ -535,7 +536,7 @@ describe("index.js", function() {
                 expect(items[0]).eql({
                   callerId: callerId,
                   callState: "init",
-                  calleeFriendlyName: calleeFriendlyName,
+                  calleeId: calleeId,
                   userMac: user,
                   sessionId: tokBoxSessionId,
                   calleeToken: tokBoxCalleeToken,
