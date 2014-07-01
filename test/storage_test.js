@@ -472,13 +472,13 @@ describe("Storage", function() {
         });
       });
 
-      describe("#setUserId, #getUserId", function() {
+      describe("#setHawkUserId, #getHawkUserId", function() {
         it("should store and retrieve an user hawk session", function(done) {
-          storage.setUserId("tokenId", "userId", function(err) {
+          storage.setHawkUserId("tokenId", "userId", function(err) {
             if (err) {
               throw err;
             }
-            storage.getUserId("tokenId", function(err, result) {
+            storage.getHawkUserId("tokenId", function(err, result) {
               if (err) {
                 throw err;
               }

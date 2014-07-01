@@ -407,7 +407,10 @@ RedisStorage.prototype = {
     this._client.get('hawkuser.' + hawkIdHmac, callback);
   },
 
-  setUserId: function(hawkIdHmac, encryptedUserId, callback) {
+  /**
+   * Associates an hawk.id (hmac-ed) to an user identifier (encrypted).
+   */
+  setHawkUserId: function(hawkIdHmac, encryptedUserId, callback) {
     this._client.setex(
       'userid.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
@@ -416,7 +419,7 @@ RedisStorage.prototype = {
     );
   },
 
-  getUserId: function(hawkIdHmac, callback) {
+  getHawkUserId: function(hawkIdHmac, callback) {
     this._client.get('userid.' + hawkIdHmac, callback);
   },
 

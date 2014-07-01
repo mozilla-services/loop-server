@@ -139,7 +139,7 @@ var requireFxA = fxa.getMiddleware({
         var encryptedIdentifier = encrypt(tokenId, identifier);
         storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
           if (res.serverError(err)) return;
-          storage.setUserId(hawkIdHmac, encryptedIdentifier, function(err) {
+          storage.setHawkUserId(hawkIdHmac, encryptedIdentifier, function(err) {
             if (res.serverError(err)) return;
 
             // return hawk credentials.
@@ -519,7 +519,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
   validateCallType, function(req, res) {
 
-    storage.getUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+    storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
       if (res.serverError(err)) return;
 
       var userId;
@@ -611,7 +611,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       return;
     }
 
-    storage.getUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+    storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
       if (res.serverError(err)) return;
 
       var userId;
