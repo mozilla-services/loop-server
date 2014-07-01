@@ -10,24 +10,24 @@ var encrypt = require("../loop/encrypt");
 describe("ENCRYPT", function() {
   describe("#encrypt/#decrypt", function() {
     it("should be able to encrypt and decrypt a string", function() {
-      var hawkHmacId = crypto.randomBytes(32).toString("hex");
+      var passphrase = crypto.randomBytes(32).toString("hex");
       var text = "Bonjour les gens";
-      var encrypted = encrypt.encrypt(hawkHmacId, text);
-      var decrypted = encrypt.decrypt(hawkHmacId, encrypted);
+      var encrypted = encrypt.encrypt(passphrase, text);
+      var decrypted = encrypt.decrypt(passphrase, encrypted);
       expect(decrypted).to.eql(text);
     });
 
     it("should error-out if the given string is empty", function() {
-      var hawkHmacId = crypto.randomBytes(32).toString("hex");
+      var passphrase = crypto.randomBytes(32).toString("hex");
       expect(function() {
-        encrypt.encrypt(hawkHmacId, null);
+        encrypt.encrypt(passphrase, null);
       }).to.throw(/is empty/);
     });
 
     it("should error-out if the given string is empty", function() {
-      var hawkHmacId = crypto.randomBytes(32).toString("hex");
+      var passphrase = crypto.randomBytes(32).toString("hex");
       expect(function() {
-        encrypt.decrypt(hawkHmacId, null);
+        encrypt.decrypt(passphrase, null);
       }).to.throw(/is empty/);
     });
   });

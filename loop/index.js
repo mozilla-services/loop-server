@@ -66,18 +66,18 @@ function logError(err) {
  * database.
  **/
 function setUser(req, res, tokenId, done) {
-  req.hawkHmacId = hmac(tokenId, conf.get("hawkIdSecret"));
-  storage.getHawkUser(req.hawkHmacId, function(err, user) {
+  req.hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+  storage.getHawkUser(req.hawkIdHmac, function(err, user) {
     if (res.serverError(err)) return;
 
-    storage.touchHawkSession(req.hawkHmacId);
+    storage.touchHawkSession(req.hawkIdHmac);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
       req.user = user;
       done();
       return;
     }
-    req.user = req.hawkHmacId;
+    req.user = req.hawkIdHmac;
     done();
   });
 }
@@ -87,8 +87,8 @@ function getHawkSession(tokenId, callback) {
 }
 
 function createHawkSession(tokenId, authKey, callback) {
-  var hawkHmacId = hmac(tokenId, conf.get("hawkIdSecret"));
-  storage.setHawkSession(hawkHmacId, authKey, function(err, data) {
+  var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+  storage.setHawkSession(hawkIdHmac, authKey, function(err, data) {
     if(statsdClient && err === null) {
       statsdClient.count('loop-activated-users', 1);
     }
@@ -135,11 +135,11 @@ var requireFxA = fxa.getMiddleware({
     // generate the hawk session.
     hawk.generateHawkSession(createHawkSession,
       function(err, tokenId, authKey, sessionToken) {
-        var hawkHmacId = hmac(tokenId, conf.get("hawkIdSecret"));
+        var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
         var encryptedIdentifier = encrypt(tokenId, identifier);
-        storage.setHawkUser(userHmac, hawkHmacId, function(err) {
+        storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
           if (res.serverError(err)) return;
-          storage.setUserId(hawkHmacId, encryptedIdentifier, function(err) {
+          storage.setUserId(hawkIdHmac, encryptedIdentifier, function(err) {
             if (res.serverError(err)) return;
 
             // return hawk credentials.
@@ -519,7 +519,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
   validateCallType, function(req, res) {
 
-    storage.getUserId(req.hawkHmacId, function(err, encryptedUserId) {
+    storage.getUserId(req.hawkIdHmac, function(err, encryptedUserId) {
       if (res.serverError(err)) return;
 
       var userId;
@@ -611,12 +611,12 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       return;
     }
 
-    storage.getUserId(req.hawkHmacId, function(err, encryptedUserId) {
+    storage.getUserId(req.hawkIdHmac, function(err, encryptedUserId) {
       if (res.serverError(err)) return;
 
       var userId;
       if (encryptedUserId !== null) {
-        userId = decrypt(req.hawkHmacId, encryptedUserId);
+        userId = decrypt(req.hawkIdHmac, encryptedUserId);
       }
 
       returnUserCallTokens({

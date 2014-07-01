@@ -394,45 +394,45 @@ RedisStorage.prototype = {
   /**
    * Add an hawk id to the list of valid hawk ids for an user.
    **/
-  setHawkUser: function(userHash, hawkHmacId, callback) {
+  setHawkUser: function(userHash, hawkIdHmac, callback) {
     this._client.setex(
-      'hawkuser.' + hawkHmacId,
+      'hawkuser.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
       userHash,
       callback
     );
   },
 
-  getHawkUser: function(hawkHmacId, callback) {
-    this._client.get('hawkuser.' + hawkHmacId, callback);
+  getHawkUser: function(hawkIdHmac, callback) {
+    this._client.get('hawkuser.' + hawkIdHmac, callback);
   },
 
-  setUserId: function(hawkHmacId, encryptedUserId, callback) {
+  setUserId: function(hawkIdHmac, encryptedUserId, callback) {
     this._client.setex(
-      'userid.' + hawkHmacId,
+      'userid.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
       encryptedUserId,
       callback
     );
   },
 
-  getUserId: function(hawkHmacId, callback) {
-    this._client.get('userid.' + hawkHmacId, callback);
+  getUserId: function(hawkIdHmac, callback) {
+    this._client.get('userid.' + hawkIdHmac, callback);
   },
 
-  setHawkSession: function(hawkHmacId, authKey, callback) {
+  setHawkSession: function(hawkIdHmac, authKey, callback) {
     this._client.setex(
-      'hawk.' + hawkHmacId,
+      'hawk.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
       authKey,
       callback
     );
   },
 
-  touchHawkSession: function(hawkHmacId, callback) {
+  touchHawkSession: function(hawkIdHmac, callback) {
     var self = this;
     self._client.expire(
-      'userid.' + hawkHmacId,
+      'userid.' + hawkIdHmac,
       self._settings.hawkSessionDuration,
       function(err) {
         if (err) {
@@ -440,15 +440,15 @@ RedisStorage.prototype = {
           return;
         }
         self._client.expire(
-          'hawk.' + hawkHmacId,
+          'hawk.' + hawkIdHmac,
           self._settings.hawkSessionDuration,
           callback
         );
       });
   },
 
-  getHawkSession: function(hawkHmacId, callback) {
-    this._client.get('hawk.' + hawkHmacId, function(err, key) {
+  getHawkSession: function(hawkIdHmac, callback) {
+    this._client.get('hawk.' + hawkIdHmac, function(err, key) {
       if (err) {
         callback(err);
         return;
