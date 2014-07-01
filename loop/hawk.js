@@ -49,6 +49,9 @@ function setHawkHeaders(res, sessionToken) {
  * The middleware checks that the request is authenticated with hawk, and sign
  * the response.
  *
+ * @param {Object} hawkOptions, an object containing the options to pass to the
+ * hawk library.
+ *
  * @param {Function} getSession, A function that knows where to find the
  * session. The function should take two arguments: the identifier of the
  * session and a callback argument.
