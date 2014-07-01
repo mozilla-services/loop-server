@@ -77,7 +77,7 @@ function setHawkHeaders(res, sessionToken) {
  * The ways to get/create the session are not defined inside this function
  * because we want to let this up to the server implementer.
  */
-function getMiddleware(getSession, createSession, setUser) {
+function getMiddleware(hawkOptions, getSession, createSession, setUser) {
   if (setUser === undefined) {
     setUser = createSession;
     createSession = undefined;
@@ -86,7 +86,7 @@ function getMiddleware(getSession, createSession, setUser) {
   function requireSession(req, res, next) {
     Hawk.server.authenticate(req, function(id, callback) {
       getSession(id, callback);
-    }, {},
+    }, hawkOptions,
       function(err, credentials, artifacts) {
         req.hawk = artifacts;
 
