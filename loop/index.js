@@ -53,6 +53,9 @@ var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
 }
+var hawkOptions = {
+  port: conf.get("protocol") === "https" ? 443 : undefined
+};
 
 function logError(err) {
   console.log(err);
@@ -111,7 +114,7 @@ function setUser(req, res, tokenId, done) {
  * Middleware that requires a valid hawk session.
  **/
 var requireHawkSession = hawk.getMiddleware(
-  {port: conf.get("protocol") === "https" ? 443 : undefined},
+  hawkOptions,
   storage.getHawkSession.bind(storage),
   setUser
 );
@@ -121,7 +124,7 @@ var requireHawkSession = hawk.getMiddleware(
  * exist.
  **/
 var attachOrCreateHawkSession = hawk.getMiddleware(
-  {port: conf.get("protocol") === "https" ? 443 : undefined},
+  hawkOptions,
   storage.getHawkSession.bind(storage),
   function(tokenId, authKey, callback) {
     storage.setHawkSession(tokenId, authKey, function(err, data) {
