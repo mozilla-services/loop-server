@@ -273,7 +273,8 @@ function returnUserCallTokens(options, res) {
             websocketToken: wsCallerToken,
             sessionId: tokboxInfo.sessionId,
             sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey
+            apiKey: tokBox.apiKey,
+            progressURL: options.progressURL
           });
         });
     });
@@ -511,6 +512,13 @@ app.get('/calls', requireHawkSession, function(req, res) {
     storage.getUserCalls(req.user, function(err, records) {
       if (res.serverError(err)) return;
 
+      var progressURL;
+      if (conf.get("protocol") === "https") {
+        progressURL = "wss://" + req.get("host").replace(/:80/, ":443");
+      } else {
+        progressURL = "ws://" + req.get("host");
+      }
+
       var calls = records.filter(function(record) {
         return record.timestamp >= version;
       }).map(function(record) {
@@ -523,7 +531,9 @@ app.get('/calls', requireHawkSession, function(req, res) {
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
           urlCreationDate: record.urlCreationDate,
-          callType: record.callType
+          callType: record.callType,
+          callerId: record.callerId,
+          progressURL: progressURL
         };
       });
 
@@ -536,6 +546,12 @@ app.get('/calls', requireHawkSession, function(req, res) {
  **/
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
   validateCallType, function(req, res) {
+    var progressURL;
+    if (conf.get("protocol") === "https") {
+      progressURL = "wss://" + req.get("host").replace(/:80/, ":443");
+    } else {
+      progressURL = "ws://" + req.get("host");
+    }
 
     function callUser(callee) {
       return function() {
@@ -543,7 +559,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         returnUserCallTokens({
           user: callee,
           urls: callees[callee],
-          callType: req.body.callType
+          callType: req.body.callType,
+          progressURL: progressURL
         }, res);
       }();
     }
@@ -620,6 +637,14 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       res.json(410, 'Gone');
       return;
     }
+
+    var progressURL;
+    if (conf.get("protocol") === "https") {
+      progressURL = "wss://" + req.get("host").replace(/:80/, ":443");
+    } else {
+      progressURL = "ws://" + req.get("host");
+    }
+
     returnUserCallTokens({
       user: req.callUrlData.userMac,
       callerId: req.token.callerId,
@@ -627,7 +652,8 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       callToken: req.token,
       urlCreationDate: req.callUrlData.timestamp,
       calleeFriendlyName: req.token.issuer,
-      callType: req.token.callType
+      callType: req.token.callType,
+      progressURL: progressURL
     }, res);
   });
 });
