@@ -23,11 +23,13 @@ var storage = loop.storage;
 var statsdClient = loop.statsdClient;
 var requireHawkSession = loop.requireHawkSession;
 var authenticate = loop.authenticate;
+var getProgressURL = require("../loop/utils").getProgressURL;
 
 var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
+var hmac = require("../loop/hmac");
 
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
@@ -99,8 +101,8 @@ describe("HTTP API exposed by the server", function() {
         key: authKey,
         algorithm: "sha256"
       };
-      userHmac = tokenId;
-      storage.setHawkSession(tokenId, authKey, done);
+      userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+      storage.setHawkSession(userHmac, authKey, done);
     });
   });
 
@@ -737,44 +739,51 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should list existing calls", function(done) {
-      var callsList = calls.map(function(call) {
-        return {
-          callId: call.callId,
-          websocketToken: call.wsCalleeToken,
-          apiKey: tokBoxConfig.apiKey,
-          sessionId: call.sessionId,
-          sessionToken: call.calleeToken,
-          callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
-          urlCreationDate: call.urlCreationDate,
-          callType: call.callType,
-        };
-      });
-
       supertest(app)
         .get('/calls?version=0')
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/)
         .expect(200).end(function(err, res) {
           if (err) throw err;
+
+          var callsList = calls.map(function(call) {
+            return {
+              callId: call.callId,
+              callType: call.callType,
+              callerId: call.callerId,
+              websocketToken: call.wsCalleeToken,
+              apiKey: tokBoxConfig.apiKey,
+              sessionId: call.sessionId,
+              sessionToken: call.calleeToken,
+              callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
+              urlCreationDate: call.urlCreationDate,
+              progressURL: getProgressURL(res.req._headers.host)
+            };
+          });
+
+
           expect(res.body).to.deep.equal({calls: callsList});
           done(err);
         });
     });
 
     it("should list calls more recent than a given version", function(done) {
-      var callsList = [{
-        callId: calls[2].callId,
-        websocketToken: calls[2].wsCalleeToken,
-        apiKey: tokBoxConfig.apiKey,
-        sessionId: calls[2].sessionId,
-        sessionToken: calls[2].calleeToken,
-        callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
-        urlCreationDate: calls[2].urlCreationDate,
-        callType: calls[2].callType
-      }];
-
       req.expect(200).end(function(err, res) {
         if (err) throw err;
+
+        var callsList = [{
+          callId: calls[2].callId,
+          callType: calls[2].callType,
+          callerId: calls[2].callerId,
+          websocketToken: calls[2].wsCalleeToken,
+          apiKey: tokBoxConfig.apiKey,
+          sessionId: calls[2].sessionId,
+          sessionToken: calls[2].calleeToken,
+          callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
+          urlCreationDate: calls[2].urlCreationDate,
+          progressURL: getProgressURL(res.req._headers.host)
+        }];
+
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
       });
@@ -945,7 +954,6 @@ describe("HTTP API exposed by the server", function() {
             assert.calledOnce(loop.setUserCall);
           });
         });
-
       });
     });
 

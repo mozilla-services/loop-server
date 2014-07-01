@@ -9,7 +9,7 @@ var sinon = require("sinon");
 
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
-var hmac = require("../loop").hmac;
+var hmac = require("../loop/hmac");
 var generateToken = require("../loop/tokenlib").generateToken;
 
 var uuid = "1234";
@@ -466,6 +466,23 @@ describe("Storage", function() {
                 throw err;
               }
               expect(result).to.eql("userhash");
+              done();
+            });
+          });
+        });
+      });
+
+      describe("#setHawkUserId, #getHawkUserId", function() {
+        it("should store and retrieve an user hawk session", function(done) {
+          storage.setHawkUserId("tokenId", "userId", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.getHawkUserId("tokenId", function(err, result) {
+              if (err) {
+                throw err;
+              }
+              expect(result).to.eql("userId");
               done();
             });
           });
