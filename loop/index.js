@@ -221,7 +221,7 @@ function authenticate(req, res, next) {
  * - user: the identifier of the connected user.
  * - callerId: the identifier for the caller.
  * - urls: the list of simple push urls to notify of the new call.
- * - calleeFriendlyName: the friendly name of the person called.
+ * - calleeId: the identifier of the called person.
  * - callToken: the call token that was used to initiate the call (if any)
  */
 function returnUserCallTokens(options, res) {
@@ -237,7 +237,7 @@ function returnUserCallTokens(options, res) {
 
     storage.addUserCall(options.user, {
       'callerId': options.callerId,
-      'calleeFriendlyName': options.calleeFriendlyName,
+      'calleeId': options.calleeId,
       'callId': callId,
       'userMac': options.user,
       'sessionId': tokboxInfo.sessionId,
@@ -273,7 +273,8 @@ function returnUserCallTokens(options, res) {
             websocketToken: wsCallerToken,
             sessionId: tokboxInfo.sessionId,
             sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey
+            apiKey: tokBox.apiKey,
+            calleeId: options.calleeId
           });
         });
     });
@@ -518,6 +519,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           callId: record.callId,
           calleeId: record.calleeFriendlyName,
           websocketToken: record.wsCalleeToken,
+          callerId: record.callerId,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
@@ -543,6 +545,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         returnUserCallTokens({
           user: callee,
           urls: callees[callee],
+          callToken: undefined,
+          calleeId: undefined,
           callType: req.body.callType
         }, res);
       }();
@@ -626,7 +630,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       urls: urls,
       callToken: req.token,
       urlCreationDate: req.callUrlData.timestamp,
-      calleeFriendlyName: req.token.issuer,
+      calleeId: req.token.issuer,
       callType: req.token.callType
     }, res);
   });
