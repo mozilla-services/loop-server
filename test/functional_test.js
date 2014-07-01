@@ -28,6 +28,7 @@ var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
+var hmac = require("../loop/hmac");
 
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
@@ -99,8 +100,8 @@ describe("HTTP API exposed by the server", function() {
         key: authKey,
         algorithm: "sha256"
       };
-      userHmac = tokenId;
-      storage.setHawkSession(tokenId, authKey, done);
+      userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+      storage.setHawkSession(userHmac, authKey, done);
     });
   });
 

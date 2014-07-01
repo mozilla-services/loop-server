@@ -14,7 +14,6 @@ http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
-var hexKeyOfSize = require('./config').hexKeyOfSize;
 var crypto = require('crypto');
 var pjson = require('../package.json');
 var request = require('request');
@@ -29,7 +28,9 @@ var async = require('async');
 var websockets = require('./websockets');
 
 var hawk = require('./hawk');
+var hmac = require('./hmac');
 var fxa = require('./fxa');
+var buildHmacId = require('./utils').buildId;
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -60,49 +61,21 @@ function logError(err) {
 }
 
 /**
- * Returns the HMac digest of the given payload.
- *
- * If no options are passed, the global configuration object is used to
- * determine which algorithm and secret should be used.
- *
- * @param {String} payload    The string to mac.
- * @param {String} secret     key encoded as hex.
- * @param {String} algorithm  Algorithm to use (defaults to sha256).
- * @return {String} hexadecimal hash.
- **/
-function hmac(payload, secret, algorithm) {
-  if (secret === undefined) {
-    throw new Error("You should provide a secret.");
-  }
-
-  // Test for secret size and validity
-  hexKeyOfSize(16)(secret);
-
-  if (algorithm === undefined) {
-    algorithm = conf.get("userMacAlgorithm");
-  }
-  var _hmac = crypto.createHmac(algorithm, new Buffer(secret, "hex"));
-  _hmac.write(payload);
-  _hmac.end();
-  return _hmac.read().toString('hex');
-}
-
-/**
  * Attach the identity of the user to the request if she is registered in the
  * database.
  **/
-function setUser(req, res, tokenId, done) {
-  storage.getHawkUser(tokenId, function(err, user) {
+function setUser(req, res, hawkHmacId, done) {
+  storage.getHawkUser(hawkHmacId, function(err, user) {
     if (res.serverError(err)) return;
 
-    storage.touchHawkSession(tokenId);
+    storage.touchHawkSession(hawkHmacId);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
       req.user = user;
       done();
       return;
     }
-    req.user = tokenId;
+    req.user = hawkHmacId;
     done();
   });
 }
@@ -111,6 +84,7 @@ function setUser(req, res, tokenId, done) {
  * Middleware that requires a valid hawk session.
  **/
 var requireHawkSession = hawk.getMiddleware(
+  buildHmacId,
   storage.getHawkSession.bind(storage),
   setUser
 );
@@ -120,9 +94,10 @@ var requireHawkSession = hawk.getMiddleware(
  * exist.
  **/
 var attachOrCreateHawkSession = hawk.getMiddleware(
+  buildHmacId,
   storage.getHawkSession.bind(storage),
-  function(tokenId, authKey, callback) {
-    storage.setHawkSession(tokenId, authKey, function(err, data) {
+  function(hawkHmacId, authKey, callback) {
+    storage.setHawkSession(hawkHmacId, authKey, function(err, data) {
       if(statsdClient && err === null) {
         statsdClient.count('loop-activated-users', 1);
       }
@@ -154,12 +129,12 @@ var requireFxA = fxa.getMiddleware({
       return;
     }
 
-    var userHmac = hmac(identifier, conf.get('userMacSecret'));
+    var userHmac = hmac(identifier, conf.get('hawkIdSecret'));
 
     // generate the hawk session.
     hawk.generateHawkSession(storage.setHawkSession.bind(storage),
-      function(err, tokenId, authKey, sessionToken) {
-        storage.setHawkUser(userHmac, tokenId, function(err) {
+      function(err, hawkHmacId, authKey, sessionToken) {
+        storage.setHawkUser(userHmac, hawkHmacId, function(err) {
           if (res.serverError(err)) return;
 
           // return hawk credentials.
@@ -697,7 +672,6 @@ module.exports = {
   app: app,
   server: server,
   conf: conf,
-  hmac: hmac,
   storage: storage,
   validateToken: validateToken,
   requireParams: requireParams,

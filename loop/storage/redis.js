@@ -394,38 +394,38 @@ RedisStorage.prototype = {
   /**
    * Add an hawk id to the list of valid hawk ids for an user.
    **/
-  setHawkUser: function(userHash, tokenId, callback) {
+  setHawkUser: function(userHash, hawkHmacId, callback) {
     this._client.setex(
-      'hawkuser.' + tokenId,
+      'hawkuser.' + hawkHmacId,
       this._settings.hawkSessionDuration,
       userHash,
       callback
     );
   },
 
-  getHawkUser: function(tokenId, callback) {
-    this._client.get('hawkuser.' + tokenId, callback);
+  getHawkUser: function(hawkHmacId, callback) {
+    this._client.get('hawkuser.' + hawkHmacId, callback);
   },
 
-  setHawkSession: function(tokenId, authKey, callback) {
+  setHawkSession: function(hawkHmacId, authKey, callback) {
     this._client.setex(
-      'hawk.' + tokenId,
+      'hawk.' + hawkHmacId,
       this._settings.hawkSessionDuration,
       authKey,
       callback
     );
   },
 
-  touchHawkSession: function(tokenId, callback) {
+  touchHawkSession: function(hawkHmacId, callback) {
     this._client.expire(
-      'hawk.' + tokenId,
+      'hawk.' + hawkHmacId,
       this._settings.hawkSessionDuration,
       callback
     );
   },
 
-  getHawkSession: function(tokenId, callback) {
-    this._client.get('hawk.' + tokenId, function(err, key) {
+  getHawkSession: function(hawkHmacId, callback) {
+    this._client.get('hawk.' + hawkHmacId, function(err, key) {
       if (err) {
         callback(err);
         return;

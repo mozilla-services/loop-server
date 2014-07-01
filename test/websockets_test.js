@@ -10,6 +10,7 @@ var crypto = require("crypto");
 var ws = require('ws');
 
 var Token = require("../loop/token").Token;
+var hmac = require("../loop/hmac");
 
 var loop = require("../loop");
 var server = loop.server;
@@ -48,8 +49,8 @@ describe('websockets', function() {
           key: authKey,
           algorithm: "sha256"
         };
-        userHmac = tokenId;
-        storage.setHawkSession(tokenId, authKey, done);
+        userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+        storage.setHawkSession(userHmac, authKey, done);
       });
     });
   });

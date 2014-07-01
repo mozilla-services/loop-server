@@ -7,6 +7,7 @@
       "db": 5
     }
   },
+  "hawkIdSecret": "6b4a7eec5406fcb3d394e7f64b2a72a2",
   "macSecret": "263ceaa5546dce837191be98db91e852ae8d050d6805a402272e0c776193cfba",
   "encryptionSecret": "7c69b9ca88e4f127f7280368f7055646",
   "invalidMacSecret": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

@@ -9,7 +9,7 @@ var sinon = require("sinon");
 
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
-var hmac = require("../loop").hmac;
+var hmac = require("../loop/hmac");
 var generateToken = require("../loop/tokenlib").generateToken;
 
 var uuid = "1234";

@@ -233,6 +233,12 @@ var conf = convict({
     format: Array,
     default: ["api.accounts.firefox.com"]
   },
+  hawkIdSecret: {
+    doc: "The secret for hmac-ing hawk.id (16 bytes key encoded as hex)",
+    format: hexKeyOfSize(16),
+    default: "",
+    env: "HAWK_ID_SECRET"
+  },
   hawkSessionDuration: {
     doc: "The duration of hawk credentials (in seconds)",
     format: Number,
