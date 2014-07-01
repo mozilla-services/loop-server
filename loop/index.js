@@ -32,7 +32,6 @@ var decrypt = require("./encrypt").decrypt;
 var hawk = require('./hawk');
 var hmac = require('./hmac');
 var fxa = require('./fxa');
-var buildHmacId = require('./utils').buildId;
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -66,48 +65,48 @@ function logError(err) {
  * Attach the identity of the user to the request if she is registered in the
  * database.
  **/
-function setUser(req, res, hawkHmacId, done) {
-  storage.getHawkUser(hawkHmacId, function(err, user) {
+function setUser(req, res, tokenId, done) {
+  req.hawkHmacId = hmac(tokenId, conf.get("hawkIdSecret"));
+  storage.getHawkUser(req.hawkHmacId, function(err, user) {
     if (res.serverError(err)) return;
 
-    storage.touchHawkSession(hawkHmacId);
+    storage.touchHawkSession(req.hawkHmacId);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
       req.user = user;
       done();
       return;
     }
-    req.user = hawkHmacId;
+    req.user = req.hawkHmacId;
     done();
+  });
+}
+
+function getHawkSession(tokenId, callback) {
+  storage.getHawkSession(hmac(tokenId, conf.get("hawkIdSecret")), callback);
+}
+
+function createHawkSession(tokenId, authKey, callback) {
+  var hawkHmacId = hmac(tokenId, conf.get("hawkIdSecret"));
+  storage.setHawkSession(hawkHmacId, authKey, function(err, data) {
+    if(statsdClient && err === null) {
+      statsdClient.count('loop-activated-users', 1);
+    }
+    callback(err, data);
   });
 }
 
 /**
  * Middleware that requires a valid hawk session.
  **/
-var requireHawkSession = hawk.getMiddleware(
-  buildHmacId,
-  storage.getHawkSession.bind(storage),
-  setUser
-);
+var requireHawkSession = hawk.getMiddleware(getHawkSession, setUser);
 
 /**
  * Middleware that uses a valid hawk session or create one if none already
  * exist.
  **/
 var attachOrCreateHawkSession = hawk.getMiddleware(
-  buildHmacId,
-  storage.getHawkSession.bind(storage),
-  function(hawkHmacId, authKey, callback) {
-    storage.setHawkSession(hawkHmacId, authKey, function(err, data) {
-      if(statsdClient && err === null) {
-        statsdClient.count('loop-activated-users', 1);
-      }
-      callback(err, data);
-    });
-  },
-  setUser
-);
+  getHawkSession, createHawkSession, setUser);
 
 /**
  * Middleware that requires a valid FxA assertion.
@@ -134,11 +133,9 @@ var requireFxA = fxa.getMiddleware({
     var userHmac = hmac(identifier, conf.get('hawkIdSecret'));
 
     // generate the hawk session.
-    hawk.generateHawkSession(function(tokenId, authKey, callback) {
-      var hawkHmacId = buildHmacId(tokenId);
-      storage.setHawkSession(hawkHmacId, authKey, callback);
-    }, function(err, tokenId, authKey, sessionToken) {
-        var hawkHmacId = buildHmacId(tokenId);
+    hawk.generateHawkSession(createHawkSession,
+      function(err, tokenId, authKey, sessionToken) {
+        var hawkHmacId = hmac(tokenId, conf.get("hawkIdSecret"));
         var encryptedIdentifier = encrypt(tokenId, identifier);
         storage.setHawkUser(userHmac, hawkHmacId, function(err) {
           if (res.serverError(err)) return;

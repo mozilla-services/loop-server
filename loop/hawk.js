@@ -77,7 +77,7 @@ function setHawkHeaders(res, sessionToken) {
  * The ways to get/create the session are not defined inside this function
  * because we want to let this up to the server implementer.
  */
-function getMiddleware(buildId, getSession, createSession, setUser) {
+function getMiddleware(getSession, createSession, setUser) {
   if (setUser === undefined) {
     setUser = createSession;
     createSession = undefined;
@@ -85,7 +85,7 @@ function getMiddleware(buildId, getSession, createSession, setUser) {
 
   function requireSession(req, res, next) {
     Hawk.server.authenticate(req, function(id, callback) {
-      getSession(buildId(id), callback);
+      getSession(id, callback);
     }, {},
       function(err, credentials, artifacts) {
         req.hawk = artifacts;
@@ -97,8 +97,7 @@ function getMiddleware(buildId, getSession, createSession, setUser) {
               function(err, tokenId, authKey, sessionToken) {
                 if (res.serverError(err)) return;
 
-                req.hawkHmacId = buildId(tokenId);
-                setUser(req, res, req.hawkHmacId, function() {
+                setUser(req, res, tokenId, function() {
                   setHawkHeaders(res, sessionToken);
                   next();
                 });
@@ -129,8 +128,7 @@ function getMiddleware(buildId, getSession, createSession, setUser) {
           res.json(401, "Unauthorized");
           return;
         }
-        req.hawkHmacId = buildId(req.hawk.id);
-        setUser(req, res, req.hawkHmacId, function() {
+        setUser(req, res, req.hawk.id, function() {
           /* Make sure we don't decorate the writeHead more than one time. */
           if (res._hawkEnabled) {
             next();
