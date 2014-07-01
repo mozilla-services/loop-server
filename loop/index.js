@@ -27,6 +27,7 @@ var logRequests = require('./middlewares').logRequests;
 var async = require('async');
 var websockets = require('./websockets');
 var encrypt = require("./encrypt").encrypt;
+var decrypt = require("./encrypt").decrypt;
 
 var hawk = require('./hawk');
 var hmac = require('./hmac');
@@ -219,19 +220,23 @@ function returnUserCallTokens(options, res) {
     var wsCallerToken = crypto.randomBytes(16).toString('hex');
 
     storage.addUserCall(options.user, {
-      'callerId': options.callerId,
-      'calleeFriendlyName': options.calleeFriendlyName,
       'callId': callId,
-      'userMac': options.user,
-      'sessionId': tokboxInfo.sessionId,
-      'calleeToken': tokboxInfo.calleeToken,
-      'wsCallerToken': wsCallerToken,
-      'wsCalleeToken': wsCalleeToken,
+      'callType': options.callType,
       'callState': "init",
       'timestamp': currentTimestamp,
+
+      'userMac': options.user,
+      'callerId': options.callerId,
+      'calleeFriendlyName': options.calleeFriendlyName,
+
+      'sessionId': tokboxInfo.sessionId,
+      'calleeToken': tokboxInfo.calleeToken,
+
+      'wsCallerToken': wsCallerToken,
+      'wsCalleeToken': wsCalleeToken,
+
       'callToken': options.callToken,
-      'urlCreationDate': options.urlCreationDate,
-      'callType': options.callType
+      'urlCreationDate': options.urlCreationDate
     }, function(err) {
       if (res.serverError(err)) return;
 
@@ -496,14 +501,14 @@ app.get('/calls', requireHawkSession, function(req, res) {
       }).map(function(record) {
         return {
           callId: record.callId,
-          calleeId: record.calleeFriendlyName,
+          callType: record.callType,
+          callerId: record.callerId,
           websocketToken: record.wsCalleeToken,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
-          urlCreationDate: record.urlCreationDate,
-          callType: record.callType
+          urlCreationDate: record.urlCreationDate
         };
       });
 
@@ -517,53 +522,58 @@ app.get('/calls', requireHawkSession, function(req, res) {
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
   validateCallType, function(req, res) {
 
-    function callUser(callee) {
-      return function() {
-        // TODO: set caller ID. Bug 1025894.
-        returnUserCallTokens({
-          user: callee,
-          urls: callees[callee],
-          callType: req.body.callType
-        }, res);
-      }();
-    }
+    storage.getUserId(req.hawkHmacId, function(err, encryptedUserId) {
+      if (res.serverError(err)) return;
 
-    var calleeId = req.body.calleeId;
-    if (!Array.isArray(calleeId)) {
-      calleeId = [calleeId];
-    }
+      var userId = decrypt(req.hawk.id, encryptedUserId);
 
-    // We get all the Loop users that match any of the ids provided by the
-    // client. We may have none, one or multiple matches. If no match is found
-    // we throw an error, otherwise we will follow the call process, storing
-    // the call information and notifying to the correspoding matched users.
-    var callees;
-    async.each(calleeId, function(identity, callback) {
-      var calleeMac = hmac(identity, conf.get('userMacSecret'));
-      storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
-        if (err) {
-          callback(err);
+      function callUser(calleeMac) {
+        return function() {
+          returnUserCallTokens({
+            callType: req.body.callType,
+            callerId: userId || undefined,
+            user: calleeMac,
+            urls: callees[calleeMac]
+          }, res);
+        }();
+      }
+
+      var calleeId = req.body.calleeId;
+      if (!Array.isArray(calleeId)) {
+        calleeId = [calleeId];
+      }
+
+      // We get all the Loop users that match any of the ids provided by the
+      // client. We may have none, one or multiple matches. If no match is found
+      // we throw an error, otherwise we will follow the call process, storing
+      // the call information and notifying to the correspoding matched users.
+      var callees;
+      async.each(calleeId, function(identity, callback) {
+        var calleeMac = hmac(identity, conf.get('userMacSecret'));
+        storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          if (!callees) {
+            callees = {};
+          }
+          callees[calleeMac] = urls;
+
+          callback();
+        });
+      }, function(err) {
+        if (res.serverError(err)) return;
+
+        if (!callees) {
+          res.json(400, 'No user to call found');
           return;
         }
 
-        if (!callees) {
-          callees = {};
-        }
-        callees[calleeMac] = urls;
-
-        callback();
+        Object.keys(callees).forEach(callUser.bind(callees));
       });
-    }, function(err) {
-      if (res.serverError(err)) return;
-
-      if (!callees) {
-        res.json(400, 'No user to call found');
-        return;
-      }
-
-      Object.keys(callees).forEach(callUser.bind(callees));
     });
-
   });
 
 /**
@@ -600,15 +610,22 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       res.json(410, 'Gone');
       return;
     }
-    returnUserCallTokens({
-      user: req.callUrlData.userMac,
-      callerId: req.callUrlData.callerId,
-      urls: urls,
-      callToken: req.token,
-      urlCreationDate: req.callUrlData.timestamp,
-      calleeFriendlyName: req.callUrlData.issuer,
-      callType: req.callUrlData.callType
-    }, res);
+
+    storage.getUserId(req.hawkHmacId, function(err, encryptedUserId) {
+      if (res.serverError(err)) return;
+
+      var userId = decrypt(req.hawkHmacId, encryptedUserId);
+
+      returnUserCallTokens({
+        callType: req.callUrlData.callType,
+        user: req.callUrlData.userMac,
+        callerId: userId || undefined,
+        calleeFriendlyName: req.callUrlData.issuer,
+        callToken: req.token,
+        urlCreationDate: req.callUrlData.timestamp,
+        urls: urls
+      }, res);
+    });
   });
 });
 

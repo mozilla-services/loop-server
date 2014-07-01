@@ -741,13 +741,14 @@ describe("HTTP API exposed by the server", function() {
       var callsList = calls.map(function(call) {
         return {
           callId: call.callId,
+          callType: call.callType,
+          callerId: call.callerId,
           websocketToken: call.wsCalleeToken,
           apiKey: tokBoxConfig.apiKey,
           sessionId: call.sessionId,
           sessionToken: call.calleeToken,
           callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
-          urlCreationDate: call.urlCreationDate,
-          callType: call.callType,
+          urlCreationDate: call.urlCreationDate
         };
       });
 
@@ -765,13 +766,14 @@ describe("HTTP API exposed by the server", function() {
     it("should list calls more recent than a given version", function(done) {
       var callsList = [{
         callId: calls[2].callId,
+        callType: calls[2].callType,
+        callerId: calls[2].callerId,
         websocketToken: calls[2].wsCalleeToken,
         apiKey: tokBoxConfig.apiKey,
         sessionId: calls[2].sessionId,
         sessionToken: calls[2].calleeToken,
         callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
-        urlCreationDate: calls[2].urlCreationDate,
-        callType: calls[2].callType
+        urlCreationDate: calls[2].urlCreationDate
       }];
 
       req.expect(200).end(function(err, res) {
