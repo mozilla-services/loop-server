@@ -40,21 +40,21 @@ describe("hawk middleware", function() {
   };
 
   app.post('/require-session',
-    hawk.getMiddleware(_getExistingSession, setUser),
+    hawk.getMiddleware({}, _getExistingSession, setUser),
     ok_200
   );
   app.post('/require-or-create-session',
-    hawk.getMiddleware(_getExistingSession, _createSession, setUser),
+    hawk.getMiddleware({}, _getExistingSession, _createSession, setUser),
     ok_200
   );
 
   app.post('/require-invalid-session',
-    hawk.getMiddleware(_getNonExistingSession, setUser),
+    hawk.getMiddleware({}, _getNonExistingSession, setUser),
     ok_200
   );
 
   app.post('/require-or-create-invalid-session',
-    hawk.getMiddleware(_getNonExistingSession, _createSession, setUser),
+    hawk.getMiddleware({}, _getNonExistingSession, _createSession, setUser),
     ok_200
   );
 
