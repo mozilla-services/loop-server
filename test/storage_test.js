@@ -224,7 +224,7 @@ describe("Storage", function() {
           });
       });
 
-      describe.only("#updateUserCallUrlData", function() {
+      describe("#updateUserCallUrlData", function() {
         it("should error in case there is no existing calls for this user",
           function(done) {
             storage.updateUserCallUrlData(userMac, token, urlData,

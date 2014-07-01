@@ -625,6 +625,58 @@ describe("HTTP API exposed by the server", function() {
     });
   });
 
+  describe("PUT /call-url/:token", function() {
+    var token;
+    beforeEach(function(done) {
+      token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      storage.addUserCallUrlData(userHmac, token, {
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        done();
+      });
+    });
+
+    it("should ignore invalid fields", function(done) {
+      supertest(app)
+        .put('/call-url/' + token)
+        .hawk(hawkCredentials)
+        .send({
+          callerId: "Adam",
+          invalidField: "value"
+        })
+        .expect(200)
+        .end(function(err, res) {
+          if (err) throw err;
+          storage.getCallUrlData(token, function(err, res) {
+            if (err) throw err;
+            expect(res.callerId).to.eql("Adam");
+            expect(res.invalidField).to.eql(undefined);
+            done();
+          });
+        });
+    });
+
+    it("should accept valid fields", function(done) {
+      supertest(app)
+        .put('/call-url/' + token)
+        .hawk(hawkCredentials)
+        .send({
+          callerId: "Adam",
+          expiresIn: 250,
+          issuer: "Mark Banner"
+        })
+        .expect(200)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body.expiresAt).not.eql(undefined);
+          done();
+        });
+
+    });
+  });
+
   describe("DELETE /call-url/:token", function() {
     var token, req, clock;
 
