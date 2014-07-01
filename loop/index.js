@@ -582,10 +582,12 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
   });
 
 /**
- * Do a redirect to the Web client.
+ * Return the callee friendly name for the given token.
  **/
 app.get('/calls/:token', validateToken, function(req, res) {
-  res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
+  res.json(200, {
+    calleeFriendlyName: req.callUrlData.issuer
+  });
 });
 
 /**

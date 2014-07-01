@@ -480,8 +480,7 @@ describe("HTTP API exposed by the server", function() {
         });
     });
 
-    // XXX Bug 980289
-    it.skip("should be able to store multiple push urls for one user",
+    it("should be able to store multiple push urls for one user",
       function(done) {
         register(url1, expectedAssertion, hawkCredentials, function() {
           register(url2, expectedAssertion, hawkCredentials, function() {
@@ -594,22 +593,35 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("GET /calls/:token", function() {
-    it("should return a 302 to the WebApp page", function(done) {
-      var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-      storage.addUserCallUrlData(user, token, {
-        timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
-      }, function(err) {
-        supertest(app)
-          .get('/calls/' + token)
-          .expect("Location", conf.get("webAppUrl").replace("{token}", token))
-          .expect(302).end(done);
-      });
-    });
-
     it("should have the validateToken middleware installed.", function() {
       expect(getMiddlewares(app, 'get', '/calls/:token'))
         .include(validateToken);
+    });
+
+    it("should return a the calleeFriendlyName", function(done) {
+      var calleeFriendlyName = "Adam Roach";
+      var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      storage.addUserCallUrlData(userHmac, token, {
+        userMac: userHmac,
+        issuer: calleeFriendlyName,
+        timestamp: Date.now(),
+        expires: Date.now() + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+
+        supertest(app)
+          .get('/calls/' + token)
+          .hawk(hawkCredentials)
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.deep.equal({
+              calleeFriendlyName: calleeFriendlyName
+            });
+            done();
+          });
+      });
     });
   });
 
@@ -735,7 +747,6 @@ describe("HTTP API exposed by the server", function() {
           storage.addUserCall(userHmac, calls[2], done);
         });
       });
-
     });
 
     it("should list existing calls", function(done) {
