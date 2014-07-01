@@ -379,8 +379,10 @@ describe("index.js", function() {
             if (err) {
               throw err;
             }
-            assert.calledWithExactly(storage.touchHawkSession,
-                                     userHmac);
+            assert.calledWithExactly(
+              storage.touchHawkSession,
+              userHmac
+            );
             done();
           });
       });
