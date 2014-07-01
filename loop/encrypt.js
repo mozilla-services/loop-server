@@ -7,12 +7,18 @@ var sodium = require("sodium");
 
 
 /**
- * Take an passphrase and a string and encrypt it as a string
+ * Encrypt a text with a given passphrase.
+ *
+ * If the string to encrypt is null, throws an error.
+ *
+ * @param {String} passphrase;
+ * @param {String} text.
+ * @return {String} encrypted text.
  */
 function encrypt(passphrase, text) {
   // Handle null
   if (text === null) {
-    return null;
+    throw new Error("Text is empty");
   }
   var box = new sodium.SecretBox(passphrase);
   var encrypted = box.encrypt(text, "utf8");
@@ -24,12 +30,18 @@ function encrypt(passphrase, text) {
 }
 
 /**
- * Take an passphrase and an encrypted string and decrypt it
+ * Decrypts a given text using a given passphrase.
+ *
+ * If the encrypted string is null, throws an error.
+ *
+ * @param {String} passphrase;
+ * @param {String} encrypted text.
+ * @return {String} decrypted text.
  */
 function decrypt(passphrase, encryptedString) {
   // Handle null
   if (encryptedString === null) {
-    return null;
+    throw new Error("Encrypted string is empty");
   }
 
   var encrypted = JSON.parse(encryptedString);

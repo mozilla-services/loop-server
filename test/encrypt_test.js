@@ -16,5 +16,19 @@ describe("ENCRYPT", function() {
       var decrypted = encrypt.decrypt(hawkHmacId, encrypted);
       expect(decrypted).to.eql(text);
     });
+
+    it("should error-out if the given string is empty", function() {
+      var hawkHmacId = crypto.randomBytes(32).toString("hex");
+      expect(function() {
+        encrypt.encrypt(hawkHmacId, null);
+      }).to.throw(/is empty/);
+    });
+
+    it("should error-out if the given string is empty", function() {
+      var hawkHmacId = crypto.randomBytes(32).toString("hex");
+      expect(function() {
+        encrypt.decrypt(hawkHmacId, null);
+      }).to.throw(/is empty/);
+    });
   });
 });

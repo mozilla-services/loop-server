@@ -525,13 +525,16 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
     storage.getUserId(req.hawkHmacId, function(err, encryptedUserId) {
       if (res.serverError(err)) return;
 
-      var userId = decrypt(req.hawk.id, encryptedUserId);
+      var userId;
+      if (encryptedUserId !== null) {
+        userId = decrypt(req.hawk.id, encryptedUserId);
+      }
 
       function callUser(calleeMac) {
         return function() {
           returnUserCallTokens({
             callType: req.body.callType,
-            callerId: userId || undefined,
+            callerId: userId,
             user: calleeMac,
             urls: callees[calleeMac]
           }, res);
@@ -614,12 +617,15 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
     storage.getUserId(req.hawkHmacId, function(err, encryptedUserId) {
       if (res.serverError(err)) return;
 
-      var userId = decrypt(req.hawkHmacId, encryptedUserId);
+      var userId;
+      if (encryptedUserId !== null) {
+        userId = decrypt(req.hawkHmacId, encryptedUserId);
+      }
 
       returnUserCallTokens({
         callType: req.callUrlData.callType,
         user: req.callUrlData.userMac,
-        callerId: userId || undefined,
+        callerId: userId || req.callUrlData.callerId,
         calleeFriendlyName: req.callUrlData.issuer,
         callToken: req.token,
         urlCreationDate: req.callUrlData.timestamp,
