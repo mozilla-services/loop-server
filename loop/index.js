@@ -219,11 +219,12 @@ function authenticate(req, res, next) {
  * Helper to store and trigger an user initiated call.
  *
  * options is a javascript object which can have the following keys:
- * - user: the identifier of the connected user.
- * - callerId: the identifier for the caller.
- * - urls: the list of simple push urls to notify of the new call.
- * - calleeFriendlyName: the friendly name of the person called.
- * - callToken: the call token that was used to initiate the call (if any)
+ * - user: the identifier of the connected user;
+ * - callerId: the identifier for the caller;
+ * - urls: the list of simple push urls to notify of the new call;
+ * - calleeFriendlyName: the friendly name of the person called;
+ * - callToken: the call token that was used to initiate the call (if any;
+ * - progressURL: the progress URL that will be used by the web sockets.
  */
 function returnUserCallTokens(options, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
