@@ -27,6 +27,7 @@ var handle503 = require("./middlewares").handle503;
 var logRequests = require('./middlewares').logRequests;
 var async = require('async');
 var websockets = require('./websockets');
+var getProgressURL = require('./utils').getProgressURL;
 
 var hawk = require('./hawk');
 var fxa = require('./fxa');
@@ -512,13 +513,6 @@ app.get('/calls', requireHawkSession, function(req, res) {
     storage.getUserCalls(req.user, function(err, records) {
       if (res.serverError(err)) return;
 
-      var progressURL;
-      if (conf.get("protocol") === "https") {
-        progressURL = "wss://" + req.get("host").replace(/:80/, ":443");
-      } else {
-        progressURL = "ws://" + req.get("host");
-      }
-
       var calls = records.filter(function(record) {
         return record.timestamp >= version;
       }).map(function(record) {
@@ -533,7 +527,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           urlCreationDate: record.urlCreationDate,
           callType: record.callType,
           callerId: record.callerId,
-          progressURL: progressURL
+          progressURL: getProgressURL(req.get("host"))
         };
       });
 
@@ -546,13 +540,6 @@ app.get('/calls', requireHawkSession, function(req, res) {
  **/
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
   validateCallType, function(req, res) {
-    var progressURL;
-    if (conf.get("protocol") === "https") {
-      progressURL = "wss://" + req.get("host").replace(/:80/, ":443");
-    } else {
-      progressURL = "ws://" + req.get("host");
-    }
-
     function callUser(callee) {
       return function() {
         // TODO: set caller ID. Bug 1025894.
@@ -560,7 +547,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
           user: callee,
           urls: callees[callee],
           callType: req.body.callType,
-          progressURL: progressURL
+          progressURL: getProgressURL(req.get("host"))
         }, res);
       }();
     }
@@ -638,13 +625,6 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       return;
     }
 
-    var progressURL;
-    if (conf.get("protocol") === "https") {
-      progressURL = "wss://" + req.get("host").replace(/:80/, ":443");
-    } else {
-      progressURL = "ws://" + req.get("host");
-    }
-
     returnUserCallTokens({
       user: req.callUrlData.userMac,
       callerId: req.token.callerId,
@@ -653,7 +633,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       urlCreationDate: req.callUrlData.timestamp,
       calleeFriendlyName: req.token.issuer,
       callType: req.token.callType,
-      progressURL: progressURL
+      progressURL: getProgressURL(req.get("host"))
     }, res);
   });
 });

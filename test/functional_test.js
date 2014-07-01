@@ -23,6 +23,7 @@ var storage = loop.storage;
 var statsdClient = loop.statsdClient;
 var requireHawkSession = loop.requireHawkSession;
 var authenticate = loop.authenticate;
+var getProgressURL = require("../loop/utils").getProgressURL;
 
 var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
@@ -755,7 +756,7 @@ describe("HTTP API exposed by the server", function() {
               urlCreationDate: call.urlCreationDate,
               callType: call.callType,
               callerId: call.callerId,
-              progressURL: "ws://" + res.req._headers.host
+              progressURL: getProgressURL(res.req._headers.host)
             };
           });
 
@@ -779,7 +780,7 @@ describe("HTTP API exposed by the server", function() {
           urlCreationDate: calls[2].urlCreationDate,
           callType: calls[2].callType,
           callerId: calls[2].callerId,
-          progressURL: "ws://" + res.req._headers.host
+          progressURL: getProgressURL(res.req._headers.host)
         }];
 
         expect(res.body).to.deep.equal({calls: callsList});
