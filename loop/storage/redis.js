@@ -66,7 +66,7 @@ RedisStorage.prototype = {
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
-      urlData.expires - urlData.timestamp,
+      urlData.expires - parseInt(Date.now() / 1000),
       JSON.stringify(urlData),
       function(err) {
         if (err) {
@@ -113,7 +113,7 @@ RedisStorage.prototype = {
           });
           self._client.setex(
             'callurl.' + callUrlId,
-            data.expires - data.timestamp,
+            data.expires - parseInt(Date.now() / 1000),
             JSON.stringify(data),
             callback
           );
