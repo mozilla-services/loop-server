@@ -372,6 +372,45 @@ function validateCallType(req, res, next) {
 }
 
 /**
+ * Validates the call url params are valid.
+ *
+ * In case they aren't, error out with an HTTP 400.
+ * If they are valid, store them in the urlData parameter of the request.
+ **/
+function validateCallUrlParams(req, res, next) {
+  var expiresIn = conf.get('callUrlTimeout'),
+      maxTimeout = conf.get('callUrlMaxTimeout');
+
+  if (req.body.hasOwnProperty("expiresIn")) {
+    expiresIn = parseInt(req.body.expiresIn, 10);
+
+    if (isNaN(expiresIn)) {
+      res.sendError("body", "expiresIn", "should be a valid number");
+      return;
+    } else if (expiresIn > maxTimeout) {
+      res.sendError("body", "expiresIn", "should be less than " + maxTimeout);
+      return;
+    }
+  }
+  if (req.token === undefined) {
+    req.token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+  }
+
+  req.urlData = {
+    userMac: req.user,
+    callerId: req.body.callerId,
+    timestamp: parseInt(Date.now() / 1000),
+    issuer: req.body.issuer || ''
+  };
+
+  if (expiresIn !== undefined) {
+    req.urlData.expires = req.urlData.timestamp +
+                          expiresIn * tokenlib.ONE_HOUR;
+  }
+  next();
+}
+
+/**
  * Enable CORS for all requests.
  **/
 app.all('*', corsEnabled);
@@ -447,45 +486,45 @@ app.delete('/registration', requireHawkSession, validateSimplePushURL,
  * Generates and return a call-url for the given callerId.
  **/
 app.post('/call-url', requireHawkSession, requireParams('callerId'),
-  function(req, res) {
-    var expiresIn = conf.get('callUrlTimeout'),
-        maxTimeout = conf.get('callUrlMaxTimeout');
-
-    if (req.body.hasOwnProperty("expiresIn")) {
-      expiresIn = parseInt(req.body.expiresIn, 10);
-
-      if (isNaN(expiresIn)) {
-        res.sendError("body", "expiresIn", "should be a valid number");
-        return;
-      } else if (expiresIn > maxTimeout) {
-        res.sendError("body", "expiresIn", "should be less than " + maxTimeout);
-        return;
-      }
-    }
-    var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-    var urlData = {
-      userMac: req.user,
-      callerId: req.body.callerId,
-      timestamp: parseInt(Date.now() / 1000),
-      issuer: req.body.issuer || ''
-    };
-    if (expiresIn !== undefined) {
-      urlData.expires = urlData.timestamp + expiresIn * tokenlib.ONE_HOUR;
-    }
-
+  validateCallUrlParams, function(req, res) {
     if (statsdClient !== undefined) {
       statsdClient.count('loop-call-urls', 1);
       statsdClient.count('loop-call-urls-' + req.user, 1);
     }
 
-    storage.addUserCallUrlData(req.user, token, urlData, function(err) {
-      if (res.serverError(err)) return;
-
-      res.json(200, {
-        callUrl: conf.get("webAppUrl").replace("{token}", token),
-        expiresAt: urlData.expires
+    storage.addUserCallUrlData(req.user, req.token, req.urlData,
+      function(err) {
+        if (res.serverError(err)) return;
+        res.json(200, {
+          callUrl: conf.get("webAppUrl").replace("{token}", req.token),
+          expiresAt: req.urlData.expires
+        });
       });
-    });
+  });
+
+/**
+ * Return the callee friendly name for the given token.
+ **/
+app.get('/calls/:token', validateToken, function(req, res) {
+  res.json(200, {
+    calleeFriendlyName: req.callUrlData.issuer
+  });
+});
+
+app.put('/call-url/:token', requireHawkSession, validateToken,
+  validateCallUrlParams, function(req, res) {
+    storage.updateUserCallUrlData(req.user, req.token, req.urlData,
+      function(err) {
+        if (err && err.notFound === true) {
+          res.json(404, "Not Found");
+          return;
+        }
+        else if (res.serverError(err)) return;
+
+        res.json(200, {
+          expiresAt: req.urlData.expires
+        });
+      });
   });
 
 /**
@@ -586,15 +625,6 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
       });
     });
   });
-
-/**
- * Return the callee friendly name for the given token.
- **/
-app.get('/calls/:token', validateToken, function(req, res) {
-  res.json(200, {
-    calleeFriendlyName: req.callUrlData.issuer
-  });
-});
 
 /**
  * Revoke a given call url.

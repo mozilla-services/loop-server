@@ -66,25 +66,70 @@ RedisStorage.prototype = {
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
-      urlData.expires - urlData.timestamp,
+      urlData.expires - parseInt(Date.now() / 1000),
       JSON.stringify(urlData),
       function(err) {
         if (err) {
           callback(err);
           return;
         }
-        self._client.sadd('userUrls.' + userMac,
-                          'callurl.' + callUrlId, callback);
+        self._client.sadd(
+          'userUrls.' + userMac,
+          'callurl.' + callUrlId, callback
+        );
       });
   },
 
+  /**
+   * Update a call url data.
+   *
+   * If the call-url doesn't belong to the given user, returns an
+   * authentication error.
+   **/
+  updateUserCallUrlData: function(userMac, callUrlId, newData, callback) {
+    var self = this;
+    self._client.sismember(
+      'userUrls.' + userMac,
+      'callurl.' + callUrlId,
+      function(err, res) {
+        if (err){
+          callback(err);
+          return;
+        }
+        if (res === 0) {
+          var error = new Error("Doesn't exist");
+          error.notFound = true;
+          callback(error);
+          return;
+        }
+        // Get and update the existing data.
+        self.getCallUrlData(callUrlId, function(err, data) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          Object.keys(newData).forEach(function(key) {
+            data[key] = newData[key];
+          });
+
+          self._client.setex(
+            'callurl.' + callUrlId,
+            data.expires - parseInt(Date.now() / 1000),
+            JSON.stringify(data),
+            callback
+          );
+        });
+      }
+    );
+  },
+
   getCallUrlData: function(callUrlId, callback) {
-    this._client.get('callurl.' + callUrlId, function(err, url) {
+    this._client.get('callurl.' + callUrlId, function(err, data) {
       if (err) {
         callback(err);
         return;
       }
-      callback(null, JSON.parse(url));
+      callback(null, JSON.parse(data));
     });
   },
 
