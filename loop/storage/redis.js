@@ -111,6 +111,7 @@ RedisStorage.prototype = {
           Object.keys(newData).forEach(function(key) {
             data[key] = newData[key];
           });
+
           self._client.setex(
             'callurl.' + callUrlId,
             data.expires - parseInt(Date.now() / 1000),

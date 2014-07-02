@@ -32,7 +32,7 @@ describe("Storage", function() {
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           callState:    "init",
-          timestamp:    0
+          timestamp:    parseInt(Date.now() / 1000, 10) - 3
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -41,7 +41,7 @@ describe("Storage", function() {
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           callState:    "init",
-          timestamp:    1
+          timestamp:    parseInt(Date.now() / 1000, 10) - 2
         },
         {
           callId:       crypto.randomBytes(16).toString("hex"),
@@ -50,22 +50,22 @@ describe("Storage", function() {
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
           callState:    "terminated",
-          timestamp:    2
+          timestamp:    parseInt(Date.now() / 1000, 10) - 1
         }
       ],
       call = calls[0],
       urls = [
         {
-          timestamp:  0,
-          expires: conf.get("callUrlTimeout")
+          timestamp:  parseInt(Date.now() / 1000, 10),
+          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
         },
         {
-          timestamp:  1,
-          expires: conf.get("callUrlTimeout")
+          timestamp:  parseInt(Date.now() / 1000, 10) + 1,
+          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
         },
         {
-          timestamp:  2,
-          expires: conf.get("callUrlTimeout")
+          timestamp:  parseInt(Date.now() / 1000, 10) + 2,
+          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
         }
       ],
     urlData = urls[0],
@@ -248,8 +248,8 @@ describe("Storage", function() {
                   expect(data).eql({
                     callerId: "natim@moz",
                     issuer: "alexis@moz",
-                    expires: 720,
-                    timestamp: 0
+                    expires: urlData.expires,
+                    timestamp: urlData.timestamp
                   });
                   done();
                 });

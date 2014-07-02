@@ -604,8 +604,8 @@ describe("HTTP API exposed by the server", function() {
       storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
         issuer: calleeFriendlyName,
-        timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
+        timestamp: parseInt(Date.now() / 1000, 10),
+        expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
       }, function(err) {
         if (err) throw err;
 
@@ -630,8 +630,8 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function(done) {
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
       storage.addUserCallUrlData(userHmac, token, {
-        timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
+        timestamp: parseInt(Date.now() / 1000, 10),
+        expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
       }, function(err) {
         if (err) throw err;
         done();
@@ -686,8 +686,8 @@ describe("HTTP API exposed by the server", function() {
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
       storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
-        timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
+        timestamp: parseInt(Date.now() / 1000, 10),
+        expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
       }, function(err) {
         if (err) throw err;
         req = supertest(app)
@@ -723,8 +723,8 @@ describe("HTTP API exposed by the server", function() {
       function(done){
         storage.addUserCallUrlData(userHmac, token, {
           userMac: "h4x0r",
-          timestamp: Date.now(),
-          expires: Date.now() + conf.get("callUrlTimeout")
+          timestamp: parseInt(Date.now() / 1000, 10),
+          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
         }, function(err) {
           if (err) throw err;
           req = supertest(app)
@@ -744,11 +744,6 @@ describe("HTTP API exposed by the server", function() {
     var req, calls;
 
     beforeEach(function(done) {
-      req = supertest(app)
-        .get('/calls?version=2')
-        .hawk(hawkCredentials)
-        .expect('Content-Type', /json/);
-
       calls = [
         {
           callId:          crypto.randomBytes(16).toString("hex"),
@@ -762,7 +757,7 @@ describe("HTTP API exposed by the server", function() {
           callType:        'audio',
           urlCreationDate: urlCreationDate,
           callState:       "init",
-          timestamp:       0
+          timestamp:       parseInt(Date.now() / 1000, 10)
         },
         {
           callId:          crypto.randomBytes(16).toString("hex"),
@@ -776,7 +771,7 @@ describe("HTTP API exposed by the server", function() {
           callType:        'audio-video',
           urlCreationDate: urlCreationDate,
           callState:       "init",
-          timestamp:       1
+          timestamp:       parseInt(Date.now() / 1000, 10) + 1
         },
         {
           callId:          crypto.randomBytes(16).toString("hex"),
@@ -790,9 +785,14 @@ describe("HTTP API exposed by the server", function() {
           callToken:       callToken,
           callType:        'audio-video',
           urlCreationDate: urlCreationDate,
-          timestamp:       2
+          timestamp:       parseInt(Date.now() / 1000, 10) + 2
         },
       ];
+
+      req = supertest(app)
+        .get('/calls?version=' + calls[2].timestamp)
+        .hawk(hawkCredentials)
+        .expect('Content-Type', /json/);
 
       storage.addUserCall(userHmac, calls[0], function() {
         storage.addUserCall(userHmac, calls[1], function() {
@@ -889,7 +889,7 @@ describe("HTTP API exposed by the server", function() {
 
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
 
-      var timestamp = Date.now();
+      var timestamp = parseInt(Date.now() / 1000, 10);
 
       storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
