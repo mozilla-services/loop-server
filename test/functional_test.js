@@ -182,8 +182,8 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /__hearbeat__", function() {
 
     it("should return a 503 if storage is down", function(done) {
-      sandbox.stub(tokBox, "getSessionTokens", function(options, callback) {
-        callback(null);
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, {statusCode: 200});
       });
       sandbox.stub(storage, "ping", function(callback) {
         callback(false);
@@ -203,7 +203,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should return a 503 if provider service is down", function(done) {
-      sandbox.stub(tokBox, "getSessionTokens", function(options, callback) {
+      sandbox.stub(request, "post", function(options, callback) {
         callback(new Error("blah"));
       });
       supertest(app)
@@ -213,15 +213,16 @@ describe("HTTP API exposed by the server", function() {
           if (err) throw err;
           expect(res.body).to.eql({
             'storage': true,
-            'provider': false
+            'provider': false,
+            'message': "TokBox Error: The request failed: Error: blah"
           });
           done();
         });
     });
 
     it("should return a 200 if all dependencies are ok", function(done) {
-      sandbox.stub(tokBox, "getSessionTokens", function(options, callback) {
-        callback(null);
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, {statusCode: 200});
       });
       supertest(app)
         .get('/__heartbeat__')

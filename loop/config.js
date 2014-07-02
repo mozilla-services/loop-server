@@ -257,7 +257,7 @@ var conf = convict({
   heartbeatTimeout: {
     doc: "Timeout for requests when doing heartbeat checks (ms)",
     format: Number,
-    default: 30
+    default: 2000
   },
   timers: {
     supervisoryDuration: {

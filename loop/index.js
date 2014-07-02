@@ -420,18 +420,20 @@ app.all('*', corsEnabled);
  **/
 app.get("/__heartbeat__", function(req, res) {
   storage.ping(function(storageStatus) {
-    tokBox.getSessionTokens({retry: 0, timeout: conf.get('heartbeatTimeout')},
+    tokBox.ping({timeout: conf.get('heartbeatTimeout')},
       function(requestError) {
-        var status;
+        var status, message;
         if (storageStatus === true && requestError === null) {
           status = 200;
         } else {
           status = 503;
+          if (requestError !== null) message = "TokBox " + requestError;
         }
 
         res.json(status, {
           storage: storageStatus,
-          provider: (requestError === null) ? true : false
+          provider: (requestError === null) ? true : false,
+          message: message
         });
       });
   });
