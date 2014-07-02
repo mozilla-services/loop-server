@@ -518,7 +518,9 @@ app.put('/call-url/:token', requireHawkSession, validateToken,
         if (err && err.notFound === true) {
           res.json(404, "Not Found");
           return;
-        } else if (res.serverError(err)) return;
+        }
+        else if (res.serverError(err)) return;
+
         res.json(200, {
           expiresAt: req.urlData.expires
         });
