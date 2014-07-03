@@ -25,21 +25,28 @@ function TokBox(settings) {
 }
 
 TokBox.prototype = {
-  getSessionTokens: function(cb, retry) {
-    if (retry === undefined) {
-      retry = this.retryOnError;
+  getSessionTokens: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = undefined;
+    }
+
+    options = options || {};
+
+    if (options.retry === undefined) {
+      options.retry = this.retryOnError;
     }
     var self = this;
     this._opentok.createSession({
       mediaMode: 'relayed'
     }, function(err, session) {
         if (err !== null) {
-          retry--;
-          if (retry <= 0) {
+          options.retry--;
+          if (options.retry <= 0) {
             cb(err);
             return;
           }
-          self.getSessionTokens(cb, retry);
+          self.getSessionTokens(options, cb);
           return;
         }
         var sessionId = session.sessionId;
@@ -58,6 +65,53 @@ TokBox.prototype = {
         });
       }
     );
+  },
+  ping: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = undefined;
+    }
+
+    options = options || {};
+    var timeout = options.timeout;
+
+    console.log(options.timeout, this._opentok.client.c.apiUrl +
+        this._opentok.client.c.endpoints.createSession);
+
+    request.post({
+      url: this._opentok.client.c.apiUrl +
+        this._opentok.client.c.endpoints.createSession,
+      form: {"p2p.preference": "enabled"},
+      headers: {
+        'User-Agent': 'OpenTok-Node-SDK/2.2.3',
+        'X-TB-PARTNER-AUTH': this._opentok.client.c.apiKey +
+          ':' + this._opentok.client.c.apiSecret
+      },
+      timeout: timeout
+    }, function(err, resp, body) {
+      if (err) {
+        cb(new Error('The request failed: ' + err));
+        return;
+      }
+
+      // handle client errors
+      if (resp.statusCode === 403) {
+        cb(new Error(
+          'An authentcation error occurred: (' + resp.statusCode + ') ' + body
+        ));
+        return;
+      }
+
+      // handle server errors
+      if (resp.statusCode === 500) {
+        cb(new Error(
+          'A server error occurred: (' + resp.statusCode + ') ' + body
+        ));
+        return;
+      }
+
+      cb(null);
+    });
   }
 };
 
@@ -82,16 +136,26 @@ FakeTokBox.prototype = {
     this._token += 1;
     return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
   },
-  getSessionTokens: function(cb) {
+  getSessionTokens: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = {};
+    }
     var self = this;
     // Do a real HTTP call to have a realistic behavior.
-    request.get(self.serverURL, function(err) {
+    request.get({
+      url: self.serverURL,
+      timeout: options.timeout
+    }, function(err) {
       cb(err, {
         sessionId: self._fakeSessionId(),
         callerToken: self._generateFakeToken(),
         calleeToken: self._generateFakeToken()
       });
     });
+  },
+  ping: function(options, cb) {
+    this.getSessionTokens(options, cb);
   }
 };
 
