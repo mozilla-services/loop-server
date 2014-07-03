@@ -137,7 +137,7 @@ var requireFxA = fxa.getMiddleware({
       return;
     }
 
-    var userHmac = hmac(identifier, conf.get('hawkIdSecret'));
+    var userHmac = hmac(identifier, conf.get('userMacSecret'));
 
     // generate the hawk session.
     hawk.generateHawkSession(createHawkSession,
