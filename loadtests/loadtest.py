@@ -13,11 +13,21 @@ from loads.case import TestCase
 
 class TestLoop(TestCase):
 
+    def test_websocket():
+        self.register()
+        token = self.generate_token()
+        call_data = self.initiate_call(token)
+        progress_url = call_data['progressURL']
+
+        # let's connect to the web socket until it gets closed
+
+
     def test_all(self):
         self.register()
         token = self.generate_token()
-        call_id, session, caller_token, api_key = self.initiate_call(token)
+        call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
+
         for call in calls:
             # We want to reject 30% of the calls.
             status = 200
@@ -68,9 +78,7 @@ class TestLoop(TestCase):
         self.assertEquals(resp.status_code, 200,
                           "Call Initialization failed: %s" % resp.content)
 
-        data = self._get_json(resp)
-        return (data['callId'], data['sessionId'], data['sessionToken'],
-                data['apiKey'])
+        return self._get_json(resp)
 
     def list_pending_calls(self):
         resp = self.session.get(
