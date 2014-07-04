@@ -1021,9 +1021,13 @@ describe("HTTP API exposed by the server", function() {
         });
 
         it("should accept a valid call token", function(done) {
-          addCallReq
-            .send({calleeId: user, callType: 'audio'})
-            .end(done);
+          storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            if (err) throw err;
+
+            addCallReq
+              .send({calleeId: user, callType: 'audio'})
+              .end(done);
+          });
         });
 
         it("should return a 503 if urlsStore is not available", function(done) {
@@ -1084,6 +1088,28 @@ describe("HTTP API exposed by the server", function() {
             });
           });
         });
+
+        it("should fail when calling a non existing user.", function(done) {
+          addCallReq
+            .send({calleeId: "non-existing@example.com", callType: "audio"})
+            .expect(400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expect(res.body).to.match(/No user to call found/);
+              done();
+            });
+        });
+
+        it("should fail when calling a user without any SimplePushURLs.",
+          function(done) {
+            addCallReq
+              .send({calleeId: user, callType: "audio"})
+              .expect(400)
+              .end(function(err, res) {
+                expect(res.body).to.match(/No user to call found/);
+              done(err);
+              });
+          });
 
         it("should ping all the user ids URLs", function(done) {
           storage.addUserSimplePushURL(userHmac, pushURL, function(err) {

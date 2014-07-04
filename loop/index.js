@@ -583,8 +583,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
               callback(err);
               return;
             }
-
-            if (urls === null) {
+            if (urls.length === 0) {
               callback();
               return;
             }
@@ -615,7 +614,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         }, function(err) {
           if (res.serverError(err)) return;
 
-          if (!callees) {
+          if (callees.length === 0) {
             res.json(400, 'No user to call found');
             return;
           }
