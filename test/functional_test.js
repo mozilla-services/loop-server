@@ -36,7 +36,8 @@ var expectFormatedError = require("./support").expectFormatedError;
 
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
-var userHmac;
+var user2 = "alexis@mozilla.com";
+var userHmac, userHmac2;
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
@@ -57,8 +58,8 @@ function register(url, assertion, credentials, cb) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, hawkCredentials, fakeCallInfo,
-      genuineOrigins;
+  var sandbox, expectedAssertion, pushURL, pushURL2, hawkCredentials,
+       hawkCredentials2, fakeCallInfo, genuineOrigins;
 
   var routes = {
     '/': ['get'],
@@ -93,6 +94,10 @@ describe("HTTP API exposed by the server", function() {
               'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
 
+    pushURL2 = 'https://push2.services.mozilla.com/update/MGlYke2SrEmYE8ceyu' +
+              'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
+              'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
+
     // Generate Hawk credentials.
     var token = new Token();
     token.getCredentials(function(tokenId, authKey) {
@@ -101,8 +106,29 @@ describe("HTTP API exposed by the server", function() {
         key: authKey,
         algorithm: "sha256"
       };
-      userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
-      storage.setHawkSession(userHmac, authKey, done);
+      var hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+      userHmac = hmac(user, conf.get('userMacSecret'));
+      storage.setHawkSession(hawkIdHmac, authKey, function(err) {
+        if (err) throw err;
+        storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
+          if (err) throw err;
+          // Generate Hawk credentials.
+          var token2 = new Token();
+          token2.getCredentials(function(tokenId2, authKey2) {
+            hawkCredentials2 = {
+              id: tokenId2,
+              key: authKey2,
+              algorithm: "sha256"
+            };
+            var hawkIdHmac2 = hmac(tokenId2, conf.get('hawkIdSecret'));
+            userHmac2 = hmac(user2, conf.get('userMacSecret'));
+            storage.setHawkSession(hawkIdHmac2, authKey2, function(err) {
+              if (err) throw err;
+              storage.setHawkUser(userHmac2, hawkIdHmac2, done);
+            });
+          });
+        });
+      });
     });
   });
 
@@ -1010,12 +1036,69 @@ describe("HTTP API exposed by the server", function() {
             .end(done);
         });
 
-        it.skip("should call setUserCall", function(done) {
-          sandbox.stub(loop, "setUserCall");
-          addCallReq
-            .send({calleeId: user})
-            .end(function() {
-            assert.calledOnce(loop.setUserCall);
+        it("should return the caller data.", function(done) {
+          storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              if (err) throw err;
+
+              addCallReq
+                .send({calleeId: [user, user2], callType: "audio"})
+                .expect(200)
+                .end(function(err, res) {
+                  expect(res.body).to.have.property("callId");
+                  expect(res.body).to.have.property("websocketToken");
+                  expect(res.body.sessionId).to.eql(tokBoxSessionId);
+                  expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
+                  expect(res.body.apiKey).to.eql(tokBox.apiKey);
+                  expect(res.body.progressURL).to.eql(
+                    "ws://" + res.req._headers.host);
+                  done();
+                });
+            });
+          });
+        });
+
+        it("should store call users data.", function(done) {
+          storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              if (err) throw err;
+
+              addCallReq
+                .send({calleeId: [user, user2], callType: "audio"})
+                .expect(200)
+                .end(function(err, res) {
+                  storage.getUserCalls(userHmac, function(err, res) {
+                    if (err) throw err;
+                    expect(res).to.length(1);
+                    storage.getUserCalls(userHmac2, function(err, res2) {
+                      if (err) throw err;
+
+                      expect(res2).to.length(1);
+                      expect(res2).to.eql(res);
+                      done();
+                    });
+                  });
+                });
+            });
+          });
+        });
+
+        it("should ping all the user ids URLs", function(done) {
+          storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              if (err) throw err;
+
+              addCallReq
+                .send({calleeId: [user, user2], callType: "audio"})
+                .expect(200)
+                .end(function(err, res) {
+                  expect(requests).to.length(2);
+                  done();
+                });
+            });
           });
         });
       });

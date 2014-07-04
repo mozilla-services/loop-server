@@ -213,18 +213,20 @@ function authenticate(req, res, next) {
  * - callToken: the call token that was used to initiate the call (if any;
  * - progressURL: the progress URL that will be used by the web sockets.
  */
-function returnUserCallTokens(options, res) {
+function returnUserCallTokens(options, callback) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
-    if (res.serverError(err)) return;
+    if (err) {
+      callback(err);
+      return;
+    }
 
-    var urls = options.urls;
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
     var wsCalleeToken = crypto.randomBytes(16).toString('hex');
     var wsCallerToken = crypto.randomBytes(16).toString('hex');
 
-    storage.addUserCall(options.user, {
+    var callTokens = {
       'callId': callId,
       'callType': options.callType,
       'callState': "init",
@@ -236,41 +238,15 @@ function returnUserCallTokens(options, res) {
 
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
+      'callerToken': tokboxInfo.callerToken,
 
       'wsCallerToken': wsCallerToken,
       'wsCalleeToken': wsCalleeToken,
 
       'callToken': options.callToken,
       'urlCreationDate': options.urlCreationDate
-    }, function(err) {
-      if (res.serverError(err)) return;
-
-      storage.setCallState(callId, "init",
-        conf.get("timers").supervisoryDuration, function() {
-          if (res.serverError(err)) return;
-
-          // Call SimplePush urls.
-          if (!Array.isArray(urls)) {
-            urls = [urls];
-          }
-
-          urls.forEach(function(simplePushUrl) {
-            request.put({
-              url: simplePushUrl,
-              form: { version: currentTimestamp }
-            });
-          });
-
-          res.json(200, {
-            callId: callId,
-            websocketToken: wsCallerToken,
-            sessionId: tokboxInfo.sessionId,
-            sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey,
-            progressURL: options.progressURL
-          });
-        });
-    });
+    };
+    callback(null, callTokens);
   });
 }
 
@@ -578,18 +554,6 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         userId = decrypt(req.hawk.id, encryptedUserId);
       }
 
-      function callUser(calleeMac) {
-        return function() {
-          returnUserCallTokens({
-            callType: req.body.callType,
-            callerId: userId,
-            user: calleeMac,
-            progressURL: getProgressURL(req.get("host")),
-            urls: callees[calleeMac]
-          }, res);
-        }();
-      }
-
       var calleeId = req.body.calleeId;
       if (!Array.isArray(calleeId)) {
         calleeId = [calleeId];
@@ -599,31 +563,72 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
       // client. We may have none, one or multiple matches. If no match is found
       // we throw an error, otherwise we will follow the call process, storing
       // the call information and notifying to the correspoding matched users.
-      var callees;
-      async.each(calleeId, function(identity, callback) {
-        var calleeMac = hmac(identity, conf.get('userMacSecret'));
-        storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
-          if (err) {
-            callback(err);
+      var callees = [];
+
+      returnUserCallTokens({
+        callType: req.body.callType,
+        callerId: userId,
+        progressURL: getProgressURL(req.get("host"))
+      }, function(err, callTokens) {
+        if (res.serverError(err)) return;
+
+        var callerToken = callTokens.callerToken;
+        // We don't want to save this token into the database
+        delete callTokens.callerToken;
+
+        async.each(calleeId, function(identity, callback) {
+          var calleeMac = hmac(identity, conf.get('userMacSecret'));
+          storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
+            if (err) {
+              callback(err);
+              return;
+            }
+
+            if (urls === null) {
+              callback();
+              return;
+            }
+            callees.push(calleeMac);
+            var callInfo = JSON.parse(JSON.stringify(callTokens));
+
+            storage.addUserCall(calleeMac, callInfo,
+              function(err) {
+                if (err) {
+                  callback(err);
+                  return;
+                }
+
+                storage.setCallState(callInfo.callId, "init",
+                  conf.get("timers").supervisoryDuration, function() {
+                    if (res.serverError(err)) return;
+
+                    urls.forEach(function(simplePushUrl) {
+                      request.put({
+                        url: simplePushUrl,
+                        form: { version: callInfo.timestamp }
+                      });
+                    });
+                    callback();
+                  });
+              });
+            });
+        }, function(err) {
+          if (res.serverError(err)) return;
+
+          if (!callees) {
+            res.json(400, 'No user to call found');
             return;
           }
 
-          if (!callees) {
-            callees = {};
-          }
-          callees[calleeMac] = urls;
-
-          callback();
+          res.json(200, {
+            callId: callTokens.callId,
+            websocketToken: callTokens.wsCallerToken,
+            sessionId: callTokens.sessionId,
+            sessionToken: callerToken,
+            apiKey: tokBox.apiKey,
+            progressURL: getProgressURL(req.get("host"))
+          });
         });
-      }, function(err) {
-        if (res.serverError(err)) return;
-
-        if (!callees) {
-          res.json(400, 'No user to call found');
-          return;
-        }
-
-        Object.keys(callees).forEach(callUser.bind(callees));
       });
     });
   });
@@ -671,9 +676,46 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
         calleeFriendlyName: req.callUrlData.issuer,
         callToken: req.token,
         urlCreationDate: req.callUrlData.timestamp,
-        progressURL: getProgressURL(req.get("host")),
-        urls: urls
-      }, res);
+      }, function(err, callTokens) {
+        if (res.serverError(err)) return;
+
+        callTokens = JSON.parse(JSON.stringify(callTokens));
+        var callerToken = callTokens.callerToken;
+        // We don't want to save this token into the database
+        delete callTokens.callerToken;
+
+
+        storage.addUserCall(req.callUrlData.userMac, callTokens,
+          function(err) {
+            if (res.serverError(err)) return;
+
+            storage.setCallState(callTokens.callId, "init",
+              conf.get("timers").supervisoryDuration, function() {
+                if (res.serverError(err)) return;
+
+                // Call SimplePush urls.
+                if (!Array.isArray(urls)) {
+                  urls = [urls];
+                }
+
+                urls.forEach(function(simplePushUrl) {
+                  request.put({
+                    url: simplePushUrl,
+                    form: { version: callTokens.timestamp }
+                  });
+                });
+
+                res.json(200, {
+                  callId: callTokens.callId,
+                  websocketToken: callTokens.wsCallerToken,
+                  sessionId: callTokens.sessionId,
+                  sessionToken: callerToken,
+                  apiKey: tokBox.apiKey,
+                  progressURL: getProgressURL(req.get("host"))
+                });
+              });
+          });
+      });
     });
   });
 });

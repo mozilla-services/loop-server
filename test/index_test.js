@@ -406,13 +406,15 @@ describe("index.js", function() {
 
     app.post('/returnUserCallTokens', function(req, res) {
       returnUserCallTokens({
-        user: req.body.callee,
         callerId: req.body.callerId,
-        urls: req.body.urls,
         calleeFriendlyName: req.body.calleeFriendlyName,
         callToken: req.body.callToken,
         callType: req.body.callType
-      }, res);
+      }, function(err, callTokens) {
+        if(res.serverError(err)) return;
+
+        res.json(200, callTokens);
+      });
     });
 
     beforeEach(function() {
@@ -437,10 +439,8 @@ describe("index.js", function() {
 
     describe("With working tokbox APIs", function() {
 
-      var user = "user@arandomuri";
       var callerId = "aCallerId";
       var calleeFriendlyName = "issuerName";
-      var urls = ["url1", "url2"];
       var callToken = 'call-token';
       var tokBoxSessionId = "aTokboxSession";
       var tokBoxCallerToken = "aToken";
@@ -456,36 +456,13 @@ describe("index.js", function() {
         });
       });
 
-      it("should trigger all the simple push URLs of the user", function(done) {
-        var stub = sandbox.stub(request, "put");
-        supertest(app)
-          .post('/returnUserCallTokens')
-          .send({
-            callee: user,
-            callerId: callerId,
-            urls: urls,
-            callToken: callToken,
-            calleeFriendlyName: calleeFriendlyName,
-            callType: "audio"
-          })
-          .expect(200)
-          .end(function(err, res) {
-            assert.calledTwice(request.put);
-            expect(stub.args[0][0].url).eql(urls[0]);
-            expect(stub.args[1][0].url).eql(urls[1]);
-            done();
-          });
-      });
-
       it("should return callId, sessionId, apiKey and caller token info",
         function(done) {
           sandbox.stub(request, "put");
           supertest(app)
             .post('/returnUserCallTokens')
             .send({
-              callee: user,
               callerId: callerId,
-              urls: urls,
               callToken: callToken,
               calleeFriendlyName: calleeFriendlyName,
               callType: "audio"
@@ -493,104 +470,27 @@ describe("index.js", function() {
             .expect(200)
             .end(function(err, res) {
               expect(res.body).to.have.property('callId');
-              expect(res.body).to.have.property('websocketToken');
+              expect(res.body).to.have.property('wsCallerToken');
+              expect(res.body).to.have.property('wsCalleeToken');
+              expect(res.body).to.have.property('timestamp');
               // Drop callId, we don't know its value.
               delete res.body.callId;
-              delete res.body.websocketToken;
+              delete res.body.timestamp;
+              delete res.body.wsCallerToken;
+              delete res.body.wsCalleeToken;
               expect(res.body).eql({
+                callState: "init",
+                callToken: callToken,
+                callType: "audio",
+                calleeFriendlyName: calleeFriendlyName,
+                callerId: callerId,
                 sessionId: tokBoxSessionId,
-                sessionToken: tokBoxCallerToken,
-                apiKey: tokBox.apiKey
+                calleeToken: tokBoxCalleeToken,
+                callerToken: tokBoxCallerToken
               });
               done();
             });
         });
-
-      it("should store sessionId and callee token info in database",
-        function(done) {
-          sandbox.stub(request, "put");
-          // Don't want to see the already created calls.
-          storage.drop();
-
-          supertest(app)
-            .post('/returnUserCallTokens')
-            .send({
-              callee: user,
-              callerId: callerId,
-              urls: urls,
-              callToken: callToken,
-              calleeFriendlyName: calleeFriendlyName,
-              callType: "audio"
-            })
-            .expect(200)
-            .end(function(err, res) {
-              storage.getUserCalls(user, function(err, items) {
-                if (err) throw err;
-                expect(items.length).eql(1);
-                expect(items[0].callId).to.have.length(32);
-                delete items[0].callId;
-                expect(items[0].wsCallerToken).to.have.length(32);
-                delete items[0].wsCallerToken;
-                expect(items[0].wsCalleeToken).to.have.length(32);
-                delete items[0].wsCalleeToken;
-                expect(items[0]).to.have.property('timestamp');
-                delete items[0].timestamp;
-                expect(items[0]).eql({
-                  callerId: callerId,
-                  callState: "init",
-                  calleeFriendlyName: calleeFriendlyName,
-                  userMac: user,
-                  sessionId: tokBoxSessionId,
-                  calleeToken: tokBoxCalleeToken,
-                  callToken: callToken,
-                  callType: "audio"
-                });
-                done();
-              });
-            });
-        });
-
-      it("should set the call-state to init by default", function(done) {
-        sandbox.stub(request, "put");
-        sandbox.stub(storage, "addUserCall", function(_, __, cb) {
-          cb(null);
-        });
-        sandbox.stub(storage, "setCallState",
-          function(callId, state, expiricy, cb) {
-            expect(state).eql("init");
-            expect(expiricy).eql(conf.get("timers").supervisoryDuration);
-            cb(null);
-          });
-
-        supertest(app)
-          .post('/returnUserCallTokens')
-          .send({
-            callee: user,
-            callerId: callerId,
-            urls: urls
-          })
-          .expect(200)
-          .end(done);
-      });
-
-      it("should return a 503 if callsStore is not available", function(done) {
-        sandbox.stub(storage, "addUserCall", function(_, __, cb) {
-          cb("error");
-        });
-
-        sandbox.stub(request, "put");
-        supertest(app)
-          .post('/returnUserCallTokens')
-          .send({
-            callee: user,
-            callerId: callerId,
-            callToken: callToken,
-            callType: "audio",
-            urls: urls
-          })
-          .expect(503)
-          .end(done);
-      });
     });
   });
 });
