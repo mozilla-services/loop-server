@@ -588,23 +588,21 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
               return;
             }
             callees.push(calleeMac);
-            var callInfo = JSON.parse(JSON.stringify(callTokens));
-
-            storage.addUserCall(calleeMac, callInfo,
+            storage.addUserCall(calleeMac, callTokens,
               function(err) {
                 if (err) {
                   callback(err);
                   return;
                 }
 
-                storage.setCallState(callInfo.callId, "init",
+                storage.setCallState(callTokens.callId, "init",
                   conf.get("timers").supervisoryDuration, function() {
                     if (res.serverError(err)) return;
 
                     urls.forEach(function(simplePushUrl) {
                       request.put({
                         url: simplePushUrl,
-                        form: { version: callInfo.timestamp }
+                        form: { version: callTokens.timestamp }
                       });
                     });
                     callback();
