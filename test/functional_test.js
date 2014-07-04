@@ -973,11 +973,44 @@ describe("HTTP API exposed by the server", function() {
             .end(done);
         });
 
-        it.skip("should call setUserCall", function(done) {
-          sandbox.stub(loop, "setUserCall");
-          addCallReq.end(function() {
-            assert.calledOnce(loop.setUserCall);
-          });
+        it("should return the caller data.", function(done) {
+          addCallReq
+            .end(function(err, res) {
+              expect(res.body).to.have.property("callId");
+              expect(res.body).to.have.property("websocketToken");
+              expect(res.body.sessionId).to.eql(tokBoxSessionId);
+              expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
+              expect(res.body.apiKey).to.eql(tokBox.apiKey);
+              expect(res.body.progressURL).to.eql(
+                "ws://" + res.req._headers.host);
+              done();
+            });
+        });
+
+        it("should store call users data.", function(done) {
+          addCallReq
+            .end(function(err, res) {
+              storage.getUserCalls(userHmac, function(err, res) {
+                if (err) throw err;
+                expect(res).to.length(1);
+                done();
+              });
+            });
+        });
+
+        it("should let the callee grab call info.", function(done) {
+          addCallReq
+            .end(function(err, res) {
+              supertest(app)
+                .get("/calls?version=200")
+                .hawk(hawkCredentials)
+                .expect(200)
+                .end(function(err, res) {
+                  if (err) throw err;
+                  expect(res.body.calls).to.length(1);
+                  done();
+                });
+            });
         });
       });
     });
@@ -1020,7 +1053,7 @@ describe("HTTP API exposed by the server", function() {
           });
         });
 
-        it("should accept a valid call token", function(done) {
+        it("should accept a valid call identity", function(done) {
           storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
             if (err) throw err;
 
@@ -1085,6 +1118,42 @@ describe("HTTP API exposed by the server", function() {
                     });
                   });
                 });
+            });
+          });
+        });
+
+        it("should let the callee grab call info.", function(done) {
+          storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              if (err) throw err;
+
+              addCallReq
+                .send({calleeId: [user, user2], callType: "audio"})
+                .expect(200)
+                .end(function(err, res) {
+                  supertest(app)
+                    .get("/calls?version=200")
+                    .hawk(hawkCredentials)
+                    .expect(200)
+                    .end(function(err, res) {
+                      if (err) throw err;
+                      expect(res.body.calls).to.length(1);
+                      supertest(app)
+                        .get("/calls?version=200")
+                        .hawk(hawkCredentials2)
+                        .expect(200)
+                        .end(function(err, res2) {
+                          if (err) throw err;
+                          expect(res2.body.calls).to.length(1);
+
+                          delete res.body.calls[0].progressURL;
+                          delete res2.body.calls[0].progressURL;
+                          expect(res.body.calls).to.eql(res2.body.calls);
+                          done();
+                        });
+                    });
+                  });
             });
           });
         });
