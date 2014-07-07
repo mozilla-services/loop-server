@@ -26,18 +26,41 @@ class TestLoop(TestCase):
         websocket_token = call_data['websocketToken']
         call_id = call_data['callId']
 
+        def _handle_callee_messages(message_data):
+            message = json.loads(message_data.data)
+            if (message['messageType'] == "hello"
+                    and message['state'] == "init"):
+                # just keep it open and wait!
+                callee_ws.receive()
+
+        def _handle_caller_messages(message_data):
+            message = json.loads(message_data.data)
+            if (message['messageType'] == "hello"
+                    and message['state'] == "init"):
+                # This is the first message, we should have the second party
+                # connect.
+                callee_ws.send(json.dumps({
+                    'messageType': 'hello',
+                    'auth': calls[0]['websocketToken'],
+                    'callId': call_id
+                }))
+                callee_ws.receive()
+
         # let's connect to the web socket until it gets closed
-        from pdb import set_trace; set_trace()
-        ws = self.create_ws(progress_url, callback=self.handle_ws_message)
-        ws.send(json.dumps({
+        callee_ws = self.create_ws(
+            progress_url,
+            callback=_handle_callee_messages)
+
+        caller_ws = self.create_ws(
+            progress_url,
+            callback=_handle_caller_messages)
+
+        caller_ws.send(json.dumps({
             'messageType': 'hello',
             'auth': websocket_token,
             'callId': call_id
         }))
-
-    def handle_ws_message(self, message):
-        print message
-
+        caller_ws.receive()
 
     def _get_json(self, resp):
         try:
@@ -78,7 +101,7 @@ class TestLoop(TestCase):
         # This happens when not authenticated.
         resp = self.session.post(
             self.server_url + '/calls/%s' % token,
-            data={"callType": "audio-video"}),
+            data=json.dumps({"callType": "audio-video"}),
             headers={'Content-Type': 'application/json'}
         )
         self.assertEquals(resp.status_code, 200,
