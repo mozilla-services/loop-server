@@ -45,26 +45,26 @@ function logMetrics(req, res, next) {
     var start =  new Date();
 
     res.on('finish', function() {
-    var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-    var line = {
-      op: 'request.summary',
-      code: res.statusCode,
-      path: req.path,
-      query: req.query,
-      agent: req.headers['user-agent'],
-      t: Date.now() - start,
-      user: req.user,
-      token: req.token,
-      callUrlData: req.callUrlData,
-      v: pjson.version,
-      name: pjson.name,
-      hostname: hostname,
-      lang: req.headers["accept-language"],
-      ip: ip
-    };
+      var line = {
+        op: 'request.summary',
+        code: res.statusCode,
+        path: req.path,
+        query: req.query,
+        agent: req.headers['user-agent'],
+        t: Date.now() - start,
+        user: req.user,
+        token: req.token,
+        callUrlData: req.callUrlData,
+        v: pjson.version,
+        name: pjson.name,
+        hostname: hostname,
+        lang: req.headers["accept-language"],
+        ip: ip
+      };
 
-    console.log(JSON.stringify(line));
+      console.log(JSON.stringify(line));
     });
   }
   next();
