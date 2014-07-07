@@ -10,7 +10,6 @@ var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var crypto = require("crypto");
 var assert = sinon.assert;
-var chai = require("chai");
 
 var loop = require("../loop");
 var app = loop.app;
@@ -917,7 +916,7 @@ describe("HTTP API exposed by the server", function() {
 
         it("should output the token into the stdout", function(done) {
           addCallReq.end(function () {
-            chai.assert.equal(_logs[0].token, token);
+            expect(_logs[0].token).to.eql(token);
             done();
           });
         });
@@ -983,7 +982,7 @@ describe("HTTP API exposed by the server", function() {
           addCallReq
             .send({calleeId: user, callType: 'audio'})
             .end(function () {
-              chai.assert.equal(_logs[0].user, userHmac);
+              expect(_logs[0].user).to.eql(userHmac);
               done();
             });
         });

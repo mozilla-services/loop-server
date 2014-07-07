@@ -10,7 +10,7 @@ var sinon = require("sinon");
 var loop = require("../loop");
 var app = loop.app;
 var logMetrics = require("../loop/middlewares").logMetrics;
-var assert = require("chai").assert;
+var expect = require("chai").expect;
 var conf = loop.conf;
 var pjson = require('../package.json');
 var os = require("os");
@@ -52,17 +52,17 @@ describe("metrics middleware", function() {
       .end(function(err, res) {
         var logged = JSON.parse(logs[0]);
 
-        assert.equal(logged.op, 'request.summary');
-        assert.equal(logged.code, 200);
-        assert.equal(logged.path, '/with-metrics-middleware');
-        assert.equal(logged.user, 'uuid');
-        assert.equal(logged.agent, 'Mouzilla');
-        assert.equal(logged.callUrlData, 'data');
-        assert.equal(logged.v, pjson.version);
-        assert.equal(logged.name, pjson.name);
-        assert.equal(logged.hostname, os.hostname());
-        assert.equal(logged.lang, 'Breton du sud');
-        assert.equal(logged.ip, 'ip1, ip2, ip3');
+        expect(logged.op).to.eql('request.summary');
+        expect(logged.code).to.eql(200);
+        expect(logged.path).to.eql('/with-metrics-middleware');
+        expect(logged.user).to.eql('uuid');
+        expect(logged.agent).to.eql('Mouzilla');
+        expect(logged.callUrlData).to.eql('data');
+        expect(logged.v).to.eql(pjson.version);
+        expect(logged.name).to.eql(pjson.name);
+        expect(logged.hostname).to.eql(os.hostname());
+        expect(logged.lang).to.eql('Breton du sud');
+        expect(logged.ip).to.eql('ip1, ip2, ip3');
 
         done();
       });
