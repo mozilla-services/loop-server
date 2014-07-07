@@ -13,28 +13,31 @@ from loads.case import TestCase
 
 class TestLoop(TestCase):
 
-    def test_websocket():
-        self.register()
-        token = self.generate_token()
-        call_data = self.initiate_call(token)
-        progress_url = call_data['progressURL']
-
-        # let's connect to the web socket until it gets closed
-
-
     def test_all(self):
         self.register()
         token = self.generate_token()
         call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
 
-        for call in calls:
-            # We want to reject 30% of the calls.
-            status = 200
-            if random.randint(0, 100) <= 30:
-                self.discard_call(call['callId'])
-                status = 404
-            self.get_call_status(call['callId'], status)
+        self.test_websockets(token, call_data, calls)
+
+    def test_websockets(self, token, call_data, calls):
+        progress_url = call_data['progressURL']
+        websocket_token = call_data['websocketToken']
+        call_id = call_data['callId']
+
+        # let's connect to the web socket until it gets closed
+        from pdb import set_trace; set_trace()
+        ws = self.create_ws(progress_url, callback=self.handle_ws_message)
+        ws.send(json.dumps({
+            'messageType': 'hello',
+            'auth': websocket_token,
+            'callId': call_id
+        }))
+
+    def handle_ws_message(self, message):
+        print message
+
 
     def _get_json(self, resp):
         try:
@@ -62,7 +65,7 @@ class TestLoop(TestCase):
         resp = self.session.post(
             self.server_url + '/call-url',
             data=json.dumps({'callerId': 'alexis@mozilla.com'}),
-            headers={'Content-type': 'application/json'},
+            headers={'Content-Type': 'application/json'},
             auth=self.hawk_auth
         )
         self.assertEquals(resp.status_code, 200,
@@ -73,8 +76,11 @@ class TestLoop(TestCase):
 
     def initiate_call(self, token):
         # This happens when not authenticated.
-        resp = self.session.post(self.server_url + '/calls/%s' % token,
-                                 {"callType": "audio-video"})
+        resp = self.session.post(
+            self.server_url + '/calls/%s' % token,
+            data={"callType": "audio-video"}),
+            headers={'Content-Type': 'application/json'}
+        )
         self.assertEquals(resp.status_code, 200,
                           "Call Initialization failed: %s" % resp.content)
 
@@ -90,14 +96,6 @@ class TestLoop(TestCase):
     def revoke_token(self, token):
         # You don't need to be authenticated to revoke a token.
         self.session.delete(self.server_url + '/call-url/%s' % token)
-
-    def discard_call(self, call_id):
-        self.session.delete(self.server_url + '/calls/id/%s' % call_id)
-
-    def get_call_status(self, call_id, status):
-        resp = self.session.get(self.server_url + '/calls/id/%s' % call_id)
-        self.assertEqual(resp.status_code, status,
-                         "Call status retrieval failed %s" % resp.content)
 
 
 def HKDF_extract(salt, IKM, hashmod=hashlib.sha256):
