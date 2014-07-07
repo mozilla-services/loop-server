@@ -27,8 +27,8 @@ var validateCallType = require("../loop").validateCallType;
 var returnUserCallTokens = require("../loop").returnUserCallTokens;
 var tokBox = require("../loop").tokBox;
 var request = require("../loop").request;
-
 var expectFormatedError = require("./support").expectFormatedError;
+var errors = require("../loop/errno.json");
 
 describe("index.js", function() {
   var jsonReq;
@@ -158,8 +158,8 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res.body, "body", "simple_push_url",
-                              "simple_push_url should be a valid url");
+          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                              "simplePushURL should be a valid url");
           done();
         });
     });
@@ -187,8 +187,8 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res.body, "body", "callType",
-                              "missing: callType");
+          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                              "Missing: callType");
           done();
         });
     });
@@ -200,8 +200,8 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res.body, "body", "callType",
-                              "Should be 'audio' or 'audio-video'");
+          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                              "callType should be 'audio' or 'audio-video'");
           done();
         });
     });
@@ -246,12 +246,8 @@ describe("index.js", function() {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expect(res.body).eql({
-              status: "errors",
-              errors: [{location: "body",
-                        name: "b",
-                        description: "missing: b"}]
-            });
+            expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                                "Missing: b");
             done();
           });
       });
@@ -263,15 +259,8 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expect(res.body).eql({
-            status: "errors",
-            errors: [{location: "body",
-                      name: "a",
-                      description: "missing: a"},
-                     {location: "body",
-                      name: "b",
-                      description: "missing: b"}]
-          });
+          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                              "Missing: a, b");
           done();
         });
     });

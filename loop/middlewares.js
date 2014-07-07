@@ -5,14 +5,16 @@
 "use strict";
 
 var conf = require("./config").conf;
-var strftime = require('strftime');
+var strftime = require("strftime");
+var sendError = require("./utils").sendError;
+var errors = require("./errno.json");
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
     res.serverError = function raiseError(error) {
       if (error) {
         logError(error);
-        res.json(503, "Service Unavailable");
+        sendError(res, 503, errors.BACKEND, "Service Unavailable");
         return true;
       }
       return false;

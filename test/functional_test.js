@@ -33,6 +33,7 @@ var hmac = require("../loop/hmac");
 
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
+var errors = require("../loop/errno.json");
 
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
@@ -314,7 +315,8 @@ describe("HTTP API exposed by the server", function() {
     it("should require a callerId parameter", function(done) {
       jsonReq.send({}).expect(400).end(function(err, res) {
         if (err) throw err;
-        expectFormatedError(res.body, "body", "callerId");
+        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                            "Missing: callerId");
         done();
       });
     });
@@ -325,12 +327,8 @@ describe("HTTP API exposed by the server", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expect(res.body).eql({
-            status: "errors",
-            errors: [{location: "body",
-                      name: "expiresIn",
-                      description: "should be a valid number"}]
-          });
+          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                              "expiresIn should be a valid number");
           done();
         });
     });
@@ -344,12 +342,8 @@ describe("HTTP API exposed by the server", function() {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expect(res.body).eql({
-              status: "errors",
-              errors: [{location: "body",
-                        name: "expiresIn",
-                        description: "should be less than 5"}]
-            });
+            expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                                "expiresIn should be less than 5");
             conf.set('callUrlMaxTimeout', oldMaxTimeout);
             done();
           });
@@ -459,8 +453,8 @@ describe("HTTP API exposed by the server", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res.body, "body", "simple_push_url",
-                              "simple_push_url should be a valid url");
+          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                              "simplePushURL should be a valid url");
           done();
         });
     });
@@ -472,7 +466,8 @@ describe("HTTP API exposed by the server", function() {
         .hawk(hawkCredentials)
         .expect(406).end(function(err, res) {
           if (err) throw err;
-          expect(res.body).eql(["application/json"]);
+          expectFormatedError(res, 406, errors.BADJSON,
+            "Request body should be defined as application/json");
           done();
         });
     });
@@ -1164,8 +1159,8 @@ describe("HTTP API exposed by the server", function() {
             .expect(400)
             .end(function(err, res) {
               if (err) throw err;
-              expect(res.body)
-                .to.match(/Could not find any existing user to call/);
+              expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                                  "Could not find any existing user to call");
               done();
             });
         });
@@ -1177,8 +1172,8 @@ describe("HTTP API exposed by the server", function() {
               .send({calleeId: user, callType: "audio"})
               .expect(400)
               .end(function(err, res) {
-                expect(res.body)
-                  .to.match(/Could not find any existing user to call/);
+                expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                                    "Could not find any existing user to call");
               done(err);
               });
           });
