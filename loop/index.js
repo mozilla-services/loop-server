@@ -373,7 +373,7 @@ function validateCallUrlParams(req, res, next) {
   req.urlData = {
     userMac: req.user,
     callerId: req.body.callerId,
-    timestamp: parseInt(Date.now() / 1000),
+    timestamp: parseInt(Date.now() / 1000, 10),
     issuer: req.body.issuer || ''
   };
 
