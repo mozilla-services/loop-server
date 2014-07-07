@@ -69,7 +69,7 @@ var conf = convict({
     env: "PORT"
   },
   protocol: {
-    doc: "The server protocol. http by default.",
+    doc: "The protocol the server is behind. Should be https behind an ELB.",
     format: String,
     default: "http",
     end: "PROTOCOL"
@@ -233,6 +233,12 @@ var conf = convict({
     format: Array,
     default: ["api.accounts.firefox.com"]
   },
+  hawkIdSecret: {
+    doc: "The secret for hmac-ing the hawk id (16 bytes key encoded as hex)",
+    format: hexKeyOfSize(16),
+    default: "",
+    env: "HAWK_ID_SECRET"
+  },
   hawkSessionDuration: {
     doc: "The duration of hawk credentials (in seconds)",
     format: Number,
@@ -251,7 +257,7 @@ var conf = convict({
   heartbeatTimeout: {
     doc: "Timeout for requests when doing heartbeat checks (ms)",
     format: Number,
-    default: 30
+    default: 2000
   },
   timers: {
     supervisoryDuration: {
@@ -279,7 +285,7 @@ var conf = convict({
     doc: "When activated, will dump metrics in the stdout",
     default: false,
     format: Boolean
-  },
+  }
 });
 
 

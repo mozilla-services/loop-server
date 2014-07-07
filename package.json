@@ -19,7 +19,7 @@
     "cors": "2.3.1",
     "express": "3.x",
     "strftime": "0.8.0",
-    "opentok": "2.2.2",
+    "opentok": "2.2.3",
     "raven": "0.6.3",
     "request": "2.36.0",
     "urlsafe-base64": "0.0.2",
@@ -30,7 +30,8 @@
     "hkdf": "0.0.2",
     "atob": "1.1.2",
     "async": "~0.9.0",
-    "ws": "0.4.31"
+    "ws": "0.4.31",
+    "sodium": "1.0.11"
   },
   "devDependencies": {
     "chai": "1.9.x",

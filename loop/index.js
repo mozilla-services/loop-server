@@ -14,7 +14,6 @@ http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
-var hexKeyOfSize = require('./config').hexKeyOfSize;
 var crypto = require('crypto');
 var loopPackageData = require('../package.json');
 var request = require('request');
@@ -27,7 +26,11 @@ var handle503 = require("./middlewares").handle503;
 var logMetrics = require('./middlewares').logMetrics;
 var async = require('async');
 var websockets = require('./websockets');
+var encrypt = require("./encrypt").encrypt;
+var decrypt = require("./encrypt").decrypt;
+var getProgressURL = require('./utils').getProgressURL;
 var hawk = require('./hawk');
+var hmac = require('./hmac');
 var fxa = require('./fxa');
 
 if (conf.get("fakeTokBox") === true) {
@@ -52,6 +55,9 @@ var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
 }
+var hawkOptions = {
+  port: conf.get("protocol") === "https" ? 443 : undefined
+};
 
 function logError(err) {
   console.log(err);
@@ -59,50 +65,37 @@ function logError(err) {
 }
 
 /**
- * Returns the HMac digest of the given payload.
- *
- * If no options are passed, the global configuration object is used to
- * determine which algorithm and secret should be used.
- *
- * @param {String} payload    The string to mac.
- * @param {String} secret     key encoded as hex.
- * @param {String} algorithm  Algorithm to use (defaults to sha256).
- * @return {String} hexadecimal hash.
- **/
-function hmac(payload, secret, algorithm) {
-  if (secret === undefined) {
-    throw new Error("You should provide a secret.");
-  }
-
-  // Test for secret size and validity
-  hexKeyOfSize(16)(secret);
-
-  if (algorithm === undefined) {
-    algorithm = conf.get("userMacAlgorithm");
-  }
-  var _hmac = crypto.createHmac(algorithm, new Buffer(secret, "hex"));
-  _hmac.write(payload);
-  _hmac.end();
-  return _hmac.read().toString('hex');
-}
-
-/**
  * Attach the identity of the user to the request if she is registered in the
  * database.
  **/
 function setUser(req, res, tokenId, done) {
-  storage.getHawkUser(tokenId, function(err, user) {
+  req.hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+  storage.getHawkUser(req.hawkIdHmac, function(err, user) {
     if (res.serverError(err)) return;
 
-    storage.touchHawkSession(tokenId);
+    storage.touchHawkSession(req.hawkIdHmac);
     // If an identity is defined for this hawk session, use it.
     if (user !== null) {
       req.user = user;
       done();
       return;
     }
-    req.user = tokenId;
+    req.user = req.hawkIdHmac;
     done();
+  });
+}
+
+function getHawkSession(tokenId, callback) {
+  storage.getHawkSession(hmac(tokenId, conf.get("hawkIdSecret")), callback);
+}
+
+function createHawkSession(tokenId, authKey, callback) {
+  var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+  storage.setHawkSession(hawkIdHmac, authKey, function(err, data) {
+    if(statsdClient && err === null) {
+      statsdClient.count('loop-activated-users', 1);
+    }
+    callback(err, data);
   });
 }
 
@@ -110,8 +103,7 @@ function setUser(req, res, tokenId, done) {
  * Middleware that requires a valid hawk session.
  **/
 var requireHawkSession = hawk.getMiddleware(
-  storage.getHawkSession.bind(storage),
-  setUser
+  hawkOptions, getHawkSession, setUser
 );
 
 /**
@@ -119,16 +111,7 @@ var requireHawkSession = hawk.getMiddleware(
  * exist.
  **/
 var attachOrCreateHawkSession = hawk.getMiddleware(
-  storage.getHawkSession.bind(storage),
-  function(tokenId, authKey, callback) {
-    storage.setHawkSession(tokenId, authKey, function(err, data) {
-      if(statsdClient && err === null) {
-        statsdClient.count('loop-activated-users', 1);
-      }
-      callback(err, data);
-    });
-  },
-  setUser
+  hawkOptions, getHawkSession, createHawkSession, setUser
 );
 
 /**
@@ -156,15 +139,20 @@ var requireFxA = fxa.getMiddleware({
     var userHmac = hmac(identifier, conf.get('userMacSecret'));
 
     // generate the hawk session.
-    hawk.generateHawkSession(storage.setHawkSession.bind(storage),
+    hawk.generateHawkSession(createHawkSession,
       function(err, tokenId, authKey, sessionToken) {
-        storage.setHawkUser(userHmac, tokenId, function(err) {
+        var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+        var encryptedIdentifier = encrypt(tokenId, identifier);
+        storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
           if (res.serverError(err)) return;
+          storage.setHawkUserId(hawkIdHmac, encryptedIdentifier, function(err) {
+            if (res.serverError(err)) return;
 
-          // return hawk credentials.
-          hawk.setHawkHeaders(res, sessionToken);
-          req.user = userHmac;
-          next();
+            // return hawk credentials.
+            hawk.setHawkHeaders(res, sessionToken);
+            req.user = userHmac;
+            next();
+          });
         });
       }
     );
@@ -217,11 +205,12 @@ function authenticate(req, res, next) {
  * Helper to store and trigger an user initiated call.
  *
  * options is a javascript object which can have the following keys:
- * - user: the identifier of the connected user.
- * - callerId: the identifier for the caller.
- * - urls: the list of simple push urls to notify of the new call.
- * - calleeFriendlyName: the friendly name of the person called.
- * - callToken: the call token that was used to initiate the call (if any)
+ * - user: the identifier of the connected user;
+ * - callerId: the identifier for the caller;
+ * - urls: the list of simple push urls to notify of the new call;
+ * - calleeFriendlyName: the friendly name of the person called;
+ * - callToken: the call token that was used to initiate the call (if any;
+ * - progressURL: the progress URL that will be used by the web sockets.
  */
 function returnUserCallTokens(options, res) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
@@ -235,19 +224,23 @@ function returnUserCallTokens(options, res) {
     var wsCallerToken = crypto.randomBytes(16).toString('hex');
 
     storage.addUserCall(options.user, {
-      'callerId': options.callerId,
-      'calleeFriendlyName': options.calleeFriendlyName,
       'callId': callId,
-      'userMac': options.user,
-      'sessionId': tokboxInfo.sessionId,
-      'calleeToken': tokboxInfo.calleeToken,
-      'wsCallerToken': wsCallerToken,
-      'wsCalleeToken': wsCalleeToken,
+      'callType': options.callType,
       'callState': "init",
       'timestamp': currentTimestamp,
+
+      'userMac': options.user,
+      'callerId': options.callerId,
+      'calleeFriendlyName': options.calleeFriendlyName,
+
+      'sessionId': tokboxInfo.sessionId,
+      'calleeToken': tokboxInfo.calleeToken,
+
+      'wsCallerToken': wsCallerToken,
+      'wsCalleeToken': wsCalleeToken,
+
       'callToken': options.callToken,
-      'urlCreationDate': options.urlCreationDate,
-      'callType': options.callType
+      'urlCreationDate': options.urlCreationDate
     }, function(err) {
       if (res.serverError(err)) return;
 
@@ -272,7 +265,8 @@ function returnUserCallTokens(options, res) {
             websocketToken: wsCallerToken,
             sessionId: tokboxInfo.sessionId,
             sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey
+            apiKey: tokBox.apiKey,
+            progressURL: options.progressURL
           });
         });
     });
@@ -375,6 +369,45 @@ function validateCallType(req, res, next) {
 }
 
 /**
+ * Validates the call url params are valid.
+ *
+ * In case they aren't, error out with an HTTP 400.
+ * If they are valid, store them in the urlData parameter of the request.
+ **/
+function validateCallUrlParams(req, res, next) {
+  var expiresIn = conf.get('callUrlTimeout'),
+      maxTimeout = conf.get('callUrlMaxTimeout');
+
+  if (req.body.hasOwnProperty("expiresIn")) {
+    expiresIn = parseInt(req.body.expiresIn, 10);
+
+    if (isNaN(expiresIn)) {
+      res.sendError("body", "expiresIn", "should be a valid number");
+      return;
+    } else if (expiresIn > maxTimeout) {
+      res.sendError("body", "expiresIn", "should be less than " + maxTimeout);
+      return;
+    }
+  }
+  if (req.token === undefined) {
+    req.token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+  }
+
+  req.urlData = {
+    userMac: req.user,
+    callerId: req.body.callerId,
+    timestamp: parseInt(Date.now() / 1000),
+    issuer: req.body.issuer || ''
+  };
+
+  if (expiresIn !== undefined) {
+    req.urlData.expires = req.urlData.timestamp +
+                          expiresIn * tokenlib.ONE_HOUR;
+  }
+  next();
+}
+
+/**
  * Enable CORS for all requests.
  **/
 app.all('*', corsEnabled);
@@ -384,18 +417,20 @@ app.all('*', corsEnabled);
  **/
 app.get("/__heartbeat__", function(req, res) {
   storage.ping(function(storageStatus) {
-    request.get(tokBox.serverURL, {timeout: conf.get('heartbeatTimeout')},
+    tokBox.ping({timeout: conf.get('heartbeatTimeout')},
       function(requestError) {
-        var status;
+        var status, message;
         if (storageStatus === true && requestError === null) {
           status = 200;
         } else {
           status = 503;
+          if (requestError !== null) message = "TokBox " + requestError;
         }
 
         res.json(status, {
           storage: storageStatus,
-          provider: (requestError === null) ? true : false
+          provider: (requestError === null) ? true : false,
+          message: message
         });
       });
   });
@@ -425,12 +460,9 @@ app.get("/", function(req, res) {
  **/
 app.post('/registration', authenticate, validateSimplePushURL,
     function(req, res) {
-    // XXX Bug 980289 —
-    // With FxA we will want to handle many SimplePushUrls per user.
     storage.addUserSimplePushURL(req.user, req.simplePushURL,
-      function(err, record) {
+      function(err) {
         if (res.serverError(err)) return;
-
         res.json(200, "ok");
       });
   });
@@ -453,45 +485,45 @@ app.delete('/registration', requireHawkSession, validateSimplePushURL,
  * Generates and return a call-url for the given callerId.
  **/
 app.post('/call-url', requireHawkSession, requireParams('callerId'),
-  function(req, res) {
-    var expiresIn = conf.get('callUrlTimeout'),
-        maxTimeout = conf.get('callUrlMaxTimeout');
-
-    if (req.body.hasOwnProperty("expiresIn")) {
-      expiresIn = parseInt(req.body.expiresIn, 10);
-
-      if (isNaN(expiresIn)) {
-        res.sendError("body", "expiresIn", "should be a valid number");
-        return;
-      } else if (expiresIn > maxTimeout) {
-        res.sendError("body", "expiresIn", "should be less than " + maxTimeout);
-        return;
-      }
-    }
-    var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-    var urlData = {
-      userMac: req.user,
-      callerId: req.body.callerId,
-      timestamp: parseInt(Date.now() / 1000),
-      issuer: req.body.issuer || ''
-    };
-    if (expiresIn !== undefined) {
-      urlData.expires = urlData.timestamp + expiresIn * tokenlib.ONE_HOUR;
-    }
-
+  validateCallUrlParams, function(req, res) {
     if (statsdClient !== undefined) {
       statsdClient.count('loop-call-urls', 1);
       statsdClient.count('loop-call-urls-' + req.user, 1);
     }
 
-    storage.addUserCallUrlData(req.user, token, urlData, function(err) {
-      if (res.serverError(err)) return;
-
-      res.json(200, {
-        callUrl: conf.get("webAppUrl").replace("{token}", token),
-        expiresAt: urlData.expires
+    storage.addUserCallUrlData(req.user, req.token, req.urlData,
+      function(err) {
+        if (res.serverError(err)) return;
+        res.json(200, {
+          callUrl: conf.get("webAppUrl").replace("{token}", req.token),
+          expiresAt: req.urlData.expires
+        });
       });
-    });
+  });
+
+/**
+ * Return the callee friendly name for the given token.
+ **/
+app.get('/calls/:token', validateToken, function(req, res) {
+  res.json(200, {
+    calleeFriendlyName: req.callUrlData.issuer
+  });
+});
+
+app.put('/call-url/:token', requireHawkSession, validateToken,
+  validateCallUrlParams, function(req, res) {
+    storage.updateUserCallUrlData(req.user, req.token, req.urlData,
+      function(err) {
+        if (err && err.notFound === true) {
+          res.json(404, "Not Found");
+          return;
+        }
+        else if (res.serverError(err)) return;
+
+        res.json(200, {
+          expiresAt: req.urlData.expires
+        });
+      });
   });
 
 /**
@@ -513,14 +545,15 @@ app.get('/calls', requireHawkSession, function(req, res) {
       }).map(function(record) {
         return {
           callId: record.callId,
-          calleeId: record.calleeFriendlyName,
+          callType: record.callType,
+          callerId: record.callerId,
           websocketToken: record.wsCalleeToken,
           apiKey: tokBox.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
           urlCreationDate: record.urlCreationDate,
-          callType: record.callType
+          progressURL: getProgressURL(req.get("host"))
         };
       });
 
@@ -534,61 +567,63 @@ app.get('/calls', requireHawkSession, function(req, res) {
 app.post('/calls', requireHawkSession, requireParams('calleeId'),
   validateCallType, function(req, res) {
 
-    function callUser(callee) {
-      return function() {
-        // TODO: set caller ID. Bug 1025894.
-        returnUserCallTokens({
-          user: callee,
-          urls: callees[callee],
-          callType: req.body.callType
-        }, res);
-      }();
-    }
+    storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+      if (res.serverError(err)) return;
 
-    var calleeId = req.body.calleeId;
-    if (!Array.isArray(calleeId)) {
-      calleeId = [calleeId];
-    }
+      var userId;
+      if (encryptedUserId !== null) {
+        userId = decrypt(req.hawk.id, encryptedUserId);
+      }
 
-    // We get all the Loop users that match any of the ids provided by the
-    // client. We may have none, one or multiple matches. If no match is found
-    // we throw an error, otherwise we will follow the call process, storing
-    // the call information and notifying to the correspoding matched users.
-    var callees;
-    async.each(calleeId, function(identity, callback) {
-      var calleeMac = hmac(identity, conf.get('userMacSecret'));
-      storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
-        if (err) {
-          callback(err);
+      function callUser(calleeMac) {
+        return function() {
+          returnUserCallTokens({
+            callType: req.body.callType,
+            callerId: userId,
+            user: calleeMac,
+            progressURL: getProgressURL(req.get("host")),
+            urls: callees[calleeMac]
+          }, res);
+        }();
+      }
+
+      var calleeId = req.body.calleeId;
+      if (!Array.isArray(calleeId)) {
+        calleeId = [calleeId];
+      }
+
+      // We get all the Loop users that match any of the ids provided by the
+      // client. We may have none, one or multiple matches. If no match is found
+      // we throw an error, otherwise we will follow the call process, storing
+      // the call information and notifying to the correspoding matched users.
+      var callees;
+      async.each(calleeId, function(identity, callback) {
+        var calleeMac = hmac(identity, conf.get('userMacSecret'));
+        storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          if (!callees) {
+            callees = {};
+          }
+          callees[calleeMac] = urls;
+
+          callback();
+        });
+      }, function(err) {
+        if (res.serverError(err)) return;
+
+        if (!callees) {
+          res.json(400, 'No user to call found');
           return;
         }
 
-        if (!callees) {
-          callees = {};
-        }
-        callees[calleeMac] = urls;
-
-        callback();
+        Object.keys(callees).forEach(callUser.bind(callees));
       });
-    }, function(err) {
-      if (res.serverError(err)) return;
-
-      if (!callees) {
-        res.json(400, 'No user to call found');
-        return;
-      }
-
-      Object.keys(callees).forEach(callUser.bind(callees));
     });
-
   });
-
-/**
- * Do a redirect to the Web client.
- **/
-app.get('/calls/:token', validateToken, function(req, res) {
-  res.redirect(conf.get("webAppUrl").replace("{token}", req.param('token')));
-});
 
 /**
  * Revoke a given call url.
@@ -617,15 +652,26 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       res.json(410, 'Gone');
       return;
     }
-    returnUserCallTokens({
-      user: req.callUrlData.userMac,
-      callerId: req.token.callerId,
-      urls: urls,
-      callToken: req.token,
-      urlCreationDate: req.callUrlData.timestamp,
-      calleeFriendlyName: req.token.issuer,
-      callType: req.token.callType
-    }, res);
+
+    storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+      if (res.serverError(err)) return;
+
+      var userId;
+      if (encryptedUserId !== null) {
+        userId = decrypt(req.hawkIdHmac, encryptedUserId);
+      }
+
+      returnUserCallTokens({
+        callType: req.callUrlData.callType,
+        user: req.callUrlData.userMac,
+        callerId: userId || req.callUrlData.callerId,
+        calleeFriendlyName: req.callUrlData.issuer,
+        callToken: req.token,
+        urlCreationDate: req.callUrlData.timestamp,
+        progressURL: getProgressURL(req.get("host")),
+        urls: urls
+      }, res);
+    });
   });
 });
 
@@ -694,7 +740,6 @@ module.exports = {
   app: app,
   server: server,
   conf: conf,
-  hmac: hmac,
   storage: storage,
   validateToken: validateToken,
   requireParams: requireParams,

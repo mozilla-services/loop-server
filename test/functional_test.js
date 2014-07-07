@@ -23,11 +23,13 @@ var storage = loop.storage;
 var statsdClient = loop.statsdClient;
 var requireHawkSession = loop.requireHawkSession;
 var authenticate = loop.authenticate;
+var getProgressURL = require("../loop/utils").getProgressURL;
 
 var Token = require("../loop/token").Token;
 var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
+var hmac = require("../loop/hmac");
 
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
@@ -100,8 +102,8 @@ describe("HTTP API exposed by the server", function() {
         key: authKey,
         algorithm: "sha256"
       };
-      userHmac = tokenId;
-      storage.setHawkSession(tokenId, authKey, done);
+      userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+      storage.setHawkSession(userHmac, authKey, done);
     });
   });
 
@@ -181,8 +183,8 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /__hearbeat__", function() {
 
     it("should return a 503 if storage is down", function(done) {
-      sandbox.stub(request, "get", function(url, options, callback){
-        callback(null);
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, {statusCode: 200});
       });
       sandbox.stub(storage, "ping", function(callback) {
         callback(false);
@@ -202,8 +204,8 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should return a 503 if provider service is down", function(done) {
-      sandbox.stub(request, "get", function(url, options, callback){
-        callback("error");
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(new Error("blah"));
       });
       supertest(app)
         .get('/__heartbeat__')
@@ -212,15 +214,16 @@ describe("HTTP API exposed by the server", function() {
           if (err) throw err;
           expect(res.body).to.eql({
             'storage': true,
-            'provider': false
+            'provider': false,
+            'message': "TokBox Error: The request failed: Error: blah"
           });
           done();
         });
     });
 
     it("should return a 200 if all dependencies are ok", function(done) {
-      sandbox.stub(request, "get", function(url, options, callback){
-        callback(null);
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, {statusCode: 200});
       });
       supertest(app)
         .get('/__heartbeat__')
@@ -479,8 +482,7 @@ describe("HTTP API exposed by the server", function() {
         });
     });
 
-    // XXX Bug 980289
-    it.skip("should be able to store multiple push urls for one user",
+    it("should be able to store multiple push urls for one user",
       function(done) {
         register(url1, expectedAssertion, hawkCredentials, function() {
           register(url2, expectedAssertion, hawkCredentials, function() {
@@ -593,22 +595,87 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("GET /calls/:token", function() {
-    it("should return a 302 to the WebApp page", function(done) {
-      var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
-      storage.addUserCallUrlData(user, token, {
-        timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
-      }, function(err) {
-        supertest(app)
-          .get('/calls/' + token)
-          .expect("Location", conf.get("webAppUrl").replace("{token}", token))
-          .expect(302).end(done);
-      });
-    });
-
     it("should have the validateToken middleware installed.", function() {
       expect(getMiddlewares(app, 'get', '/calls/:token'))
         .include(validateToken);
+    });
+
+    it("should return a the calleeFriendlyName", function(done) {
+      var calleeFriendlyName = "Adam Roach";
+      var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      storage.addUserCallUrlData(userHmac, token, {
+        userMac: userHmac,
+        issuer: calleeFriendlyName,
+        timestamp: parseInt(Date.now() / 1000, 10),
+        expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+
+        supertest(app)
+          .get('/calls/' + token)
+          .hawk(hawkCredentials)
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.deep.equal({
+              calleeFriendlyName: calleeFriendlyName
+            });
+            done();
+          });
+      });
+    });
+  });
+
+  describe("PUT /call-url/:token", function() {
+    var token;
+    beforeEach(function(done) {
+      token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      storage.addUserCallUrlData(userHmac, token, {
+        timestamp: parseInt(Date.now() / 1000, 10),
+        expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+      }, function(err) {
+        if (err) throw err;
+        done();
+      });
+    });
+
+    it("should ignore invalid fields", function(done) {
+      supertest(app)
+        .put('/call-url/' + token)
+        .hawk(hawkCredentials)
+        .send({
+          callerId: "Adam",
+          invalidField: "value"
+        })
+        .expect(200)
+        .end(function(err, res) {
+          if (err) throw err;
+          storage.getCallUrlData(token, function(err, res) {
+            if (err) throw err;
+            expect(res.callerId).to.eql("Adam");
+            expect(res.invalidField).to.eql(undefined);
+            done();
+          });
+        });
+    });
+
+    it("should accept valid fields", function(done) {
+      supertest(app)
+        .put('/call-url/' + token)
+        .hawk(hawkCredentials)
+        .send({
+          callerId: "Adam",
+          expiresIn: 250,
+          issuer: "Mark Banner"
+        })
+        .expect(200)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body.expiresAt).not.eql(undefined);
+          done();
+        });
+
     });
   });
 
@@ -621,8 +688,8 @@ describe("HTTP API exposed by the server", function() {
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
       storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
-        timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
+        timestamp: parseInt(Date.now() / 1000, 10),
+        expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
       }, function(err) {
         if (err) throw err;
         req = supertest(app)
@@ -658,8 +725,8 @@ describe("HTTP API exposed by the server", function() {
       function(done){
         storage.addUserCallUrlData(userHmac, token, {
           userMac: "h4x0r",
-          timestamp: Date.now(),
-          expires: Date.now() + conf.get("callUrlTimeout")
+          timestamp: parseInt(Date.now() / 1000, 10),
+          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
         }, function(err) {
           if (err) throw err;
           req = supertest(app)
@@ -679,11 +746,6 @@ describe("HTTP API exposed by the server", function() {
     var req, calls;
 
     beforeEach(function(done) {
-      req = supertest(app)
-        .get('/calls?version=2')
-        .hawk(hawkCredentials)
-        .expect('Content-Type', /json/);
-
       calls = [
         {
           callId:          crypto.randomBytes(16).toString("hex"),
@@ -697,7 +759,7 @@ describe("HTTP API exposed by the server", function() {
           callType:        'audio',
           urlCreationDate: urlCreationDate,
           callState:       "init",
-          timestamp:       0
+          timestamp:       parseInt(Date.now() / 1000, 10)
         },
         {
           callId:          crypto.randomBytes(16).toString("hex"),
@@ -711,7 +773,7 @@ describe("HTTP API exposed by the server", function() {
           callType:        'audio-video',
           urlCreationDate: urlCreationDate,
           callState:       "init",
-          timestamp:       1
+          timestamp:       parseInt(Date.now() / 1000, 10) + 1
         },
         {
           callId:          crypto.randomBytes(16).toString("hex"),
@@ -725,57 +787,68 @@ describe("HTTP API exposed by the server", function() {
           callToken:       callToken,
           callType:        'audio-video',
           urlCreationDate: urlCreationDate,
-          timestamp:       2
+          timestamp:       parseInt(Date.now() / 1000, 10) + 2
         },
       ];
+
+      req = supertest(app)
+        .get('/calls?version=' + calls[2].timestamp)
+        .hawk(hawkCredentials)
+        .expect('Content-Type', /json/);
 
       storage.addUserCall(userHmac, calls[0], function() {
         storage.addUserCall(userHmac, calls[1], function() {
           storage.addUserCall(userHmac, calls[2], done);
         });
       });
-
     });
 
     it("should list existing calls", function(done) {
-      var callsList = calls.map(function(call) {
-        return {
-          callId: call.callId,
-          websocketToken: call.wsCalleeToken,
-          apiKey: tokBoxConfig.apiKey,
-          sessionId: call.sessionId,
-          sessionToken: call.calleeToken,
-          callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
-          urlCreationDate: call.urlCreationDate,
-          callType: call.callType,
-        };
-      });
-
       supertest(app)
         .get('/calls?version=0')
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/)
         .expect(200).end(function(err, res) {
           if (err) throw err;
+
+          var callsList = calls.map(function(call) {
+            return {
+              callId: call.callId,
+              callType: call.callType,
+              callerId: call.callerId,
+              websocketToken: call.wsCalleeToken,
+              apiKey: tokBoxConfig.apiKey,
+              sessionId: call.sessionId,
+              sessionToken: call.calleeToken,
+              callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
+              urlCreationDate: call.urlCreationDate,
+              progressURL: getProgressURL(res.req._headers.host)
+            };
+          });
+
+
           expect(res.body).to.deep.equal({calls: callsList});
           done(err);
         });
     });
 
     it("should list calls more recent than a given version", function(done) {
-      var callsList = [{
-        callId: calls[2].callId,
-        websocketToken: calls[2].wsCalleeToken,
-        apiKey: tokBoxConfig.apiKey,
-        sessionId: calls[2].sessionId,
-        sessionToken: calls[2].calleeToken,
-        callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
-        urlCreationDate: calls[2].urlCreationDate,
-        callType: calls[2].callType
-      }];
-
       req.expect(200).end(function(err, res) {
         if (err) throw err;
+
+        var callsList = [{
+          callId: calls[2].callId,
+          callType: calls[2].callType,
+          callerId: calls[2].callerId,
+          websocketToken: calls[2].wsCalleeToken,
+          apiKey: tokBoxConfig.apiKey,
+          sessionId: calls[2].sessionId,
+          sessionToken: calls[2].calleeToken,
+          callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
+          urlCreationDate: calls[2].urlCreationDate,
+          progressURL: getProgressURL(res.req._headers.host)
+        }];
+
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
       });
@@ -818,7 +891,7 @@ describe("HTTP API exposed by the server", function() {
 
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
 
-      var timestamp = Date.now();
+      var timestamp = parseInt(Date.now() / 1000, 10);
 
       storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
@@ -1011,8 +1084,6 @@ describe("HTTP API exposed by the server", function() {
             assert.calledOnce(loop.setUserCall);
           });
         });
-
-
       });
     });
 

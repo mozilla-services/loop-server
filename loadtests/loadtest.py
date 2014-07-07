@@ -36,8 +36,9 @@ class TestLoop(TestCase):
     def register(self):
         resp = self.session.post(
             self.server_url + '/registration',
-            data={'simple_push_url': 'http://localhost/push'})
-        self.assertEquals(200, resp.status_code)
+            data={'simple_push_url': 'http://httpbin.org/deny'})
+        self.assertEquals(200, resp.status_code,
+                          "Registration failed: %s" % resp.content)
 
         try:
             self.hawk_auth = HawkAuth(
@@ -54,15 +55,18 @@ class TestLoop(TestCase):
             headers={'Content-type': 'application/json'},
             auth=self.hawk_auth
         )
-        self.assertEquals(resp.status_code, 200)
+        self.assertEquals(resp.status_code, 200,
+                          "Call-Url creation failed: %s" % resp.content)
         data = self._get_json(resp)
-        call_url = data['call_url']
+        call_url = data.get('callUrl', data.get('call_url'))
         return call_url.split('/').pop()
 
     def initiate_call(self, token):
         # This happens when not authenticated.
-        resp = self.session.post(self.server_url + '/calls/%s' % token)
-        self.assertEquals(resp.status_code, 200)
+        resp = self.session.post(self.server_url + '/calls/%s' % token,
+                                 {"callType": "audio-video"})
+        self.assertEquals(resp.status_code, 200,
+                          "Call Initialization failed: %s" % resp.content)
 
         data = self._get_json(resp)
         return (data['callId'], data['sessionId'], data['sessionToken'],
@@ -84,7 +88,8 @@ class TestLoop(TestCase):
 
     def get_call_status(self, call_id, status):
         resp = self.session.get(self.server_url + '/calls/id/%s' % call_id)
-        self.assertEqual(resp.status_code, status)
+        self.assertEqual(resp.status_code, status,
+                         "Call status retrieval failed %s" % resp.content)
 
 
 def HKDF_extract(salt, IKM, hashmod=hashlib.sha256):

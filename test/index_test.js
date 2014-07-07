@@ -14,7 +14,7 @@ var fxaAuth = require("../loop/fxa");
 var Token = require("../loop/token").Token;
 var conf = require("../loop").conf;
 var app = require("../loop").app;
-var hmac = require("../loop").hmac;
+var hmac = require("../loop/hmac");
 var server = require("../loop").server;
 var shutdown = require("../loop").shutdown;
 var storage = require("../loop").storage;
@@ -334,7 +334,7 @@ describe("index.js", function() {
     });
 
     describe("Hawk", function() {
-      var hawkCredentials;
+      var hawkCredentials, userHmac;
 
       beforeEach(function(done) {
         // Generate Hawk credentials.
@@ -345,7 +345,8 @@ describe("index.js", function() {
             key: authKey,
             algorithm: "sha256"
           };
-          storage.setHawkSession(tokenId, authKey, done);
+          userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+          storage.setHawkSession(userHmac, authKey, done);
         });
       });
 
@@ -377,8 +378,10 @@ describe("index.js", function() {
             if (err) {
               throw err;
             }
-            assert.calledWithExactly(storage.touchHawkSession,
-                                     hawkCredentials.id);
+            assert.calledWithExactly(
+              storage.touchHawkSession,
+              userHmac
+            );
             done();
           });
       });
