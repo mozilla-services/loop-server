@@ -902,6 +902,7 @@ describe("HTTP API exposed by the server", function() {
           });
 
           sandbox.stub(console, "log", function(log) {
+            // We are keeping only json mappings for this test.
             try {
               _logs.push(JSON.parse(log));
             } catch (e) {
