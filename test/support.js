@@ -18,15 +18,11 @@ function intersection(array1, array2) {
   });
 }
 
-function expectFormatedError(body, location, name, description) {
-  if (typeof description === "undefined") {
-    description = "missing: " + name;
-  }
-  expect(body).eql({
-    status: "errors",
-    errors: [{location: location,
-              name: name,
-              description: description}]
+function expectFormatedError(res, code, errno, message) {
+  expect(res.body).eql({
+    code: code,
+    errno: errno,
+    error: message
   });
 }
 

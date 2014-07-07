@@ -7,6 +7,9 @@
 var Hawk = require('hawk');
 
 var Token = require("./token").Token;
+var sendError = require("./utils").sendError;
+var errors = require("./errno.json");
+
 
 /**
  * Generate and store an hawk session. Storage is not handled by this function
@@ -111,7 +114,8 @@ function getMiddleware(hawkOptions, getSession, createSession, setUser) {
               // don't need to create the session),  challenge the client.
               res.setHeader("WWW-Authenticate",
                             err.output.headers["WWW-Authenticate"]);
-              res.json(401, err.output.payload);
+              sendError(res, 401, errors.INVALID_AUTH_TOKEN,
+                        err.output.payload);
               return;
             }
           }
@@ -121,14 +125,15 @@ function getMiddleware(hawkOptions, getSession, createSession, setUser) {
                 res.set(header, err.output.headers[header]);
               }
             }
-            res.json(err.output.statusCode, err.output.message);
+            sendError(res, err.output.statusCode, errors.INVALID_AUTH_TOKEN,
+                      err.output.payload);
             return;
           }
         }
 
         if (credentials === null) {
           res.setHeader("WWW-Authenticate", "Hawk");
-          res.json(401, "Unauthorized");
+          sendError(res, 401, errors.INVALID_AUTH_TOKEN, "Unauthorized");
           return;
         }
         setUser(req, res, req.hawk.id, function() {

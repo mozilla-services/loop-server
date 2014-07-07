@@ -6,6 +6,27 @@
 
 var conf = require('./config').conf;
 
+function sendError(res, code, errno, error, message, info) {
+  var errmap = {};
+  if (code) {
+    errmap.code = code;
+  }
+  if (errno) {
+    errmap.errno = errno;
+  }
+  if (error) {
+    errmap.error = error;
+  }
+  if (message) {
+    errmap.message = message;
+  }
+  if (info) {
+    errmap.info = info;
+  }
+
+  res.json(code, errmap);
+}
+
 function getProgressURL(host) {
   var progressURL;
   if (conf.get("protocol") === "https") {
@@ -18,5 +39,6 @@ function getProgressURL(host) {
 }
 
 module.exports = {
-  getProgressURL: getProgressURL
+  getProgressURL: getProgressURL,
+  sendError: sendError
 };
