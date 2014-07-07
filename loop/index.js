@@ -16,7 +16,7 @@ var express = require('express');
 var tokenlib = require('./tokenlib');
 var hexKeyOfSize = require('./config').hexKeyOfSize;
 var crypto = require('crypto');
-var pjson = require('../package.json');
+var loopPackageData = require('../package.json');
 var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
@@ -406,10 +406,10 @@ app.get("/__heartbeat__", function(req, res) {
  **/
 app.get("/", function(req, res) {
   var credentials = {
-    name: pjson.name,
-    description: pjson.description,
-    version: pjson.version,
-    homepage: pjson.homepage,
+    name: loopPackageData.name,
+    description: loopPackageData.description,
+    version: loopPackageData.version,
+    homepage: loopPackageData.homepage,
     endpoint: conf.get("protocol") + "://" + req.get('host'),
     fakeTokBox: conf.get('fakeTokBox')
   };

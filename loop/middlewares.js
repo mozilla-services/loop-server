@@ -5,7 +5,7 @@
 "use strict";
 
 var conf = require("./config").conf;
-var pjson = require('../package.json');
+var loopPackageData = require('../package.json');
 var os = require("os");
 
 // We make the assumption that this won't change once launched.
@@ -57,8 +57,8 @@ function logMetrics(req, res, next) {
         user: req.user,
         token: req.token,
         callUrlData: req.callUrlData,
-        v: pjson.version,
-        name: pjson.name,
+        v: loopPackageData.version,
+        name: loopPackageData.name,
         hostname: hostname,
         lang: req.headers["accept-language"],
         ip: ip
