@@ -206,71 +206,45 @@ function authenticate(req, res, next) {
  * Helper to store and trigger an user initiated call.
  *
  * options is a javascript object which can have the following keys:
- * - user: the identifier of the connected user;
  * - callerId: the identifier for the caller;
- * - urls: the list of simple push urls to notify of the new call;
+ * - callType: the type of the call;
  * - calleeFriendlyName: the friendly name of the person called;
  * - callToken: the call token that was used to initiate the call (if any;
- * - progressURL: the progress URL that will be used by the web sockets.
+ * - urlCreationDate: the timestamp of the url used to make the call;
  */
-function returnUserCallTokens(options, res) {
+function returnUserCallTokens(options, callback) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
-    if (res.serverError(err)) return;
+    if (err) {
+      callback(err);
+      return;
+    }
 
-    var urls = options.urls;
     var currentTimestamp = Date.now();
     var callId = crypto.randomBytes(16).toString('hex');
 
     var wsCalleeToken = crypto.randomBytes(16).toString('hex');
     var wsCallerToken = crypto.randomBytes(16).toString('hex');
 
-    storage.addUserCall(options.user, {
+    var callInfo = {
       'callId': callId,
       'callType': options.callType,
       'callState': "init",
       'timestamp': currentTimestamp,
 
-      'userMac': options.user,
       'callerId': options.callerId,
       'calleeFriendlyName': options.calleeFriendlyName,
 
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
+      'callerToken': tokboxInfo.callerToken,
 
       'wsCallerToken': wsCallerToken,
       'wsCalleeToken': wsCalleeToken,
 
       'callToken': options.callToken,
       'urlCreationDate': options.urlCreationDate
-    }, function(err) {
-      if (res.serverError(err)) return;
-
-      storage.setCallState(callId, "init",
-        conf.get("timers").supervisoryDuration, function() {
-          if (res.serverError(err)) return;
-
-          // Call SimplePush urls.
-          if (!Array.isArray(urls)) {
-            urls = [urls];
-          }
-
-          urls.forEach(function(simplePushUrl) {
-            request.put({
-              url: simplePushUrl,
-              form: { version: currentTimestamp }
-            });
-          });
-
-          res.json(200, {
-            callId: callId,
-            websocketToken: wsCallerToken,
-            sessionId: tokboxInfo.sessionId,
-            sessionToken: tokboxInfo.callerToken,
-            apiKey: tokBox.apiKey,
-            progressURL: options.progressURL
-          });
-        });
-    });
+    };
+    callback(null, callInfo);
   });
 }
 
@@ -578,18 +552,6 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         userId = decrypt(req.hawk.id, encryptedUserId);
       }
 
-      function callUser(calleeMac) {
-        return function() {
-          returnUserCallTokens({
-            callType: req.body.callType,
-            callerId: userId,
-            user: calleeMac,
-            progressURL: getProgressURL(req.get("host")),
-            urls: callees[calleeMac]
-          }, res);
-        }();
-      }
-
       var calleeId = req.body.calleeId;
       if (!Array.isArray(calleeId)) {
         calleeId = [calleeId];
@@ -599,31 +561,69 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
       // client. We may have none, one or multiple matches. If no match is found
       // we throw an error, otherwise we will follow the call process, storing
       // the call information and notifying to the correspoding matched users.
-      var callees;
-      async.each(calleeId, function(identity, callback) {
-        var calleeMac = hmac(identity, conf.get('userMacSecret'));
-        storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
-          if (err) {
-            callback(err);
+      var callees = [];
+
+      returnUserCallTokens({
+        callType: req.body.callType,
+        callerId: userId,
+        progressURL: getProgressURL(req.get("host"))
+      }, function(err, callInfo) {
+        if (res.serverError(err)) return;
+
+        var callerToken = callInfo.callerToken;
+        // Don't save the callerToken information in the database.
+        delete callInfo.callerToken;
+
+        async.each(calleeId, function(identity, callback) {
+          var calleeMac = hmac(identity, conf.get('userMacSecret'));
+          storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            if (urls.length === 0) {
+              callback();
+              return;
+            }
+            callees.push(calleeMac);
+            storage.addUserCall(calleeMac, callInfo,
+              function(err) {
+                if (err) {
+                  callback(err);
+                  return;
+                }
+
+                storage.setCallState(callInfo.callId, "init",
+                  conf.get("timers").supervisoryDuration, function() {
+                    if (res.serverError(err)) return;
+
+                    urls.forEach(function(simplePushUrl) {
+                      request.put({
+                        url: simplePushUrl,
+                        form: { version: callInfo.timestamp }
+                      });
+                    });
+                    callback();
+                  });
+              });
+            });
+        }, function(err) {
+          if (res.serverError(err)) return;
+
+          if (callees.length === 0) {
+            res.json(400, 'Could not find any existing user to call');
             return;
           }
 
-          if (!callees) {
-            callees = {};
-          }
-          callees[calleeMac] = urls;
-
-          callback();
+          res.json(200, {
+            callId: callInfo.callId,
+            websocketToken: callInfo.wsCallerToken,
+            sessionId: callInfo.sessionId,
+            sessionToken: callerToken,
+            apiKey: tokBox.apiKey,
+            progressURL: getProgressURL(req.get("host"))
+          });
         });
-      }, function(err) {
-        if (res.serverError(err)) return;
-
-        if (!callees) {
-          res.json(400, 'No user to call found');
-          return;
-        }
-
-        Object.keys(callees).forEach(callUser.bind(callees));
       });
     });
   });
@@ -671,9 +671,45 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
         calleeFriendlyName: req.callUrlData.issuer,
         callToken: req.token,
         urlCreationDate: req.callUrlData.timestamp,
-        progressURL: getProgressURL(req.get("host")),
-        urls: urls
-      }, res);
+      }, function(err, callInfo) {
+        if (res.serverError(err)) return;
+
+        callInfo = JSON.parse(JSON.stringify(callInfo));
+        var callerToken = callInfo.callerToken;
+        // Don't save the callerToken information in the database.
+        delete callInfo.callerToken;
+
+        storage.addUserCall(req.callUrlData.userMac, callInfo,
+          function(err) {
+            if (res.serverError(err)) return;
+
+            storage.setCallState(callInfo.callId, "init",
+              conf.get("timers").supervisoryDuration, function() {
+                if (res.serverError(err)) return;
+
+                // Call SimplePush urls.
+                if (!Array.isArray(urls)) {
+                  urls = [urls];
+                }
+
+                urls.forEach(function(simplePushUrl) {
+                  request.put({
+                    url: simplePushUrl,
+                    form: { version: callInfo.timestamp }
+                  });
+                });
+
+                res.json(200, {
+                  callId: callInfo.callId,
+                  websocketToken: callInfo.wsCallerToken,
+                  sessionId: callInfo.sessionId,
+                  sessionToken: callerToken,
+                  apiKey: tokBox.apiKey,
+                  progressURL: getProgressURL(req.get("host"))
+                });
+              });
+          });
+      });
     });
   });
 });
