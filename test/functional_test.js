@@ -95,8 +95,8 @@ describe("HTTP API exposed by the server", function() {
               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
 
     pushURL2 = 'https://push2.services.mozilla.com/update/MGlYke2SrEmYE8ceyu' +
-              'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
-              'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
+               'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
+               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
 
     // Generate Hawk credentials.
     var token = new Token();
@@ -981,13 +981,13 @@ describe("HTTP API exposed by the server", function() {
               expect(res.body.sessionId).to.eql(tokBoxSessionId);
               expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
               expect(res.body.apiKey).to.eql(tokBox.apiKey);
-              expect(res.body.progressURL).to.eql(
-                "ws://" + res.req._headers.host);
+              expect(res.body.progressURL)
+                .to.eql("ws://" + res.req._headers.host);
               done();
             });
         });
 
-        it("should store call users data.", function(done) {
+        it("should store call user data.", function(done) {
           addCallReq
             .end(function(err, res) {
               storage.getUserCalls(userHmac, function(err, res) {
@@ -1088,15 +1088,15 @@ describe("HTTP API exposed by the server", function() {
                   expect(res.body.sessionId).to.eql(tokBoxSessionId);
                   expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
                   expect(res.body.apiKey).to.eql(tokBox.apiKey);
-                  expect(res.body.progressURL).to.eql(
-                    "ws://" + res.req._headers.host);
+                  expect(res.body.progressURL)
+                    .to.eql("ws://" + res.req._headers.host);
                   done();
                 });
             });
           });
         });
 
-        it("should store call users data.", function(done) {
+        it("should store call user data.", function(done) {
           storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
             if (err) throw err;
             storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
@@ -1164,18 +1164,21 @@ describe("HTTP API exposed by the server", function() {
             .expect(400)
             .end(function(err, res) {
               if (err) throw err;
-              expect(res.body).to.match(/No user to call found/);
+              expect(res.body)
+                .to.match(/Could not find any existing user to call/);
               done();
             });
         });
 
-        it("should fail when calling a user without any SimplePushURLs.",
+        it("should 400 when no existing Simple Push URL is register " +
+           "for the called user.",
           function(done) {
             addCallReq
               .send({calleeId: user, callType: "audio"})
               .expect(400)
               .end(function(err, res) {
-                expect(res.body).to.match(/No user to call found/);
+                expect(res.body)
+                  .to.match(/Could not find any existing user to call/);
               done(err);
               });
           });

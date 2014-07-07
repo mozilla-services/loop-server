@@ -206,12 +206,11 @@ function authenticate(req, res, next) {
  * Helper to store and trigger an user initiated call.
  *
  * options is a javascript object which can have the following keys:
- * - user: the identifier of the connected user;
  * - callerId: the identifier for the caller;
- * - urls: the list of simple push urls to notify of the new call;
+ * - callType: the type of the call;
  * - calleeFriendlyName: the friendly name of the person called;
  * - callToken: the call token that was used to initiate the call (if any;
- * - progressURL: the progress URL that will be used by the web sockets.
+ * - urlCreationDate: the timestamp of the url used to make the call;
  */
 function returnUserCallTokens(options, callback) {
   tokBox.getSessionTokens(function(err, tokboxInfo) {
@@ -226,13 +225,12 @@ function returnUserCallTokens(options, callback) {
     var wsCalleeToken = crypto.randomBytes(16).toString('hex');
     var wsCallerToken = crypto.randomBytes(16).toString('hex');
 
-    var callTokens = {
+    var callInfo = {
       'callId': callId,
       'callType': options.callType,
       'callState': "init",
       'timestamp': currentTimestamp,
 
-      'userMac': options.user,
       'callerId': options.callerId,
       'calleeFriendlyName': options.calleeFriendlyName,
 
@@ -246,7 +244,7 @@ function returnUserCallTokens(options, callback) {
       'callToken': options.callToken,
       'urlCreationDate': options.urlCreationDate
     };
-    callback(null, callTokens);
+    callback(null, callInfo);
   });
 }
 
@@ -569,12 +567,12 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
         callType: req.body.callType,
         callerId: userId,
         progressURL: getProgressURL(req.get("host"))
-      }, function(err, callTokens) {
+      }, function(err, callInfo) {
         if (res.serverError(err)) return;
 
-        var callerToken = callTokens.callerToken;
-        // We don't want to save this token into the database
-        delete callTokens.callerToken;
+        var callerToken = callInfo.callerToken;
+        // Don't save the callerToken information in the database.
+        delete callInfo.callerToken;
 
         async.each(calleeId, function(identity, callback) {
           var calleeMac = hmac(identity, conf.get('userMacSecret'));
@@ -588,21 +586,21 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
               return;
             }
             callees.push(calleeMac);
-            storage.addUserCall(calleeMac, callTokens,
+            storage.addUserCall(calleeMac, callInfo,
               function(err) {
                 if (err) {
                   callback(err);
                   return;
                 }
 
-                storage.setCallState(callTokens.callId, "init",
+                storage.setCallState(callInfo.callId, "init",
                   conf.get("timers").supervisoryDuration, function() {
                     if (res.serverError(err)) return;
 
                     urls.forEach(function(simplePushUrl) {
                       request.put({
                         url: simplePushUrl,
-                        form: { version: callTokens.timestamp }
+                        form: { version: callInfo.timestamp }
                       });
                     });
                     callback();
@@ -613,14 +611,14 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
           if (res.serverError(err)) return;
 
           if (callees.length === 0) {
-            res.json(400, 'No user to call found');
+            res.json(400, 'Could not find any existing user to call');
             return;
           }
 
           res.json(200, {
-            callId: callTokens.callId,
-            websocketToken: callTokens.wsCallerToken,
-            sessionId: callTokens.sessionId,
+            callId: callInfo.callId,
+            websocketToken: callInfo.wsCallerToken,
+            sessionId: callInfo.sessionId,
             sessionToken: callerToken,
             apiKey: tokBox.apiKey,
             progressURL: getProgressURL(req.get("host"))
@@ -673,20 +671,19 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
         calleeFriendlyName: req.callUrlData.issuer,
         callToken: req.token,
         urlCreationDate: req.callUrlData.timestamp,
-      }, function(err, callTokens) {
+      }, function(err, callInfo) {
         if (res.serverError(err)) return;
 
-        callTokens = JSON.parse(JSON.stringify(callTokens));
-        var callerToken = callTokens.callerToken;
-        // We don't want to save this token into the database
-        delete callTokens.callerToken;
+        callInfo = JSON.parse(JSON.stringify(callInfo));
+        var callerToken = callInfo.callerToken;
+        // Don't save the callerToken information in the database.
+        delete callInfo.callerToken;
 
-
-        storage.addUserCall(req.callUrlData.userMac, callTokens,
+        storage.addUserCall(req.callUrlData.userMac, callInfo,
           function(err) {
             if (res.serverError(err)) return;
 
-            storage.setCallState(callTokens.callId, "init",
+            storage.setCallState(callInfo.callId, "init",
               conf.get("timers").supervisoryDuration, function() {
                 if (res.serverError(err)) return;
 
@@ -698,14 +695,14 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
                 urls.forEach(function(simplePushUrl) {
                   request.put({
                     url: simplePushUrl,
-                    form: { version: callTokens.timestamp }
+                    form: { version: callInfo.timestamp }
                   });
                 });
 
                 res.json(200, {
-                  callId: callTokens.callId,
-                  websocketToken: callTokens.wsCallerToken,
-                  sessionId: callTokens.sessionId,
+                  callId: callInfo.callId,
+                  websocketToken: callInfo.wsCallerToken,
+                  sessionId: callInfo.sessionId,
                   sessionToken: callerToken,
                   apiKey: tokBox.apiKey,
                   progressURL: getProgressURL(req.get("host"))
