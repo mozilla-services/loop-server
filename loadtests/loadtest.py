@@ -31,7 +31,8 @@ class TestLoop(TestCase):
             if (message['messageType'] == "hello"
                     and message['state'] == "init"):
                 # just keep it open and wait!
-                callee_ws.receive()
+                # callee_ws.receive()
+                pass
 
         def _handle_caller_messages(message_data):
             message = json.loads(message_data.data)
