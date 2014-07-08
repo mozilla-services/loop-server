@@ -286,6 +286,11 @@ var conf = convict({
     doc: "The maximum number of simple-push urls stored for an user",
     format: Number,
     default: 10
+  },
+  progressURLEndpoint: {
+    doc: "The endpoint to use for the progressURL.",
+    format: String,
+    default: "/websocket"
   }
 });
 
