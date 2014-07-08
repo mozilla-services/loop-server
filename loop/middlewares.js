@@ -10,13 +10,16 @@ var os = require("os");
 
 // We make the assumption that this won't change once launched.
 var hostname = os.hostname();
+var sendError = require("./utils").sendError;
+var errors = require("./errno.json");
+
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
     res.serverError = function raiseError(error) {
       if (error) {
         logError(error);
-        res.json(503, "Service Unavailable");
+        sendError(res, 503, errors.BACKEND, "Service Unavailable");
         return true;
       }
       return false;

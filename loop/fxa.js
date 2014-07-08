@@ -8,6 +8,8 @@ var https = require('https');
 var request = require('request');
 var conf = require('./config').conf;
 var atob = require('atob');
+var sendError = require("./utils").sendError;
+var errors = require("./errno.json");
 
 // Don't be limited by the default node.js HTTP agent.
 var agent = new https.Agent();
@@ -91,7 +93,7 @@ function getMiddleware(conf, callback) {
 
     function _unauthorized(message){
       res.set('WWW-Authenticate', 'BrowserID');
-      res.json(401, message || "Unauthorized");
+      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
     }
 
     authorization = req.headers.authorization;
