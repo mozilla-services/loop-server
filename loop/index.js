@@ -303,6 +303,14 @@ function requireParams() {
       return;
     }
 
+    // Bug 1032966 - Handle old simple_push_url format
+    if (params.indexOf("simplePushURL") !== -1) {
+      if (req.body.hasOwnProperty("simple_push_url")) {
+        req.body.simplePushURL = req.body.simple_push_url;
+        delete req.body.simple_push_url;
+      }
+    }
+
     missingParams = params.filter(function(param) {
       return req.body[param] === undefined;
     });
@@ -320,8 +328,8 @@ function requireParams() {
  * Middleware that ensures a valid simple push url is present in the request.
  **/
 function validateSimplePushURL(req, res, next) {
-  requireParams("simple_push_url")(req, res, function() {
-    req.simplePushURL = req.body.simplePushURL || req.body.simple_push_url;
+  requireParams("simplePushURL")(req, res, function() {
+    req.simplePushURL = req.body.simplePushURL;
     if (req.simplePushURL.indexOf('http') !== 0) {
       sendError(res, 400, errors.INVALID_PARAMETERS,
                 "simplePushURL should be a valid url");
@@ -473,8 +481,10 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
     storage.addUserCallUrlData(req.user, req.token, req.urlData,
       function(err) {
         if (res.serverError(err)) return;
+        // XXX Bug 1032966 - call_url is deprecated
         res.json(200, {
           callUrl: conf.get("webAppUrl").replace("{token}", req.token),
+          call_url: conf.get("webAppUrl").replace("{token}", req.token),
           expiresAt: req.urlData.expires
         });
       });
@@ -523,6 +533,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
       var calls = records.filter(function(record) {
         return record.timestamp >= version;
       }).map(function(record) {
+        // XXX Bug 1032966 - call_url is deprecated
         return {
           callId: record.callId,
           callType: record.callType,
@@ -532,6 +543,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
+          call_url: conf.get("webAppUrl").replace("{token}", record.callToken),
           urlCreationDate: record.urlCreationDate,
           progressURL: getProgressURL(req.get("host"))
         };
