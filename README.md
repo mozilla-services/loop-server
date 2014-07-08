@@ -65,6 +65,11 @@ How to run the tests?
 Redis is the default backend. The code is made to support multiple ones but
 only supports redis for now.
 
+In order to have tests working with Mac OS, make sure your ulimit
+value is high enough or you will get EMFILE errors:
+
+    ulimit -S -n 2048
+
 Where to report bugs?
 ---------------------
 
