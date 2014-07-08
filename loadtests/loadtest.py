@@ -1,9 +1,15 @@
+from gevent import monkey
+monkey.patch_all()
+
 from urlparse import urlparse
 import random
 import json
 import hmac
 import hashlib
 import math
+import gevent
+from Queue import Empty
+import socket
 
 import mohawk
 from requests.auth import AuthBase
@@ -12,6 +18,22 @@ from loads.case import TestCase
 
 
 class TestLoop(TestCase):
+
+    def setUp(self):
+        self.wss = []
+
+    def tearDown(self):
+        for ws in self.wss:
+            ws.close()
+            # XXX this is missing in ws4py
+            ws._th.join()
+            if ws.sock:
+                ws.sock.close()
+
+    def create_ws(self, *args, **kw):
+        ws = TestCase.create_ws(self, *args, **kw)
+        self.wss.append(ws)
+        return ws
 
     def test_all(self):
         self.register()
@@ -25,17 +47,22 @@ class TestLoop(TestCase):
         progress_url = call_data['progressURL']
         websocket_token = call_data['websocketToken']
         call_id = call_data['callId']
+        caller_alerts = []
+        callee_alerts = []
 
         def _handle_callee_messages(message_data):
             message = json.loads(message_data.data)
+            callee_alerts.append(message)
             if (message['messageType'] == "hello"
                     and message['state'] == "init"):
                 # just keep it open and wait!
-                # callee_ws.receive()
                 pass
+                #rcv = callee_ws.receive()
 
         def _handle_caller_messages(message_data):
             message = json.loads(message_data.data)
+            caller_alerts.append(message)
+
             if (message['messageType'] == "hello"
                     and message['state'] == "init"):
                 # This is the first message, we should have the second party
@@ -45,6 +72,7 @@ class TestLoop(TestCase):
                     'auth': calls[0]['websocketToken'],
                     'callId': call_id
                 }))
+
                 callee_ws.receive()
 
         # let's connect to the web socket until it gets closed
@@ -61,7 +89,12 @@ class TestLoop(TestCase):
             'auth': websocket_token,
             'callId': call_id
         }))
-        caller_ws.receive()
+
+        while len(caller_alerts) < 2:
+            gevent.sleep(.1)
+
+        # here assert on the content
+        self.assertEqual(len(callee_alerts), 2)
 
     def _get_json(self, resp):
         try:
