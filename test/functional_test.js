@@ -871,7 +871,7 @@ describe("HTTP API exposed by the server", function() {
           call_url: conf.get('webAppUrl')
             .replace('{token}', calls[2].callToken),
           urlCreationDate: calls[2].urlCreationDate,
-              progressURL: progressURL
+          progressURL: progressURL
         }];
 
         expect(res.body).to.deep.equal({calls: callsList});
