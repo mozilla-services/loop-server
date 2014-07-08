@@ -35,7 +35,7 @@ function getProgressURL(host) {
     progressURL = "ws://" + host;
   }
 
-  return progressURL;
+  return progressURL + conf.get('progressURLEndpoint');
 }
 
 module.exports = {

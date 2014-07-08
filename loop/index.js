@@ -42,6 +42,8 @@ if (conf.get("fakeTokBox") === true) {
   var TokBox = require('./tokbox').TokBox;
 }
 
+var progressURL = getProgressURL(conf.get('publicServerAddress'));
+
 var getStorage = require('./storage');
 var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
@@ -545,7 +547,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
           call_url: conf.get("webAppUrl").replace("{token}", record.callToken),
           urlCreationDate: record.urlCreationDate,
-          progressURL: getProgressURL(req.get("host"))
+          progressURL: progressURL
         };
       });
 
@@ -581,7 +583,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
       returnUserCallTokens({
         callType: req.body.callType,
         callerId: userId,
-        progressURL: getProgressURL(req.get("host"))
+        progressURL: progressURL
       }, function(err, callInfo) {
         if (res.serverError(err)) return;
 
@@ -637,7 +639,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
             sessionId: callInfo.sessionId,
             sessionToken: callerToken,
             apiKey: tokBox.apiKey,
-            progressURL: getProgressURL(req.get("host"))
+            progressURL: progressURL
           });
         });
       });
@@ -721,7 +723,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
                   sessionId: callInfo.sessionId,
                   sessionToken: callerToken,
                   apiKey: tokBox.apiKey,
-                  progressURL: getProgressURL(req.get("host"))
+                  progressURL: progressURL
                 });
               });
           });
