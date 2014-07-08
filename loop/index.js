@@ -19,7 +19,8 @@ var pjson = require('../package.json');
 var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
-var errors = require('connect-validation');
+var sendError = require('./utils').sendError;
+var errors = require('./errno.json');
 var StatsdClient = require('statsd-node').client;
 var addHeaders = require('./middlewares').addHeaders;
 var handle503 = require("./middlewares").handle503;
@@ -134,8 +135,8 @@ var requireFxA = fxa.getMiddleware({
 
     if (identifier === undefined) {
       logError(new Error("Assertion is invalid: " + assertion));
-      res.sendError("header", "Authorization",
-        "BrowserID assertion is invalid");
+      sendError(res, 400, errors.INVALID_AUTH_TOKEN,
+                "BrowserID assertion is invalid");
       return;
     }
 
@@ -176,7 +177,7 @@ function authenticate(req, res, next) {
 
   function _unauthorized(message, supported){
     res.set('WWW-Authenticate', supported.join());
-    res.json(401, message || "Unauthorized");
+    sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
   }
 
   if (authorization !== undefined) {
@@ -260,7 +261,6 @@ app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(handle503(logError));
-app.use(errors);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
@@ -300,8 +300,17 @@ function requireParams() {
     var missingParams;
 
     if (!req.accepts("json")) {
-      res.json(406, ['application/json']);
+      sendError(res, 406, errors.BADJSON,
+                "Request body should be defined as application/json");
       return;
+    }
+
+    // Bug 1032966 - Handle old simple_push_url format
+    if (params.indexOf("simplePushURL") !== -1) {
+      if (req.body.hasOwnProperty("simple_push_url")) {
+        req.body.simplePushURL = req.body.simple_push_url;
+        delete req.body.simple_push_url;
+      }
     }
 
     missingParams = params.filter(function(param) {
@@ -309,10 +318,8 @@ function requireParams() {
     });
 
     if (missingParams.length > 0) {
-      missingParams.forEach(function(item) {
-        res.addError("body", item, "missing: " + item);
-      });
-      res.sendError();
+      sendError(res, 400, errors.MISSING_PARAMETERS,
+                "Missing: " + missingParams.join(", "));
       return;
     }
     next();
@@ -323,11 +330,11 @@ function requireParams() {
  * Middleware that ensures a valid simple push url is present in the request.
  **/
 function validateSimplePushURL(req, res, next) {
-  requireParams("simple_push_url")(req, res, function() {
-    req.simplePushURL = req.body.simple_push_url;
+  requireParams("simplePushURL")(req, res, function() {
+    req.simplePushURL = req.body.simplePushURL;
     if (req.simplePushURL.indexOf('http') !== 0) {
-      res.sendError("body", "simple_push_url",
-                    "simple_push_url should be a valid url");
+      sendError(res, 400, errors.INVALID_PARAMETERS,
+                "simplePushURL should be a valid url");
       return;
     }
     next();
@@ -340,7 +347,8 @@ function validateSimplePushURL(req, res, next) {
 function validateCallType(req, res, next) {
   requireParams("callType")(req, res, function() {
     if (req.body.callType !== "audio" && req.body.callType !== "audio-video") {
-      res.sendError("body", "callType", "Should be 'audio' or 'audio-video'");
+      sendError(res, 400, errors.INVALID_PARAMETERS,
+                "callType should be 'audio' or 'audio-video'");
       return;
     }
     next();
@@ -361,10 +369,12 @@ function validateCallUrlParams(req, res, next) {
     expiresIn = parseInt(req.body.expiresIn, 10);
 
     if (isNaN(expiresIn)) {
-      res.sendError("body", "expiresIn", "should be a valid number");
+      sendError(res, 400, errors.INVALID_PARAMETERS,
+                "expiresIn should be a valid number");
       return;
     } else if (expiresIn > maxTimeout) {
-      res.sendError("body", "expiresIn", "should be less than " + maxTimeout);
+      sendError(res, 400, errors.INVALID_PARAMETERS,
+                "expiresIn should be less than " + maxTimeout);
       return;
     }
   }
@@ -473,8 +483,10 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
     storage.addUserCallUrlData(req.user, req.token, req.urlData,
       function(err) {
         if (res.serverError(err)) return;
+        // XXX Bug 1032966 - call_url is deprecated
         res.json(200, {
           callUrl: conf.get("webAppUrl").replace("{token}", req.token),
+          call_url: conf.get("webAppUrl").replace("{token}", req.token),
           expiresAt: req.urlData.expires
         });
       });
@@ -494,7 +506,7 @@ app.put('/call-url/:token', requireHawkSession, validateToken,
     storage.updateUserCallUrlData(req.user, req.token, req.urlData,
       function(err) {
         if (err && err.notFound === true) {
-          res.json(404, "Not Found");
+          sendError(res, 404, errors.INVALID_TOKEN, "Not Found.");
           return;
         }
         else if (res.serverError(err)) return;
@@ -510,7 +522,8 @@ app.put('/call-url/:token', requireHawkSession, validateToken,
  **/
 app.get('/calls', requireHawkSession, function(req, res) {
     if (!req.query.hasOwnProperty('version')) {
-      res.sendError("querystring", "version", "missing: version");
+      sendError(res, 400, errors.MISSING_PARAMETERS,
+                "Missing: version");
       return;
     }
 
@@ -522,6 +535,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
       var calls = records.filter(function(record) {
         return record.timestamp >= version;
       }).map(function(record) {
+        // XXX Bug 1032966 - call_url is deprecated
         return {
           callId: record.callId,
           callType: record.callType,
@@ -531,6 +545,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
+          call_url: conf.get("webAppUrl").replace("{token}", record.callToken),
           urlCreationDate: record.urlCreationDate,
           progressURL: progressURL
         };
@@ -613,7 +628,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
           if (res.serverError(err)) return;
 
           if (callees.length === 0) {
-            res.json(400, 'Could not find any existing user to call');
+            sendError(res, 400, errors.INVALID_PARAMETERS,
+                      "Could not find any existing user to call");
             return;
           }
 
@@ -636,7 +652,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
 app.delete('/call-url/:token', requireHawkSession, validateToken,
   function(req, res) {
     if (req.callUrlData.userMac !== req.user) {
-      res.json(403, "Forbidden");
+      sendError(res, 403, errors.INVALID_AUTH_TOKEN, "Forbidden");
       return;
     }
     storage.revokeURLToken(req.token, function(err, record) {
@@ -654,7 +670,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
     if (res.serverError(err)) return;
 
     if (!urls) {
-      res.json(410, 'Gone');
+      sendError(res, 410, errors.EXPIRED, "Gone");
       return;
     }
 
@@ -725,7 +741,8 @@ app.get('/calls/id/:callId', function(req, res) {
     if (res.serverError(err)) return;
 
     if (result === null) {
-      res.json(404, {error: "Call " + callId + " not found."});
+
+      sendError(res, 404, errors.INVALID_TOKEN, "callId not Found.");
       return;
     }
     res.json(200, "ok");
@@ -741,7 +758,7 @@ app.delete('/calls/id/:callId', function(req, res) {
     if (res.serverError(err)) return;
 
     if (result === false) {
-      res.json(404, {error: "Call " + callId + " not found."});
+      sendError(res, 404, errors.INVALID_TOKEN, "callId not Found.");
       return;
     }
     res.json(204, "");

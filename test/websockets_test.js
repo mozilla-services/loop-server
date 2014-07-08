@@ -668,18 +668,22 @@ describe('websockets', function() {
       function(done) {
         var callerMsgCount = 0;
 
-        callee.on('close', function() {
-          callee.isClosed = true;
-          if (caller.isClosed) {
+        function stopTest() {
+          if (caller.isClosed && callee.isClosed) {
+            expect(callerMsgCount).to.eql(3);
+            expect(calleeMsgCount).to.eql(3);
             done();
           }
+        }
+
+        callee.on('close', function() {
+          callee.isClosed = true;
+          stopTest();
         });
 
         caller.on('close', function() {
           caller.isClosed = true;
-          if (callee.isClosed) {
-            done();
-          }
+          stopTest();
         });
 
         caller.on('message', function(data) {
