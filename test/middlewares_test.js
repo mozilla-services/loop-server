@@ -57,7 +57,6 @@ describe("metrics middleware", function() {
         expect(logged.path).to.eql('/with-metrics-middleware');
         expect(logged.user).to.eql('uuid');
         expect(logged.agent).to.eql('Mouzilla');
-        expect(logged.callUrlData).to.eql('data');
         expect(logged.v).to.eql(pjson.version);
         expect(logged.name).to.eql(pjson.name);
         expect(logged.hostname).to.eql(os.hostname());

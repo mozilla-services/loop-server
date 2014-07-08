@@ -68,7 +68,6 @@ function logMetrics(req, res, next) {
         t: Date.now() - start,
         user: req.user,
         token: req.token,
-        callUrlData: req.callUrlData,
         v: loopPackageData.version,
         name: loopPackageData.name,
         hostname: hostname,
