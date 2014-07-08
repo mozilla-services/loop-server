@@ -3,11 +3,26 @@ Changelog
 
 This document describes changes between each past release.
 
-0.8.0 (unreleased)
+0.8.0 (2014-07-08)
 ------------------
 
+- Document ulimit for Mac OS X
+- Add Progress URL
+- Continue to accept old simple_push_url format as well as new simplePushURL
+- Continue to provide both callUrl and call_url parameters
+- Add Direct Call behavior
+- Fix the heartbeat endpoint by calling TokBox
+- Implement short call-token urls
+- Get /calls/:token returns callee informations
+- Store the validated userId from the certificate during the registration
+- Add websocket support for call setup information
+- Handle the callType parameter
+- Pass the calleeFriendlyName on call-url creation
+- Store multiple simplePushURLs per user
+- Add URL info to call data
+- Handle server shutdown gracefully on SIGTERM
 
-0.7.0 (2014-19-06)
+0.7.0 (2014-06-19)
 ------------------
 
 - Make sure the FxA audiences parameter is an array;
@@ -15,12 +30,12 @@ This document describes changes between each past release.
 - Add a possibility for an user to call multiple identities;
 - Fix hawk implementation to handle querystrings properly.
 
-0.6.1 (2014-13-06)
+0.6.1 (2014-06-13)
 ------------------
 
 - Fix Hawk implementation
 
-0.6.0 (2014-13-06)
+0.6.0 (2014-06-13)
 ------------------
 
 - Better exception handling in the loadtests
