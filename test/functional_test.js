@@ -845,6 +845,7 @@ describe("HTTP API exposed by the server", function() {
               callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
               call_url: conf.get('webAppUrl')
                 .replace('{token}', call.callToken),
+              callToken: call.callToken,
               urlCreationDate: call.urlCreationDate,
               progressURL: progressURL
             };
@@ -871,6 +872,7 @@ describe("HTTP API exposed by the server", function() {
           callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
           call_url: conf.get('webAppUrl')
             .replace('{token}', calls[2].callToken),
+          callToken: calls[2].callToken,
           urlCreationDate: calls[2].urlCreationDate,
           progressURL: progressURL
         }];
