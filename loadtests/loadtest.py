@@ -27,7 +27,7 @@ class TestLoop(TestCase):
             if ws.sock:
                 ws.sock.close()
 
-    def send(self, ws, **msg):
+    def _send_ws_message(self, ws, **msg):
         return ws.send(json.dumps(msg))
 
     def create_ws(self, *args, **kw):
@@ -49,41 +49,72 @@ class TestLoop(TestCase):
         caller_alerts = []
         callee_alerts = []
 
+        self.connected = False
+
         def _handle_callee(message_data):
             message = json.loads(message_data.data)
             callee_alerts.append(message)
-            if (message['messageType'] == "hello"
-                    and message['state'] == "init"):
-                # just keep it open and wait!
-                pass
+            state = message.get('state')
+            messageType = message.get('messageType')
+
+            if messageType == "progress" and state == "connecting":
+                self._send_ws_message(
+                    callee_ws,
+                    messageType="action",
+                    event="media-up")
+                caller_ws.receive()
+
+            elif messageType == "progress" and state == "connected":
+                self.connected = True
 
         def _handle_caller(message_data):
             message = json.loads(message_data.data)
             caller_alerts.append(message)
+            state = message.get('state')
+            messageType = message.get('messageType')
 
-            if (message['messageType'] == "hello"
-                    and message['state'] == "init"):
-                # This is the first message, we should have the second party
-                # connect.
-                self.send(callee_ws, messageType='hello',
-                          auth=calls[0]['websocketToken'],
-                          callId=call_id)
-
+            if messageType == "hello" and state == "init":
+                # This is the first message, Ask the second party to connect.
+                self._send_ws_message(
+                    callee_ws,
+                    messageType='hello',
+                    auth=calls[0]['websocketToken'],
+                    callId=call_id)
                 callee_ws.receive()
+
+            elif messageType == "progress" and state == "alerting":
+                gevent.sleep(25)
+                self._send_ws_message(
+                    caller_ws,
+                    messageType="action",
+                    event="accept")
+                callee_ws.receive()
+
+            elif messageType == "progress" and state == "connecting":
+                self._send_ws_message(
+                    caller_ws,
+                    messageType="action",
+                    event="media-up")
+                callee_ws.receive()
+
+            elif messageType == "progress" and state == "half-connected":
+                caller_ws.receive()
+
+            elif messageType == "progress" and state == "connected":
+                self.connected = True
 
         # let's connect to the web socket until it gets closed
         callee_ws = self.create_ws(progress_url, callback=_handle_callee)
         caller_ws = self.create_ws(progress_url, callback=_handle_caller)
 
-        self.send(caller_ws, messageType='hello',
-                  auth=websocket_token,
-                  callId=call_id)
+        self._send_ws_message(
+            caller_ws,
+            messageType='hello',
+            auth=websocket_token,
+            callId=call_id)
 
-        while len(caller_alerts) < 2:
-            gevent.sleep(.1)
-
-        # here assert on the content
-        self.assertEqual(len(callee_alerts), 2)
+        while not self.connected:
+            gevent.sleep(.5)
 
     def _get_json(self, resp):
         try:
