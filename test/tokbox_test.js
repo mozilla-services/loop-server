@@ -64,7 +64,17 @@ describe("TokBox", function() {
 
     beforeEach(function() {
       tokBox = new TokBox({
-        credentials: {},
+        credentials: {
+          nightly: {
+            apiKey: apiKey + "_nightly",
+            apiSecret: apiSecret + "_nightly"
+          },
+          release: {
+            apiKey: apiKey + "_release",
+            apiSecret: apiSecret + "_release",
+            serverURL: "https://release.tokbox.com"
+          }
+        },
         apiKey: apiKey,
         apiSecret: apiSecret,
         tokenDuration: 3600 // 1h.
@@ -113,6 +123,70 @@ describe("TokBox", function() {
         done();
       });
     });
+
+    it("should use the default credemntials if the channel is not known",
+      function(done) {
+        sandbox.stub(tokBox._opentok, "createSession",
+          function(options, cb) {
+            cb(null, {sessionId: fakeCallInfo.session1});
+          });
+        tokBox.getSessionTokens({
+          channel: "unknown"
+        }, function(error, info) {
+          expect(info).to.eql({
+            sessionId: fakeCallInfo.session1,
+            callerToken: null,
+            calleeToken: null
+          });
+          done(error);
+        });
+      });
+
+    it("should create an new client with a known channel and specific apiUrl",
+      function(done) {
+        sandbox.stub(loopTokbox, "OpenTok", function() {
+          return {
+            createSession: function(options, cb) {
+              cb(null, {sessionId: fakeCallInfo.session});
+            }
+          };
+        });
+        tokBox.getSessionTokens({
+          channel: "release"
+        }, function(error, info) {
+          assert.calledOnce(loopTokbox.OpenTok);
+          assert.calledWithExactly(
+            loopTokbox.OpenTok,
+            apiKey + "_release",
+            apiSecret + "_release",
+            "https://release.tokbox.com"
+          );
+          done(error);
+        });
+      });
+
+    it("should create an new client with a known channel and default apiUrl",
+      function(done) {
+        sandbox.stub(loopTokbox, "OpenTok", function() {
+          return {
+            createSession: function(options, cb) {
+              cb(null, {sessionId: fakeCallInfo.session});
+            }
+          };
+        });
+        tokBox.getSessionTokens({
+          channel: "nightly"
+        }, function(error, info) {
+          assert.calledOnce(loopTokbox.OpenTok);
+          assert.calledWithExactly(
+            loopTokbox.OpenTok,
+            apiKey + "_nightly",
+            apiSecret + "_nightly",
+            "https://api.opentok.com"
+          );
+          done(error);
+        });
+      });
   });
 
   describe("#ping", function() {
