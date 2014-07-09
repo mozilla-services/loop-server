@@ -24,7 +24,7 @@ clean:
 .PHONY: cover-mocha
 cover-mocha:
 	@env NODE_ENV=test $(NODE_LOCAL_BIN)/istanbul cover \
-			 $(NODE_LOCAL_BIN)/_mocha -- --reporter spec test/*
+			 $(NODE_LOCAL_BIN)/_mocha -- --reporter spec -t 5000 test/*
 	@echo aim your browser at coverage/lcov-report/index.html for details
 
 .PHONY: jshint

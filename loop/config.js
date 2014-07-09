@@ -68,11 +68,17 @@ var conf = convict({
     default: 5000,
     env: "PORT"
   },
+  publicServerAddress: {
+    doc: "The public-facing server address",
+    format: String,
+    default: "localhost:5000",
+    env: "SERVER_ADDRESS"
+  },
   protocol: {
     doc: "The protocol the server is behind. Should be https behind an ELB.",
     format: String,
     default: "http",
-    end: "PROTOCOL"
+    env: "PROTOCOL"
   },
   macSecret: {
     doc: "The secret for MAC tokens (32 bytes key encoded as hex)",
@@ -285,6 +291,11 @@ var conf = convict({
     doc: "Defines if metrics should be dumped to the stdout",
     default: false,
     format: Boolean
+  },
+  progressURLEndpoint: {
+    doc: "The endpoint to use for the progressURL.",
+    format: String,
+    default: "/websocket"
   }
 });
 

@@ -42,6 +42,7 @@ var userHmac, userHmac2;
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
+var progressURL = getProgressURL(conf.get('publicServerAddress'));
 
 
 
@@ -842,8 +843,10 @@ describe("HTTP API exposed by the server", function() {
               sessionId: call.sessionId,
               sessionToken: call.calleeToken,
               callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
+              call_url: conf.get('webAppUrl')
+                .replace('{token}', call.callToken),
               urlCreationDate: call.urlCreationDate,
-              progressURL: getProgressURL(res.req._headers.host)
+              progressURL: progressURL
             };
           });
 
@@ -866,8 +869,10 @@ describe("HTTP API exposed by the server", function() {
           sessionId: calls[2].sessionId,
           sessionToken: calls[2].calleeToken,
           callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
+          call_url: conf.get('webAppUrl')
+            .replace('{token}', calls[2].callToken),
           urlCreationDate: calls[2].urlCreationDate,
-          progressURL: getProgressURL(res.req._headers.host)
+          progressURL: progressURL
         }];
 
         expect(res.body).to.deep.equal({calls: callsList});
@@ -977,8 +982,7 @@ describe("HTTP API exposed by the server", function() {
               expect(res.body.sessionId).to.eql(tokBoxSessionId);
               expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
               expect(res.body.apiKey).to.eql(tokBox.apiKey);
-              expect(res.body.progressURL)
-                .to.eql("ws://" + res.req._headers.host);
+              expect(res.body.progressURL).to.eql(progressURL);
               done();
             });
         });
@@ -1109,8 +1113,7 @@ describe("HTTP API exposed by the server", function() {
                   expect(res.body.sessionId).to.eql(tokBoxSessionId);
                   expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
                   expect(res.body.apiKey).to.eql(tokBox.apiKey);
-                  expect(res.body.progressURL)
-                    .to.eql("ws://" + res.req._headers.host);
+                  expect(res.body.progressURL).to.eql(progressURL);
                   done();
                 });
             });
@@ -1174,7 +1177,7 @@ describe("HTTP API exposed by the server", function() {
                           done();
                         });
                     });
-                  });
+                });
             });
           });
         });
