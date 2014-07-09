@@ -8,7 +8,7 @@ var conf = require("./config").conf;
 var loopPackageData = require('../package.json');
 var os = require("os");
 
-// Assume the hostname will not change once server launched.
+// Assume the hostname will not change once the server is launched.
 var hostname = os.hostname();
 var sendError = require("./utils").sendError;
 var errors = require("./errno.json");
