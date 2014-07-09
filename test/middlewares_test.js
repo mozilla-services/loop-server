@@ -22,6 +22,7 @@ describe("metrics middleware", function() {
   var sandbox;
   var logs = [];
   var old_metrics;
+  var clock;
 
   app.get("/with-metrics-middleware", logMetrics, function(req, res) {
     req.user = 'uuid';
@@ -31,7 +32,7 @@ describe("metrics middleware", function() {
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
-    sinon.useFakeTimers(fakeNow);
+    clock = sinon.useFakeTimers(fakeNow);
     old_metrics = conf.get('metrics');
     conf.set('metrics', true);
     sandbox.stub(console, "log", function(log) {
@@ -42,6 +43,7 @@ describe("metrics middleware", function() {
   afterEach(function() {
     sandbox.restore();
     conf.set('metrics', old_metrics);
+    clock.restore();
   });
 
 
