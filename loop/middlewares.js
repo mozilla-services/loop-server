@@ -55,8 +55,6 @@ function addHeaders(req, res, next) {
 
 function logMetrics(req, res, next) {
   if (conf.get('metrics') === true) {
-    var start =  new Date();
-
     res.on('finish', function() {
       var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
@@ -66,7 +64,6 @@ function logMetrics(req, res, next) {
         path: req.path,
         query: req.query,
         agent: req.headers['user-agent'],
-        t: Date.now() - start,
         time: isoDateString(new Date()),
         uid: req.user,
         token: req.token,
