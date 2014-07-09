@@ -1,9 +1,12 @@
+from gevent import monkey
+monkey.patch_all()
+
 from urlparse import urlparse
-import random
 import json
 import hmac
 import hashlib
 import math
+import gevent
 
 import mohawk
 from requests.auth import AuthBase
@@ -13,18 +16,105 @@ from loads.case import TestCase
 
 class TestLoop(TestCase):
 
+    def setUp(self):
+        self.wss = []
+
+    def tearDown(self):
+        for ws in self.wss:
+            ws.close()
+            # XXX this is missing in ws4py
+            ws._th.join()
+            if ws.sock:
+                ws.sock.close()
+
+    def _send_ws_message(self, ws, **msg):
+        return ws.send(json.dumps(msg))
+
+    def create_ws(self, *args, **kw):
+        ws = TestCase.create_ws(self, *args, **kw)
+        self.wss.append(ws)
+        return ws
+
     def test_all(self):
         self.register()
         token = self.generate_token()
-        call_id, session, caller_token, api_key = self.initiate_call(token)
+        call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
-        for call in calls:
-            # We want to reject 30% of the calls.
-            status = 200
-            if random.randint(0, 100) <= 30:
-                self.discard_call(call['callId'])
-                status = 404
-            self.get_call_status(call['callId'], status)
+        self._test_websockets(token, call_data, calls)
+
+    def _test_websockets(self, token, call_data, calls):
+        progress_url = call_data['progressURL']
+        websocket_token = call_data['websocketToken']
+        call_id = call_data['callId']
+        caller_alerts = []
+        callee_alerts = []
+
+        self.connected = False
+
+        def _handle_callee(message_data):
+            message = json.loads(message_data.data)
+            callee_alerts.append(message)
+            state = message.get('state')
+            messageType = message.get('messageType')
+
+            if messageType == "progress" and state == "connecting":
+                self._send_ws_message(
+                    callee_ws,
+                    messageType="action",
+                    event="media-up")
+                caller_ws.receive()
+
+            elif messageType == "progress" and state == "connected":
+                self.connected = True
+
+        def _handle_caller(message_data):
+            message = json.loads(message_data.data)
+            caller_alerts.append(message)
+            state = message.get('state')
+            messageType = message.get('messageType')
+
+            if messageType == "hello" and state == "init":
+                # This is the first message, Ask the second party to connect.
+                self._send_ws_message(
+                    callee_ws,
+                    messageType='hello',
+                    auth=calls[0]['websocketToken'],
+                    callId=call_id)
+                callee_ws.receive()
+
+            elif messageType == "progress" and state == "alerting":
+                gevent.sleep(25)
+                self._send_ws_message(
+                    caller_ws,
+                    messageType="action",
+                    event="accept")
+                callee_ws.receive()
+
+            elif messageType == "progress" and state == "connecting":
+                self._send_ws_message(
+                    caller_ws,
+                    messageType="action",
+                    event="media-up")
+                callee_ws.receive()
+
+            elif messageType == "progress" and state == "half-connected":
+                caller_ws.receive()
+
+            elif messageType == "progress" and state == "connected":
+                self.connected = True
+
+        # let's connect to the web socket until it gets closed
+        callee_ws = self.create_ws(progress_url, callback=_handle_callee)
+        caller_ws = self.create_ws(progress_url, callback=_handle_caller)
+
+        self._send_ws_message(
+            caller_ws,
+            messageType='hello',
+            auth=websocket_token,
+            callId=call_id)
+
+        while not self.connected:
+            gevent.sleep(.5)
 
     def _get_json(self, resp):
         try:
@@ -52,7 +142,7 @@ class TestLoop(TestCase):
         resp = self.session.post(
             self.server_url + '/call-url',
             data=json.dumps({'callerId': 'alexis@mozilla.com'}),
-            headers={'Content-type': 'application/json'},
+            headers={'Content-Type': 'application/json'},
             auth=self.hawk_auth
         )
         self.assertEquals(resp.status_code, 200,
@@ -63,14 +153,15 @@ class TestLoop(TestCase):
 
     def initiate_call(self, token):
         # This happens when not authenticated.
-        resp = self.session.post(self.server_url + '/calls/%s' % token,
-                                 {"callType": "audio-video"})
+        resp = self.session.post(
+            self.server_url + '/calls/%s' % token,
+            data=json.dumps({"callType": "audio-video"}),
+            headers={'Content-Type': 'application/json'}
+        )
         self.assertEquals(resp.status_code, 200,
                           "Call Initialization failed: %s" % resp.content)
 
-        data = self._get_json(resp)
-        return (data['callId'], data['sessionId'], data['sessionToken'],
-                data['apiKey'])
+        return self._get_json(resp)
 
     def list_pending_calls(self):
         resp = self.session.get(
@@ -82,14 +173,6 @@ class TestLoop(TestCase):
     def revoke_token(self, token):
         # You don't need to be authenticated to revoke a token.
         self.session.delete(self.server_url + '/call-url/%s' % token)
-
-    def discard_call(self, call_id):
-        self.session.delete(self.server_url + '/calls/id/%s' % call_id)
-
-    def get_call_status(self, call_id, status):
-        resp = self.session.get(self.server_url + '/calls/id/%s' % call_id)
-        self.assertEqual(resp.status_code, status,
-                         "Call status retrieval failed %s" % resp.content)
 
 
 def HKDF_extract(salt, IKM, hashmod=hashlib.sha256):
