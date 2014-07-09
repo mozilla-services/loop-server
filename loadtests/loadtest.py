@@ -2,14 +2,11 @@ from gevent import monkey
 monkey.patch_all()
 
 from urlparse import urlparse
-import random
 import json
 import hmac
 import hashlib
 import math
 import gevent
-from Queue import Empty
-import socket
 
 import mohawk
 from requests.auth import AuthBase
@@ -30,6 +27,9 @@ class TestLoop(TestCase):
             if ws.sock:
                 ws.sock.close()
 
+    def send(self, ws, **msg):
+        return ws.send(json.dumps(msg))
+
     def create_ws(self, *args, **kw):
         ws = TestCase.create_ws(self, *args, **kw)
         self.wss.append(ws)
@@ -40,7 +40,6 @@ class TestLoop(TestCase):
         token = self.generate_token()
         call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
-
         self._test_websockets(token, call_data, calls)
 
     def _test_websockets(self, token, call_data, calls):
@@ -50,16 +49,15 @@ class TestLoop(TestCase):
         caller_alerts = []
         callee_alerts = []
 
-        def _handle_callee_messages(message_data):
+        def _handle_callee(message_data):
             message = json.loads(message_data.data)
             callee_alerts.append(message)
             if (message['messageType'] == "hello"
                     and message['state'] == "init"):
                 # just keep it open and wait!
                 pass
-                #rcv = callee_ws.receive()
 
-        def _handle_caller_messages(message_data):
+        def _handle_caller(message_data):
             message = json.loads(message_data.data)
             caller_alerts.append(message)
 
@@ -67,28 +65,19 @@ class TestLoop(TestCase):
                     and message['state'] == "init"):
                 # This is the first message, we should have the second party
                 # connect.
-                callee_ws.send(json.dumps({
-                    'messageType': 'hello',
-                    'auth': calls[0]['websocketToken'],
-                    'callId': call_id
-                }))
+                self.send(callee_ws, messageType='hello',
+                          auth=calls[0]['websocketToken'],
+                          callId=call_id)
 
                 callee_ws.receive()
 
         # let's connect to the web socket until it gets closed
-        callee_ws = self.create_ws(
-            progress_url,
-            callback=_handle_callee_messages)
+        callee_ws = self.create_ws(progress_url, callback=_handle_callee)
+        caller_ws = self.create_ws(progress_url, callback=_handle_caller)
 
-        caller_ws = self.create_ws(
-            progress_url,
-            callback=_handle_caller_messages)
-
-        caller_ws.send(json.dumps({
-            'messageType': 'hello',
-            'auth': websocket_token,
-            'callId': call_id
-        }))
+        self.send(caller_ws, messageType='hello',
+                  auth=websocket_token,
+                  callId=call_id)
 
         while len(caller_alerts) < 2:
             gevent.sleep(.1)
