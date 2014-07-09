@@ -15,6 +15,8 @@ var conf = loop.conf;
 var pjson = require('../package.json');
 var os = require("os");
 
+var fakeNow = 1393595554796;
+
 
 describe("metrics middleware", function() {
   var sandbox;
@@ -29,6 +31,7 @@ describe("metrics middleware", function() {
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
+    sinon.useFakeTimers(fakeNow);
     old_metrics = conf.get('metrics');
     conf.set('metrics', true);
     sandbox.stub(console, "log", function(log) {
@@ -63,6 +66,7 @@ describe("metrics middleware", function() {
         expect(logged.lang).to.eql('Breton du sud');
         expect(logged.ip).to.eql('ip1, ip2, ip3');
         expect(logged.errno).to.eql(0);
+        expect(logged.time).to.eql('2014-02-28T13:52:34Z');
 
         done();
       });

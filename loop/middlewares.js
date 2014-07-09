@@ -11,6 +11,7 @@ var os = require("os");
 // Assume the hostname will not change once the server is launched.
 var hostname = os.hostname();
 var sendError = require("./utils").sendError;
+var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
 
 
@@ -66,6 +67,7 @@ function logMetrics(req, res, next) {
         query: req.query,
         agent: req.headers['user-agent'],
         t: Date.now() - start,
+        time: isoDateString(new Date()),
         uid: req.user,
         token: req.token,
         v: loopPackageData.version,
