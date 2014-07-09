@@ -15,7 +15,7 @@ http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 var express = require('express');
 var tokenlib = require('./tokenlib');
 var crypto = require('crypto');
-var pjson = require('../package.json');
+var loopPackageData = require('../package.json');
 var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
@@ -24,13 +24,12 @@ var errors = require('./errno.json');
 var StatsdClient = require('statsd-node').client;
 var addHeaders = require('./middlewares').addHeaders;
 var handle503 = require("./middlewares").handle503;
-var logRequests = require('./middlewares').logRequests;
+var logMetrics = require('./middlewares').logMetrics;
 var async = require('async');
 var websockets = require('./websockets');
 var encrypt = require("./encrypt").encrypt;
 var decrypt = require("./encrypt").decrypt;
 var getProgressURL = require('./utils').getProgressURL;
-
 var hawk = require('./hawk');
 var hmac = require('./hmac');
 var fxa = require('./fxa');
@@ -253,14 +252,12 @@ function returnUserCallTokens(options, callback) {
 
 var app = express();
 
-if (conf.get("env") === "dev") {
-  app.use(logRequests);
-}
 app.use(addHeaders);
 app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(handle503(logError));
+app.use(logMetrics);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
@@ -430,10 +427,10 @@ app.get("/__heartbeat__", function(req, res) {
  **/
 app.get("/", function(req, res) {
   var credentials = {
-    name: pjson.name,
-    description: pjson.description,
-    version: pjson.version,
-    homepage: pjson.homepage,
+    name: loopPackageData.name,
+    description: loopPackageData.description,
+    version: loopPackageData.version,
+    homepage: loopPackageData.homepage,
     endpoint: conf.get("protocol") + "://" + req.get('host'),
     fakeTokBox: conf.get('fakeTokBox')
   };
@@ -623,7 +620,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
                     callback();
                   });
               });
-            });
+          });
         }, function(err) {
           if (res.serverError(err)) return;
 

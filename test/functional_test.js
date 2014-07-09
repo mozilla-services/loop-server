@@ -45,6 +45,7 @@ var urlCreationDate = 1404139145;
 var progressURL = getProgressURL(conf.get('publicServerAddress'));
 
 
+
 function register(url, assertion, credentials, cb) {
   supertest(app)
     .post('/registration')
@@ -1018,6 +1019,7 @@ describe("HTTP API exposed by the server", function() {
       var emptyReq, addCallReq;
 
       beforeEach(function() {
+
         emptyReq = supertest(app)
           .post("/calls")
           .hawk(hawkCredentials)
@@ -1028,6 +1030,7 @@ describe("HTTP API exposed by the server", function() {
           .type("json")
           .expect(200);
       });
+
 
       it("should have the requireHawk middleware installed", function() {
         expect(
@@ -1041,8 +1044,17 @@ describe("HTTP API exposed by the server", function() {
         });
 
       describe("With working tokbox APIs", function() {
+        var _logs = [];
 
         beforeEach(function() {
+          conf.set('metrics', true);
+          sandbox.stub(console, "log", function(log) {
+            try {
+              _logs.push(JSON.parse(log));
+            } catch (e) {
+            }
+          });
+
           sandbox.stub(tokBox, "getSessionTokens", function(cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
@@ -1050,6 +1062,20 @@ describe("HTTP API exposed by the server", function() {
               calleeToken: tokBoxCalleeToken
             });
           });
+        });
+
+        afterEach(function() {
+          _logs = [];
+          conf.set('metrics', false);
+        });
+
+        it("should log metrics with the user hash", function(done) {
+          addCallReq
+            .send({calleeId: user, callType: 'audio'})
+            .end(function () {
+              expect(_logs[0].uid).to.eql(userHmac);
+              done();
+            });
         });
 
         it("should accept a valid call identity", function(done) {

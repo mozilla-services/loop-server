@@ -5,9 +5,14 @@
 "use strict";
 
 var conf = require("./config").conf;
-var strftime = require("strftime");
+var loopPackageData = require('../package.json');
+var os = require("os");
+
+// Assume the hostname will not change once the server is launched.
+var hostname = os.hostname();
 var sendError = require("./utils").sendError;
 var errors = require("./errno.json");
+
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
@@ -46,23 +51,40 @@ function addHeaders(req, res, next) {
   next();
 }
 
-function logRequests(req, res, next) {
-  var start =  new Date();
-  res.on('finish', function() {
-    var length = res._headers['content-length'] || "";
-    var stop = new Date();
 
-    console.log(
-      '[%s] "%s %s HTTP/%s.%s" %s %s — (%s ms)',
-      strftime(conf.get("consoleDateFormat"), start),
-      req.method, req.url, req.httpVersionMajor, req.httpVersionMinor,
-      res.statusCode, length, stop - start);
-  });
+function logMetrics(req, res, next) {
+  if (conf.get('metrics') === true) {
+    var start =  new Date();
+
+    res.on('finish', function() {
+      var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+      var line = {
+        op: 'request.summary',
+        code: res.statusCode,
+        path: req.path,
+        query: req.query,
+        agent: req.headers['user-agent'],
+        t: Date.now() - start,
+        uid: req.user,
+        token: req.token,
+        v: loopPackageData.version,
+        name: loopPackageData.name,
+        hostname: hostname,
+        lang: req.headers["accept-language"],
+        ip: ip,
+        errno: res.errno || 0
+      };
+
+      console.log(JSON.stringify(line));
+    });
+  }
   next();
 }
+
 
 module.exports = {
   handle503: handle503,
   addHeaders: addHeaders,
-  logRequests: logRequests
+  logMetrics: logMetrics
 };

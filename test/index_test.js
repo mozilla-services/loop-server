@@ -12,9 +12,8 @@ var sinon = require("sinon");
 var assert = sinon.assert;
 var fxaAuth = require("../loop/fxa");
 var Token = require("../loop/token").Token;
-
-var app = require("../loop").app;
 var conf = require("../loop").conf;
+var app = require("../loop").app;
 var hmac = require("../loop/hmac");
 var server = require("../loop").server;
 var shutdown = require("../loop").shutdown;

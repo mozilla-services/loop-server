@@ -287,6 +287,11 @@ var conf = convict({
     format: Number,
     default: 10
   },
+  metrics: {
+    doc: "Defines if metrics should be dumped to the stdout",
+    default: false,
+    format: Boolean
+  },
   progressURLEndpoint: {
     doc: "The endpoint to use for the progressURL.",
     format: String,
