@@ -483,6 +483,7 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
         // XXX Bug 1032966 - call_url is deprecated
         res.json(200, {
           callUrl: conf.get("webAppUrl").replace("{token}", req.token),
+          callToken: req.token,
           call_url: conf.get("webAppUrl").replace("{token}", req.token),
           expiresAt: req.urlData.expires
         });
@@ -543,6 +544,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
           call_url: conf.get("webAppUrl").replace("{token}", record.callToken),
+          callToken: record.callToken,
           urlCreationDate: record.urlCreationDate,
           progressURL: progressURL
         };
