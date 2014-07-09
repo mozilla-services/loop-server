@@ -250,12 +250,12 @@ function returnUserCallTokens(options, callback) {
 
 var app = express();
 
-app.use(logMetrics);
 app.use(addHeaders);
 app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(handle503(logError));
+app.use(logMetrics);
 app.use(app.router);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
@@ -606,7 +606,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
                     callback();
                   });
               });
-            });
+          });
         }, function(err) {
           if (res.serverError(err)) return;
 

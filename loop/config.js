@@ -282,7 +282,7 @@ var conf = convict({
     default: 10
   },
   metrics: {
-    doc: "When activated, will dump metrics in the stdout",
+    doc: "Defines if metrics should be dumped to the stdout",
     default: false,
     format: Boolean
   }

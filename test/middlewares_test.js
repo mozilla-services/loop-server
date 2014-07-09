@@ -22,9 +22,6 @@ describe("metrics middleware", function() {
   var old_metrics;
 
   app.get("/with-metrics-middleware", logMetrics, function(req, res) {
-    req.headers['user-agent'] = 'Mouzilla';
-    req.headers['accept-language'] = 'Breton du sud';
-    req.headers['x-forwarded-for'] = 'ip1, ip2, ip3';
     req.user = 'uuid';
     req.callUrlData = 'data';
     res.json(200, "ok");
@@ -48,6 +45,9 @@ describe("metrics middleware", function() {
   it("should write logs to stdout", function(done) {
     supertest(app)
       .get('/with-metrics-middleware')
+      .set('user-agent', 'Mouzilla')
+      .set('accept-language', 'Breton du sud')
+      .set('x-forwarded-for', 'ip1, ip2, ip3')
       .expect(200)
       .end(function(err, res) {
         var logged = JSON.parse(logs[0]);
@@ -55,13 +55,14 @@ describe("metrics middleware", function() {
         expect(logged.op).to.eql('request.summary');
         expect(logged.code).to.eql(200);
         expect(logged.path).to.eql('/with-metrics-middleware');
-        expect(logged.user).to.eql('uuid');
+        expect(logged.uid).to.eql('uuid');
         expect(logged.agent).to.eql('Mouzilla');
         expect(logged.v).to.eql(pjson.version);
         expect(logged.name).to.eql(pjson.name);
         expect(logged.hostname).to.eql(os.hostname());
         expect(logged.lang).to.eql('Breton du sud');
         expect(logged.ip).to.eql('ip1, ip2, ip3');
+        expect(logged.errno).to.eql(0);
 
         done();
       });

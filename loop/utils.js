@@ -24,6 +24,7 @@ function sendError(res, code, errno, error, message, info) {
     errmap.info = info;
   }
 
+  res.errno = errno;
   res.json(code, errmap);
 }
 

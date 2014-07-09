@@ -8,7 +8,7 @@ var conf = require("./config").conf;
 var loopPackageData = require('../package.json');
 var os = require("os");
 
-// We make the assumption that this won't change once launched.
+// Assume the hostname will not change once server launched.
 var hostname = os.hostname();
 var sendError = require("./utils").sendError;
 var errors = require("./errno.json");
@@ -66,13 +66,14 @@ function logMetrics(req, res, next) {
         query: req.query,
         agent: req.headers['user-agent'],
         t: Date.now() - start,
-        user: req.user,
+        uid: req.user,
         token: req.token,
         v: loopPackageData.version,
         name: loopPackageData.name,
         hostname: hostname,
         lang: req.headers["accept-language"],
-        ip: ip
+        ip: ip,
+        errno: res.errno || 0
       };
 
       console.log(JSON.stringify(line));

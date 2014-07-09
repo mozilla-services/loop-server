@@ -1009,46 +1009,6 @@ describe("HTTP API exposed by the server", function() {
             });
         });
       });
-
-      describe("with the metrics middleware", function() {
-        var _logs = [];
-        var old_metrics;
-
-        beforeEach(function() {
-          old_metrics = conf.get('metrics');
-          conf.set('metrics', true);
-          var fakeCallInfo = conf.get("fakeCallInfo");
-
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-            cb(null, {
-              sessionId: fakeCallInfo.session1,
-              callerToken: fakeCallInfo.token1,
-              calleeToken: fakeCallInfo.token2
-            });
-          });
-
-          sandbox.stub(console, "log", function(log) {
-            // We are keeping only json mappings for this test.
-            try {
-              _logs.push(JSON.parse(log));
-            } catch (e) {
-            }
-          });
-        });
-
-        afterEach(function() {
-          _logs = [];
-          conf.set('metrics', old_metrics);
-        });
-
-        it("should output the token into the stdout", function(done) {
-          addCallReq.end(function () {
-            expect(_logs[0].token).to.eql(token);
-            done();
-          });
-        });
-      });
-
     });
 
     describe("POST /calls", function() {
@@ -1109,7 +1069,7 @@ describe("HTTP API exposed by the server", function() {
           addCallReq
             .send({calleeId: user, callType: 'audio'})
             .end(function () {
-              expect(_logs[0].user).to.eql(userHmac);
+              expect(_logs[0].uid).to.eql(userHmac);
               done();
             });
         });
