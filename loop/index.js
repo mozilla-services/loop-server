@@ -215,7 +215,9 @@ function authenticate(req, res, next) {
  * - urlCreationDate: the timestamp of the url used to make the call;
  */
 function returnUserCallTokens(options, callback) {
-  tokBox.getSessionTokens(function(err, tokboxInfo) {
+  tokBox.getSessionTokens({
+    channel: options.channel
+  }, function(err, tokboxInfo) {
     if (err) {
       callback(err);
       return;
@@ -581,6 +583,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
 
       returnUserCallTokens({
         callType: req.body.callType,
+        channel: req.body.channel,
         callerId: userId,
         progressURL: progressURL
       }, function(err, callInfo) {
@@ -683,6 +686,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
 
       returnUserCallTokens({
         callType: req.callUrlData.callType,
+        channel: req.body.channel,
         user: req.callUrlData.userMac,
         callerId: userId || req.callUrlData.callerId,
         calleeFriendlyName: req.callUrlData.issuer,

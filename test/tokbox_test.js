@@ -64,6 +64,7 @@ describe("TokBox", function() {
 
     beforeEach(function() {
       tokBox = new TokBox({
+        credentials: {},
         apiKey: apiKey,
         apiSecret: apiSecret,
         tokenDuration: 3600 // 1h.

@@ -14,6 +14,8 @@ exports.OpenTok = require('opentok');
 
 function TokBox(settings) {
   this.apiKey = settings.apiKey;
+  this.apiSecret = settings.apiSecret;
+  this.credentials = settings.credentials;
   if (settings.retryOnError === undefined) {
     settings.retryOnError = 3;
   }
@@ -36,8 +38,21 @@ TokBox.prototype = {
     if (options.retry === undefined) {
       options.retry = this.retryOnError;
     }
+
+    var opentok;
+
+    if (this.credentials.hasOwnProperty(options.channel)) {
+      opentok = new exports.OpenTok(
+        this.credentials[options.channel].apiKey,
+        this.credentials[options.channel].apiSecret,
+        this.credentials[options.channel].serverURL || this.serverURL
+      );
+    } else {
+      opentok = this._opentok;
+    }
+
     var self = this;
-    this._opentok.createSession({
+    opentok.createSession({
       mediaMode: 'relayed'
     }, function(err, session) {
         if (err !== null) {

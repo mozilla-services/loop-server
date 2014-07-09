@@ -178,7 +178,7 @@ describe("HTTP API exposed by the server", function() {
       describe(method + ' ' + route, function() {
         beforeEach(function() {
           var fakeCallInfo = conf.get("fakeCallInfo");
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: fakeCallInfo.session1,
               callerToken: fakeCallInfo.token1,
@@ -954,7 +954,7 @@ describe("HTTP API exposed by the server", function() {
       describe("With working tokbox APIs", function() {
 
         beforeEach(function() {
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
@@ -1057,7 +1057,7 @@ describe("HTTP API exposed by the server", function() {
             }
           });
 
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,

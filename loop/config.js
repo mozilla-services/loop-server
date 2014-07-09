@@ -161,6 +161,11 @@ var conf = convict({
       format: String,
       default: "https://api.opentok.com"
     },
+    credentials: {
+      doc: "api credentials based on a channel.",
+      format: Object,
+      default: {}
+    },
     apiKey: {
       doc: 'api key for tokbox',
       format: String,
