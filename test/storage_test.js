@@ -510,6 +510,28 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteUserCalls", function() {
+        it("should delete all calls of an user", function(done) {
+          storage.addUserCall(userMac, calls[0], function(err) {
+            if (err) throw err;
+            storage.addUserCall(userMac, calls[1], function(err) {
+              if (err) throw err;
+              storage.addUserCall(userMac, calls[2], function(err) {
+                if (err) throw err;
+                storage.deleteUserCalls(userMac, function(err) {
+                  if (err) throw err;
+                  storage.getUserCalls(userMac, function(err, results) {
+                    if (err) throw err;
+                    expect(results).to.have.length(0);
+                    done();
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+
       describe("#getHawkSession", function() {
         it("should return null if the hawk session doesn't exist",
           function(done) {

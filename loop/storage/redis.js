@@ -240,6 +240,44 @@ RedisStorage.prototype = {
       });
   },
 
+  /**
+   * Deletes all the call data for a given user.
+   *
+   * Deletes the list of calls.
+   *
+   * @param String the user mac.
+   **/
+  deleteUserCalls: function(userMac, callback) {
+    var self = this;
+    this._client.smembers('userCalls.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.mget(members, function(err, calls) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.del(members, function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          async.map(calls.map(JSON.parse), function(call, cb) {
+            self._client.del('callstate.' + call.callId, cb);
+          }, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            self._client.del('userCalls.' + userMac, callback);
+          });
+        });
+      });
+    });
+  },
+
   getUserCalls: function(userMac, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
