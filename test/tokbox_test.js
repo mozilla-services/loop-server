@@ -148,7 +148,7 @@ describe("TokBox", function() {
       });
     });
 
-    it("should use the default credemntials if the channel is not known",
+    it("should use the default credentials if the channel is not known",
       function(done) {
         sandbox.stub(tokBox._opentok.default, "createSession",
           function(options, cb) {

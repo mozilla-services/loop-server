@@ -20,11 +20,11 @@ function TokBox(settings) {
   this.retryOnError = settings.retryOnError;
   this.tokenDuration = settings.tokenDuration;
   this._opentok = {};
-  for (var k in this.credentials) {
-    this._opentok[k] = new exports.OpenTok(
-      this.credentials[k].apiKey,
-      this.credentials[k].apiSecret,
-      this.credentials[k].apiUrl || "https://api.opentok.com"
+  for (var channel in this.credentials) {
+    this._opentok[channel] = new exports.OpenTok(
+      this.credentials[channel].apiKey,
+      this.credentials[channel].apiSecret,
+      this.credentials[channel].apiUrl || "https://api.opentok.com"
     );
   }
 }

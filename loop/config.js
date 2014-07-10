@@ -50,32 +50,33 @@ function hexKeyOfSize(size) {
 }
 
 /**
- * Validator that each channel have got an apiKey and apiSecret with a
- * default channel configured.
+ * Validates that each channel has an apiKey and apiSecret as well as
+ * an optional apiUrl and nothing else. Alse make sure the default
+ * channel is defined.
  **/
-function tokBoxCredentials(val) {
-  if (!val.hasOwnProperty("default")) {
+function tokBoxCredentials(credentials) {
+  if (!credentials.hasOwnProperty("default")) {
     throw new Error("Please define the default TokBox channel credentials.");
   }
 
   var authorizedKeys = ["apiKey", "apiSecret", "apiUrl"];
 
-  function checkKeys(val) {
-    if (authorizedKeys.indexOf(val) === -1) {
-      throw new Error(k + " configuration value is unknow. " +
+  function checkKeys(key) {
+    if (authorizedKeys.indexOf(key) === -1) {
+      throw new Error(key + " configuration value is unknown. " +
                       "Should be one of " + authorizedKeys.join(", ") + ".");
     }
   }
 
-  for (var k in val) {
+  for (var channel in credentials) {
     // Verify channel keys validity.
-    Object.keys(val[k]).forEach(checkKeys);
+    Object.keys(credentials[channel]).forEach(checkKeys);
 
-    if (!val[k].hasOwnProperty("apiKey")) {
-      throw new Error(k + "channel should define an apiKey.");
+    if (!credentials[channel].hasOwnProperty("apiKey")) {
+      throw new Error(channel + " channel should define an apiKey.");
     }
-    if (!val[k].hasOwnProperty("apiSecret")) {
-      throw new Error(k + "channel should define an apiKey.");
+    if (!credentials[channel].hasOwnProperty("apiSecret")) {
+      throw new Error(channel + " channel should define an apiSecret.");
     }
   }
 }
