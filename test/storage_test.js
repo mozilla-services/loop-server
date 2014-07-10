@@ -198,6 +198,26 @@ describe("Storage", function() {
         });
       });
 
+      describe("#removeUserSimplePushURLs", function() {
+        it("should delete all existing simple push URLs", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                if (err) throw err;
+                storage.removeUserSimplePushURLs(userMac, function(err) {
+                  if (err) throw err;
+                  storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                    if (err) throw err;
+                    expect(urls).to.length(0);
+                    done();
+                  });
+                });
+              });
+          });
+        });
+      });
+
       describe("#addUserCallUrlData", function() {
         it("should be able to add one call-url to the store", function(done) {
           storage.addUserCallUrlData(userMac, token, urlData, function(err) {

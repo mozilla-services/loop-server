@@ -54,6 +54,15 @@ RedisStorage.prototype = {
     this._client.lrem('spurl.' + userMac, 0, simplepushURL, callback);
   },
 
+  /**
+   * Deletes all the simple push URLs of an user.
+   *
+   * @param String the user mac.
+   **/
+  removeUserSimplePushURLs: function(userMac, callback) {
+    this._client.del('spurl.' + userMac, callback);
+  },
+
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
