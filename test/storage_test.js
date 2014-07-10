@@ -530,6 +530,10 @@ describe("Storage", function() {
             });
           });
         });
+
+        it("should not error when no calls exist", function(done) {
+          storage.deleteUserCalls(userMac, done);
+        });
       });
 
       describe("#getHawkSession", function() {
