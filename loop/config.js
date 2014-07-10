@@ -49,6 +49,25 @@ function hexKeyOfSize(size) {
   };
 }
 
+/**
+ * Validator that each channel have got an apiKey and apiSecret with a
+ * default channel configured.
+ **/
+function tokBoxCredentials(val) {
+  if (!val.hasOwnProperty("default")) {
+    throw new Error("Please define the default TokBox channel credentials.");
+  }
+
+  for (var k in val) {
+    if (!val[k].hasOwnProperty("apiKey")) {
+      throw new Error(k + "channel should define an apiKey.");
+    }
+    if (!val[k].hasOwnProperty("apiSecret")) {
+      throw new Error(k + "channel should define an apiKey.");
+    }
+  }
+}
+
 var conf = convict({
   env: {
     doc: "The applicaton environment.",
@@ -163,18 +182,8 @@ var conf = convict({
     },
     credentials: {
       doc: "api credentials based on a channel.",
-      format: Object,
+      format: tokBoxCredentials,
       default: {}
-    },
-    apiKey: {
-      doc: 'api key for tokbox',
-      format: String,
-      default: ""
-    },
-    apiSecret: {
-      doc: 'api secret for tokbox',
-      format: String,
-      default: ""
     },
     tokenDuration: {
       doc: 'how long api tokens are valid for in seconds',

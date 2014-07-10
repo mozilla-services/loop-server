@@ -238,6 +238,7 @@ function returnUserCallTokens(options, callback) {
       'callerId': options.callerId,
       'calleeFriendlyName': options.calleeFriendlyName,
 
+      'apiKey': tokboxInfo.apiKey,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'callerToken': tokboxInfo.callerToken,
@@ -541,7 +542,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           callType: record.callType,
           callerId: record.callerId,
           websocketToken: record.wsCalleeToken,
-          apiKey: tokBox.apiKey,
+          apiKey: record.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
@@ -640,7 +641,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
             websocketToken: callInfo.wsCallerToken,
             sessionId: callInfo.sessionId,
             sessionToken: callerToken,
-            apiKey: tokBox.apiKey,
+            apiKey: callInfo.apiKey,
             progressURL: progressURL
           });
         });
