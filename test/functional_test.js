@@ -1228,6 +1228,21 @@ describe("HTTP API exposed by the server", function() {
       });
     });
 
+    describe("DELETE /account", function() {
+      it("should return 204 even if there is no call-data to delete",
+        function(done) {
+          supertest(app)
+            .del('/account')
+            .hawk(hawkCredentials)
+            .expect(204)
+            .end(function(err) {
+              if (err) {
+                throw err;
+              }
+              done();
+            });
+        });
+    });
 
     describe("GET /calls/id/:callId", function() {
       var baseReq;
