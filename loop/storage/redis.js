@@ -59,7 +59,7 @@ RedisStorage.prototype = {
    *
    * @param String the user mac.
    **/
-  removeUserSimplePushURLs: function(userMac, callback) {
+  deleteUserSimplePushURLs: function(userMac, callback) {
     this._client.del('spurl.' + userMac, callback);
   },
 
