@@ -731,39 +731,6 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
   });
 });
 
-/**
- * Returns the state of a given call.
- **/
-app.get('/calls/id/:callId', function(req, res) {
-  var callId = req.param('callId');
-  storage.getCall(callId, function(err, result) {
-    if (res.serverError(err)) return;
-
-    if (result === null) {
-
-      sendError(res, 404, errors.INVALID_TOKEN, "callId not Found.");
-      return;
-    }
-    res.json(200, "ok");
-  });
-});
-
-/**
- * Rejects or cancel a given call.
- **/
-app.delete('/calls/id/:callId', function(req, res) {
-  var callId = req.param('callId');
-  storage.deleteCall(callId, function(err, result) {
-    if (res.serverError(err)) return;
-
-    if (result === false) {
-      sendError(res, 404, errors.INVALID_TOKEN, "callId not Found.");
-      return;
-    }
-    res.json(204, "");
-  });
-});
-
 
 // Starts HTTP server.
 var server = http.createServer(app);

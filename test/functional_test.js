@@ -1205,7 +1205,7 @@ describe("HTTP API exposed by the server", function() {
               .end(function(err, res) {
                 expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
                                     "Could not find any existing user to call");
-              done(err);
+                done(err);
               });
           });
 
@@ -1224,95 +1224,6 @@ describe("HTTP API exposed by the server", function() {
                 });
             });
           });
-        });
-      });
-    });
-
-
-    describe("GET /calls/id/:callId", function() {
-      var baseReq;
-
-      beforeEach(function () {
-        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-          cb(null, {
-            sessionId: tokBoxSessionId,
-            callerToken: tokBoxCallerToken,
-            calleeToken: tokBoxCalleeToken
-          });
-        });
-
-        baseReq = supertest(app)
-          .post('/calls/' + token)
-          .send({callerId: "foo", callType: "audio"})
-          .expect(200);
-      });
-
-      it("should return a 503 if the database is not available.",
-        function(done) {
-          sandbox.stub(storage, "getCall", function(callId, cb) {
-            cb(new Error("error"));
-          });
-
-          var fakeUUID = crypto.randomBytes(16).toString('hex');
-
-          supertest(app)
-            .get('/calls/id/' + fakeUUID)
-            .expect(503)
-            .end(done);
-        });
-
-      it("should return a 404 if the call doesn't exists.", function(done) {
-        supertest(app)
-          .get('/calls/id/invalidUUID')
-          .expect(404)
-          .end(done);
-      });
-
-      it("should return a 200 if the call exists.", function(done) {
-        baseReq.expect(200).end(function(req, res) {
-          supertest(app)
-            .get('/calls/id/' + res.body.callId)
-            .expect(200)
-            .end(done);
-        });
-      });
-    });
-
-    describe("DELETE /calls/id/:callId", function() {
-
-      var createCall;
-
-      beforeEach(function () {
-        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-          cb(null, {
-            sessionId: tokBoxSessionId,
-            callerToken: tokBoxCallerToken,
-            calleeToken: tokBoxCalleeToken
-          });
-        });
-        createCall = supertest(app)
-          .post('/calls/' + token)
-          .send({callerId: "foo", callType: "audio"})
-          .expect(200);
-      });
-
-      it("should return a 404 on an already deleted call.", function(done) {
-        supertest(app)
-          .del('/calls/id/invalidUUID')
-          .hawk(hawkCredentials)
-          .expect(404)
-          .end(done);
-      });
-
-      it("should return a 200 ok on an existing call.", function(done) {
-        createCall.end(function(err, res) {
-          if (err) throw err;
-          var callId = res.body.callId;
-
-          supertest(app)
-            .del('/calls/id/' + callId)
-            .expect(204)
-            .end(done);
         });
       });
     });
