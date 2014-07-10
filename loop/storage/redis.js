@@ -586,6 +586,10 @@ RedisStorage.prototype = {
     });
   },
 
+  deleteHawkSession: function(hawkIdHmac, callback) {
+    this._client.del('hawk.' + hawkIdHmac, callback);
+  },
+
   drop: function(callback) {
     this._client.flushdb(callback);
   },

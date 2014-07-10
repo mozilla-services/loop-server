@@ -559,6 +559,25 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteHawkSession", function() {
+        it("should delete an existing hawk session", function(done) {
+          storage.setHawkSession("id", "key", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.deleteHawkSession("id", function(err) {
+              if (err) {
+                throw err;
+              }
+              storage.getHawkSession("id", function(err, result) {
+                expect(result).to.eql(null);
+                done();
+              });
+            });
+          });
+        });
+      });
+
       describe("#setHawkUser, #getHawkUser", function() {
         it("should store and retrieve an user hawk session", function(done) {
           storage.setHawkUser("userhash", "tokenid", function(err) {
