@@ -58,7 +58,19 @@ function tokBoxCredentials(val) {
     throw new Error("Please define the default TokBox channel credentials.");
   }
 
+  var authorizedKeys = ["apiKey", "apiSecret", "apiUrl"];
+
+  function checkKeys(val) {
+    if (authorizedKeys.indexOf(val) === -1) {
+      throw new Error(k + " configuration value is unknow. " +
+                      "Should be one of " + authorizedKeys.join(", ") + ".");
+    }
+  }
+
   for (var k in val) {
+    // Verify channel keys validity.
+    Object.keys(val[k]).forEach(checkKeys);
+
     if (!val[k].hasOwnProperty("apiKey")) {
       throw new Error(k + "channel should define an apiKey.");
     }
