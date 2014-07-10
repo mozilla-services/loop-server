@@ -593,6 +593,28 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteHawkUserId", function() {
+        it("should delete an existing user hawk session", function(done) {
+          storage.setHawkUserId("tokenId", "userId", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.deleteHawkUserId("tokenId", function(err) {
+              if (err) {
+                throw err;
+              }
+              storage.getHawkUserId("tokenId", function(err, result) {
+                if (err) {
+                  throw err;
+                }
+                expect(result).to.eql(null);
+                done();
+              });
+            });
+          });
+        });
+      });
+
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
           storage.setCallState("12345", "init", 10, function(err) {
