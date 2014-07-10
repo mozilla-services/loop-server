@@ -142,6 +142,30 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Deletes all the call-url data for a given user.
+   *
+   * Deletes the list of call-urls and all the call-url data for each call.
+   *
+   * @param String the user mac.
+   **/
+  deleteUserCallUrls: function(userMac, callback) {
+    var self = this;
+    self._client.smembers('userUrls.' + userMac, function(err, calls) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.del(calls, function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.del('userUrls.' + userMac, callback);
+      });
+    });
+  },
+
   revokeURLToken: function(callUrlId, callback) {
     this._client.del('callurl.' + callUrlId, callback);
   },

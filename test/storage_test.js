@@ -360,6 +360,38 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteUserCallUrls", function() {
+        it("should delete all call data for a given user", function(done){
+          storage.addUserCallUrlData(
+            userMac,
+            generateToken(conf.get("callUrlTokenSize")),
+            urls[0],
+            function() {
+              storage.addUserCallUrlData(
+                userMac,
+                generateToken(conf.get("callUrlTokenSize")),
+                urls[1],
+                function() {
+                  storage.addUserCallUrlData(
+                    userMac,
+                    generateToken(conf.get("callUrlTokenSize")),
+                    urls[2],
+                    function() {
+                      storage.deleteUserCallUrls(userMac, function(err) {
+                        if (err) throw err;
+                        storage.getUserCallUrls(userMac,
+                          function(err, results) {
+                            if (err) throw err;
+                            expect(results).to.have.length(0);
+                            done();
+                          });
+                      });
+                    });
+                });
+            });
+        });
+      });
+
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {
