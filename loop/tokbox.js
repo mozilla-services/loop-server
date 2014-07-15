@@ -24,7 +24,7 @@ function TokBox(settings) {
     this._opentok[channel] = new exports.OpenTok(
       this.credentials[channel].apiKey,
       this.credentials[channel].apiSecret,
-      this.credentials[channel].apiUrl || "https://api.opentok.com"
+      this.credentials[channel].apiUrl || conf.get("tokBox").apiUrl
     );
   }
 }
