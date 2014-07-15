@@ -23,7 +23,7 @@ clean:
 
 .PHONY: cover-mocha
 cover-mocha:
-	@-if [ `ulimit -n` -lt 1024 ]; then echo "ulimit is too low."; exit 1; fi
+	@if [ `ulimit -n` -lt 1024 ]; then echo "ulimit is too low. Settings it to 2048 fd"; ulimit -S -n 2048; fi
 	@env NODE_ENV=test $(NODE_LOCAL_BIN)/istanbul cover \
 			 $(NODE_LOCAL_BIN)/_mocha -- --reporter spec -t 5000 test/*
 	@echo aim your browser at coverage/lcov-report/index.html for details
@@ -34,7 +34,7 @@ jshint:
 
 .PHONY: mocha
 mocha:
-	@if [ `ulimit -n` -lt 1024 ]; then echo "ulimit is too low."; exit 1; fi
+	@if [ `ulimit -n` -lt 1024 ]; then echo "ulimit is too low. Settings it to 2048 fd"; ulimit -S -n 2048; fi
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec
 
 .PHONY: spaceleft
