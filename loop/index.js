@@ -736,6 +736,28 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
   });
 });
 
+/**
+ * Delete an account and all data associated with it.
+ **/
+app.delete('/account', requireHawkSession, function(req, res) {
+  storage.deleteUserSimplePushURLs(req.user, function(err) {
+    if (res.serverError(err)) return;
+    storage.deleteUserCallUrls(req.user, function(err) {
+      if (res.serverError(err)) return;
+      storage.deleteUserCalls(req.user, function(err) {
+        if (res.serverError(err)) return;
+        storage.deleteHawkUserId(req.hawkIdHmac, function(err) {
+          if (res.serverError(err)) return;
+          storage.deleteHawkSession(req.hawkIdHmac, function(err) {
+            if (res.serverError(err)) return;
+            res.json(204, "No Content");
+          });
+        });
+      });
+    });
+  });
+});
+
 
 // Starts HTTP server.
 var server = http.createServer(app);

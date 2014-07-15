@@ -1199,7 +1199,7 @@ describe("HTTP API exposed by the server", function() {
             });
         });
 
-        it("should 400 when no existing Simple Push URL is register " +
+        it("should 400 when no existing Simple Push URL is registered " +
            "for the called user.",
           function(done) {
             addCallReq
@@ -1229,6 +1229,22 @@ describe("HTTP API exposed by the server", function() {
           });
         });
       });
+    });
+
+    describe("DELETE /account", function() {
+      it("should return 204 even if there is no call-data to delete",
+        function(done) {
+          supertest(app)
+            .del('/account')
+            .hawk(hawkCredentials)
+            .expect(204)
+            .end(function(err) {
+              if (err) {
+                throw err;
+              }
+              done();
+            });
+        });
     });
   });
 });

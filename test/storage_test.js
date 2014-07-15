@@ -198,6 +198,26 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteUserSimplePushURLs", function() {
+        it("should delete all existing simple push URLs", function(done) {
+          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
+            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+              function(err) {
+                if (err) throw err;
+                storage.deleteUserSimplePushURLs(userMac, function(err) {
+                  if (err) throw err;
+                  storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                    if (err) throw err;
+                    expect(urls).to.length(0);
+                    done();
+                  });
+                });
+              });
+          });
+        });
+      });
+
       describe("#addUserCallUrlData", function() {
         it("should be able to add one call-url to the store", function(done) {
           storage.addUserCallUrlData(userMac, token, urlData, function(err) {
@@ -340,6 +360,38 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteUserCallUrls", function() {
+        it("should delete all call data for a given user", function(done){
+          storage.addUserCallUrlData(
+            userMac,
+            generateToken(conf.get("callUrlTokenSize")),
+            urls[0],
+            function() {
+              storage.addUserCallUrlData(
+                userMac,
+                generateToken(conf.get("callUrlTokenSize")),
+                urls[1],
+                function() {
+                  storage.addUserCallUrlData(
+                    userMac,
+                    generateToken(conf.get("callUrlTokenSize")),
+                    urls[2],
+                    function() {
+                      storage.deleteUserCallUrls(userMac, function(err) {
+                        if (err) throw err;
+                        storage.getUserCallUrls(userMac,
+                          function(err, results) {
+                            if (err) throw err;
+                            expect(results).to.have.length(0);
+                            done();
+                          });
+                      });
+                    });
+                });
+            });
+        });
+      });
+
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {
@@ -458,6 +510,32 @@ describe("Storage", function() {
         });
       });
 
+      describe("#deleteUserCalls", function() {
+        it("should delete all calls of an user", function(done) {
+          storage.addUserCall(userMac, calls[0], function(err) {
+            if (err) throw err;
+            storage.addUserCall(userMac, calls[1], function(err) {
+              if (err) throw err;
+              storage.addUserCall(userMac, calls[2], function(err) {
+                if (err) throw err;
+                storage.deleteUserCalls(userMac, function(err) {
+                  if (err) throw err;
+                  storage.getUserCalls(userMac, function(err, results) {
+                    if (err) throw err;
+                    expect(results).to.have.length(0);
+                    done();
+                  });
+                });
+              });
+            });
+          });
+        });
+
+        it("should not error when no calls exist", function(done) {
+          storage.deleteUserCalls(userMac, done);
+        });
+      });
+
       describe("#getHawkSession", function() {
         it("should return null if the hawk session doesn't exist",
           function(done) {
@@ -480,6 +558,25 @@ describe("Storage", function() {
                 algorithm: "sha256"
               });
               done();
+            });
+          });
+        });
+      });
+
+      describe("#deleteHawkSession", function() {
+        it("should delete an existing hawk session", function(done) {
+          storage.setHawkSession("id", "key", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.deleteHawkSession("id", function(err) {
+              if (err) {
+                throw err;
+              }
+              storage.getHawkSession("id", function(err, result) {
+                expect(result).to.eql(null);
+                done();
+              });
             });
           });
         });
@@ -514,6 +611,28 @@ describe("Storage", function() {
               }
               expect(result).to.eql("userId");
               done();
+            });
+          });
+        });
+      });
+
+      describe("#deleteHawkUserId", function() {
+        it("should delete an existing user hawk session", function(done) {
+          storage.setHawkUserId("tokenId", "userId", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.deleteHawkUserId("tokenId", function(err) {
+              if (err) {
+                throw err;
+              }
+              storage.getHawkUserId("tokenId", function(err, result) {
+                if (err) {
+                  throw err;
+                }
+                expect(result).to.eql(null);
+                done();
+              });
             });
           });
         });

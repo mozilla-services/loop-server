@@ -54,6 +54,15 @@ RedisStorage.prototype = {
     this._client.lrem('spurl.' + userMac, 0, simplepushURL, callback);
   },
 
+  /**
+   * Deletes all the simple push URLs of an user.
+   *
+   * @param String the user mac.
+   **/
+  deleteUserSimplePushURLs: function(userMac, callback) {
+    this._client.del('spurl.' + userMac, callback);
+  },
+
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
@@ -133,6 +142,30 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Deletes all the call-url data for a given user.
+   *
+   * Deletes the list of call-urls and all the call-url data for each call.
+   *
+   * @param String the user mac.
+   **/
+  deleteUserCallUrls: function(userMac, callback) {
+    var self = this;
+    self._client.smembers('userUrls.' + userMac, function(err, calls) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.del(calls, function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.del('userUrls.' + userMac, callback);
+      });
+    });
+  },
+
   revokeURLToken: function(callUrlId, callback) {
     this._client.del('callurl.' + callUrlId, callback);
   },
@@ -205,6 +238,48 @@ RedisStorage.prototype = {
                             'call.' + call.callId, callback);
         });
       });
+  },
+
+  /**
+   * Deletes all the call data for a given user.
+   *
+   * Deletes the list of calls.
+   *
+   * @param String the user mac.
+   **/
+  deleteUserCalls: function(userMac, callback) {
+    var self = this;
+    this._client.smembers('userCalls.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      if (members.length === 0) {
+        callback(null);
+        return;
+      }
+      self._client.mget(members, function(err, calls) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.del(members, function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          async.map(calls.map(JSON.parse), function(call, cb) {
+            self._client.del('callstate.' + call.callId, cb);
+          }, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            self._client.del('userCalls.' + userMac, callback);
+          });
+        });
+      });
+    });
   },
 
   getUserCalls: function(userMac, callback) {
@@ -468,6 +543,10 @@ RedisStorage.prototype = {
     this._client.get('userid.' + hawkIdHmac, callback);
   },
 
+  deleteHawkUserId: function(hawkIdHmac, callback) {
+    this._client.del('userid.' + hawkIdHmac, callback);
+  },
+
   setHawkSession: function(hawkIdHmac, authKey, callback) {
     this._client.setex(
       'hawk.' + hawkIdHmac,
@@ -509,6 +588,10 @@ RedisStorage.prototype = {
 
       callback(null, key === null ? null : data);
     });
+  },
+
+  deleteHawkSession: function(hawkIdHmac, callback) {
+    this._client.del('hawk.' + hawkIdHmac, callback);
   },
 
   drop: function(callback) {
