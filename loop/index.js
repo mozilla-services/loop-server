@@ -726,7 +726,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
                   websocketToken: callInfo.wsCallerToken,
                   sessionId: callInfo.sessionId,
                   sessionToken: callerToken,
-                  apiKey: tokBox.apiKey,
+                  apiKey: callInfo.apiKey,
                   progressURL: progressURL
                 });
               });
