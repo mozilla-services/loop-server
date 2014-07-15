@@ -8,8 +8,11 @@
   "sessionSecret": "this is not a secret",
   "useSSL": false,
   "tokBox": {
-    "apiKey": "<put your apiKey here>",
-    "apiSecret": "<put your apiSecret here>",
+    "credentials": {
+      "default": {
+        "apiKey": "<put your apiKey here>",
+        "apiSecret": "<put your apiSecret here>"
+    },
     "tokenDuration": 86400
   },
   "webAppUrl": "http://localhost:3000/content/#call/{token}",
