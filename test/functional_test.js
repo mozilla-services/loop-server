@@ -178,7 +178,7 @@ describe("HTTP API exposed by the server", function() {
       describe(method + ' ' + route, function() {
         beforeEach(function() {
           var fakeCallInfo = conf.get("fakeCallInfo");
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: fakeCallInfo.session1,
               callerToken: fakeCallInfo.token1,
@@ -775,6 +775,7 @@ describe("HTTP API exposed by the server", function() {
           wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
+          apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session1,
           calleeToken:     fakeCallInfo.token1,
           callToken:       callToken,
@@ -789,6 +790,7 @@ describe("HTTP API exposed by the server", function() {
           wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
+          apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session2,
           calleeToken:     fakeCallInfo.token2,
           callToken:       callToken,
@@ -803,6 +805,7 @@ describe("HTTP API exposed by the server", function() {
           wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
+          apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session3,
           calleeToken:     fakeCallInfo.token2,
           callState:       "terminated",
@@ -839,7 +842,7 @@ describe("HTTP API exposed by the server", function() {
               callType: call.callType,
               callerId: call.callerId,
               websocketToken: call.wsCalleeToken,
-              apiKey: tokBoxConfig.apiKey,
+              apiKey: tokBoxConfig.credentials.default.apiKey,
               sessionId: call.sessionId,
               sessionToken: call.calleeToken,
               callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
@@ -866,7 +869,7 @@ describe("HTTP API exposed by the server", function() {
           callType: calls[2].callType,
           callerId: calls[2].callerId,
           websocketToken: calls[2].wsCalleeToken,
-          apiKey: tokBoxConfig.apiKey,
+          apiKey: tokBoxConfig.credentials.default.apiKey,
           sessionId: calls[2].sessionId,
           sessionToken: calls[2].calleeToken,
           callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
@@ -954,7 +957,7 @@ describe("HTTP API exposed by the server", function() {
       describe("With working tokbox APIs", function() {
 
         beforeEach(function() {
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
@@ -1057,7 +1060,7 @@ describe("HTTP API exposed by the server", function() {
             }
           });
 
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
