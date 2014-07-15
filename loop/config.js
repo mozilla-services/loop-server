@@ -279,7 +279,7 @@ var conf = convict({
     connectionDuration: {
       doc: "Websocket timeout for the connection timer (seconds)",
       format: Number,
-      default: 5
+      default: 10
     }
   },
   maxSimplePushUrls: {
