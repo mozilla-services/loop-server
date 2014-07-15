@@ -49,6 +49,38 @@ function hexKeyOfSize(size) {
   };
 }
 
+/**
+ * Validates that each channel has an apiKey and apiSecret as well as
+ * an optional apiUrl and nothing else. Alse make sure the default
+ * channel is defined.
+ **/
+function tokBoxCredentials(credentials) {
+  if (!credentials.hasOwnProperty("default")) {
+    throw new Error("Please define the default TokBox channel credentials.");
+  }
+
+  var authorizedKeys = ["apiKey", "apiSecret", "apiUrl"];
+
+  function checkKeys(key) {
+    if (authorizedKeys.indexOf(key) === -1) {
+      throw new Error(key + " configuration value is unknown. " +
+                      "Should be one of " + authorizedKeys.join(", ") + ".");
+    }
+  }
+
+  for (var channel in credentials) {
+    // Verify channel keys validity.
+    Object.keys(credentials[channel]).forEach(checkKeys);
+
+    if (!credentials[channel].hasOwnProperty("apiKey")) {
+      throw new Error(channel + " channel should define an apiKey.");
+    }
+    if (!credentials[channel].hasOwnProperty("apiSecret")) {
+      throw new Error(channel + " channel should define an apiSecret.");
+    }
+  }
+}
+
 var conf = convict({
   env: {
     doc: "The applicaton environment.",
@@ -161,15 +193,10 @@ var conf = convict({
       format: String,
       default: "https://api.opentok.com"
     },
-    apiKey: {
-      doc: 'api key for tokbox',
-      format: String,
-      default: ""
-    },
-    apiSecret: {
-      doc: 'api secret for tokbox',
-      format: String,
-      default: ""
+    credentials: {
+      doc: "api credentials based on a channel.",
+      format: tokBoxCredentials,
+      default: {}
     },
     tokenDuration: {
       doc: 'how long api tokens are valid for in seconds',

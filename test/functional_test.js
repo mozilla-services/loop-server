@@ -178,7 +178,7 @@ describe("HTTP API exposed by the server", function() {
       describe(method + ' ' + route, function() {
         beforeEach(function() {
           var fakeCallInfo = conf.get("fakeCallInfo");
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: fakeCallInfo.session1,
               callerToken: fakeCallInfo.token1,
@@ -775,6 +775,7 @@ describe("HTTP API exposed by the server", function() {
           wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
+          apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session1,
           calleeToken:     fakeCallInfo.token1,
           callToken:       callToken,
@@ -789,6 +790,7 @@ describe("HTTP API exposed by the server", function() {
           wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
+          apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session2,
           calleeToken:     fakeCallInfo.token2,
           callToken:       callToken,
@@ -803,6 +805,7 @@ describe("HTTP API exposed by the server", function() {
           wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
+          apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session3,
           calleeToken:     fakeCallInfo.token2,
           callState:       "terminated",
@@ -839,7 +842,7 @@ describe("HTTP API exposed by the server", function() {
               callType: call.callType,
               callerId: call.callerId,
               websocketToken: call.wsCalleeToken,
-              apiKey: tokBoxConfig.apiKey,
+              apiKey: tokBoxConfig.credentials.default.apiKey,
               sessionId: call.sessionId,
               sessionToken: call.calleeToken,
               callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
@@ -866,7 +869,7 @@ describe("HTTP API exposed by the server", function() {
           callType: calls[2].callType,
           callerId: calls[2].callerId,
           websocketToken: calls[2].wsCalleeToken,
-          apiKey: tokBoxConfig.apiKey,
+          apiKey: tokBoxConfig.credentials.default.apiKey,
           sessionId: calls[2].sessionId,
           sessionToken: calls[2].calleeToken,
           callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
@@ -954,7 +957,7 @@ describe("HTTP API exposed by the server", function() {
       describe("With working tokbox APIs", function() {
 
         beforeEach(function() {
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
@@ -1057,7 +1060,7 @@ describe("HTTP API exposed by the server", function() {
             }
           });
 
-          sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+          sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
@@ -1196,7 +1199,7 @@ describe("HTTP API exposed by the server", function() {
             });
         });
 
-        it("should 400 when no existing Simple Push URL is register " +
+        it("should 400 when no existing Simple Push URL is registered " +
            "for the called user.",
           function(done) {
             addCallReq
@@ -1205,7 +1208,7 @@ describe("HTTP API exposed by the server", function() {
               .end(function(err, res) {
                 expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
                                     "Could not find any existing user to call");
-              done(err);
+                done(err);
               });
           });
 
@@ -1242,94 +1245,6 @@ describe("HTTP API exposed by the server", function() {
               done();
             });
         });
-    });
-
-    describe("GET /calls/id/:callId", function() {
-      var baseReq;
-
-      beforeEach(function () {
-        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-          cb(null, {
-            sessionId: tokBoxSessionId,
-            callerToken: tokBoxCallerToken,
-            calleeToken: tokBoxCalleeToken
-          });
-        });
-
-        baseReq = supertest(app)
-          .post('/calls/' + token)
-          .send({callerId: "foo", callType: "audio"})
-          .expect(200);
-      });
-
-      it("should return a 503 if the database is not available.",
-        function(done) {
-          sandbox.stub(storage, "getCall", function(callId, cb) {
-            cb(new Error("error"));
-          });
-
-          var fakeUUID = crypto.randomBytes(16).toString('hex');
-
-          supertest(app)
-            .get('/calls/id/' + fakeUUID)
-            .expect(503)
-            .end(done);
-        });
-
-      it("should return a 404 if the call doesn't exists.", function(done) {
-        supertest(app)
-          .get('/calls/id/invalidUUID')
-          .expect(404)
-          .end(done);
-      });
-
-      it("should return a 200 if the call exists.", function(done) {
-        baseReq.expect(200).end(function(req, res) {
-          supertest(app)
-            .get('/calls/id/' + res.body.callId)
-            .expect(200)
-            .end(done);
-        });
-      });
-    });
-
-    describe("DELETE /calls/id/:callId", function() {
-
-      var createCall;
-
-      beforeEach(function () {
-        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
-          cb(null, {
-            sessionId: tokBoxSessionId,
-            callerToken: tokBoxCallerToken,
-            calleeToken: tokBoxCalleeToken
-          });
-        });
-        createCall = supertest(app)
-          .post('/calls/' + token)
-          .send({callerId: "foo", callType: "audio"})
-          .expect(200);
-      });
-
-      it("should return a 404 on an already deleted call.", function(done) {
-        supertest(app)
-          .del('/calls/id/invalidUUID')
-          .hawk(hawkCredentials)
-          .expect(404)
-          .end(done);
-      });
-
-      it("should return a 200 ok on an existing call.", function(done) {
-        createCall.end(function(err, res) {
-          if (err) throw err;
-          var callId = res.body.callId;
-
-          supertest(app)
-            .del('/calls/id/' + callId)
-            .expect(204)
-            .end(done);
-        });
-      });
     });
   });
 });

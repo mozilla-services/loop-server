@@ -431,7 +431,7 @@ describe("index.js", function() {
     });
 
     it("should return a 503 if tokbox API errors out", function(done) {
-      sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+      sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
         cb("error");
       });
 
@@ -452,7 +452,7 @@ describe("index.js", function() {
       var tokBoxCalleeToken = "anotherToken";
 
       beforeEach(function() {
-        sandbox.stub(tokBox, "getSessionTokens", function(cb) {
+        sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
           cb(null, {
             sessionId: tokBoxSessionId,
             callerToken: tokBoxCallerToken,

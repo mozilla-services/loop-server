@@ -215,7 +215,9 @@ function authenticate(req, res, next) {
  * - urlCreationDate: the timestamp of the url used to make the call;
  */
 function returnUserCallTokens(options, callback) {
-  tokBox.getSessionTokens(function(err, tokboxInfo) {
+  tokBox.getSessionTokens({
+    channel: options.channel
+  }, function(err, tokboxInfo) {
     if (err) {
       callback(err);
       return;
@@ -236,6 +238,7 @@ function returnUserCallTokens(options, callback) {
       'callerId': options.callerId,
       'calleeFriendlyName': options.calleeFriendlyName,
 
+      'apiKey': tokboxInfo.apiKey,
       'sessionId': tokboxInfo.sessionId,
       'calleeToken': tokboxInfo.calleeToken,
       'callerToken': tokboxInfo.callerToken,
@@ -539,7 +542,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
           callType: record.callType,
           callerId: record.callerId,
           websocketToken: record.wsCalleeToken,
-          apiKey: tokBox.apiKey,
+          apiKey: record.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
           callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
@@ -581,6 +584,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
 
       returnUserCallTokens({
         callType: req.body.callType,
+        channel: req.body.channel,
         callerId: userId,
         progressURL: progressURL
       }, function(err, callInfo) {
@@ -637,7 +641,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
             websocketToken: callInfo.wsCallerToken,
             sessionId: callInfo.sessionId,
             sessionToken: callerToken,
-            apiKey: tokBox.apiKey,
+            apiKey: callInfo.apiKey,
             progressURL: progressURL
           });
         });
@@ -683,6 +687,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
 
       returnUserCallTokens({
         callType: req.callUrlData.callType,
+        channel: req.body.channel,
         user: req.callUrlData.userMac,
         callerId: userId || req.callUrlData.callerId,
         calleeFriendlyName: req.callUrlData.issuer,
@@ -750,39 +755,6 @@ app.delete('/account', requireHawkSession, function(req, res) {
         });
       });
     });
-  });
-});
-
-/**
- * Returns the state of a given call.
- **/
-app.get('/calls/id/:callId', function(req, res) {
-  var callId = req.param('callId');
-  storage.getCall(callId, function(err, result) {
-    if (res.serverError(err)) return;
-
-    if (result === null) {
-
-      sendError(res, 404, errors.INVALID_TOKEN, "callId not Found.");
-      return;
-    }
-    res.json(200, "ok");
-  });
-});
-
-/**
- * Rejects or cancel a given call.
- **/
-app.delete('/calls/id/:callId', function(req, res) {
-  var callId = req.param('callId');
-  storage.deleteCall(callId, function(err, result) {
-    if (res.serverError(err)) return;
-
-    if (result === false) {
-      sendError(res, 404, errors.INVALID_TOKEN, "callId not Found.");
-      return;
-    }
-    res.json(204, "");
   });
 });
 
