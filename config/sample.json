@@ -1,24 +1,25 @@
 {
   "host": "localhost",
-  "port": 5000,
-  "macSecret": "263ceaa5546dce837191be98db91e852ae8d050d6805a402272e0c776193cfba",
-  "encryptionSecret": "7c69b9ca88e4f127f7280368f7055646",
-  "userMacAlgorithm": "sha256",
-  "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
-  "sessionSecret": "this is not a secret",
-  "useSSL": false,
-  "tokBox": {
-    "credentials": {
-      "default": {
-        "apiKey": "<put your apiKey here>",
-        "apiSecret": "<put your apiSecret here>"
-    },
-    "tokenDuration": 86400
-  },
-  "webAppUrl": "http://localhost:3000/content/#call/{token}",
-  "sentryDSN": false,
-  "allowedOrigins": ["http://localhost:3000"],
-  "statsdEnabled": false,
-  "fxaAudiences": ["https://loop.services.mozilla.com",
-                   "app://loop.services.mozilla.com"]
+    "port": 5000,
+    "macSecret": "263ceaa5546dce837191be98db91e852ae8d050d6805a402272e0c776193cfba",
+    "encryptionSecret": "7c69b9ca88e4f127f7280368f7055646",
+    "userMacAlgorithm": "sha256",
+    "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
+    "sessionSecret": "this is not a secret",
+    "useSSL": false,
+    "tokBox": {
+      "credentials": {
+        "default": {
+          "apiKey": "<put your apiKey here>",
+          "apiSecret": "<put your apiSecret here>"
+        },
+        "tokenDuration": 86400
+      },
+      "webAppUrl": "http://localhost:3000/content/#call/{token}",
+      "sentryDSN": false,
+      "allowedOrigins": ["http://localhost:3000"],
+      "statsdEnabled": false,
+      "fxaAudiences": ["https://loop.services.mozilla.com",
+      "app://loop.services.mozilla.com"]
+    }
 }
