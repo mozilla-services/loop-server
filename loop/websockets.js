@@ -50,7 +50,8 @@ MessageHandler.prototype = {
 
     var handlers = {
       hello: "handleHello",
-      action: "handleAction"
+      action: "handleAction",
+      echo: "handleEcho"
     };
 
     var messageType = inboundMessage.messageType;
@@ -63,6 +64,10 @@ MessageHandler.prototype = {
     handler(session, inboundMessage, function(err, outboundMessage, terminate) {
       callback(err, this.encode(outboundMessage), terminate);
     }.bind(this));
+  },
+
+  handleEcho: function(session, message, callback) {
+    callback(null, {messageType: "echo", echo: message.echo});
   },
 
   /**

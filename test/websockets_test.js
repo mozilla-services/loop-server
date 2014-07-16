@@ -66,6 +66,19 @@ describe('websockets', function() {
     client.close();
   });
 
+  it('should echo back a message', function(done) {
+    client.on('message', function(data) {
+      var message = JSON.parse(data);
+      expect(message.messageType).eql('echo');
+      expect(message.echo).eql('foo');
+      done();
+    });
+    client.send(JSON.stringify({
+      messageType: 'echo',
+      echo: 'foo'
+    }));
+  });
+
   it('should reject bad authentication tokens', function(done) {
     var callId = crypto.randomBytes(16).toString('hex');
     createCall(callId, hawkCredentials.id, function(err) {
