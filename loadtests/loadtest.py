@@ -1,15 +1,11 @@
 from gevent import monkey
 monkey.patch_all()
 
-from urlparse import urlparse
 import json
-import hmac
-import hashlib
-import math
 import gevent
 
-import mohawk
-from requests.auth import AuthBase
+from requests_hawk import HawkAuth
+
 
 from loads.case import TestCase
 
@@ -132,8 +128,8 @@ class TestLoop(TestCase):
 
         try:
             self.hawk_auth = HawkAuth(
-                self.server_url,
-                resp.headers['hawk-session-token'])
+                hawk_session=resp.headers['hawk-session-token'],
+                server_url=self.server_url)
         except KeyError:
             print resp
             raise
@@ -173,56 +169,3 @@ class TestLoop(TestCase):
     def revoke_token(self, token):
         # You don't need to be authenticated to revoke a token.
         self.session.delete(self.server_url + '/call-url/%s' % token)
-
-
-def HKDF_extract(salt, IKM, hashmod=hashlib.sha256):
-    """HKDF-Extract; see RFC-5869 for the details."""
-    if salt is None:
-        salt = b"\x00" * hashmod().digest_size
-    return hmac.new(salt, IKM, hashmod).digest()
-
-
-def HKDF_expand(PRK, info, L, hashmod=hashlib.sha256):
-    """HKDF-Expand; see RFC-5869 for the details."""
-    digest_size = hashmod().digest_size
-    N = int(math.ceil(L * 1.0 / digest_size))
-    assert N <= 255
-    T = b""
-    output = []
-    for i in xrange(1, N + 1):
-        data = T + info + chr(i)
-        T = hmac.new(PRK, data, hashmod).digest()
-        output.append(T)
-    return b"".join(output)[:L]
-
-
-def HKDF(secret, salt, info, size, hashmod=hashlib.sha256):
-    """HKDF-extract-and-expand as a single function."""
-    PRK = HKDF_extract(salt, secret, hashmod)
-    return HKDF_expand(PRK, info, size, hashmod)
-
-
-class HawkAuth(AuthBase):
-    def __init__(self, server_url, tokendata):
-        hawk_session = tokendata.decode('hex')
-        self.server_url = server_url
-        keyInfo = 'identity.mozilla.com/picl/v1/sessionToken'
-        keyMaterial = HKDF(hawk_session, "", keyInfo, 32*3)
-        self.credentials = {
-            'id': keyMaterial[:32].encode("hex"),
-            'key': keyMaterial[32:64].encode("hex"),
-            'algorithm': 'sha256'
-        }
-
-    def __call__(self, r):
-        r.headers['Host'] = urlparse(self.server_url).netloc
-        sender = mohawk.Sender(
-            self.credentials,
-            r.url,
-            r.method,
-            content=r.body or '',
-            content_type=r.headers.get('Content-Type', '')
-        )
-
-        r.headers['Authorization'] = sender.request_header
-        return r
