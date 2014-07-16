@@ -180,6 +180,7 @@ describe("HTTP API exposed by the server", function() {
           var fakeCallInfo = conf.get("fakeCallInfo");
           sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
+              apiKey: tokBoxConfig.credentials.default.apiKey,
               sessionId: fakeCallInfo.session1,
               callerToken: fakeCallInfo.token1,
               calleeToken: fakeCallInfo.token2
@@ -959,6 +960,7 @@ describe("HTTP API exposed by the server", function() {
         beforeEach(function() {
           sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
+              apiKey: tokBoxConfig.credentials.default.apiKey,
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
               calleeToken: tokBoxCalleeToken
@@ -986,7 +988,8 @@ describe("HTTP API exposed by the server", function() {
               expect(res.body).to.have.property("websocketToken");
               expect(res.body.sessionId).to.eql(tokBoxSessionId);
               expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
-              expect(res.body.apiKey).to.eql(tokBox.apiKey);
+              expect(res.body.apiKey).to.eql(
+                tokBoxConfig.credentials.default.apiKey);
               expect(res.body.progressURL).to.eql(progressURL);
               done();
             });
@@ -1062,6 +1065,7 @@ describe("HTTP API exposed by the server", function() {
 
           sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
             cb(null, {
+              apiKey: tokBoxConfig.credentials.default.apiKey,
               sessionId: tokBoxSessionId,
               callerToken: tokBoxCallerToken,
               calleeToken: tokBoxCalleeToken
@@ -1117,7 +1121,8 @@ describe("HTTP API exposed by the server", function() {
                   expect(res.body).to.have.property("websocketToken");
                   expect(res.body.sessionId).to.eql(tokBoxSessionId);
                   expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
-                  expect(res.body.apiKey).to.eql(tokBox.apiKey);
+                  expect(res.body.apiKey).to.eql(
+                    tokBoxConfig.credentials.default.apiKey);
                   expect(res.body.progressURL).to.eql(progressURL);
                   done();
                 });

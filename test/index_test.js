@@ -447,6 +447,7 @@ describe("index.js", function() {
       var callerId = "aCallerId";
       var calleeFriendlyName = "issuerName";
       var callToken = 'call-token';
+      var tokBoxApiKey = '123456';
       var tokBoxSessionId = "aTokboxSession";
       var tokBoxCallerToken = "aToken";
       var tokBoxCalleeToken = "anotherToken";
@@ -454,6 +455,7 @@ describe("index.js", function() {
       beforeEach(function() {
         sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
           cb(null, {
+            apiKey: tokBoxApiKey,
             sessionId: tokBoxSessionId,
             callerToken: tokBoxCallerToken,
             calleeToken: tokBoxCalleeToken
@@ -484,6 +486,7 @@ describe("index.js", function() {
               delete res.body.wsCallerToken;
               delete res.body.wsCalleeToken;
               expect(res.body).eql({
+                apiKey: "123456",
                 callState: "init",
                 callToken: callToken,
                 callType: "audio",

@@ -138,16 +138,23 @@ FakeTokBox.prototype = {
     return crypto.randomBytes(number_of_bytes).toString('base64')
                  .replace(/\+/g, '-').replace(/\//g, '_');
   },
+
+  _fakeApiKey: function() {
+    return "4468744";
+  },
+
   _fakeSessionId: function() {
     this._token = 0;
     this._counter += 1;
     return this._counter + '_' + this._urlSafeBase64RandomBytes(51);
 
   },
+
   _generateFakeToken: function() {
     this._token += 1;
     return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
   },
+
   getSessionTokens: function(options, cb) {
     if (cb === undefined) {
       cb = options;
@@ -160,6 +167,7 @@ FakeTokBox.prototype = {
       timeout: options.timeout
     }, function(err) {
       cb(err, {
+        apiKey: self._fakeApiKey(),
         sessionId: self._fakeSessionId(),
         callerToken: self._generateFakeToken(),
         calleeToken: self._generateFakeToken()
