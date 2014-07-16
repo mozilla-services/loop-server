@@ -13,7 +13,7 @@ build:
 	$(INSTALL) pexpect
 	$(INSTALL) gevent
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git
-	$(INSTALL) mohawk
+	$(INSTALL) requests-hawk
 
 install: build
 
