@@ -397,7 +397,10 @@ module.exports = function(storage, logError, conf) {
     sub.setMaxListeners(0);
     var messageHandler = new MessageHandler(pub, sub, storage,
       conf.get('timers'));
-    var wss = new WebSocket.Server({server: server});
+    var wss = new WebSocket.Server({
+      server: server,
+      path: conf.get('progressURLEndpoint')
+    });
 
     wss.on('connection', function(ws) {
       // We have a different session for each connection.
