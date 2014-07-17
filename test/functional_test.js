@@ -25,7 +25,7 @@ var requireHawkSession = loop.requireHawkSession;
 var authenticate = loop.authenticate;
 var getProgressURL = require("../loop/utils").getProgressURL;
 
-var Token = require("../loop/token").Token;
+var Token = require("express-hawkauth").Token;
 var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
