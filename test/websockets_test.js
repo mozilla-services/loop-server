@@ -39,7 +39,10 @@ describe('websockets', function() {
     sandbox = sinon.sandbox.create();
 
     // Create the websocket client.
-    client = new ws("ws://localhost:" + server.address().port);
+    client = new ws("ws://localhost:" +
+      server.address().port +
+      conf.get('progressURLEndpoint'));
+
     client.on('open', function() {
       // Generate Hawk credentials.
       var token = new Token();
@@ -174,7 +177,9 @@ describe('websockets', function() {
       callee = client;
 
       // Create the second websocket callee.
-      caller = new ws("ws://localhost:" + server.address().port);
+      caller = new ws("ws://localhost:" +
+        server.address().port +
+        conf.get('progressURLEndpoint'));
 
       // The on("open") needs to be defined right after the callee creation,
       // otherwise the event might be lost.
