@@ -84,7 +84,7 @@ function tokBoxCredentials(credentials) {
 var conf = convict({
   env: {
     doc: "The applicaton environment.",
-    format: [ "dev", "test", "stage", "prod" ],
+    format: [ "dev", "test", "stage", "prod", "loadtest"],
     default: "dev",
     env: "NODE_ENV"
   },
