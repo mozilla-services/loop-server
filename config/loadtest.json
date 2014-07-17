@@ -8,7 +8,7 @@
   "sessionSecret": "this is not a secret",
   "useSSL": false,
   "webAppUrl": "http://localhost:3000/static/#call/{token}",
-  "fakeTokbox": true,
+  "fakeTokBox": true,
   "tokBox": {
     "credentials": {
       "default": {
