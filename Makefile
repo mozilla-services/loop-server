@@ -8,7 +8,7 @@ NODE_LOCAL_BIN=./node_modules/.bin
 test: lint cover-mocha spaceleft
 
 .PHONY: travis
-travis: lint
+travis: lint loadtests-check
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
 
@@ -47,3 +47,7 @@ spaceleft:
 .PHONY: runserver
 runserver:
 	@env NODE_ENV=${NODE_ENV} node loop/index.js
+
+loadtests-check:
+	@env NODE_ENV=loadtest node loop/index.js&
+	sleep 1 && cd loadtests && SERVER_URL=http://localhost:5000 make test -e
