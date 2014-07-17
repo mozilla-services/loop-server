@@ -1,7 +1,10 @@
-language: node_js
+language:
+  - node_js
+  - python
 
 node_js:
   - "0.10"
+
 services: redis-server
 
 script: make travis
