@@ -283,7 +283,7 @@ function validateToken(req, res, next) {
   storage.getCallUrlData(req.token, function(err, urlData) {
     if (res.serverError(err)) return;
     if (urlData === null) {
-      res.send(404, "Not found");
+      sendError(res, 404, errors.INVALID_TOKEN, "Token not found.");
       return;
     }
     req.callUrlData = urlData;
