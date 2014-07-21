@@ -51,5 +51,5 @@ runserver:
 loadtests-check:
 	@env NODE_ENV=loadtest node loop/index.js & PID=$$!; \
 	  sleep 1 && cd loadtests && \
-	  make travis SERVER_URL=http://localhost:5000; \
+	  make test SERVER_URL=http://localhost:5000; \
 	  EXIT_CODE=$$?; kill $$PID; exit $$EXIT_CODE
