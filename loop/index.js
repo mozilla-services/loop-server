@@ -548,10 +548,9 @@ app.get('/calls', requireHawkSession, function(req, res) {
           progressURL: progressURL
         };
         if (record.callToken !== undefined) {
-          result.callUrl = conf.get("webAppUrl").replace("{token}",
-                                                        record.callToken);
-          result.call_url = conf.get("webAppUrl").replace("{token}",
-                                                         record.callToken);
+          result.callUrl = conf.get("webAppUrl")
+            .replace("{token}", record.callToken);
+          result.call_url = result.callUrl;
           result.callToken = record.callToken;
           result.urlCreationDate = record.urlCreationDate;
         }
