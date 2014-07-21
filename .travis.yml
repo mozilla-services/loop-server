@@ -11,6 +11,8 @@ node_js:
 services: redis-server
 
 script: make travis
+before_install:
+  - "sudo apt-get install python-virtualenv"
 install: "pip install -r loadtests/requirements.txt"
 
 notifications:
