@@ -111,7 +111,12 @@ describe("index.js", function() {
       jsonReq
         .get('/validateToken/invalidToken')
         .expect(404)
-        .end(done);
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res, 404, errors.INVALID_TOKEN,
+                              "Token not found.");
+          done();
+        });
     });
 
     it("should return a 404 if the token had been revoked", function(done) {
@@ -125,7 +130,12 @@ describe("index.js", function() {
           jsonReq
             .get('/validateToken/1234')
             .expect(404)
-            .end(done);
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormatedError(res, 404, errors.INVALID_TOKEN,
+                                  "Token not found.");
+              done();
+            });
         });
       });
     });
