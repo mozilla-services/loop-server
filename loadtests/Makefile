@@ -39,3 +39,6 @@ purge:
 
 attach:
 	./venv/bin/loads-runner --config=./config/megabench.ini --attach
+
+travis:
+	loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
