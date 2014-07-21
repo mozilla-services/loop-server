@@ -9,7 +9,7 @@ var crypto = require("crypto");
 
 var ws = require('ws');
 
-var Token = require("../loop/token").Token;
+var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
 
 var loop = require("../loop");

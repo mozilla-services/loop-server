@@ -30,7 +30,7 @@ var websockets = require('./websockets');
 var encrypt = require("./encrypt").encrypt;
 var decrypt = require("./encrypt").decrypt;
 var getProgressURL = require('./utils').getProgressURL;
-var hawk = require('./hawk');
+var hawk = require('express-hawkauth');
 var hmac = require('./hmac');
 var fxa = require('./fxa');
 
@@ -94,28 +94,43 @@ function getHawkSession(tokenId, callback) {
 
 function createHawkSession(tokenId, authKey, callback) {
   var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
-  storage.setHawkSession(hawkIdHmac, authKey, function(err, data) {
+  storage.setHawkSession(hawkIdHmac, authKey, function(err) {
     if(statsdClient && err === null) {
       statsdClient.count('loop-activated-users', 1);
     }
-    callback(err, data);
+    callback(err);
   });
+}
+
+function hawkSendError(res, status, payload) {
+  var errno = errors.INVALID_AUTH_TOKEN;
+  if (status === 503) {
+    errno = errors.BACKEND;
+  }
+  sendError(res, status, errno, payload);
 }
 
 /**
  * Middleware that requires a valid hawk session.
  **/
-var requireHawkSession = hawk.getMiddleware(
-  hawkOptions, getHawkSession, setUser
-);
+var requireHawkSession = hawk.getMiddleware({
+  hawkOptions: hawkOptions,
+  getSession: getHawkSession,
+  setUser: setUser,
+  sendError: hawkSendError
+});
 
 /**
  * Middleware that uses a valid hawk session or create one if none already
  * exist.
  **/
-var attachOrCreateHawkSession = hawk.getMiddleware(
-  hawkOptions, getHawkSession, createHawkSession, setUser
-);
+var attachOrCreateHawkSession = hawk.getMiddleware({
+  hawkOptions: hawkOptions,
+  getSession: getHawkSession,
+  createSession: createHawkSession,
+  setUser: setUser,
+  sendError: hawkSendError
+});
 
 /**
  * Middleware that requires a valid FxA assertion.
