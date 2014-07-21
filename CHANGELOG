@@ -10,60 +10,60 @@ This document describes changes between each past release.
 0.9.0 (2014-07-09)
 ------------------
 
-- [feature] 1003170 — Adds metrics reporting;
+- [feature] 1003170 — Adds metrics reporting.
 - [feature] Updates the loadtests for websockets.
 
 
 0.8.0 (2014-07-08)
 ------------------
 
-- [bug]     1032733 — Document ulimit for Mac OS X;
-- [feature]    #130 — Add Progress URL;
-- [api]     1032966 — Continue to accept old simple_push_url format as
-                      well as new simplePushURL;
-- [api]     1032966 — Continue to provide both callUrl and call_url parameters;
-- [feature] 1015085 — Add Direct Call behavior;
-- [feature] 1027877 — Fix the heartbeat endpoint by calling TokBox;
-- [feature] 1026426 — Implement short call-token urls;
-- [feature] 1032253 — Get /calls/:token returns callee informations;
-- [feature] 1025881 — Store the validated userId from the certificate during
-                      the registration;
-- [feature] 1025872 — Add websocket support for call setup information;
-- [feature] 1029580 — Handle the callType parameter;
-- [feature] 1032253 — Pass the calleeFriendlyName on call-url creation;
-- [feature]  985387 — Store multiple simplePushURLs per user;
-- [feature] 1026494 — Add URL info to call data:
-- [feature] 1028451 — Handle server shutdown gracefully on SIGTERM.
+- [bugfix]     1032733 — Document ulimit for Mac OS X.
+- [feature]       #130 — Add Progress URL.
+- [api-change] 1032966 — Continue to accept old simple_push_url format as
+                         well as new simplePushURL.
+- [api-change] 1032966 — Continue to provide both callUrl and call_url parameters.
+- [feature]    1015085 — Add Direct Call behavior.
+- [feature]    1027877 — Fix the heartbeat endpoint by calling TokBox.
+- [feature]    1026426 — Implement short call-token urls.
+- [feature]    1032253 — Get /calls/:token returns callee informations.
+- [feature]    1025881 — Store the validated userId from the certificate during
+                         the registration.
+- [feature]    1025872 — Add websocket support for call setup information.
+- [feature]    1029580 — Handle the callType parameter.
+- [feature]    1032253 — Pass the calleeFriendlyName on call-url creation.
+- [feature]     985387 — Store multiple simplePushURLs per user.
+- [feature]    1026494 — Add URL info to call data.
+- [feature]    1028451 — Handle server shutdown gracefully on SIGTERM.
 
 
 0.7.0 (2014-06-19)
 ------------------
 
-- [feature] 1024007 — Add a 503 error handler;
-- [feat               Make sure the FxA audiences parameter is an array;
-- [bug]               Fix the load test script for the new stage deployment;
-- [feature] 1015085 — Add a possibility for an user to call multiple identities;
-- [bug] Fix hawk implementation to handle querystrings properly.
+- [feature] 1024007 — Add a 503 error handler.
+- [feature] Make sure the FxA audiences parameter is an array.
+- [bugfix]  Fix the load test script for the new stage deployment.
+- [feature] 1015085 — Add a possibility for an user to call multiple identities.
+- [bugfix]  Fix hawk implementation to handle querystrings properly.
 
 
 0.6.1 (2014-06-13)
 ------------------
 
-- [bug] 1023792 — Fix Hawk implementation.
+- [bugfix] 1023792 — Fix Hawk implementation.
 
 
 0.6.0 (2014-06-13)
 ------------------
 
-- [feature] 1024408 — Tell on / if fakeTokBox is used;
-- [feature] Better exception handling in the loadtests;
-- [feature] 1023518 — Retry on failure when tokbox servers fail;
-- [feature] 1023281 — Added an HTTPS connection pool;
-- [feature] 1023296 — Accepts multiple FxA audiences on registration;
-- [feature] 1016886 — Provides an unregister mechanism when DELETE /registration;
-- [feature] 1023296 — Accept "app" scheme if domain matches;
-- [feature] 1020575 — Update dependencies;
-- [feature] 1023281 — Return the call-url of the webapp directly;
+- [feature] 1024408 — Tell on / if fakeTokBox is used.
+- [feature] Better exception handling in the loadtests.
+- [feature] 1023518 — Retry on failure when tokbox servers fail.
+- [feature] 1023281 — Added an HTTPS connection pool.
+- [feature] 1023296 — Accepts multiple FxA audiences on registration.
+- [feature] 1016886 — Provides an unregister mechanism when DELETE /registration.
+- [feature] 1023296 — Accept "app" scheme if domain matches.
+- [feature] 1020575 — Update dependencies.
+- [feature] 1023281 — Return the call-url of the webapp directly.
 
 
 0.5.0 (2014-06-06)
@@ -78,33 +78,33 @@ This document describes changes between each past release.
 ------------------
 
 - [feature] 1019504 — Ensure hawk session duration is longer than max call-url
-	    duration;
-- [feature] 1019416 — Implements the new TokBox SDK;
-- [feature] 1019504 — Update session expiricy on auth;
-- [feature] Add redis memory usage estimation;
-- [feature] Improve configuratio handling;
+	    duration.
+- [feature] 1019416 — Implements the new TokBox SDK.
+- [feature] 1019504 — Update session expiricy on auth.
+- [feature] Add redis memory usage estimation.
+- [feature] Improve configuratio handling.
 - [config]  `development` ENV became `dev` ENV.
-- [bug]     1014224 — Use the master version of loads for load testing;
-- [feature] Remove Mongodb backend;
-- [feature] Implement authentication with Hawk;
-- [feature]  984949 — Add authentication with Firefox Accounts;
-- [feature] Update CORS to support "*";
+- [bugfix]  1014224 — Use the master version of loads for load testing.
+- [feature] Remove Mongodb backend.
+- [feature] Implement authentication with Hawk.
+- [feature]  984949 — Add authentication with Firefox Accounts.
+- [feature] Update CORS to support "*".
 
 
 0.3.0 (2014-04-21)
 ------------------
 
-- [feature] 985991 — Rewrite Store in Storage (with redis as default storage);
-- [bug]     988902 — Remove authentication for discarding a call;
-- [bug]     988893 — Move URL revocation
-- [feature] 988845 — Add POST /call-url expiresIn parameter
-- [feature] Add TTL on urls;
-- [feature] Add TTL on revocation and callUrl stores;
-- [feature] 984383 — Write the API documentation;
-- [feature] 994967 — Add a heartbeat endpoint that ping the storage and the partner API;
-- [feature] 996488 — Add the FakePartner interface for load testing;
-- [feature] 989252 — Add an API logger for development;
-- [feature] 987853 — 985388 — Add Timestamp and Retry-After headers;
+- [feature] 985991 — Rewrite Store in Storage (with redis as default storage).
+- [bugfix]  988902 — Remove authentication for discarding a call.
+- [bugfix]  988893 — Move URL revocation.
+- [feature] 988845 — Add POST /call-url expiresIn parameter.
+- [feature] Add TTL on urls.
+- [feature] Add TTL on revocation and callUrl stores.
+- [feature] 984383 — Write the API documentation.
+- [feature] 994967 — Add a heartbeat endpoint that ping the storage and the partner API.
+- [feature] 996488 — Add the FakePartner interface for load testing.
+- [feature] 989252 — Add an API logger for development.
+- [feature] 987853 — 985388 — Add Timestamp and Retry-After headers.
 - [feature] Add server telemetry using a Statsd endpoint.
 
 
@@ -114,7 +114,7 @@ This document describes changes between each past release.
 - [feature] 984325 — Log server errors using Sentry.
 - [feature] 986057 — Accept CORS requests.
 - [feature] 986533 — Have the caller name in the token.
-- [feature] 985983 — Add the discar call endpoint.
+- [feature] 985983 — Add the discard call endpoint.
 - [feature] 985990 — 988255 — Add the revoke call endpoint.
 - [feature] 988250 — Better handle OpenTok error messages.
 - [feature] 985919 — Improve 400 errors format.
