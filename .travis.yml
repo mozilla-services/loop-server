@@ -8,6 +8,7 @@ node_js:
 services: redis-server
 
 script: make travis
+install: "pip install -r loadtests/requirement.txt"
 
 notifications:
   irc:
