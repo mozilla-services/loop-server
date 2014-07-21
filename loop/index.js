@@ -537,7 +537,7 @@ app.get('/calls', requireHawkSession, function(req, res) {
         return record.timestamp >= version;
       }).map(function(record) {
         // XXX Bug 1032966 - call_url is deprecated
-        return {
+        var result = {
           callId: record.callId,
           callType: record.callType,
           callerId: record.callerId,
@@ -545,12 +545,17 @@ app.get('/calls', requireHawkSession, function(req, res) {
           apiKey: record.apiKey,
           sessionId: record.sessionId,
           sessionToken: record.calleeToken,
-          callUrl: conf.get("webAppUrl").replace("{token}", record.callToken),
-          call_url: conf.get("webAppUrl").replace("{token}", record.callToken),
-          callToken: record.callToken,
-          urlCreationDate: record.urlCreationDate,
           progressURL: progressURL
         };
+        if (record.callToken !== undefined) {
+          result.callUrl = conf.get("webAppUrl").replace("{token}",
+                                                        record.callToken);
+          result.call_url = conf.get("webAppUrl").replace("{token}",
+                                                         record.callToken);
+          result.callToken = record.callToken;
+          result.urlCreationDate = record.urlCreationDate;
+        }
+        return result;
       });
 
       res.json(200, {calls: calls});

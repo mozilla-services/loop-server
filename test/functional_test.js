@@ -814,7 +814,7 @@ describe("HTTP API exposed by the server", function() {
           callType:        'audio-video',
           urlCreationDate: urlCreationDate,
           timestamp:       parseInt(Date.now() / 1000, 10) + 2
-        },
+        }
       ];
 
       req = supertest(app)
@@ -883,6 +883,47 @@ describe("HTTP API exposed by the server", function() {
 
         expect(res.body).to.deep.equal({calls: callsList});
         done(err);
+      });
+    });
+
+    it("shouldn't list callToken and urls for a direct call", function(done) {
+      var call = {
+        callId:          crypto.randomBytes(16).toString("hex"),
+        wsCallerToken:   crypto.randomBytes(16).toString("hex"),
+        wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+        callerId:        callerId,
+        userMac:         userHmac,
+        apiKey:          tokBoxConfig.credentials.default.apiKey,
+        sessionId:       fakeCallInfo.session3,
+        calleeToken:     fakeCallInfo.token2,
+        callState:       "init",
+        callType:        'audio-video',
+        timestamp:       parseInt(Date.now() / 1000, 10) + 3
+      };
+
+      req = supertest(app)
+        .get('/calls?version=' + call.timestamp)
+        .hawk(hawkCredentials)
+        .expect('Content-Type', /json/);
+
+      storage.addUserCall(userHmac, call, function() {
+        req.expect(200).end(function(err, res) {
+          if (err) throw err;
+
+          var callsList = [{
+            callId: call.callId,
+            callType: call.callType,
+            callerId: call.callerId,
+            websocketToken: call.wsCalleeToken,
+            apiKey: tokBoxConfig.credentials.default.apiKey,
+            sessionId: call.sessionId,
+            sessionToken: call.calleeToken,
+            progressURL: progressURL
+          }];
+
+          expect(res.body).to.deep.equal({calls: callsList});
+          done(err);
+        });
       });
     });
 
