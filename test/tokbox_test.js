@@ -207,7 +207,7 @@ describe("TokBox", function() {
   });
 
   describe("#ping", function() {
-    var tokBox, sandbox, requests;
+    var tokBox, sandbox, requests, openTokSpy;
 
     beforeEach(function() {
       tokBox = new TokBox({
@@ -222,10 +222,11 @@ describe("TokBox", function() {
       sandbox = sinon.sandbox.create();
 
       requests = [];
-      sandbox.stub(request, "post", function(options, cb) {
-        requests.push(options);
-        cb(null, {statusCode: 200});
-      });
+      sandbox.stub(loopTokbox.OpenTok.prototype, "createSession",
+        function(options, cb) {
+          cb(null);
+        });
+      openTokSpy = sandbox.spy(loopTokbox, "OpenTok");
     });
 
     afterEach(function() {
@@ -235,17 +236,14 @@ describe("TokBox", function() {
     it("should return null if there is no error.", function() {
       tokBox.ping({timeout: 2}, function(err) {
         expect(err).to.eql(null);
-        expect(requests).to.length(1);
-        expect(requests[0]).to.eql({
-          url: 'https://api.opentok.com/session/create',
-          form: { 'p2p.preference': 'enabled' },
-          headers:  {
-            'User-Agent': 'OpenTok-Node-SDK/2.2.3',
-            'X-TB-PARTNER-AUTH':
-            '44687443:5379ba385ad44c83a2584840d095c08351cd9041'
-          },
-          timeout: 2
-        });
+        assert.calledOnce(loopTokbox.OpenTok);
+        assert.calledWithExactly(
+          loopTokbox.OpenTok, apiKey,
+          apiSecret, {
+            apiUrl: "https://api.opentok.com",
+            timeout: 2
+          }
+        );
       });
     });
   });
