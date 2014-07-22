@@ -15,7 +15,7 @@ var expect = require("chai").expect;
 var assert = sinon.assert;
 
 describe("TokBox", function() {
-  var sandbox, apiSecret, apiKey, serverIP, fakeCallInfo;
+  var sandbox, apiSecret, apiKey, apiUrl, serverIP, fakeCallInfo;
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
@@ -23,6 +23,8 @@ describe("TokBox", function() {
     fakeCallInfo = conf.get('fakeCallInfo');
     apiSecret = tokBoxConfig.credentials.default.apiSecret;
     apiKey = tokBoxConfig.credentials.default.apiKey;
+    apiUrl = "https://api.opentok.com";
+    releaseUrl = "https://release.opentok.com";
     serverIP = tokBoxConfig.serverIP;
   });
 
@@ -45,7 +47,7 @@ describe("TokBox", function() {
       });
       assert.calledOnce(loopTokbox.OpenTok);
       assert.calledWithExactly(loopTokbox.OpenTok, apiKey,
-                               apiSecret, "https://api.opentok.com");
+                               apiSecret, apiUrl);
     });
 
     it("should create an OpenTok object and override the apiUrl", function() {
@@ -75,13 +77,13 @@ describe("TokBox", function() {
       openTokSpy.withArgs(
         apiKey + "_nightly",
         apiSecret + "_nightly",
-        "https://api.opentok.com"
+        apiUrl
       );
 
       openTokSpy.withArgs(
         apiKey + "_release",
         apiSecret + "_release",
-        "https://release.opentok.com"
+        releaseUrl
       );
 
       tokBox = new TokBox({
@@ -93,7 +95,7 @@ describe("TokBox", function() {
           release: {
             apiKey: apiKey + "_release",
             apiSecret: apiSecret + "_release",
-            apiUrl: "https://release.opentok.com"
+            apiUrl: releaseUrl
           },
           default: {
             apiKey: apiKey,
@@ -179,7 +181,7 @@ describe("TokBox", function() {
           expect(openTokSpy.withArgs(
             apiKey + "_release",
             apiSecret + "_release",
-            "https://release.opentok.com"
+            releaseUrl
           ).calledOnce).to.eql(true);
           assert.calledOnce(tokBox._opentok.release.createSession);
           done(error);
@@ -198,7 +200,7 @@ describe("TokBox", function() {
           expect(openTokSpy.withArgs(
             apiKey + "_nightly",
             apiSecret + "_nightly",
-            "https://api.opentok.com"
+            apiUrl
           ).calledOnce).to.eql(true);
           assert.calledOnce(tokBox._opentok.nightly.createSession);
           done(error);
@@ -240,7 +242,7 @@ describe("TokBox", function() {
         assert.calledWithExactly(
           loopTokbox.OpenTok, apiKey,
           apiSecret, {
-            apiUrl: "https://api.opentok.com",
+            apiUrl: apiUrl,
             timeout: 2
           }
         );

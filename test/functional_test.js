@@ -215,8 +215,8 @@ describe("HTTP API exposed by the server", function() {
       sandbox.stub(tokBox, "ping", function(options, cb) {
         cb(null);
       });
-      sandbox.stub(storage, "ping", function(callback) {
-        callback(false);
+      sandbox.stub(storage, "ping", function(cb) {
+        cb(false);
       });
 
       supertest(app)
