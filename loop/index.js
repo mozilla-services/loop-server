@@ -617,6 +617,8 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
                       request.put({
                         url: simplePushUrl,
                         form: { version: callInfo.timestamp }
+                      }, function(err) {
+                        // Catch errors.
                       });
                     });
                     callback();
@@ -713,6 +715,8 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
                   request.put({
                     url: simplePushUrl,
                     form: { version: callInfo.timestamp }
+                  }, function(err) {
+                    // Catch errors.
                   });
                 });
 
