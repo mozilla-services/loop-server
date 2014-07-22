@@ -6,6 +6,10 @@ This document describes changes between each past release.
 0.10.0 (Unreleased)
 -------------------
 
+0.9.1 (2014-07-22)
+------------------
+
+- [bugfix] Prevent server from failing when simple push url isn't valid.
 
 0.9.0 (2014-07-09)
 ------------------
