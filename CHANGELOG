@@ -3,8 +3,16 @@ Changelog
 
 This document describes changes between each past release.
 
-0.10.0 (Unreleased)
+0.10.0 (unreleased)
 -------------------
+
+- [api-change] Remove APIs for GET / DELETE calls;
+- [config] 1033575 — Base tokBox keys on a channel;
+- [feature] 1024490 — Add a /accounts/delete endpoint;
+- [feature] Add a way to echo messages for websockets;
+- [config] 1039837 — Make sure websockets endpoint is defined;
+- [feature] 1038832 — Don't return a callUrl on direct calls.
+
 
 0.9.1 (2014-07-22)
 ------------------

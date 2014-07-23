@@ -36,7 +36,7 @@ class TestLoop(TestCase):
         token = self.generate_token()
         call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
-        self._test_websockets(token, call_data, calls)
+        # self._test_websockets(token, call_data, calls)
 
     def _test_websockets(self, token, call_data, calls):
         progress_url = call_data['progressURL']
