@@ -626,10 +626,11 @@ describe("HTTP API exposed by the server", function() {
     it("should return a the calleeFriendlyName", function(done) {
       var calleeFriendlyName = "Adam Roach";
       var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      var timestamp = parseInt(Date.now() / 1000, 10);
       storage.addUserCallUrlData(userHmac, token, {
         userMac: userHmac,
         issuer: calleeFriendlyName,
-        timestamp: parseInt(Date.now() / 1000, 10),
+        timestamp: timestamp,
         expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
       }, function(err) {
         if (err) throw err;
@@ -642,7 +643,8 @@ describe("HTTP API exposed by the server", function() {
           .end(function(err, res) {
             if (err) throw err;
             expect(res.body).to.deep.equal({
-              calleeFriendlyName: calleeFriendlyName
+              calleeFriendlyName: calleeFriendlyName,
+              timestamp: timestamp
             });
             done();
           });

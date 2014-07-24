@@ -11,7 +11,8 @@ This document describes changes between each past release.
 - [feature] 1024490 — Add a /accounts/delete endpoint;
 - [feature] Add a way to echo messages for websockets;
 - [config] 1039837 — Make sure websockets endpoint is defined;
-- [feature] 1038832 — Don't return a callUrl on direct calls.
+- [feature] 1038832 — Don't return a callUrl on direct calls;
+- [feature] 1043483 — Expose creation date on get /calls/{token}.
 
 
 0.9.1 (2014-07-22)
