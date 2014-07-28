@@ -513,7 +513,8 @@ app.post('/call-url', requireHawkSession, requireParams('callerId'),
  **/
 app.get('/calls/:token', validateToken, function(req, res) {
   res.json(200, {
-    calleeFriendlyName: req.callUrlData.issuer
+    calleeFriendlyName: req.callUrlData.issuer,
+    urlCreationDate: req.callUrlData.timestamp
   });
 });
 
