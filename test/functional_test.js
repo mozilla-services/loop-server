@@ -644,7 +644,7 @@ describe("HTTP API exposed by the server", function() {
             if (err) throw err;
             expect(res.body).to.deep.equal({
               calleeFriendlyName: calleeFriendlyName,
-              timestamp: timestamp
+              urlCreationDate: timestamp
             });
             done();
           });
