@@ -22,7 +22,7 @@ clean:
 	rm -rf ./venv *.pyc
 
 # Run a single test from the venv machine, for sanity-checking.
-test:
+test: build
 	./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 
 # Run a bench of 20 concurrent users.
