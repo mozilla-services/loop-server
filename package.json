@@ -44,7 +44,7 @@
   "scripts": {
     "test": "make test",
     "start": "make runserver",
-    "eslint": "eslint **/*.js"
+    "eslint": "make lint"
   },
   "license": "MPL-2.0",
   "keywords": []
