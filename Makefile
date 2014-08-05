@@ -30,7 +30,7 @@ cover-mocha:
 
 .PHONY: eslint
 eslint:
-	@$(NODE_LOCAL_BIN)/eslint **/*.js
+	@$(NODE_LOCAL_BIN)/eslint test/*.js loop/*.js loop/*/*.js
 
 .PHONY: mocha
 mocha:
