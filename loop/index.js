@@ -14,7 +14,7 @@ http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
 var tokenlib = require('./tokenlib');
-var crypto = require('crypto');
+var randomBytes = require('crypto').randomBytes;
 var loopPackageData = require('../package.json');
 var request = require('request');
 var raven = require('raven');
@@ -34,11 +34,12 @@ var hawk = require('express-hawkauth');
 var hmac = require('./hmac');
 var fxa = require('./fxa');
 
+var TokBox;
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
-  var TokBox = require('./tokbox').FakeTokBox;
+  TokBox = require('./tokbox').FakeTokBox;
 } else {
-  var TokBox = require('./tokbox').TokBox;
+  TokBox = require('./tokbox').TokBox;
 }
 
 var progressURL = getProgressURL(conf.get('publicServerAddress'));
@@ -159,6 +160,7 @@ var requireFxA = fxa.getMiddleware({
     // generate the hawk session.
     hawk.generateHawkSession(createHawkSession,
       function(err, tokenId, authKey, sessionToken) {
+        if (res.serverError(err)) return;
         var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
         var encryptedIdentifier = encrypt(tokenId, identifier);
         storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
@@ -239,10 +241,10 @@ function returnUserCallTokens(options, callback) {
     }
 
     var currentTimestamp = Date.now();
-    var callId = crypto.randomBytes(16).toString('hex');
+    var callId = randomBytes(16).toString('hex');
 
-    var wsCalleeToken = crypto.randomBytes(16).toString('hex');
-    var wsCallerToken = crypto.randomBytes(16).toString('hex');
+    var wsCalleeToken = randomBytes(16).toString('hex');
+    var wsCallerToken = randomBytes(16).toString('hex');
 
     var callInfo = {
       'callId': callId,
@@ -641,7 +643,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
                       request.put({
                         url: simplePushUrl,
                         form: { version: callInfo.timestamp }
-                      }, function(err) {
+                      }, function() {
                         // Catch errors.
                       });
                     });
@@ -680,7 +682,7 @@ app.delete('/call-url/:token', requireHawkSession, validateToken,
       sendError(res, 403, errors.INVALID_AUTH_TOKEN, "Forbidden");
       return;
     }
-    storage.revokeURLToken(req.token, function(err, record) {
+    storage.revokeURLToken(req.token, function(err) {
       if (res.serverError(err)) return;
 
       res.json(204, "");
@@ -714,7 +716,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
         callerId: userId || req.callUrlData.callerId,
         calleeFriendlyName: req.callUrlData.issuer,
         callToken: req.token,
-        urlCreationDate: req.callUrlData.timestamp,
+        urlCreationDate: req.callUrlData.timestamp
       }, function(err, callInfo) {
         if (res.serverError(err)) return;
 
@@ -740,8 +742,8 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
                   request.put({
                     url: simplePushUrl,
                     form: { version: callInfo.timestamp }
-                  }, function(err) {
-                    // Catch errors.
+                  }, function() {
+                    // Catch errors
                   });
                 });
 

@@ -4,7 +4,6 @@
 
 "use strict";
 
-var WebSocket = require('ws');
 var PubSub = require('./pubsub');
 
 /**
@@ -150,6 +149,7 @@ MessageHandler.prototype = {
           if (serverError(err, callback)) return;
           setTimeout(function() {
             self.storage.getCallStateTTL(session.callId, function(err, ttl) {
+              if (serverError(err, callback)) return;
               if (ttl === -1) {
                 self.broadcastState(session.callId, "terminated:timeout");
               }
@@ -181,6 +181,7 @@ MessageHandler.prototype = {
             // We are now in "alterting" mode.
             setTimeout(function() {
               self.storage.getCallState(session.callId, function(err, state) {
+                if (serverError(err, callback)) return;
                 if (state === "alerting") {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
@@ -240,7 +241,7 @@ MessageHandler.prototype = {
       if (serverError(err, callback)) return;
 
       // Ensure half-connected is not send twice by the same party.
-      var validateState = function(currentState, transition) {
+      var validateState = function(currentState) {
         if (currentState === "connecting" ||
             currentState === "half-connected") {
           return "connected." + session.type;
@@ -256,6 +257,7 @@ MessageHandler.prototype = {
           actuator: function() {
             setTimeout(function() {
               self.storage.getCallState(session.callId, function(err, state) {
+                if (serverError(err, callback)) return;
                 if (state !== "connected") {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
@@ -279,7 +281,7 @@ MessageHandler.prototype = {
 
         var state;
 
-        eventConf.transitions.forEach(function(transition, key) {
+        eventConf.transitions.forEach(function(transition) {
           if (transition[0] === currentState) {
             handled = true;
             var validator = eventConf.validator;
@@ -386,6 +388,8 @@ MessageHandler.prototype = {
 };
 
 module.exports = function(storage, logError, conf) {
+  var WebSocket = require('ws');
+
   /**
    * Allow a server to register itself as a websocket provider.
    **/

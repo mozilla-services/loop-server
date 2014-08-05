@@ -4,7 +4,7 @@
 
 "use strict";
 
-var crypto = require('crypto');
+var randomBytes = require('crypto').randomBytes;
 var request = require('request');
 var conf = require('./config').conf;
 
@@ -127,7 +127,7 @@ TokBox.prototype = {
   }
 };
 
-function FakeTokBox(serverURL) {
+function FakeTokBox() {
   this._counter = 0;
   this.serverURL = conf.get("fakeTokBoxURL");
   this.apiKey = "falseApiKey";
@@ -135,7 +135,7 @@ function FakeTokBox(serverURL) {
 
 FakeTokBox.prototype = {
   _urlSafeBase64RandomBytes: function(number_of_bytes) {
-    return crypto.randomBytes(number_of_bytes).toString('base64')
+    return randomBytes(number_of_bytes).toString('base64')
                  .replace(/\+/g, '-').replace(/\//g, '_');
   },
 

@@ -27,10 +27,7 @@ describe("#headers", function(){
 
   it("should set a Timestamp header when returning a 200 ok.", function(done) {
     supertest(app).get('/return200/').expect(200).end(function(err, res) {
-      if (err) {
-        throw err;
-      }
-
+      if (err) throw err;
       expect(res.headers.hasOwnProperty('timestamp')).eql(true);
       done();
     });
@@ -38,10 +35,7 @@ describe("#headers", function(){
 
   it("should set a Timestamp header when returning a 401.", function(done) {
     supertest(app).get('/return401/').expect(401).end(function(err, res) {
-      if (err) {
-        throw err;
-      }
-
+      if (err) throw err;
       expect(res.headers.hasOwnProperty('timestamp')).eql(true);
       done();
     });
@@ -49,10 +43,7 @@ describe("#headers", function(){
 
   it("should not set a Timestamp header when returning a 400.", function(done) {
     supertest(app).get('/return400/').expect(400).end(function(err, res) {
-      if (err) {
-        throw err;
-      }
-
+      if (err) throw err;
       expect(res.headers.hasOwnProperty('x-timestamp')).eql(false);
       done();
     });
@@ -60,10 +51,7 @@ describe("#headers", function(){
 
   it("should set a Retry-After header when returning a 503.", function(done) {
     supertest(app).get('/return503/').expect(503).end(function(err, res) {
-      if (err) {
-        throw err;
-      }
-
+      if (err) throw err;
       expect(res.headers.hasOwnProperty('retry-after')).eql(true);
       expect(res.headers['retry-after']).equal(
         conf.get('retryAfter').toString());
@@ -73,10 +61,7 @@ describe("#headers", function(){
 
   it("should not return any X-Powered-By headers..", function(done) {
     supertest(app).get('/return200/').expect(200).end(function(err, res) {
-      if (err) {
-        throw err;
-      }
-
+      if (err) throw err;
       expect(res.headers.hasOwnProperty('x-powered-by')).eql(false);
       done();
     });

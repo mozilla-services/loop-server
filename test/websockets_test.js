@@ -5,7 +5,7 @@
 
 var expect = require("chai").expect;
 var sinon = require("sinon");
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 
 var ws = require('ws');
 
@@ -83,7 +83,7 @@ describe('websockets', function() {
   });
 
   it('should reject bad authentication tokens', function(done) {
-    var callId = crypto.randomBytes(16).toString('hex');
+    var callId = randomBytes(16).toString('hex');
     createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
       client.on('message', function(data) {
@@ -118,7 +118,7 @@ describe('websockets', function() {
 
   it('should accept caller authenticating with a valid token url',
     function(done) {
-      var callId = crypto.randomBytes(16).toString('hex');
+      var callId = randomBytes(16).toString('hex');
 
       // Create a call and set its state to "init".
       createCall(callId, hawkCredentials.id, function(err) {
@@ -142,7 +142,7 @@ describe('websockets', function() {
     });
 
   it('should return the state of the call', function(done) {
-    var callId = crypto.randomBytes(16).toString('hex');
+    var callId = randomBytes(16).toString('hex');
 
     createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
@@ -171,7 +171,7 @@ describe('websockets', function() {
     beforeEach(function(done) {
       this.timeout(5000);
       calleeMsgCount = 0;
-      callId = crypto.randomBytes(16).toString('hex');
+      callId = randomBytes(16).toString('hex');
 
       // Name the existing ws client "callee" for readability.
       callee = client;

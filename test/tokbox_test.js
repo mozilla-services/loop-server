@@ -15,7 +15,7 @@ var expect = require("chai").expect;
 var assert = sinon.assert;
 
 describe("TokBox", function() {
-  var sandbox, apiSecret, apiKey, serverIP, fakeCallInfo;
+  var sandbox, apiSecret, apiKey, fakeCallInfo;
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
@@ -23,7 +23,6 @@ describe("TokBox", function() {
     fakeCallInfo = conf.get('fakeCallInfo');
     apiSecret = tokBoxConfig.credentials.default.apiSecret;
     apiKey = tokBoxConfig.credentials.default.apiKey;
-    serverIP = tokBoxConfig.serverIP;
   });
 
   afterEach(function() {
@@ -113,6 +112,7 @@ describe("TokBox", function() {
 
       var generateTokenCalls = 0;
       sandbox.stub(tokBox._opentok.default, "generateToken",
+        /*eslint-disable */
         function(sessionId, options) {
           generateTokenCalls += 1;
           if (generateTokenCalls === 1) {
@@ -120,9 +120,10 @@ describe("TokBox", function() {
           }
           return fakeCallInfo.token2;
         });
+       /*eslint-enable */
 
-      tokBox.getSessionTokens(function(error, info) {
-        expect(error).eql(null);
+      tokBox.getSessionTokens(function(err, info) {
+        expect(err).eql(null);
         expect(info).eql({
           apiKey: apiKey,
           sessionId: fakeCallInfo.session1,
@@ -141,8 +142,8 @@ describe("TokBox", function() {
         function(options, cb) {
           cb("error");
         });
-      tokBox.getSessionTokens(function(error, info) {
-        expect(error).eql("error");
+      tokBox.getSessionTokens(function(err) {
+        expect(err).eql("error");
         assert.calledThrice(tokBox._opentok.default.createSession);
         done();
       });
@@ -156,14 +157,14 @@ describe("TokBox", function() {
           });
         tokBox.getSessionTokens({
           channel: "unknown"
-        }, function(error, info) {
+        }, function(err, info) {
           expect(info).to.eql({
             apiKey: apiKey,
             sessionId: fakeCallInfo.session1,
             callerToken: null,
             calleeToken: null
           });
-          done(error);
+          done(err);
         });
       });
 
@@ -175,14 +176,14 @@ describe("TokBox", function() {
           });
         tokBox.getSessionTokens({
           channel: "release"
-        }, function(error, info) {
+        }, function(err) {
           expect(openTokSpy.withArgs(
             apiKey + "_release",
             apiSecret + "_release",
             "https://release.opentok.com"
           ).calledOnce).to.eql(true);
           assert.calledOnce(tokBox._opentok.release.createSession);
-          done(error);
+          done(err);
         });
       });
 
@@ -194,14 +195,14 @@ describe("TokBox", function() {
           });
         tokBox.getSessionTokens({
           channel: "nightly"
-        }, function(error, info) {
+        }, function(err) {
           expect(openTokSpy.withArgs(
             apiKey + "_nightly",
             apiSecret + "_nightly",
             "https://api.opentok.com"
           ).calledOnce).to.eql(true);
           assert.calledOnce(tokBox._opentok.nightly.createSession);
-          done(error);
+          done(err);
         });
       });
   });
@@ -276,6 +277,7 @@ describe("FakeTokBox", function() {
 
     it("should return new session and tokens.", function(done) {
       tokbox.getSessionTokens(function(err, credentials) {
+        if (err) throw err;
         // Verify sessionId
         expect(credentials.hasOwnProperty('sessionId')).to.equal(true);
         expect(credentials.sessionId).to.match(/^1_/);
@@ -293,6 +295,7 @@ describe("FakeTokBox", function() {
 
     it("should do a call to a predefined url.", function(done) {
       tokbox.getSessionTokens(function(err) {
+        if (err) throw err;
         expect(requests).to.have.length(1);
         expect(requests[0]).to.equal(conf.get("fakeTokBoxURL"));
         done();

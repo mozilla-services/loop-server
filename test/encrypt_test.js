@@ -4,13 +4,13 @@
 "use strict";
 
 var expect = require("chai").expect;
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 var encrypt = require("../loop/encrypt");
 
 describe("ENCRYPT", function() {
   describe("#encrypt/#decrypt", function() {
     it("should be able to encrypt and decrypt a string", function() {
-      var passphrase = crypto.randomBytes(32).toString("hex");
+      var passphrase = randomBytes(32).toString("hex");
       var text = "Bonjour les gens";
       var encrypted = encrypt.encrypt(passphrase, text);
       var decrypted = encrypt.decrypt(passphrase, encrypted);
@@ -18,14 +18,14 @@ describe("ENCRYPT", function() {
     });
 
     it("should error-out if the given string is empty", function() {
-      var passphrase = crypto.randomBytes(32).toString("hex");
+      var passphrase = randomBytes(32).toString("hex");
       expect(function() {
         encrypt.encrypt(passphrase, null);
       }).to.throw(/is empty/);
     });
 
     it("should error-out if the given string is empty", function() {
-      var passphrase = crypto.randomBytes(32).toString("hex");
+      var passphrase = randomBytes(32).toString("hex");
       expect(function() {
         encrypt.decrypt(passphrase, null);
       }).to.throw(/is empty/);
