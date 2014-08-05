@@ -1044,6 +1044,7 @@ describe("HTTP API exposed by the server", function() {
               storage.getUserCalls(userHmac, function(err, res) {
                 if (err) throw err;
                 expect(res).to.length(1);
+                expect(res[0].callType).to.eql("audio-video");
                 done();
               });
             });

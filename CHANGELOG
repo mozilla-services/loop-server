@@ -12,7 +12,8 @@ This document describes changes between each past release.
 - [feature] Add a way to echo messages for websockets;
 - [config] 1039837 — Make sure websockets endpoint is defined;
 - [feature] 1038832 — Don't return a callUrl on direct calls;
-- [feature] 1043483 — Expose creation date on get /calls/{token}.
+- [feature] 1043483 — Expose creation date on get /calls/{token};
+- [bugfix] 1048426 — Read callType from the request body.
 
 
 0.9.1 (2014-07-22)

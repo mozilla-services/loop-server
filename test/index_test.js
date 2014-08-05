@@ -23,7 +23,7 @@ var requireParams = require("../loop").requireParams;
 var authenticate = require("../loop").authenticate;
 var validateSimplePushURL = require("../loop").validateSimplePushURL;
 var validateCallType = require("../loop").validateCallType;
-var returnUserCallTokens = require("../loop").returnUserCallTokens;
+var storeUserCallTokens = require("../loop").storeUserCallTokens;
 var tokBox = require("../loop").tokBox;
 var request = require("../loop").request;
 var expectFormatedError = require("./support").expectFormatedError;
@@ -416,11 +416,11 @@ describe("index.js", function() {
       });
   });
 
-  describe("#returnUserCallTokens", function() {
+  describe("#storeUserCallTokens", function() {
     var sandbox;
 
-    app.post('/returnUserCallTokens', function(req, res) {
-      returnUserCallTokens({
+    app.post('/storeUserCallTokens', function(req, res) {
+      storeUserCallTokens({
         callerId: req.body.callerId,
         calleeFriendlyName: req.body.calleeFriendlyName,
         callToken: req.body.callToken,
@@ -446,7 +446,7 @@ describe("index.js", function() {
       });
 
       supertest(app)
-        .post('/returnUserCallTokens')
+        .post('/storeUserCallTokens')
         .send({callType: "audio"})
         .expect(503)
         .end(done);
@@ -477,7 +477,7 @@ describe("index.js", function() {
         function(done) {
           sandbox.stub(request, "put");
           supertest(app)
-            .post('/returnUserCallTokens')
+            .post('/storeUserCallTokens')
             .send({
               callerId: callerId,
               callToken: callToken,

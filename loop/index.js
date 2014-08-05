@@ -229,7 +229,7 @@ function authenticate(req, res, next) {
  * - callToken: the call token that was used to initiate the call (if any;
  * - urlCreationDate: the timestamp of the url used to make the call;
  */
-function returnUserCallTokens(options, callback) {
+function storeUserCallTokens(options, callback) {
   tokBox.getSessionTokens({
     channel: options.channel
   }, function(err, tokboxInfo) {
@@ -602,7 +602,7 @@ app.post('/calls', requireHawkSession, requireParams('calleeId'),
       // the call information and notifying to the correspoding matched users.
       var callees = [];
 
-      returnUserCallTokens({
+      storeUserCallTokens({
         callType: req.body.callType,
         channel: req.body.channel,
         callerId: userId,
@@ -707,8 +707,8 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
         userId = decrypt(req.hawkIdHmac, encryptedUserId);
       }
 
-      returnUserCallTokens({
-        callType: req.callUrlData.callType,
+      storeUserCallTokens({
+        callType: req.body.callType,
         channel: req.body.channel,
         user: req.callUrlData.userMac,
         callerId: userId || req.callUrlData.callerId,
@@ -825,6 +825,6 @@ module.exports = {
   requireHawkSession: requireHawkSession,
   validateSimplePushURL: validateSimplePushURL,
   validateCallType: validateCallType,
-  returnUserCallTokens: returnUserCallTokens,
+  storeUserCallTokens: storeUserCallTokens,
   shutdown: shutdown
 };
