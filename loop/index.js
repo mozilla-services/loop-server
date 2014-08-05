@@ -684,7 +684,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
       }
 
       returnUserCallTokens({
-        callType: req.callUrlData.callType,
+        callType: req.body.callType,
         user: req.callUrlData.userMac,
         callerId: userId || req.callUrlData.callerId,
         calleeFriendlyName: req.callUrlData.issuer,
