@@ -148,9 +148,9 @@ MessageHandler.prototype = {
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
           setTimeout(function() {
-            self.storage.getCallStateTTL(session.callId, function(err, ttl) {
+            self.storage.getCallState(session.callId, function(err, state) {
               if (serverError(err, callback)) return;
-              if (ttl === -1) {
+              if (state === 'terminated' || state === 'alerting') {
                 self.broadcastState(session.callId, "terminated:timeout");
               }
             });
