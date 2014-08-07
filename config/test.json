@@ -15,7 +15,6 @@
   "userMacAlgorithm": "sha256",
   "userMacSecret": "5a25ad4feadd45fdcbb05402658272da",
   "sessionSecret": "this is not a secret",
-  "useSSL": false,
   "tokBox": {
     "credentials": {
       "default": {
