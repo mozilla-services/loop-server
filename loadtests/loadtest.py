@@ -27,7 +27,6 @@ class TestLoop(TestCase):
         return ws.send(json.dumps(msg))
 
     def create_ws(self, *args, **kw):
-        print args, kw
         ws = TestCase.create_ws(self, *args, **kw)
         self.wss.append(ws)
         return ws
