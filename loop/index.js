@@ -67,6 +67,8 @@ function logError(err) {
   ravenClient.captureError(err);
 }
 
+var fxaOauth = require('./fxa_oauth')(conf, logError);
+
 /**
  * Attach the identity of the user to the request if she is registered in the
  * database.
@@ -415,6 +417,11 @@ function validateCallUrlParams(req, res, next) {
  * Enable CORS for all requests.
  **/
 app.all('*', corsEnabled);
+
+/**
+ * Enable Firefox Accounts OAuth routes.
+ */
+fxaOauth.routes(app);
 
 /**
  * Checks that the service and its dependencies are healthy.
@@ -815,6 +822,7 @@ module.exports = {
   app: app,
   server: server,
   conf: conf,
+  logError: logError,
   storage: storage,
   validateToken: validateToken,
   requireParams: requireParams,
