@@ -75,4 +75,3 @@ describe("metrics middleware", function() {
       });
   });
 });
-

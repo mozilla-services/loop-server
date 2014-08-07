@@ -94,3 +94,4 @@ rules:
   "wrap-regex": 0
   "no-path-concat": 0
   "no-process-exit": 0
+  "eol-last": 2

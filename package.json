@@ -39,7 +39,7 @@
     "sinon": "1.9.x",
     "supertest": "0.10.x",
     "superagent-hawk": "0.0.4",
-    "eslint": "0.6.x"
+    "eslint": "0.7.x"
   },
   "scripts": {
     "test": "make test",
