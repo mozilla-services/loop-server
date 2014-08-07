@@ -428,7 +428,13 @@ module.exports = function(storage, logError, conf) {
                 } else {
                   message = err.message;
                 }
-                ws.send(messageHandler.createError(message));
+                try {
+                  ws.send(messageHandler.createError(message));
+                } catch (e) {
+                  // Socket already closed (i.e, in case of race condition
+                  // where we don't receive half-connected but twice
+                  // connected.
+                }
                 ws.close();
                 return;
               }
