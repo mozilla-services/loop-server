@@ -4,7 +4,6 @@
 
 "use strict";
 
-var WebSocket = require('ws');
 var PubSub = require('./pubsub');
 
 /**
@@ -149,8 +148,9 @@ MessageHandler.prototype = {
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
           setTimeout(function() {
-            self.storage.getCallStateTTL(session.callId, function(err, ttl) {
-              if (ttl === -1) {
+            self.storage.getCallState(session.callId, function(err, state) {
+              if (serverError(err, callback)) return;
+              if (state === 'terminated' || state === 'alerting') {
                 self.broadcastState(session.callId, "terminated:timeout");
               }
             });
@@ -180,8 +180,10 @@ MessageHandler.prototype = {
             self.broadcastState(session.callId, "init." + session.type);
             // We are now in "alterting" mode.
             setTimeout(function() {
+
               self.storage.getCallState(session.callId, function(err, state) {
-                if (state === "alerting") {
+                if (serverError(err, callback)) return;
+                if (state === "alerting" || state === 'terminated') {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
               });
@@ -240,7 +242,7 @@ MessageHandler.prototype = {
       if (serverError(err, callback)) return;
 
       // Ensure half-connected is not send twice by the same party.
-      var validateState = function(currentState, transition) {
+      var validateState = function(currentState) {
         if (currentState === "connecting" ||
             currentState === "half-connected") {
           return "connected." + session.type;
@@ -255,7 +257,9 @@ MessageHandler.prototype = {
           ],
           actuator: function() {
             setTimeout(function() {
+
               self.storage.getCallState(session.callId, function(err, state) {
+                if (serverError(err, callback)) return;
                 if (state !== "connected") {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
@@ -279,7 +283,7 @@ MessageHandler.prototype = {
 
         var state;
 
-        eventConf.transitions.forEach(function(transition, key) {
+        eventConf.transitions.forEach(function(transition) {
           if (transition[0] === currentState) {
             handled = true;
             var validator = eventConf.validator;
@@ -386,6 +390,8 @@ MessageHandler.prototype = {
 };
 
 module.exports = function(storage, logError, conf) {
+  var WebSocket = require('ws');
+
   /**
    * Allow a server to register itself as a websocket provider.
    **/
@@ -413,6 +419,7 @@ module.exports = function(storage, logError, conf) {
             function(err, outboundMessage, terminate) {
               // Handle regular error.
               if (err) {
+
                 var message;
                 // Log critical errors.
                 if (err.isCritical) {
@@ -421,7 +428,13 @@ module.exports = function(storage, logError, conf) {
                 } else {
                   message = err.message;
                 }
-                ws.send(messageHandler.createError(message));
+                try {
+                  ws.send(messageHandler.createError(message));
+                } catch (e) {
+                  // Socket already closed (i.e, in case of race condition
+                  // where we don't receive half-connected but twice
+                  // connected.
+                }
                 ws.close();
                 return;
               }
@@ -442,7 +455,13 @@ module.exports = function(storage, logError, conf) {
         } catch(e) {
           // Handle programmation / uncatched errors.
           logError(e);
-          ws.send(messageHandler.createError("Service Unavailable"));
+          try {
+            ws.send(messageHandler.createError("Service Unavailable"));
+          } catch (err) {
+            // Socket already closed (i.e, in case of race condition
+            // where we don't receive half-connected but twice
+            // connected.
+          }
           ws.close();
           messageHandler.clearSession(session);
         }

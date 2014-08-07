@@ -23,7 +23,7 @@ RedisStorage.prototype = {
     // delete the SP url if it exists
     var self = this;
     self._client.lrem('spurl.' + userMac, 0, simplepushURL,
-      function(err, deleted) {
+      function(err) {
         if (err) {
           callback(err);
           return;
@@ -31,6 +31,10 @@ RedisStorage.prototype = {
         // And add it back.
         self._client.lpush('spurl.' + userMac, simplepushURL,
           function(err, size) {
+            if (err) {
+              callback(err);
+              return;
+            }
             // Keep the X most recent URLs.
             if (size > self._settings.maxSimplePushUrls) {
               self._client.ltrim(
@@ -200,7 +204,11 @@ RedisStorage.prototype = {
         });
 
         if (expired.length > 0) {
-          self._client.srem(expired, function(err, res) {
+          self._client.srem(expired, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
             callback(null, pendingUrls);
           });
           return;
@@ -326,12 +334,20 @@ RedisStorage.prototype = {
               cb(null, call);
             });
           }, function(err, results) {
+            if (err) {
+              callback(err);
+              return;
+            }
             callback(null, results);
           });
         }
 
         if (expired.length > 0) {
-          self._client.srem(expired, function(err, res) {
+          self._client.srem(expired, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
             getState();
           });
           return;

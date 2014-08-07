@@ -6,7 +6,7 @@
 
 var convict = require('convict');
 var format = require('util').format;
-var crypto = require('crypto');
+var getHashes = require('crypto').getHashes;
 var path = require('path');
 var fs = require('fs');
 
@@ -133,7 +133,7 @@ var conf = convict({
   userMacAlgorithm: {
     doc: "The algorithm that should be used to mac userIds",
     format: function(val) {
-      if (crypto.getHashes().indexOf(val) === -1) {
+      if (getHashes().indexOf(val) === -1) {
         throw new Error("Given hmac algorithm is not supported");
       }
     },

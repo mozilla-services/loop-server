@@ -5,7 +5,7 @@
 "use strict";
 
 var expect = require("chai").expect;
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
@@ -335,6 +335,7 @@ describe("index.js", function() {
             .set('Authorization', 'BrowserID ' + expectedAssertion)
             .expect(200)
             .end(function(err, res) {
+              if (err) throw err;
               expect(res.header['hawk-session-token']).to.not.be.undefined;
               done();
             });
@@ -375,12 +376,13 @@ describe("index.js", function() {
         });
 
       it("shouldn't accept invalid hawk credentials", function(done) {
-          hawkCredentials.id = crypto.randomBytes(16).toString("hex");
+          hawkCredentials.id = randomBytes(16).toString("hex");
           supertest(app)
             .post("/with-authenticate")
             .hawk(hawkCredentials)
             .expect(401)
-            .end(function(err, res) {
+            .end(function(err) {
+              if (err) throw err;
               done();
             });
         });
@@ -391,9 +393,7 @@ describe("index.js", function() {
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             assert.calledWithExactly(
               storage.touchHawkSession,
               userHmac
@@ -409,6 +409,7 @@ describe("index.js", function() {
           .post("/with-authenticate")
           .expect(200)
           .end(function(err, res) {
+            if (err) throw err;
             expect(res.header['hawk-session-token']).to.not.be.undefined;
             expect(res.header['hawk-session-token']).to.length(64);
             done();
@@ -486,6 +487,7 @@ describe("index.js", function() {
             })
             .expect(200)
             .end(function(err, res) {
+              if (err) throw err;
               expect(res.body).to.have.property('callId');
               expect(res.body).to.have.property('wsCallerToken');
               expect(res.body).to.have.property('wsCalleeToken');
