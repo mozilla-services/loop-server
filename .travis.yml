@@ -1,10 +1,18 @@
-language: node_js
+language:
+  - node_js
+  - python
+
+python:
+    - "2.7"
 
 node_js:
   - "0.10"
+
 services: redis-server
 
 script: make travis
+before_install:
+  - "sudo apt-get install python-virtualenv"
 
 notifications:
   irc:
