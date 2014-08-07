@@ -457,7 +457,7 @@ module.exports = function(storage, logError, conf) {
           logError(e);
           try {
             ws.send(messageHandler.createError("Service Unavailable"));
-          } catch (e) {
+          } catch (err) {
             // Socket already closed (i.e, in case of race condition
             // where we don't receive half-connected but twice
             // connected.
