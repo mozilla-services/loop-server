@@ -180,9 +180,10 @@ MessageHandler.prototype = {
             self.broadcastState(session.callId, "init." + session.type);
             // We are now in "alterting" mode.
             setTimeout(function() {
+
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
-                if (state === "alerting") {
+                if (state === "alerting" || state === 'terminated') {
                   self.broadcastState(session.callId, "terminated:timeout");
                 }
               });
@@ -256,6 +257,7 @@ MessageHandler.prototype = {
           ],
           actuator: function() {
             setTimeout(function() {
+
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
                 if (state !== "connected") {
@@ -417,6 +419,7 @@ module.exports = function(storage, logError, conf) {
             function(err, outboundMessage, terminate) {
               // Handle regular error.
               if (err) {
+
                 var message;
                 // Log critical errors.
                 if (err.isCritical) {

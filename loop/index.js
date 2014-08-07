@@ -743,7 +743,7 @@ app.post('/calls/:token', validateToken, validateCallType, function(req, res) {
                     url: simplePushUrl,
                     form: { version: callInfo.timestamp }
                   }, function() {
-                    // Catch errors
+                    // Catch errors.
                   });
                 });
 
