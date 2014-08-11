@@ -36,6 +36,7 @@
     "grunt-cli": "0.1.13",
     "grunt-sass": "0.12.1",
     "grunt-marked": "0.1.1",
+    "grunt-text-replace": "0.3.12",
     "time-grunt": "0.4.0",
     "load-grunt-tasks": "0.6.0",
     "i18n-abide": "0.0.22"

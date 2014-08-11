@@ -4,7 +4,7 @@
 
 NODE_LOCAL_BIN=./node_modules/.bin
 GRUNT=./node_modules/.bin/grunt
-bower=./node_modules/bower/bin/bower
+BOWER=./node_modules/bower/bin/bower
 
 .PHONY: test
 test: lint cover-mocha spaceleft
@@ -21,7 +21,7 @@ npm-install:
 
 tos:
 	@$(BOWER) install
-	@$(GRUNT) marked
+	@$(GRUNT) replace marked
 	@$(GRUNT) sass
 
 
