@@ -4,6 +4,7 @@
 
 NODE_LOCAL_BIN=./node_modules/.bin
 GRUNT=./node_modules/.bin/grunt
+bower=./node_modules/bower/bin/bower
 
 .PHONY: test
 test: lint cover-mocha spaceleft
@@ -13,10 +14,16 @@ travis: lint loadtests-check
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
 
-install:
+install: npm-install tos
+
+npm-install:
 	@npm install
+
+tos:
+	@$(BOWER) install
 	@$(GRUNT) marked
 	@$(GRUNT) sass
+
 
 .PHONY: lint
 lint: jshint
