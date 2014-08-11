@@ -24,5 +24,8 @@
   "fxaAudiences": [
     "https://loop.services.mozilla.com",
     "app://loop.services.mozilla.com"
-  ]
+  ],
+  "i18n": {
+    "supportedLanguages": ["en-US"]
+  }
 }

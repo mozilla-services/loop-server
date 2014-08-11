@@ -5,6 +5,7 @@
 "use strict";
 
 var conf = require('./config').conf;
+var path = require('path');
 
 // Configure http agents to use more than the default number of sockets.
 var http = require('http');
@@ -13,6 +14,7 @@ https.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
+var consolidate = require('consolidate');
 var tokenlib = require('./tokenlib');
 var crypto = require('crypto');
 var loopPackageData = require('../package.json');
@@ -33,6 +35,8 @@ var getProgressURL = require('./utils').getProgressURL;
 var hawk = require('express-hawkauth');
 var hmac = require('./hmac');
 var fxa = require('./fxa');
+var i18n = require('./i18n')(conf.get('i18n'));
+var addTermsPrivacyRoute = require('./get-term-privacy');
 
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
@@ -269,6 +273,15 @@ function storeUserCallTokens(options, callback) {
 }
 
 var app = express();
+
+app.engine('html', consolidate.handlebars);
+app.set('view engine', 'html');
+app.set('views', path.join(conf.get('pageTemplateRoot'), 'src'));
+// workaround for reserved word bug:
+// https://github.com/marijnh/acorn/issues/85
+app.use(express['static'](conf.get("staticDirectory"), {
+  maxAge: conf.get('staticMaxAge')
+}));
 
 app.use(addHeaders);
 app.disable('x-powered-by');
@@ -793,6 +806,7 @@ app.delete('/account', requireHawkSession, function(req, res) {
   });
 });
 
+addTermsPrivacyRoute(app, logError, i18n);
 
 // Starts HTTP server.
 var server = http.createServer(app);

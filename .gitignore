@@ -6,4 +6,4 @@ lib-cov
 config/dev.json
 config/stage.json
 config/prod.json
-templates/pages/dist/
+loop/templates/pages/dist/
