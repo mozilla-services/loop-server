@@ -122,7 +122,11 @@ module.exports = function verRoute (app, logError, i18n) {
           res.send(template);
         },
         'text/html': function () {
-          res.render(page, {body: template});
+          res.render(page, {
+            body: template,
+            lang: req.lang,
+            lang_dir: req.lang_dir
+          });
         }
       });
     });
