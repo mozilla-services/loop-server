@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 NODE_LOCAL_BIN=./node_modules/.bin
+GRUNT=./node_modules/.bin/grunt
 
 .PHONY: test
 test: lint cover-mocha spaceleft
@@ -14,6 +15,8 @@ travis: lint loadtests-check
 
 install:
 	@npm install
+	@$(GRUNT) marked
+	@$(GRUNT) sass
 
 .PHONY: lint
 lint: jshint

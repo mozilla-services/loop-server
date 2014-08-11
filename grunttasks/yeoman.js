@@ -9,6 +9,7 @@ module.exports = function (grunt) {
   var TOS_PP_REPO_ROOT = 'bower_components/tos-pp';
 
   grunt.config('yeoman', {
+    app: "app",
     // Translated TOS/PP agreements.
     tos_pp_repo_dest: TOS_PP_REPO_ROOT,
     tos_md_src: TOS_PP_REPO_ROOT + '/WebRTC_ToS/',

@@ -283,6 +283,7 @@ app.use(express['static'](conf.get("staticDirectory"), {
   maxAge: conf.get('staticMaxAge')
 }));
 
+app.use(i18n);
 app.use(addHeaders);
 app.disable('x-powered-by');
 app.use(express.json());

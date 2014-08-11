@@ -7,3 +7,4 @@ config/dev.json
 config/stage.json
 config/prod.json
 loop/templates/pages/dist/
+app/styles/*.css
