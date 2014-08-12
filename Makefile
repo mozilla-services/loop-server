@@ -3,16 +3,15 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 NODE_LOCAL_BIN=./node_modules/.bin
-GRUNT=./node_modules/.bin/grunt
-BOWER=./node_modules/bower/bin/bower
+MOCHA=./node_modules/mocha/bin/mocha
 
 .PHONY: test
 test: lint cover-mocha spaceleft
 
 .PHONY: travis
 travis: lint loadtests-check
-	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
-	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
+	@env NODE_ENV=test $(MOCHA) test/* --reporter spec -ig websocket
+	@env NODE_ENV=test $(MOCHA) test/* --reporter spec -g websocket -t 5000
 
 install: npm-install tos
 
@@ -20,16 +19,15 @@ npm-install:
 	@npm install
 
 tos:
-	@$(BOWER) install
-	@$(GRUNT) replace marked
-	@$(GRUNT) sass
+	@$(NODE_LOCAL_BIN)/grunt replace marked
+	@$(NODE_LOCAL_BIN)/grunt sass
 
 
 .PHONY: lint
 lint: jshint
 
 clean:
-	rm -rf .venv node_modules coverage lib-cov html-report
+	rm -rf .venv node_modules coverage lib-cov html-report bower_components
 
 .PHONY: cover-mocha
 cover-mocha:
@@ -45,7 +43,7 @@ jshint:
 .PHONY: mocha
 mocha:
 	@if [ `ulimit -n` -lt 1024 ]; then echo "ulimit is too low. Please run 'ulimit -S -n 2048' before running tests."; exit 1; fi
-	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec
+	@env NODE_ENV=test $(MOCHA) test/* --reporter spec
 
 .PHONY: spaceleft
 spaceleft:
