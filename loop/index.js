@@ -449,9 +449,20 @@ app.get("/", function(req, res) {
     description: loopPackageData.description,
     version: loopPackageData.version,
     homepage: loopPackageData.homepage,
-    endpoint: conf.get("protocol") + "://" + req.get('host'),
-    fakeTokBox: conf.get('fakeTokBox')
+    endpoint: conf.get("protocol") + "://" + req.get('host')
   };
+
+  // Adding information about the tokbox backend
+  credentials.fakeTokBox = conf.get('fakeTokBox');
+
+  // Adding localization information for the client.
+  credentials.i18n = {
+    defaultLang: conf.get("i18n").defaultLang
+  };
+
+  if (req.headers["accept-language"]) {
+    credentials.i18n.lang = req.headers["accept-language"].split(",")[0];
+  }
 
   if (!conf.get("displayVersion")) {
     delete credentials.version;

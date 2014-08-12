@@ -323,6 +323,12 @@ var conf = convict({
     doc: "The endpoint to use for the progressURL.",
     format: String,
     default: "/websocket"
+  },
+  i18n: {
+    defaultLang: {
+      format: String,
+      default: 'en-US'
+    }
   }
 });
 
