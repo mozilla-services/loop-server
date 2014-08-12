@@ -30,7 +30,7 @@ cover-mocha:
 
 .PHONY: jshint
 jshint:
-	@$(NODE_LOCAL_BIN)/jshint test loop/{,**/}*.js
+	@$(NODE_LOCAL_BIN)/jshint test loop/*.js loop/*/*.js
 
 .PHONY: mocha
 mocha:
