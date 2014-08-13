@@ -43,7 +43,9 @@
   },
   "scripts": {
     "test": "make test",
-    "start": "make runserver"
+    "start": "make runserver",
+    "outdated": "npm outdated --depth 0",
+    "audit-shrinkwrap": "npm shrinkwrap --dev && nsp audit-shrinkwrap || true"
   },
   "license": "MPL-2.0",
   "keywords": []
