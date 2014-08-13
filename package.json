@@ -47,7 +47,9 @@
   "scripts": {
     "test": "make test",
     "start": "make runserver",
-    "eslint": "make lint"
+    "eslint": "make lint",
+    "outdated": "npm outdated --depth 0",
+    "audit-shrinkwrap": "npm shrinkwrap --dev && nsp audit-shrinkwrap || true"
   },
   "license": "MPL-2.0",
   "keywords": []
