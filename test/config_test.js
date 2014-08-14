@@ -37,9 +37,15 @@ describe("config", function() {
     });
   });
 
-  describe("Test that the sample.json file is valid.", function() {
+  describe("sample.json", function() {
     it("should load.", function() {
       require("../config/sample.json");
+    });
+
+    it("should validates.", function() {
+      var file = __dirname + '/../config/sample.json';
+      config.conf.loadFile(file);
+      config.conf.validate();
     });
   });
 });
