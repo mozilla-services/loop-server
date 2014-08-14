@@ -324,11 +324,48 @@ var conf = convict({
     format: String,
     default: "/websocket"
   },
+  pageTemplateRoot: {
+    doc: "The page template root",
+    format: String,
+    default: path.resolve(__dirname, 'templates', 'pages')
+  },
   i18n: {
     defaultLang: {
       format: String,
       default: 'en-US'
+    },
+    supportedLanguages: {
+      doc: 'List of languages this deployment should detect and ' +
+        'display localized strings.',
+      format: Array,
+      // the big list of locales is specified so the production build script
+      // can build all the locales before config/production.json is written.
+      default: ['en-US'],
+      env: 'I18N_SUPPORTED_LANGUAGES'
+    },
+    translationDirectory: {
+      doc: 'The directory where per-locale .json files containing ' +
+        'translations reside',
+      format: String,
+      default: 'app/i18n/',
+      env: 'I18N_TRANSLATION_DIR'
+    },
+    translationType: {
+      doc: 'The file format used for the translations',
+      format: String,
+      default: 'key-value-json',
+      env: 'I18N_TRANSLATION_TYPE'
     }
+  },
+  staticDirectory: {
+    doc: 'Directory that static files are served from.',
+    format: String,
+    default: 'app'
+  },
+  staticMaxAge: {
+    doc: 'Cache max age for static assets, in ms',
+    format: Number,
+    default: 10 * 60 * 1000 // 10 minutes
   }
 });
 

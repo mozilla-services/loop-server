@@ -1,7 +1,10 @@
 node_modules
+bower_components
 coverage
 html-report
 lib-cov
 config/dev.json
 config/stage.json
 config/prod.json
+loop/templates/pages/dist/
+app/styles/*.css
