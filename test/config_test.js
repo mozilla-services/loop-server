@@ -36,4 +36,10 @@ describe("config", function() {
       }).to.throw(/Should be an 4 bytes key encoded as hexadecimal/);
     });
   });
+
+  describe("Test that the sample.json file is valid.", function() {
+    it("should load.", function() {
+      require("../config/sample.json");
+    });
+  });
 });
