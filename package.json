@@ -19,7 +19,7 @@
     "cors": "2.4.1",
     "express": "3.x",
     "strftime": "0.8.1",
-    "opentok": "2.2.3",
+    "opentok": "2.2.4",
     "raven": "0.7.0",
     "request": "2.40.0",
     "urlsafe-base64": "0.0.2",
