@@ -304,6 +304,60 @@ describe("HTTP API exposed by the server", function() {
       });
   });
 
+  describe("GET /call-url", function() {
+    var jsonReq;
+
+    beforeEach(function() {
+      jsonReq = supertest(app)
+        .get('/call-url')
+        .hawk(hawkCredentials)
+        .type('json')
+        .expect('Content-Type', /json/);
+    });
+
+    it("should have the requireHawkSession middleware installed", function() {
+      expect(getMiddlewares(app, 'post', '/call-url'))
+        .include(requireHawkSession);
+    });
+
+    it("should return an empty list if no call-url", function(done) {
+      jsonReq.send({}).expect(200).end(function(err, res) {
+        if (err) throw err;
+        expect(res.body).to.eql([]);
+        done();
+      });
+    });
+
+    it("should return a list of call-url with some information",
+      function(done) {
+        supertest(app)
+          .post('/call-url')
+          .hawk(hawkCredentials)
+          .type('json')
+          .send({callerId: callerId, expiresIn: 5, issuer: "alexis"})
+          .end(function(err, res) {
+            if (err) throw err;
+
+            jsonReq.send({}).expect(200).end(function(err, res) {
+              if (err) throw err;
+              expect(res.body).to.length(1);
+              var callUrlData = res.body[0];
+              expect(callUrlData).to.have.property("expires");
+              expect(callUrlData).to.have.property("timestamp");
+              delete callUrlData.expires;
+              delete callUrlData.timestamp;
+              expect(callUrlData).to.eql(
+                  {
+                    "callerId": "natim@mozilla.com",
+                    "issuer": "alexis",
+                  }
+              );
+              done();
+            });
+          });
+      });
+  });
+
   describe("POST /call-url", function() {
     var jsonReq;
 
