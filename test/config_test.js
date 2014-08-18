@@ -41,11 +41,5 @@ describe("config", function() {
     it("should load.", function() {
       require("../config/sample.json");
     });
-
-    it.skip("should validates.", function() {
-      var file = __dirname + '/../config/sample.json';
-      config.conf.loadFile(file);
-      config.conf.validate();
-    });
   });
 });
