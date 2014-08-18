@@ -22,8 +22,8 @@ module.exports = function(conf, logError, storage, statsdClient) {
    * Attach the identity of the user to the request if she is registered in the
    * database.
    **/
-  function setUser(req, res, tokenId, done) {
-    req.hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+  function setUser(req, res, credentials, done) {
+    req.hawkIdHmac = hmac(credentials.id, conf.get("hawkIdSecret"));
     storage.getHawkUser(req.hawkIdHmac, function(err, user) {
       if (res.serverError(err)) return;
 
