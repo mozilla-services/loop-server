@@ -14,15 +14,11 @@ var assert = sinon.assert;
 var loop = require("../loop");
 var app = loop.app;
 var request = loop.request;
-var validateToken = loop.validateToken;
-var validateCallType = loop.validateCallType;
-var validateSimplePushURL = loop.validateSimplePushURL;
+
 var conf = loop.conf;
 var tokBox = loop.tokBox;
 var storage = loop.storage;
 var statsdClient = loop.statsdClient;
-var requireHawkSession = loop.requireHawkSession;
-var authenticate = loop.authenticate;
 var getProgressURL = require("../loop/utils").getProgressURL;
 
 var Token = require("express-hawkauth").Token;
@@ -35,6 +31,16 @@ var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
 var errors = require("../loop/errno.json");
 
+var auth = loop.auth;
+var authenticate = auth.authenticate;
+var requireHawkSession = auth.requireHawkSession;
+
+var validators = loop.validators;
+var validateToken = validators.validateToken;
+var validateCallType = validators.validateCallType;
+var validateSimplePushURL = validators.validateSimplePushURL;
+
+
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
 var user2 = "alexis@mozilla.com";
@@ -43,7 +49,6 @@ var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
 var progressURL = getProgressURL(conf.get('publicServerAddress'));
-
 
 
 function register(url, assertion, credentials, cb) {
