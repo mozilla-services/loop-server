@@ -11,6 +11,20 @@ var sendError = require('../utils').sendError;
 module.exports = function (app, conf, logError, storage, auth, validators,
   statsdClient) {
     /**
+     * Return the list of existing call-urls for this specific user.
+     **/
+    app.get('/call-url', auth.requireHawkSession, function(req, res) {
+      storage.getUserCallUrls(req.user, function(err, urls) {
+        if (res.serverError(err)) return;
+        var callUrlsData = urls.map(function(url) {
+          delete url.userMac;
+          return url;
+        });
+        res.json(200, callUrlsData);
+      });
+    });
+
+    /**
      * Generates and return a call-url for the given callerId.
      **/
     app.post('/call-url', auth.requireHawkSession,
