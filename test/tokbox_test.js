@@ -15,7 +15,7 @@ var expect = require("chai").expect;
 var assert = sinon.assert;
 
 describe("TokBox", function() {
-  var sandbox, apiSecret, apiKey, apiUrl, serverIP, fakeCallInfo;
+  var sandbox, apiSecret, apiKey, apiUrl, serverIP, fakeCallInfo, releaseUrl;
 
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
