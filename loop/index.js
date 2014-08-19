@@ -98,6 +98,9 @@ var calls = require("./routes/calls");
 var storeUserCallTokens = calls(app, conf, logError, storage, tokBox,
                                 auth, validators);
 
+var pushServerConfig = require("./routes/push-server-config");
+pushServerConfig(app, conf);
+
 
 // Starts HTTP server.
 var server = http.createServer(app);

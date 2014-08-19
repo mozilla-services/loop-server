@@ -304,6 +304,20 @@ describe("HTTP API exposed by the server", function() {
       });
   });
 
+  describe("GET /push-server-config", function() {
+    it("should return the push server configuration", function(done) {
+      supertest(app)
+        .get('/push-server-config')
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.body).eql({
+            pushServerURI: 'wss://push.services.mozilla.com/'
+          });
+          done();
+        });
+    });
+  });
+
   describe("GET /call-url", function() {
     var jsonReq;
 

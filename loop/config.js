@@ -329,7 +329,12 @@ var conf = convict({
       format: String,
       default: 'en-US'
     }
-  }
+  },
+  pushServerURIs: {
+    doc: "An array of push server URIs",
+    format: Array,
+    default: ["wss://push.services.mozilla.com/"]
+  },
 });
 
 
