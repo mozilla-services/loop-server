@@ -6,7 +6,7 @@
 
 var conf = require("./config").conf;
 var hexKeyOfSize = require('./config').hexKeyOfSize;
-var crypto = require('crypto');
+var createHmac = require('crypto').createHmac;
 
 /**
  * Returns the HMac digest of the given payload.
@@ -30,7 +30,7 @@ function hmac(payload, secret, algorithm) {
   if (algorithm === undefined) {
     algorithm = conf.get("userMacAlgorithm");
   }
-  var _hmac = crypto.createHmac(algorithm, new Buffer(secret, "hex"));
+  var _hmac = createHmac(algorithm, new Buffer(secret, "hex"));
   _hmac.write(payload);
   _hmac.end();
   return _hmac.read().toString('hex');

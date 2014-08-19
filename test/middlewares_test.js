@@ -54,7 +54,10 @@ describe("metrics middleware", function() {
       .set('accept-language', 'Breton du sud')
       .set('x-forwarded-for', 'ip1, ip2, ip3')
       .expect(200)
-      .end(function(err, res) {
+      .end(function(err) {
+        if (err) {
+          throw err;
+        }
         var logged = JSON.parse(logs[0]);
 
         expect(logged.op).to.eql('request.summary');
@@ -75,4 +78,3 @@ describe("metrics middleware", function() {
       });
   });
 });
-

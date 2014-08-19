@@ -16,7 +16,7 @@ install:
 	@npm install
 
 .PHONY: lint
-lint: jshint
+lint: eslint
 
 clean:
 	rm -rf .venv node_modules coverage lib-cov html-report
@@ -28,9 +28,9 @@ cover-mocha:
 			 $(NODE_LOCAL_BIN)/_mocha -- --reporter spec -t 5000 test/*
 	@echo aim your browser at coverage/lcov-report/index.html for details
 
-.PHONY: jshint
-jshint:
-	@$(NODE_LOCAL_BIN)/jshint test loop/*.js loop/*/*.js
+.PHONY: eslint
+eslint:
+	@$(NODE_LOCAL_BIN)/eslint -c .eslint test/*.js loop/*.js loop/*/*.js
 
 .PHONY: mocha
 mocha:

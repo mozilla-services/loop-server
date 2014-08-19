@@ -7,7 +7,9 @@
 var https = require('https');
 var request = require('request');
 var conf = require('./config').conf;
+/*eslint-disable */
 var atob = require('atob');
+/* eslint-enable */
 var sendError = require("./utils").sendError;
 var errors = require("./errno.json");
 

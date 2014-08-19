@@ -31,7 +31,8 @@
     "ws": "0.4.31",
     "sodium": "1.0.11",
     "atob": "1.1.2",
-    "express-hawkauth": "0.2.0"
+    "express-hawkauth": "0.2.0",
+    "eslint": "0.7.x"
   },
   "devDependencies": {
     "chai": "1.9.x",
@@ -44,7 +45,8 @@
   },
   "scripts": {
     "test": "make test",
-    "start": "make runserver"
+    "start": "make runserver",
+    "eslint": "make lint"
   },
   "license": "MPL-2.0",
   "keywords": []

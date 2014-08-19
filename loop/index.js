@@ -23,11 +23,13 @@ var handle503 = require("./middlewares").handle503;
 var logMetrics = require('./middlewares').logMetrics;
 var websockets = require('./websockets');
 
+var TokBox;
+
 if (conf.get("fakeTokBox") === true) {
   console.log("Calls to TokBox are now mocked.");
-  var TokBox = require('./tokbox').FakeTokBox;
+  TokBox = require('./tokbox').FakeTokBox;
 } else {
-  var TokBox = require('./tokbox').TokBox;
+  TokBox = require('./tokbox').TokBox;
 }
 
 var getStorage = require('./storage');

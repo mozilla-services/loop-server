@@ -8,7 +8,7 @@ module.exports = function (app, conf) {
   app.get('/push-server-config', function(req, res) {
     var urls = conf.get('pushServerURIs');
     var url = urls[Math.floor(Math.random() * urls.length)];
-    res.json(200, {
+    res.status(200).json({
       'pushServerURI': url
     });
   });

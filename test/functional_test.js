@@ -8,7 +8,7 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
 
 var loop = require("../loop");
@@ -349,7 +349,7 @@ describe("HTTP API exposed by the server", function() {
           .hawk(hawkCredentials)
           .type('json')
           .send({callerId: callerId, expiresIn: 5, issuer: "alexis"})
-          .end(function(err, res) {
+          .end(function(err) {
             if (err) throw err;
 
             jsonReq.send({}).expect(200).end(function(err, res) {
@@ -363,7 +363,7 @@ describe("HTTP API exposed by the server", function() {
               expect(callUrlData).to.eql(
                   {
                     "callerId": "natim@mozilla.com",
-                    "issuer": "alexis",
+                    "issuer": "alexis"
                   }
               );
               done();
@@ -483,7 +483,7 @@ describe("HTTP API exposed by the server", function() {
       jsonReq
         .expect(200)
         .send({callerId: callerId})
-        .end(function(err, res) {
+        .end(function(err) {
           if (err) throw err;
           assert.calledTwice(statsdClient.count);
           assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
@@ -568,7 +568,7 @@ describe("HTTP API exposed by the server", function() {
       jsonReq
         .send({'simple_push_url': pushURL})
         .hawk(hawkCredentials)
-        .expect(200).end(function(err, res) {
+        .expect(200).end(function(err) {
           if (err) throw err;
           storage.getUserSimplePushURLs(userHmac, function(err, records) {
             if (err) throw err;
@@ -621,7 +621,7 @@ describe("HTTP API exposed by the server", function() {
         });
       jsonReq
         .send({
-          'simple_push_url': pushURL,
+          'simple_push_url': pushURL
         }).expect(503).end(done);
     });
 
@@ -631,8 +631,8 @@ describe("HTTP API exposed by the server", function() {
         .post('/registration')
         .type('json')
         .send({
-          'simple_push_url': pushURL,
-        }).expect(200).end(function(err, res) {
+          'simple_push_url': pushURL
+        }).expect(200).end(function(err) {
           if (err) throw err;
           assert.calledOnce(statsdClient.count);
           assert.calledWithExactly(
@@ -649,8 +649,8 @@ describe("HTTP API exposed by the server", function() {
         sandbox.stub(statsdClient, "count");
         jsonReq
           .send({
-            'simple_push_url': pushURL,
-          }).expect(200).end(function(err, res) {
+            'simple_push_url': pushURL
+          }).expect(200).end(function(err) {
             if (err) throw err;
             assert.notCalled(statsdClient.count);
             done();
@@ -747,7 +747,7 @@ describe("HTTP API exposed by the server", function() {
           invalidField: "value"
         })
         .expect(200)
-        .end(function(err, res) {
+        .end(function(err) {
           if (err) throw err;
           storage.getCallUrlData(token, function(err, res) {
             if (err) throw err;
@@ -802,7 +802,7 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should remove the call-url", function(done) {
-      req.expect(204).end(function(err, res) {
+      req.expect(204).end(function(err) {
         if (err) throw err;
         storage.getCallUrlData(token, function(err, record) {
           if (err) throw err;
@@ -846,9 +846,9 @@ describe("HTTP API exposed by the server", function() {
     beforeEach(function(done) {
       calls = [
         {
-          callId:          crypto.randomBytes(16).toString("hex"),
-          wsCallerToken:   crypto.randomBytes(16).toString("hex"),
-          wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+          callId:          randomBytes(16).toString("hex"),
+          wsCallerToken:   randomBytes(16).toString("hex"),
+          wsCalleeToken:   randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
           apiKey:          tokBoxConfig.credentials.default.apiKey,
@@ -861,9 +861,9 @@ describe("HTTP API exposed by the server", function() {
           timestamp:       parseInt(Date.now() / 1000, 10)
         },
         {
-          callId:          crypto.randomBytes(16).toString("hex"),
-          wsCallerToken:   crypto.randomBytes(16).toString("hex"),
-          wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+          callId:          randomBytes(16).toString("hex"),
+          wsCallerToken:   randomBytes(16).toString("hex"),
+          wsCalleeToken:   randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
           apiKey:          tokBoxConfig.credentials.default.apiKey,
@@ -876,9 +876,9 @@ describe("HTTP API exposed by the server", function() {
           timestamp:       parseInt(Date.now() / 1000, 10) + 1
         },
         {
-          callId:          crypto.randomBytes(16).toString("hex"),
-          wsCallerToken:   crypto.randomBytes(16).toString("hex"),
-          wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+          callId:          randomBytes(16).toString("hex"),
+          wsCallerToken:   randomBytes(16).toString("hex"),
+          wsCalleeToken:   randomBytes(16).toString("hex"),
           callerId:        callerId,
           userMac:         userHmac,
           apiKey:          tokBoxConfig.credentials.default.apiKey,
@@ -963,9 +963,9 @@ describe("HTTP API exposed by the server", function() {
 
     it("shouldn't list callToken and urls for a direct call", function(done) {
       var call = {
-        callId:          crypto.randomBytes(16).toString("hex"),
-        wsCallerToken:   crypto.randomBytes(16).toString("hex"),
-        wsCalleeToken:   crypto.randomBytes(16).toString("hex"),
+        callId:          randomBytes(16).toString("hex"),
+        wsCallerToken:   randomBytes(16).toString("hex"),
+        wsCalleeToken:   randomBytes(16).toString("hex"),
         callerId:        callerId,
         userMac:         userHmac,
         apiKey:          tokBoxConfig.credentials.default.apiKey,
@@ -1017,7 +1017,7 @@ describe("HTTP API exposed by the server", function() {
   });
 
   describe("with tokens", function() {
-    var requests, token, jsonReq, tokBoxSessionId,
+    var requests, token, tokBoxSessionId,
         tokBoxCallerToken, tokBoxCalleeToken;
 
     beforeEach(function (done) {
@@ -1032,11 +1032,6 @@ describe("HTTP API exposed by the server", function() {
         requests.push(options);
       });
 
-      jsonReq = supertest(app)
-        .post('/calls/' + token)
-        .send()
-        .expect(200);
-
       token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
 
       var timestamp = parseInt(Date.now() / 1000, 10);
@@ -1050,10 +1045,9 @@ describe("HTTP API exposed by the server", function() {
     });
 
     describe("POST /calls/:token", function() {
-      var emptyReq, addCallReq;
+      var addCallReq;
 
       beforeEach(function() {
-        emptyReq = supertest(app).post('/calls/' + token);
         addCallReq = supertest(app)
           .post('/calls/' + token)
           .send({callType: 'audio-video'})
@@ -1100,6 +1094,7 @@ describe("HTTP API exposed by the server", function() {
         it("should return the caller data.", function(done) {
           addCallReq
             .end(function(err, res) {
+              if (err) throw err;
               expect(res.body).to.have.property("callId");
               expect(res.body).to.have.property("websocketToken");
               expect(res.body.sessionId).to.eql(tokBoxSessionId);
@@ -1113,7 +1108,8 @@ describe("HTTP API exposed by the server", function() {
 
         it("should store call user data.", function(done) {
           addCallReq
-            .end(function(err, res) {
+            .end(function(err) {
+              if (err) throw err;
               storage.getUserCalls(userHmac, function(err, res) {
                 if (err) throw err;
                 expect(res).to.length(1);
@@ -1125,7 +1121,8 @@ describe("HTTP API exposed by the server", function() {
 
         it("should let the callee grab call info.", function(done) {
           addCallReq
-            .end(function(err, res) {
+            .end(function(err) {
+              if (err) throw err;
               supertest(app)
                 .get("/calls?version=200")
                 .hawk(hawkCredentials)
@@ -1141,14 +1138,9 @@ describe("HTTP API exposed by the server", function() {
     });
 
     describe("POST /calls", function() {
-      var emptyReq, addCallReq;
+      var addCallReq;
 
       beforeEach(function() {
-
-        emptyReq = supertest(app)
-          .post("/calls")
-          .hawk(hawkCredentials)
-          .type("json");
         addCallReq = supertest(app)
           .post("/calls")
           .hawk(hawkCredentials)
@@ -1234,6 +1226,7 @@ describe("HTTP API exposed by the server", function() {
                 .send({calleeId: [user, user2], callType: "audio"})
                 .expect(200)
                 .end(function(err, res) {
+                  if (err) throw err;
                   expect(res.body).to.have.property("callId");
                   expect(res.body).to.have.property("websocketToken");
                   expect(res.body.sessionId).to.eql(tokBoxSessionId);
@@ -1256,7 +1249,8 @@ describe("HTTP API exposed by the server", function() {
               addCallReq
                 .send({calleeId: [user, user2], callType: "audio"})
                 .expect(200)
-                .end(function(err, res) {
+                .end(function(err) {
+                  if (err) throw err;
                   storage.getUserCalls(userHmac, function(err, res) {
                     if (err) throw err;
                     expect(res).to.length(1);
@@ -1282,7 +1276,8 @@ describe("HTTP API exposed by the server", function() {
               addCallReq
                 .send({calleeId: [user, user2], callType: "audio"})
                 .expect(200)
-                .end(function(err, res) {
+                .end(function(err) {
+                  if (err) throw err;
                   supertest(app)
                     .get("/calls?version=200")
                     .hawk(hawkCredentials)
@@ -1343,7 +1338,8 @@ describe("HTTP API exposed by the server", function() {
               addCallReq
                 .send({calleeId: [user, user2], callType: "audio"})
                 .expect(200)
-                .end(function(err, res) {
+                .end(function(err) {
+                  if (err) throw err;
                   expect(requests).to.length(2);
                   done();
                 });

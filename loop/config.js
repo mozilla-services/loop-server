@@ -6,7 +6,7 @@
 
 var convict = require('convict');
 var format = require('util').format;
-var crypto = require('crypto');
+var getHashes = require('crypto').getHashes;
 var path = require('path');
 var fs = require('fs');
 
@@ -133,7 +133,7 @@ var conf = convict({
   userMacAlgorithm: {
     doc: "The algorithm that should be used to mac userIds",
     format: function(val) {
-      if (crypto.getHashes().indexOf(val) === -1) {
+      if (getHashes().indexOf(val) === -1) {
         throw new Error("Given hmac algorithm is not supported");
       }
     },
@@ -334,7 +334,7 @@ var conf = convict({
     doc: "An array of push server URIs",
     format: Array,
     default: ["wss://push.services.mozilla.com/"]
-  },
+  }
 });
 
 
@@ -342,7 +342,7 @@ var conf = convict({
 // files to process, which will be overlayed in order, in the CONFIG_FILES
 // environment variable. By default, the ../config/<env>.json file is loaded.
 
-var envConfig = path.join(__dirname + '/../config', conf.get('env') + '.json');
+var envConfig = path.join(__dirname, '/../config', conf.get('env') + '.json');
 var files = (envConfig + ',' + process.env.CONFIG_FILES)
     .split(',')
     .filter(fs.existsSync);
