@@ -62,6 +62,7 @@ function logMetrics(req, res, next) {
         op: 'request.summary',
         code: res.statusCode,
         path: req.path,
+        method: req.method.toLowerCase(),
         query: req.query,
         agent: req.headers['user-agent'],
         time: isoDateString(new Date()),
