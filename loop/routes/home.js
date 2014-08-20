@@ -23,11 +23,12 @@ module.exports = function(app, conf, logError, storage, tokBox) {
             if (requestError !== null) message = "TokBox " + requestError;
           }
 
-          res.json(status, {
-            storage: storageStatus,
-            provider: (requestError === null) ? true : false,
-            message: message
-          });
+          res.status(status)
+             .json({
+               storage: storageStatus,
+               provider: (requestError === null) ? true : false,
+               message: message
+             });
         });
     });
   });
@@ -59,6 +60,6 @@ module.exports = function(app, conf, logError, storage, tokBox) {
     if (!conf.get("displayVersion")) {
       delete credentials.version;
     }
-    res.json(200, credentials);
+    res.status(200).json(credentials);
   });
 };

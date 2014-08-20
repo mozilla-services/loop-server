@@ -106,7 +106,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
           return result;
         });
 
-        res.json(200, {calls: calls});
+        res.status(200).json({calls: calls});
       });
     });
 
@@ -193,7 +193,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
               return;
             }
 
-            res.json(200, {
+            res.status(200).json({
               callId: callInfo.callId,
               websocketToken: callInfo.wsCallerToken,
               sessionId: callInfo.sessionId,
@@ -210,7 +210,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
    * Return the callee friendly name for the given token.
    **/
   app.get('/calls/:token', validators.validateToken, function(req, res) {
-    res.json(200, {
+    res.status(200).json({
       calleeFriendlyName: req.callUrlData.issuer,
       urlCreationDate: req.callUrlData.timestamp
     });
@@ -276,7 +276,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                         });
                       });
 
-                      res.json(200, {
+                      res.status(200).json({
                         callId: callInfo.callId,
                         websocketToken: callInfo.wsCallerToken,
                         sessionId: callInfo.sessionId,

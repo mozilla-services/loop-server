@@ -96,7 +96,7 @@ describe("index.js", function() {
 
     // Create a route with the validateToken middleware installed.
     app.get('/validateToken/:token', validateToken, function(req, res) {
-      res.json(200, "ok");
+      res.status(200).json();
     });
 
     afterEach(function(done) {
@@ -151,7 +151,7 @@ describe("index.js", function() {
         if (err) throw err;
         jsonReq
           .get('/validateToken/1234')
-          .expect(200, /ok/)
+          .expect(200)
           .end(done);
       });
     });
@@ -160,7 +160,7 @@ describe("index.js", function() {
   describe("#validateSimplePushURL", function() {
     // Create a route with the validateSimplePushURL middleware installed.
     app.post('/validateSP/', validateSimplePushURL, function(req, res) {
-      res.json(200, "ok");
+      res.status(200).json();
     });
 
     it("should validate the simple push url", function(done) {
@@ -192,7 +192,7 @@ describe("index.js", function() {
   describe("#validateCallType", function() {
     // Create a route with the validateSimplePushURL middleware installed.
     app.post('/validateCallType/', validateCallType, function(req, res) {
-      res.json(200, "ok");
+      res.status(200).json();
     });
 
     it("should error on empty callType", function(done) {
@@ -242,12 +242,12 @@ describe("index.js", function() {
   describe("#requireParams", function(){
     // Create a route with the requireParams middleware installed.
     app.post('/requireParams/', requireParams('a', 'b'), function(req, res) {
-      res.json(200, "ok");
+      res.status(200).json();
     });
 
     app.post('/requireParams/simplePushURL', requireParams('simplePushURL'),
       function(req, res) {
-        res.json(200, "ok");
+        res.status(200).json();
       });
 
     it("should return a 406 if the body is not in JSON.", function(done) {
@@ -308,7 +308,7 @@ describe("index.js", function() {
     user = "alexis";
 
     app.post("/with-authenticate", authenticate, function(req, res) {
-      res.json(200, {});
+      res.status(200).json();
     });
 
     describe("BrowserID", function() {
@@ -431,7 +431,7 @@ describe("index.js", function() {
       }, function(err, callTokens) {
         if(res.serverError(err)) return;
 
-        res.json(200, callTokens);
+        res.status(200).json(callTokens);
       });
     });
 

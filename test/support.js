@@ -7,9 +7,17 @@
 var expect = require("chai").expect;
 
 function getMiddlewares(app, method, url) {
-  return app.routes[method].filter(function(e){
-    return e.path === url;
-  }).shift().callbacks;
+  var methodStack = app._router.stack.filter(function(e) {
+    if (e.route && e.route.path === url &&
+        e.route.methods[method]) {
+      return true;
+    }
+    return false;
+  }).shift();
+
+  return methodStack.route.stack.map(function(e) {
+    return e.handle;
+  });
 }
 
 function intersection(array1, array2) {
