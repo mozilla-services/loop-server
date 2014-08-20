@@ -31,7 +31,7 @@ describe("fxa authentication", function() {
         req.user = assertion.email;
         next();
       }), function(req, res) {
-      res.json(200, req.user);
+      res.status(200).json(req.user);
     });
 
     beforeEach(function() {

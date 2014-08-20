@@ -20,7 +20,7 @@ module.exports = function (app, conf, logError, storage, auth, validators,
           delete url.userMac;
           return url;
         });
-        res.json(200, callUrlsData);
+        res.status(200).json(callUrlsData);
       });
     });
 
@@ -39,7 +39,7 @@ module.exports = function (app, conf, logError, storage, auth, validators,
           function(err) {
             if (res.serverError(err)) return;
             // XXX Bug 1032966 - call_url is deprecated
-            res.json(200, {
+            res.status(200).json({
               callUrl: conf.get("webAppUrl").replace("{token}", req.token),
               callToken: req.token,
               call_url: conf.get("webAppUrl").replace("{token}", req.token),
@@ -59,7 +59,7 @@ module.exports = function (app, conf, logError, storage, auth, validators,
             }
             else if (res.serverError(err)) return;
 
-            res.json(200, {
+            res.status(200).json({
               expiresAt: req.urlData.expires
             });
           });
@@ -77,7 +77,7 @@ module.exports = function (app, conf, logError, storage, auth, validators,
         storage.revokeURLToken(req.token, function(err, record) {
           if (res.serverError(err)) return;
 
-          res.json(204, "");
+          res.status(204).json();
         });
       });
   };

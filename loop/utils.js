@@ -25,7 +25,7 @@ function sendError(res, code, errno, error, message, info) {
   }
 
   res.errno = errno;
-  res.json(code, errmap);
+  res.status(code).json(errmap);
 }
 
 function getProgressURL(host) {

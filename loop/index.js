@@ -13,6 +13,7 @@ https.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
+var bodyParser = require('body-parser');
 var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
@@ -50,17 +51,6 @@ function logError(err) {
   ravenClient.captureError(err);
 }
 
-var app = express();
-
-app.use(addHeaders);
-app.disable('x-powered-by');
-app.use(express.json());
-app.use(express.urlencoded());
-app.use(handle503(logError));
-app.use(logMetrics);
-app.use(app.router);
-// Exception logging should come at the end of the list of middlewares.
-app.use(raven.middleware.express(conf.get('sentryDSN')));
 
 var corsEnabled = cors({
   origin: function(origin, callback) {
@@ -71,10 +61,19 @@ var corsEnabled = cors({
   }
 });
 
+
+var app = express();
+
 /**
  * Enable CORS for all requests.
  **/
-app.all('*', corsEnabled);
+app.use(corsEnabled);
+app.use(addHeaders);
+app.disable('x-powered-by');
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(handle503(logError));
+app.use(logMetrics);
 
 var authMiddlewares = require("./auth");
 var auth = authMiddlewares(conf, logError, storage, statsdClient);
@@ -101,6 +100,8 @@ var storeUserCallTokens = calls(app, conf, logError, storage, tokBox,
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(app, conf);
 
+// Exception logging should come at the end of the list of middlewares.
+app.use(raven.middleware.express(conf.get('sentryDSN')));
 
 // Starts HTTP server.
 var server = http.createServer(app);

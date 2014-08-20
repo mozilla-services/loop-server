@@ -27,7 +27,7 @@ describe("metrics middleware", function() {
   app.get("/with-metrics-middleware", logMetrics, function(req, res) {
     req.user = 'uuid';
     req.callUrlData = 'data';
-    res.json(200, "ok");
+    res.status(200).json();
   });
 
   beforeEach(function() {

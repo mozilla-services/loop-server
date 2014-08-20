@@ -20,7 +20,7 @@ module.exports = function (app, storage, auth) {
             if (res.serverError(err)) return;
             storage.deleteHawkSession(req.hawkIdHmac, function(err) {
               if (res.serverError(err)) return;
-              res.json(204, "No Content");
+              res.status(204).json();
             });
           });
         });

@@ -14,7 +14,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
       storage.addUserSimplePushURL(req.user, req.simplePushURL,
         function(err) {
           if (res.serverError(err)) return;
-          res.json(200, "ok");
+          res.status(200).json();
         });
     });
 
@@ -26,7 +26,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
     validators.validateSimplePushURL, function(req, res) {
       storage.removeSimplePushURL(req.user, req.simplePushUrl, function(err) {
         if (res.serverError(err)) return;
-        res.json(204, "");
+        res.status(204).json();
       });
     });
 };
