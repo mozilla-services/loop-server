@@ -12,6 +12,8 @@ var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
 
 var loop = require("../loop");
+var apiPrefix = loop.apiPrefix;
+var apiRouter = loop.apiRouter;
 var app = loop.app;
 var request = require("request");
 
@@ -54,7 +56,7 @@ var progressURL = getProgressURL(conf.get('publicServerAddress'));
 
 function register(url, assertion, credentials, cb) {
   supertest(app)
-    .post('/registration')
+    .post(apiPrefix + '/registration')
     .hawk(credentials)
     .type('json')
     .send({'simple_push_url': url})
@@ -153,7 +155,7 @@ describe("HTTP API exposed by the server", function() {
     describe("OPTIONS " + route, function() {
       it("should authorize allowed origins to do CORS", function(done) {
         supertest(app)
-          .options(route)
+          .options(apiPrefix + route)
           .set('Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
           .expect('Access-Control-Allow-Methods',
@@ -163,7 +165,7 @@ describe("HTTP API exposed by the server", function() {
 
       it("should reject unauthorized origins to do CORS", function(done) {
         supertest(app)
-          .options(route)
+          .options(apiPrefix + route)
           .set('Origin', 'http://not-authorized')
           .end(function(err, res) {
             if (err) throw err;
@@ -196,14 +198,14 @@ describe("HTTP API exposed by the server", function() {
         });
 
         it("should authorize allowed origins to do CORS", function(done) {
-          supertest(app)[method](route)
+          supertest(app)[method](apiPrefix + route)
             .set('Origin', 'http://mozilla.org')
             .expect('Access-Control-Allow-Origin', 'http://mozilla.org')
             .end(done);
         });
 
         it("should reject unauthorized origins to do CORS", function(done) {
-          supertest(app)[method](route)
+          supertest(app)[method](apiPrefix + route)
             .set('Origin', 'http://not-authorized')
             .end(function(err, res) {
               if (err) throw err;
@@ -227,7 +229,7 @@ describe("HTTP API exposed by the server", function() {
       });
 
       supertest(app)
-        .get('/__heartbeat__')
+        .get(apiPrefix + '/__heartbeat__')
         .expect(503)
         .end(function(err, res) {
           if (err) throw err;
@@ -244,7 +246,7 @@ describe("HTTP API exposed by the server", function() {
         cb(new Error("blah"));
       });
       supertest(app)
-        .get('/__heartbeat__')
+        .get(apiPrefix + '/__heartbeat__')
         .expect(503)
         .end(function(err, res) {
           if (err) throw err;
@@ -262,7 +264,7 @@ describe("HTTP API exposed by the server", function() {
         cb(null);
       });
       supertest(app)
-        .get('/__heartbeat__')
+        .get(apiPrefix + '/__heartbeat__')
         .expect(200)
         .end(function(err, res) {
           if (err) throw err;
@@ -278,7 +280,7 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /", function() {
     it("should display project information.", function(done) {
       supertest(app)
-        .get('/')
+        .get(apiPrefix + '/')
         .expect(200)
         .expect('Content-Type', /json/)
         .end(function(err, res) {
@@ -296,7 +298,7 @@ describe("HTTP API exposed by the server", function() {
         conf.set("displayVersion", false);
 
         supertest(app)
-          .get('/')
+          .get(apiPrefix + '/')
           .expect(200)
           .end(function(err, res) {
             if (err) throw err;
@@ -309,7 +311,7 @@ describe("HTTP API exposed by the server", function() {
   describe("GET /push-server-config", function() {
     it("should return the push server configuration", function(done) {
       supertest(app)
-        .get('/push-server-config')
+        .get(apiPrefix + '/push-server-config')
         .end(function(err, res) {
           if (err) throw err;
           expect(res.body).eql({
@@ -325,14 +327,14 @@ describe("HTTP API exposed by the server", function() {
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .get('/call-url')
+        .get(apiPrefix + '/call-url')
         .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
     });
 
     it("should have the requireHawkSession middleware installed", function() {
-      expect(getMiddlewares(app, 'post', '/call-url'))
+      expect(getMiddlewares(apiRouter, 'post', '/call-url'))
         .include(requireHawkSession);
     });
 
@@ -347,7 +349,7 @@ describe("HTTP API exposed by the server", function() {
     it("should return a list of call-url with some information",
       function(done) {
         supertest(app)
-          .post('/call-url')
+          .post(apiPrefix + '/call-url')
           .hawk(hawkCredentials)
           .type('json')
           .send({callerId: callerId, expiresIn: 5, issuer: "alexis"})
@@ -379,14 +381,14 @@ describe("HTTP API exposed by the server", function() {
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .post('/call-url')
+        .post(apiPrefix + '/call-url')
         .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
     });
 
     it("should have the requireHawkSession middleware installed", function() {
-      expect(getMiddlewares(app, 'post', '/call-url'))
+      expect(getMiddlewares(apiRouter, 'post', '/call-url'))
         .include(requireHawkSession);
     });
 
@@ -554,7 +556,7 @@ describe("HTTP API exposed by the server", function() {
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .post('/registration')
+        .post(apiPrefix + '/registration')
         .hawk(hawkCredentials)
         .type('json')
         .expect('Content-Type', /json/);
@@ -562,13 +564,13 @@ describe("HTTP API exposed by the server", function() {
 
     it("should have the authenticate middleware installed",
       function() {
-        expect(getMiddlewares(app, 'post', '/registration'))
+        expect(getMiddlewares(apiRouter, 'post', '/registration'))
           .include(authenticate);
       });
 
     it("should have the validateSimplePushURL middleware installed",
       function() {
-        expect(getMiddlewares(app, 'post', '/registration'))
+        expect(getMiddlewares(apiRouter, 'post', '/registration'))
           .include(validateSimplePushURL);
       });
 
@@ -586,7 +588,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should reject non-JSON requests", function(done) {
       supertest(app)
-        .post('/registration')
+        .post(apiPrefix + '/registration')
         .set('Accept', 'text/html')
         .hawk(hawkCredentials)
         .expect(406).end(function(err, res) {
@@ -600,7 +602,7 @@ describe("HTTP API exposed by the server", function() {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=986578
     it("should accept request with custom JSON content-type.", function(done) {
       supertest(app)
-        .post('/call-url')
+        .post(apiPrefix + '/call-url')
         .send({callerId: callerId})
         .hawk(hawkCredentials)
         .type('application/json; charset=utf-8')
@@ -677,7 +679,7 @@ describe("HTTP API exposed by the server", function() {
     it("should count new users if the session is created", function(done) {
       sandbox.stub(statsdClient, "count");
       supertest(app)
-        .post('/registration')
+        .post(apiPrefix + '/registration')
         .type('json')
         .send({
           'simple_push_url': pushURL
@@ -713,20 +715,20 @@ describe("HTTP API exposed by the server", function() {
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .del('/registration')
+        .del(apiPrefix + '/registration')
         .hawk(hawkCredentials)
         .type('json');
     });
 
     it("should have the requireHawkSession middleware installed",
       function() {
-        expect(getMiddlewares(app, 'delete', '/registration'))
+        expect(getMiddlewares(apiRouter, 'delete', '/registration'))
           .include(requireHawkSession);
       });
 
     it("should have the validateSimplePushURL middleware installed",
       function() {
-        expect(getMiddlewares(app, 'delete', '/registration'))
+        expect(getMiddlewares(apiRouter, 'delete', '/registration'))
           .include(validateSimplePushURL);
       });
 
@@ -741,7 +743,7 @@ describe("HTTP API exposed by the server", function() {
 
   describe("GET /calls/:token", function() {
     it("should have the validateToken middleware installed.", function() {
-      expect(getMiddlewares(app, 'get', '/calls/:token'))
+      expect(getMiddlewares(apiRouter, 'get', '/calls/:token'))
         .include(validateToken);
     });
 
@@ -758,7 +760,7 @@ describe("HTTP API exposed by the server", function() {
         if (err) throw err;
 
         supertest(app)
-          .get('/calls/' + token)
+          .get(apiPrefix + '/calls/' + token)
           .hawk(hawkCredentials)
           .expect(200)
           .expect('Content-Type', /json/)
@@ -789,7 +791,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should ignore invalid fields", function(done) {
       supertest(app)
-        .put('/call-url/' + token)
+        .put(apiPrefix + '/call-url/' + token)
         .hawk(hawkCredentials)
         .send({
           callerId: "Adam",
@@ -809,7 +811,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should accept valid fields", function(done) {
       supertest(app)
-        .put('/call-url/' + token)
+        .put(apiPrefix + '/call-url/' + token)
         .hawk(hawkCredentials)
         .send({
           callerId: "Adam",
@@ -840,7 +842,7 @@ describe("HTTP API exposed by the server", function() {
       }, function(err) {
         if (err) throw err;
         req = supertest(app)
-          .del('/call-url/' + token)
+          .del(apiPrefix + '/call-url/' + token)
           .hawk(hawkCredentials);
         done();
       });
@@ -877,14 +879,14 @@ describe("HTTP API exposed by the server", function() {
         }, function(err) {
           if (err) throw err;
           req = supertest(app)
-            .del('/call-url/' + token)
+            .del(apiPrefix + '/call-url/' + token)
             .hawk(hawkCredentials)
             .expect(403).end(done);
         });
       });
 
     it("should have the validateToken middleware installed", function() {
-      expect(getMiddlewares(app, 'delete', '/call-url/:token'))
+      expect(getMiddlewares(apiRouter, 'delete', '/call-url/:token'))
         .include(validateToken);
     });
   });
@@ -942,7 +944,7 @@ describe("HTTP API exposed by the server", function() {
       ];
 
       req = supertest(app)
-        .get('/calls?version=' + calls[2].timestamp)
+        .get(apiPrefix + '/calls?version=' + calls[2].timestamp)
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/);
 
@@ -955,7 +957,7 @@ describe("HTTP API exposed by the server", function() {
 
     it("should list existing calls", function(done) {
       supertest(app)
-        .get('/calls?version=0')
+        .get(apiPrefix + '/calls?version=0')
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/)
         .expect(200).end(function(err, res) {
@@ -1026,7 +1028,7 @@ describe("HTTP API exposed by the server", function() {
       };
 
       req = supertest(app)
-        .get('/calls?version=' + call.timestamp)
+        .get(apiPrefix + '/calls?version=' + call.timestamp)
         .hawk(hawkCredentials)
         .expect('Content-Type', /json/);
 
@@ -1052,7 +1054,8 @@ describe("HTTP API exposed by the server", function() {
     });
 
     it("should have the requireHawk middleware installed", function() {
-      expect(getMiddlewares(app, 'get', '/calls')).include(requireHawkSession);
+      expect(getMiddlewares(apiRouter, 'get', '/calls'))
+        .include(requireHawkSession);
     });
 
     it("should answer a 503 if the database isn't available", function(done) {
@@ -1098,19 +1101,19 @@ describe("HTTP API exposed by the server", function() {
 
       beforeEach(function() {
         addCallReq = supertest(app)
-          .post('/calls/' + token)
+          .post(apiPrefix + '/calls/' + token)
           .send({callType: 'audio-video'})
           .expect(200);
       });
 
       it("should have the token validation middleware installed", function() {
-        expect(getMiddlewares(app, 'post', '/calls/:token'))
+        expect(getMiddlewares(apiRouter, 'post', '/calls/:token'))
           .include(validateToken);
       });
 
       it("should have the validateCallType middleware installed",
         function() {
-          expect(getMiddlewares(app, 'post', '/calls'))
+          expect(getMiddlewares(apiRouter, 'post', '/calls'))
             .include(validateCallType);
         });
 
@@ -1173,7 +1176,7 @@ describe("HTTP API exposed by the server", function() {
             .end(function(err) {
               if (err) throw err;
               supertest(app)
-                .get("/calls?version=200")
+                .get(apiPrefix + "/calls?version=200")
                 .hawk(hawkCredentials)
                 .expect(200)
                 .end(function(err, res) {
@@ -1191,7 +1194,7 @@ describe("HTTP API exposed by the server", function() {
 
       beforeEach(function() {
         addCallReq = supertest(app)
-          .post("/calls")
+          .post(apiPrefix + "/calls")
           .hawk(hawkCredentials)
           .type("json")
           .expect(200);
@@ -1199,13 +1202,13 @@ describe("HTTP API exposed by the server", function() {
 
 
       it("should have the requireHawk middleware installed", function() {
-        expect(
-          getMiddlewares(app, "post", "/calls")).include(requireHawkSession);
+        expect(getMiddlewares(apiRouter, "post", "/calls"))
+          .include(requireHawkSession);
       });
 
       it("should have the validateCallType middleware installed",
         function() {
-          expect(getMiddlewares(app, 'post', '/calls'))
+          expect(getMiddlewares(apiRouter, 'post', '/calls'))
             .include(validateCallType);
         });
 
@@ -1328,14 +1331,14 @@ describe("HTTP API exposed by the server", function() {
                 .end(function(err) {
                   if (err) throw err;
                   supertest(app)
-                    .get("/calls?version=200")
+                    .get(apiPrefix + "/calls?version=200")
                     .hawk(hawkCredentials)
                     .expect(200)
                     .end(function(err, res) {
                       if (err) throw err;
                       expect(res.body.calls).to.length(1);
                       supertest(app)
-                        .get("/calls?version=200")
+                        .get(apiPrefix + "/calls?version=200")
                         .hawk(hawkCredentials2)
                         .expect(200)
                         .end(function(err, res2) {
@@ -1402,7 +1405,7 @@ describe("HTTP API exposed by the server", function() {
       it("should return 204 even if there is no call-data to delete",
         function(done) {
           supertest(app)
-            .del('/account')
+            .del(apiPrefix + '/account')
             .hawk(hawkCredentials)
             .expect(204)
             .end(function(err) {

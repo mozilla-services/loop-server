@@ -7,7 +7,14 @@
 var expect = require("chai").expect;
 
 function getMiddlewares(app, method, url) {
-  var methodStack = app._router.stack.filter(function(e) {
+  var apiRouter;
+  if (app.hasOwnProperty("_router")) {
+    apiRouter = app._router;
+  } else {
+    apiRouter = app;
+  }
+
+  var methodStack = apiRouter.stack.filter(function(e) {
     if (e.route && e.route.path === url &&
         e.route.methods[method]) {
       return true;
