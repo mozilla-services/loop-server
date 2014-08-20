@@ -7,13 +7,15 @@
 var expect = require("chai").expect;
 
 function getMiddlewares(app, method, url) {
-  return app._router.stack.filter(function(e){
+  var methodStack = app._router.stack.filter(function(e) {
     if (e.route && e.route.path === url &&
         e.route.methods[method]) {
       return true;
     }
     return false;
-  }).shift().route.stack.map(function(e) {
+  }).shift();
+
+  return methodStack.route.stack.map(function(e) {
     return e.handle;
   });
 }
