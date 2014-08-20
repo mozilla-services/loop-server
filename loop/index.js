@@ -101,6 +101,9 @@ var storeUserCallTokens = calls(app, conf, logError, storage, tokBox,
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(app, conf);
 
+var fxaOAuth = require("./routes/fxa-oauth");
+fxaOAuth(app, conf, logError);
+
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
 

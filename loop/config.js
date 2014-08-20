@@ -334,6 +334,23 @@ var conf = convict({
     doc: "An array of push server URIs",
     format: Array,
     default: ["wss://push.services.mozilla.com/"]
+  },
+  fxaOAuth: {
+    client_id: {
+      doc: "The FxA client identifier",
+      format: String,
+      default: "loop"
+    },
+    oauth_uri: {
+      doc: "The location of the FxA OAuth server.",
+      format: String,
+      default: ""
+    },
+    scope: {
+      doc: "The scope we're requesting access to",
+      format: String,
+      default: "profile"
+    }
   }
 });
 
