@@ -14,7 +14,6 @@ http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
 var bodyParser = require('body-parser');
-var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
 var StatsdClient = require('statsd-node').client;
@@ -146,7 +145,6 @@ module.exports = {
   server: server,
   conf: conf,
   storage: storage,
-  request: request,
   tokBox: tokBox,
   statsdClient: statsdClient,
   shutdown: shutdown,

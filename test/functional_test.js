@@ -13,7 +13,7 @@ var assert = sinon.assert;
 
 var loop = require("../loop");
 var app = loop.app;
-var request = loop.request;
+var request = require("request");
 
 var conf = loop.conf;
 var tokBox = loop.tokBox;
