@@ -69,6 +69,7 @@ describe("metrics middleware", function() {
         expect(logged.ip).to.eql('ip1, ip2, ip3');
         expect(logged.errno).to.eql(0);
         expect(logged.time).to.eql('2014-02-28T13:52:34Z');
+        expect(logged.method).to.eql('get');
 
         done();
       });
