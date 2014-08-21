@@ -48,7 +48,9 @@ if (conf.get('statsdEnabled') === true) {
 }
 
 function logError(err) {
-  console.log(err);
+  if (conf.get('env') !== 'test') {
+    console.log(err);
+  }
   ravenClient.captureError(err);
 }
 
