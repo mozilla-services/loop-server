@@ -15,16 +15,6 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   var oauthConf = conf.get('fxaOAuth');
 
   /**
-   * An endpoint you can use to retrieve a hawk session.
-   *
-   * In the case of OAuth, this session will be upgraded at the end of the
-   * authentication flow, with an attached identity.
-   **/
-  app.post('/session', auth.attachOrCreateHawkSession, function(req, res) {
-    res.json(200, 'ok');
-  });
-
-  /**
    * Provide the client with the parameters needed for the OAuth dance.
    **/
   app.get('/fxa-oauth/parameters', auth.requireHawkSession,

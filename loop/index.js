@@ -104,6 +104,9 @@ pushServerConfig(app, conf);
 var fxaOAuth = require("./routes/fxa-oauth");
 fxaOAuth(app, conf, logError, storage, auth, validators);
 
+var session = require("./routes/session");
+session(app, auth);
+
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
 
