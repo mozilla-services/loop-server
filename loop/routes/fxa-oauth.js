@@ -8,11 +8,11 @@ var randomBytes = require('crypto').randomBytes;
 var request = require('request');
 var sendError = require('../utils').sendError;
 var errors = require('../errno.json');
-var hmac = require('./hmac');
+var hmac = require('../hmac');
 
 module.exports = function (app, conf, logError, storage, auth, validators) {
 
-  var oauthConf = conf.get('fxaOauth');
+  var oauthConf = conf.get('fxaOAuth');
 
   /**
    * An endpoint you can use to retrieve a hawk session.

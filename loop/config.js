@@ -353,7 +353,7 @@ var conf = convict({
     },
     redirect_uri: {
       doc: "The redirect_uri.",
-      format: "url",
+      format: String,
       default: "fxa://oauth/"
     },
     profile_uri: {
