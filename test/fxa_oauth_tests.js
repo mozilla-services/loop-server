@@ -59,7 +59,7 @@ describe('/fxa-oauth', function () {
           expect(resp.body.oauth_uri).eql(oauthConf.oauth_uri);
           expect(resp.body.scope).eql(oauthConf.scope);
           expect(resp.body.redirect_uri).eql(oauthConf.redirect_uri);
-          expect(resp.body.state).to.not.be.undefined;
+          expect(resp.body.state).to.not.eql(undefined);
           done();
         });
     });
