@@ -354,7 +354,7 @@ var conf = convict({
     redirect_uri: {
       doc: "The redirect_uri.",
       format: String,
-      default: "fxa://oauth/"
+      default: "urn:ietf:wg:oauth:2.0:fx:webchannel"
     },
     profile_uri: {
       doc: "The FxA profile uri.",
