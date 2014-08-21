@@ -46,5 +46,10 @@
     "ringingDuration": 0.05,
     "connectionDuration": 0.05
   },
-  "maxSimplePushUrls": 2
+  "maxSimplePushUrls": 2,
+
+  "fxaOAuth": {
+    "client_id": "263ceaa5546dce83",
+    "client_secret": "852ae8d050d6805a402272e0c776193cfba263ceaa5546dce837191be98db91e"
+  }
 }

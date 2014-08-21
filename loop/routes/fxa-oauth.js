@@ -49,7 +49,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   app.get('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
     storage.getHawkOAuthToken(req.hawkIdHmac, function(err, token) {
       res.json(200, {
-        oauthToken: token
+        oauthToken: token || undefined
       });
     });
   });
@@ -57,20 +57,35 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Trade an OAuth code with an oauth bearer token.
    **/
-  app.post('/fxa-oauth/token', auth.requireHawkSession,
-    validators.requireParams('state', 'code'), function (req, res) {
+  app.post('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
       var state = req.query.state;
       var code = req.query.code;
+
+      var missingParams = [];
+      if (!state) {
+        missingParams.push('state');
+      }
+      if (!code) {
+        missingParams.push('code');
+      }
+      if (missingParams.length > 0) {
+        sendError(res, 400, errors.MISSING_PARAMETERS,
+                  "Missing: " + missingParams.join(", "));
+        return;
+      }
 
       // State should match an existing state.
       storage.getHawkOAuthState(req.hawkIdHmac, function(err, storedState) {
         if (res.serverError(err)) return;
+
+        storage.clearHawkOAuthState(req.hawkIdHmac, function(err) {
+          if (res.serverError(err)) return;
+        });
+
         if (storedState !== state) {
           // Reset session state after an attempt was made to compare it.
-          storage.clearHawkOAuthState(req.hawkIdHmac, function(err) {
-            if (res.serverError(err)) return;
-            sendError(res, 400, errors.INVALID_OAUTH_STATE);
-          });
+          sendError(res, 400,
+            errors.INVALID_OAUTH_STATE, "Invalid OAuth state");
           return;
         }
 
@@ -103,7 +118,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             try {
               data = JSON.parse(body);
             } catch (e) {
-              if (res.serverError(err)) return;
+              if (res.serverError(e)) return;
             }
             // Store the appropriate profile information into the database,
             // associated with the hawk session.
