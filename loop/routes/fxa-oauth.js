@@ -20,7 +20,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   app.get('/fxa-oauth/parameters', auth.requireHawkSession,
     function(req, res) {
       var callback = function(state) {
-        res.json(200, {
+        res.status(200).json({
           client_id: oauthConf.client_id,
           redirect_uri: oauthConf.redirect_uri,
           oauth_uri: oauthConf.oauth_uri,
@@ -48,7 +48,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    **/
   app.get('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
     storage.getHawkOAuthToken(req.hawkIdHmac, function(err, token) {
-      res.json(200, {
+      res.status(200).json({
         oauthToken: token || undefined
       });
     });
@@ -125,7 +125,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             var userHmac = hmac(data.email, conf.get('userMacSecret'));
             storage.setHawkUser(userHmac, req.hawkIdHmac, function(err) {
               if (res.serverError(err)) return;
-              res.json(200, {
+              res.status(200).json({
                 oauthToken: token
               });
             });
