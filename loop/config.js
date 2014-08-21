@@ -337,14 +337,19 @@ var conf = convict({
   },
   fxaOAuth: {
     client_id: {
-      doc: "The FxA client identifier",
-      format: String,
-      default: "loop"
+      doc: "The FxA client_id (8 bytes key encoded as hex)",
+      format: hexKeyOfSize(8),
+      default: ""
+    },
+    client_secret: {
+      doc: "The FxA client secret (32 bytes key encoded as hex)",
+      format: hexKeyOfSize(32),
+      default: ""
     },
     oauth_uri: {
       doc: "The location of the FxA OAuth server.",
-      format: String,
-      default: ""
+      format: "url",
+      default: "https://oauth.accounts.firefox.com/v1"
     },
     scope: {
       doc: "The scope we're requesting access to",
