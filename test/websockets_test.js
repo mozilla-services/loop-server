@@ -43,6 +43,10 @@ describe('websockets', function() {
       server.address().port +
       conf.get('progressURLEndpoint'));
 
+    client.on('close', function() {
+      client.isClosed = true;
+    });
+
     client.on('open', function() {
       // Generate Hawk credentials.
       var token = new Token();
@@ -60,13 +64,10 @@ describe('websockets', function() {
 
   afterEach(function(done) {
     sandbox.restore();
-    if (client.isClosed === true) {
-      done();
-      return;
+    if (!client.isClosed) {
+      client.close();
     }
-
-    client.on('close', function() { done(); });
-    client.close();
+    done();
   });
 
   it('should echo back a message', function(done) {
@@ -183,6 +184,8 @@ describe('websockets', function() {
 
       // The on("open") needs to be defined right after the callee creation,
       // otherwise the event might be lost.
+      caller.on('close', function() { caller.isClosed = true; });
+
       caller.on('open', function() {
         // Create a call and initialize its state to "init".
         createCall(callId, hawkCredentials.id, function(err) {
@@ -197,12 +200,10 @@ describe('websockets', function() {
     });
 
     afterEach(function(done) {
-      if (caller.isClosed === true) {
-        done();
-        return;
+      if (! caller.isClosed) {
+        caller.close();
       }
-      caller.on('close', function() { done(); });
-      caller.close();
+      done();
     });
 
     it('should broadcast alerting state to other interested parties',

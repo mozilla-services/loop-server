@@ -114,13 +114,15 @@ describe("TokBox", function() {
 
       var generateTokenCalls = 0;
       sandbox.stub(tokBox._opentok.default, "generateToken",
-        function() {
+        /* eslint-disable */
+        function(sessionId, options) {
           generateTokenCalls += 1;
           if (generateTokenCalls === 1) {
             return fakeCallInfo.token1;
           }
           return fakeCallInfo.token2;
         });
+        /* eslint-enable */
 
       tokBox.getSessionTokens(function(error, info) {
         expect(error).eql(null);

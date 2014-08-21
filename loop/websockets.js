@@ -148,9 +148,9 @@ MessageHandler.prototype = {
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
           setTimeout(function() {
-            self.storage.getCallStateTTL(session.callId, function(err, state) {
+            self.storage.getCallState(session.callId, function(err, state) {
               if (serverError(err, callback)) return;
-              if (state === 'terminated' || state === 'alerting') {
+              if (state === 'terminated' || state === 'half-initiated') {
                 self.broadcastState(session.callId, "terminated:timeout");
               }
             });
@@ -173,20 +173,20 @@ MessageHandler.prototype = {
 
           // After the hello phase and as soon the callee is connected,
           // the call changes to the "alerting" state.
-          if (currentState === "init") {
+          if (currentState === "init" || currentState === "half-initiated") {
             self.broadcastState(session.callId, "init." + session.type,
               timeoutTTL);
-          } else if (currentState === "half-initiated") {
-            self.broadcastState(session.callId, "init." + session.type);
-            // We are now in "alterting" mode.
-            setTimeout(function() {
-              self.storage.getCallState(session.callId, function(err, state) {
-                if (serverError(err, callback)) return;
-                if (state === "alerting" || state === "terminated") {
-                  self.broadcastState(session.callId, "terminated:timeout");
-                }
-              });
-            }, self.conf.ringingDuration * 1000);
+            if (session.type === "callee") {
+              // We are now in "alerting" mode.
+              setTimeout(function() {
+                self.storage.getCallState(session.callId, function(err, state) {
+                  if (serverError(err, callback)) return;
+                  if (state === "alerting" || state === "terminated") {
+                    self.broadcastState(session.callId, "terminated:timeout");
+                  }
+                });
+              }, self.conf.ringingDuration * 1000);
+            }
           }
         });
       });
@@ -322,7 +322,6 @@ MessageHandler.prototype = {
     var self = this;
     var parts = stateData.split(":");
     var state = parts[0];
-
     self.storage.setCallState(callId, state, ttl, function(err) {
       if (serverError(err)) return;
 
@@ -424,7 +423,13 @@ module.exports = function(storage, logError, conf) {
                 } else {
                   message = err.message;
                 }
-                ws.send(messageHandler.createError(message));
+                try {
+                  ws.send(messageHandler.createError(message));
+                } catch (e) {
+                  // Socket already closed (i.e, in case of race condition
+                  // where we don't receive half-connected but twice
+                  // connected.
+                }
                 ws.close();
                 return;
               }

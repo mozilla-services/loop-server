@@ -64,7 +64,6 @@ rules:
   "no-with": 2
   "no-wrap-func": 2
   "no-yoda": 0
-
   "block-scoped-var": 0
   "brace-style": 0
   "camelcase": 0

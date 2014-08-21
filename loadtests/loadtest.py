@@ -79,7 +79,6 @@ class TestLoop(TestCase):
                 callee_ws.receive()
 
             elif messageType == "progress" and state == "alerting":
-                gevent.sleep(25)
                 self._send_ws_message(
                     caller_ws,
                     messageType="action",
