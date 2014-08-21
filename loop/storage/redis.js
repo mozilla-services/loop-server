@@ -614,6 +614,10 @@ RedisStorage.prototype = {
     this._client.set('oauth.token.' + hawkIdHmac, token, callback);
   },
 
+  getHawkOAuthToken: function(hawkIdHmac, callback) {
+    this._client.get('oauth.token.' + hawkIdHmac, callback);
+  },
+
   setHawkOAuthState: function(hawkIdHmac, state, callback) {
     this._client.setex(
       'oauth.state.' + hawkIdHmac,
@@ -628,9 +632,8 @@ RedisStorage.prototype = {
   },
 
   clearHawkOAuthState: function(hawkIdHmac, callback) {
-    this.client.del('oauth.state.' + hawkIdHmac, callback);
+    this._client.del('oauth.state.' + hawkIdHmac, callback);
   },
-
 
   drop: function(callback) {
     this._client.flushdb(callback);

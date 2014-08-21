@@ -351,6 +351,16 @@ var conf = convict({
       format: "url",
       default: "https://oauth.accounts.firefox.com/v1"
     },
+    redirect_uri: {
+      doc: "The redirect_uri.",
+      format: "url",
+      default: "fxa://oauth/"
+    },
+    profile_uri: {
+      doc: "The FxA profile uri.",
+      format: "url",
+      default: "https://profile.firefox.com/v1"
+    },
     scope: {
       doc: "The scope we're requesting access to",
       format: String,
