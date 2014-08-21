@@ -21,7 +21,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * authentication flow, with an attached identity.
    **/
   app.post('/session', auth.attachOrCreateHawkSession, function(req, res) {
-    res.json(200, "ok");
+    res.json(200, 'ok');
   });
 
   /**
@@ -29,11 +29,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    **/
   app.get('/fxa-oauth/parameters', auth.requireHawkSession, 
     function(req, res) {
-      var state = randomBytes(32).toString('hex');
-
-      // Store the state for the time of the OAuth session.
-      storage.setHawkOAuthState(req.hawkIdHmac, state, function(err) {
-        if (res.serverError(err)) return;
+      var callback = function(state) {
         res.json(200, {
           client_id: oauthConf.client_id,
           redirect_uri: undefined,
@@ -41,6 +37,18 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
           scope: oauthConf.scope,
           state: state
         });
+      };
+      storage.getHawkOAuthState(req.hawkIdHmac, function(err, state) {
+        if (res.serverError(err)) return;
+        if (state === null) {
+          state = randomBytes(32).toString('hex');
+          storage.setHawkOAuthState(req.hawkIdHmac, state, function(err) {
+            if (res.serverError(err)) return;
+            callback(state);
+          });
+        } else {
+          callback(state);
+        }
       });
     });
 
@@ -98,7 +106,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             var userHmac = hmac(data.email, conf.get('userMacSecret'));
             storage.setHawkUser(userHmac, req.hawkIdHmac, function(err) {
               if (res.serverError(err)) return;
-              res.json(200, "ok");
+              res.json(200, 'ok');
             });
           });
         });
