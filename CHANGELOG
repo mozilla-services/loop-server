@@ -3,6 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
+0.11.0 (unreleased)
+-------------------
+
+- [feature] 1041814 — Add FxA oauth support
+
+
 0.10.0 (2014-08-05)
 -------------------
 
