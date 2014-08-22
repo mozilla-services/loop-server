@@ -5,7 +5,7 @@
 
 var expect = require("chai").expect;
 var sinon = require("sinon");
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 
 var ws = require('ws');
 
@@ -43,6 +43,10 @@ describe('websockets', function() {
       server.address().port +
       conf.get('progressURLEndpoint'));
 
+    client.on('close', function() {
+      client.isClosed = true;
+    });
+
     client.on('open', function() {
       // Generate Hawk credentials.
       var token = new Token();
@@ -60,13 +64,10 @@ describe('websockets', function() {
 
   afterEach(function(done) {
     sandbox.restore();
-    if (client.isClosed === true) {
-      done();
-      return;
+    if (!client.isClosed) {
+      client.close();
     }
-
-    client.on('close', function() { done(); });
-    client.close();
+    done();
   });
 
   it('should echo back a message', function(done) {
@@ -83,7 +84,7 @@ describe('websockets', function() {
   });
 
   it('should reject bad authentication tokens', function(done) {
-    var callId = crypto.randomBytes(16).toString('hex');
+    var callId = randomBytes(16).toString('hex');
     createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
       client.on('message', function(data) {
@@ -118,7 +119,7 @@ describe('websockets', function() {
 
   it('should accept caller authenticating with a valid token url',
     function(done) {
-      var callId = crypto.randomBytes(16).toString('hex');
+      var callId = randomBytes(16).toString('hex');
 
       // Create a call and set its state to "init".
       createCall(callId, hawkCredentials.id, function(err) {
@@ -142,7 +143,7 @@ describe('websockets', function() {
     });
 
   it('should return the state of the call', function(done) {
-    var callId = crypto.randomBytes(16).toString('hex');
+    var callId = randomBytes(16).toString('hex');
 
     createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
@@ -171,7 +172,7 @@ describe('websockets', function() {
     beforeEach(function(done) {
       this.timeout(5000);
       calleeMsgCount = 0;
-      callId = crypto.randomBytes(16).toString('hex');
+      callId = randomBytes(16).toString('hex');
 
       // Name the existing ws client "callee" for readability.
       callee = client;
@@ -183,6 +184,8 @@ describe('websockets', function() {
 
       // The on("open") needs to be defined right after the callee creation,
       // otherwise the event might be lost.
+      caller.on('close', function() { caller.isClosed = true; });
+
       caller.on('open', function() {
         // Create a call and initialize its state to "init".
         createCall(callId, hawkCredentials.id, function(err) {
@@ -197,12 +200,10 @@ describe('websockets', function() {
     });
 
     afterEach(function(done) {
-      if (caller.isClosed === true) {
-        done();
-        return;
+      if (! caller.isClosed) {
+        caller.close();
       }
-      caller.on('close', function() { done(); });
-      caller.close();
+      done();
     });
 
     it('should broadcast alerting state to other interested parties',

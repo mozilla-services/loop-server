@@ -110,6 +110,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
       // generate the hawk session.
       hawk.generateHawkSession(createHawkSession,
         function(err, tokenId, authKey, sessionToken) {
+          if (res.serverError(err)) return;
           var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
           var encryptedIdentifier = encrypt(tokenId, identifier);
           storage.setHawkUser(userHmac, hawkIdHmac, function(err) {

@@ -4,7 +4,7 @@
 
 "use strict";
 var expect = require("chai").expect;
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 var sinon = require("sinon");
 
 var getStorage = require("../loop/storage");
@@ -26,7 +26,7 @@ describe("Storage", function() {
         a_second = 1 / 3600,  // A second in hours.
         calls = [
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
+          callId:       randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session1,
@@ -35,7 +35,7 @@ describe("Storage", function() {
           timestamp:    parseInt(Date.now() / 1000, 10) - 3
         },
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
+          callId:       randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session2,
@@ -44,7 +44,7 @@ describe("Storage", function() {
           timestamp:    parseInt(Date.now() / 1000, 10) - 2
         },
         {
-          callId:       crypto.randomBytes(16).toString("hex"),
+          callId:       randomBytes(16).toString("hex"),
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session3,
@@ -93,9 +93,7 @@ describe("Storage", function() {
         it("should add a revoked url", function(done) {
           storage.revokeURLToken({uuid: uuid, expires: a_second},
             function(err) {
-              if (err)  {
-                throw err;
-              }
+              if (err) throw err;
               storage.getCallUrlData(uuid, function(err, value){
                 expect(value).to.equal(null);
                 done(err);
@@ -107,9 +105,7 @@ describe("Storage", function() {
       describe("#addUserSimplePushURL", function() {
         it("should be able to add a user simple push URL", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getUserSimplePushURLs(userMac, function(err, urls) {
               expect(urls).to.have.length(1);
               expect(urls).to.eql([simplePushURL]);
@@ -120,8 +116,10 @@ describe("Storage", function() {
 
         it("should not overwrite existing simple push URLs", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
             storage.addUserSimplePushURL(userMac, simplePushURL + '2',
               function(err) {
+                if (err) throw err;
                 storage.getUserSimplePushURLs(userMac, function(err, urls) {
                   expect(urls).to.have.length(2);
                   expect(urls).to.contain(simplePushURL);
@@ -134,8 +132,10 @@ describe("Storage", function() {
 
         it("should dedupe URLs", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
             storage.addUserSimplePushURL(userMac, simplePushURL,
               function(err) {
+                if (err) throw err;
                 storage.getUserSimplePushURLs(userMac, function(err, urls) {
                   expect(urls).to.have.length(1);
                   expect(urls).to.contain(simplePushURL);
@@ -147,10 +147,13 @@ describe("Storage", function() {
 
         it("should not store more than X records", function(done) {
           storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+            if (err) throw err;
             storage.addUserSimplePushURL(userMac, simplePushURL + "2",
               function(err) {
+                if (err) throw err;
                 storage.addUserSimplePushURL(userMac, simplePushURL + "3",
                   function(err) {
+                    if (err) throw err;
                     storage.getUserSimplePushURLs(userMac, function(err, urls) {
                       expect(urls).to.have.length(2);
                       expect(urls).to.not.contain(simplePushURL);
@@ -354,6 +357,7 @@ describe("Storage", function() {
 
         it("should return null if the call-url doesn't exist", function(done) {
           storage.getCall("does-not-exist", function(err, call) {
+            if (err) throw err;
             expect(call).to.eql(null);
             done();
           });
@@ -481,6 +485,7 @@ describe("Storage", function() {
 
         it("should return null if the call doesn't exist", function(done) {
           storage.getCall("does-not-exist", function(err, call) {
+            if (err) throw err;
             expect(call).to.eql(null);
             done();
           });
@@ -490,6 +495,7 @@ describe("Storage", function() {
       describe("#deleteCall", function() {
         it("should delete an existing call", function(done) {
           storage.addUserCall(userMac, call, function(err) {
+            if (err) throw err;
             storage.deleteCall(call.callId, function(err, result) {
               if (err) throw err;
               expect(result).to.eql(true);
@@ -504,6 +510,7 @@ describe("Storage", function() {
 
         it("should return an error if the call doesn't exist", function(done) {
           storage.deleteCall("does-not-exist", function(err, result) {
+            if (err) throw err;
             expect(result).to.eql(false);
             done();
           });
@@ -540,6 +547,7 @@ describe("Storage", function() {
         it("should return null if the hawk session doesn't exist",
           function(done) {
             storage.getHawkSession("does-not-exist", function(err, result) {
+              if (err) throw err;
               expect(result).to.eql(null);
               done();
             });
@@ -553,6 +561,7 @@ describe("Storage", function() {
               throw err;
             }
             storage.getHawkSession("id", function(err, result) {
+              if (err) throw err;
               expect(result).to.eql({
                 key: "key",
                 algorithm: "sha256"
@@ -574,6 +583,7 @@ describe("Storage", function() {
                 throw err;
               }
               storage.getHawkSession("id", function(err, result) {
+                if (err) throw err;
                 expect(result).to.eql(null);
                 done();
               });

@@ -73,7 +73,7 @@ describe("fxa authentication", function() {
       jsonReq
         .set('Authorization', 'BrowserID ' + expectedAssertion)
         .expect(200)
-        .end(function(err, res) {
+        .end(function(err) {
           if (err) throw err;
           done();
         });
@@ -102,7 +102,7 @@ describe("fxa authentication", function() {
         "email": "4c352927cd4f4a4aa03d7d1893d950b8@msisdn.accounts.firefox.com",
         "status": "okay"
       };
-      sandbox.stub(fxa, "getAssertionAudience", function(assertion) {
+      sandbox.stub(fxa, "getAssertionAudience", function() {
         return audience;
       });
     });
@@ -122,7 +122,7 @@ describe("fxa authentication", function() {
         });
       });
       fxa.verifyAssertion("assertion", [audience], ["trustedIssuer"],
-        function(err, data) {
+        function(err) {
           expect(err).eql("something bad");
         });
     });
@@ -132,7 +132,7 @@ describe("fxa authentication", function() {
         cb("error", null, null);
       });
       fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
-        function(err, data) {
+        function(err) {
           expect(err).eql("error");
         });
     });
@@ -144,7 +144,7 @@ describe("fxa authentication", function() {
       });
 
       fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
-        function(err, data) {
+        function(err) {
           expect(err).eql("Issuer is not trusted");
         });
     });

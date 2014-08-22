@@ -4,14 +4,14 @@
 
 "use strict";
 
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 var ONE_HOUR = 60 * 60;
 
 /**
  * Return a url token of [a-zA-Z0-9-_] character and size length.
  */
 function generateToken(bytes) {
-  return crypto.randomBytes(bytes)
+  return randomBytes(bytes)
     .toString("base64")
     .replace(/\=/g, '')
     .replace(/\//g, '_')

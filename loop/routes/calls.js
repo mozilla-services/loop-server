@@ -5,7 +5,7 @@
 "use strict";
 
 var async = require('async');
-var crypto = require("crypto");
+var randomBytes = require("crypto").randomBytes;
 var decrypt = require("../encrypt").decrypt;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
@@ -38,10 +38,10 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
       }
 
       var currentTimestamp = Date.now();
-      var callId = crypto.randomBytes(16).toString('hex');
+      var callId = randomBytes(16).toString('hex');
 
-      var wsCalleeToken = crypto.randomBytes(16).toString('hex');
-      var wsCallerToken = crypto.randomBytes(16).toString('hex');
+      var wsCalleeToken = randomBytes(16).toString('hex');
+      var wsCallerToken = randomBytes(16).toString('hex');
 
       var callInfo = {
         'callId': callId,
@@ -176,7 +176,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                         request.put({
                           url: simplePushUrl,
                           form: { version: callInfo.timestamp }
-                        }, function(err) {
+                        }, function() {
                           // Catch errors.
                         });
                       });
@@ -271,7 +271,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                         request.put({
                           url: simplePushUrl,
                           form: { version: callInfo.timestamp }
-                        }, function(err) {
+                        }, function() {
                           // Catch errors.
                         });
                       });

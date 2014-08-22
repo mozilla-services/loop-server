@@ -74,9 +74,8 @@ module.exports = function (app, conf, logError, storage, auth, validators,
           sendError(res, 403, errors.INVALID_AUTH_TOKEN, "Forbidden");
           return;
         }
-        storage.revokeURLToken(req.token, function(err, record) {
+        storage.revokeURLToken(req.token, function(err) {
           if (res.serverError(err)) return;
-
           res.status(204).json();
         });
       });
