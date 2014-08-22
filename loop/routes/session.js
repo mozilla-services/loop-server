@@ -13,6 +13,6 @@ module.exports = function (app, auth) {
    * authentication flow, with an attached identity.
    **/
   app.post('/session', auth.attachOrCreateHawkSession, function(req, res) {
-    res.json(200, 'ok');
+    res.status(204).json();
   });
 };

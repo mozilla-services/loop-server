@@ -31,7 +31,7 @@
     "ws": "0.4.31",
     "sodium": "1.0.11",
     "atob": "1.1.2",
-    "express-hawkauth": "0.2.0",
+    "express-hawkauth": "git://github.com/mozilla-services/express-hawkauth.git#aaa098",
     "eslint": "0.7.x",
     "yargs": "1.3.1"
   },

@@ -33,6 +33,7 @@ var errors = require("../loop/errno.json");
 
 var auth = loop.auth;
 var authenticate = auth.authenticate;
+var attachOrCreateHawkSession = auth.attachOrCreateHawkSession;
 var requireHawkSession = auth.requireHawkSession;
 
 var validators = loop.validators;
@@ -72,6 +73,7 @@ describe("HTTP API exposed by the server", function() {
   var routes = {
     '/': ['get'],
     '/registration': ['post'],
+    '/session': ['post'],
     '/call-url': ['post', 'del'],
     '/calls': ['get', 'post'],
     '/calls/token': ['get', 'post'],
@@ -490,6 +492,53 @@ describe("HTTP API exposed by the server", function() {
           assert.calledWithExactly(
             statsdClient.count,
             "loop-call-urls-" + userHmac,
+            1
+          );
+          done();
+        });
+    });
+  });
+
+  describe.only("POST /session", function() {
+    var jsonReq;
+
+    beforeEach(function() {
+      jsonReq = supertest(app)
+        .post('/session')
+        .hawk(hawkCredentials);
+    });
+
+    it("should have the attachOrCreateHawkSession middleware installed",
+      function() {
+        expect(getMiddlewares(app, 'post', '/session'))
+          .include(attachOrCreateHawkSession);
+      });
+
+    it("should return a 204 if everything went fine", function(done) {
+      jsonReq
+        .expect(204).end(done);
+    });
+
+    it("should return a 503 if the database isn't available",
+    function(done) {
+      sandbox.stub(storage, "getHawkSession",
+        function(tokenId, cb) {
+          cb(new Error("error"));
+        });
+      jsonReq.expect(503).end(done);
+    });
+
+    it("should count new users if the session is created", function(done) {
+      sandbox.stub(statsdClient, "count");
+      supertest(app)
+        .post('/session')
+        .type('json')
+        .send({}).expect(204).end(function(err, res) {
+          if (err) throw err;
+          assert.calledOnce(statsdClient.count);
+          assert.calledWithExactly(
+            statsdClient.count,
+            "loop-activated-users",
             1
           );
           done();

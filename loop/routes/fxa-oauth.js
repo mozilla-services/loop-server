@@ -118,7 +118,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             try {
               data = JSON.parse(body);
             } catch (e) {
-              if (res.serverError(e)) return;
+              if (res.serverError(new Error(e + " JSON: " + body))) return;
             }
             // Store the appropriate profile information into the database,
             // associated with the hawk session.
