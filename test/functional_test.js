@@ -499,7 +499,7 @@ describe("HTTP API exposed by the server", function() {
     });
   });
 
-  describe.only("POST /session", function() {
+  describe("POST /session", function() {
     var jsonReq;
 
     beforeEach(function() {
@@ -533,7 +533,7 @@ describe("HTTP API exposed by the server", function() {
       supertest(app)
         .post('/session')
         .type('json')
-        .send({}).expect(204).end(function(err, res) {
+        .send({}).expect(204).end(function(err) {
           if (err) throw err;
           assert.calledOnce(statsdClient.count);
           assert.calledWithExactly(

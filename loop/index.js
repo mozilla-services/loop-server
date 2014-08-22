@@ -104,7 +104,7 @@ var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(app, conf);
 
 var fxaOAuth = require("./routes/fxa-oauth");
-fxaOAuth(app, conf, logError, storage, auth, validators);
+fxaOAuth(app, conf, logError, storage, auth);
 
 var session = require("./routes/session");
 session(app, auth);

@@ -10,7 +10,7 @@ var sendError = require('../utils').sendError;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
 
-module.exports = function (app, conf, logError, storage, auth, validators) {
+module.exports = function (app, conf, logError, storage, auth) {
 
   var oauthConf = conf.get('fxaOAuth');
 
@@ -48,6 +48,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    **/
   app.get('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
     storage.getHawkOAuthToken(req.hawkIdHmac, function(err, token) {
+      if (res.serverError(err)) return;
       res.status(200).json({
         oauthToken: token || undefined
       });

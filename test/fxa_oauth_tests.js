@@ -135,6 +135,7 @@ describe('/fxa-oauth', function () {
           .hawk(hawkCredentials)
           .expect(400)
           .end(function(err, res) {
+            if (err) throw err;
             expectFormatedError(
               res, 400, errors.INVALID_OAUTH_STATE, "Invalid OAuth state");
 
@@ -216,6 +217,7 @@ describe('/fxa-oauth', function () {
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err, resp) {
+            if (err) throw err;
             expect(resp.body.oauthToken).eql("token");
             storage.getHawkOAuthToken(hawkIdHmac, function(err, token) {
               if (err) throw err;
