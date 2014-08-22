@@ -10,14 +10,15 @@ node_js:
 
 services: redis-server
 
-before_script:
-  - npm i nsp -g
-  - npm run outdated
-  - npm run audit-shrinkwrap
-
-script: make travis
 before_install:
   - "sudo apt-get install python-virtualenv"
+
+script: make travis
+
+after_script:
+  - npm install nsp -g
+  - npm run outdated
+  - npm run audit-shrinkwrap
 
 notifications:
   irc:
