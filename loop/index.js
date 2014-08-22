@@ -111,48 +111,11 @@ var server = http.createServer(app);
 
 if (argv.hasOwnProperty("fd")) {
   var fd = parseInt(argv.fd, 10);
-  var net = require("net");
-  var util = require('util');
-  var rval = net._createServerHandle(null, null, null, null, fd);
-  if (typeof rval === "number") {
-    var error = util._errnoException(rval, 'listen');
-    process.nextTick(function() {
-      server.emit('error', error);
-    });
-    return;
-  }
-  server._handle = rval;
-  server._handle.onconnection = function onconnection(err, clientHandle) {
-    console.log("Connection");
-    var handle = this;
-    var self = handle.owner;
-    if (err) {
-      self.emit('error', util._errnoException(err, 'accept'));
-      return;
-    }
-    if (self.maxConnections && self._connections >= self.maxConnections) {
-      clientHandle.close();
-      return;
-    }
-    var socket = new net.Socket({
-      handle: clientHandle,
-      allowHalfOpen: self.allowHalfOpen
-    });
-    socket.readable = socket.writable = true;
-    self._connections++;
-    socket.server = self;
-    // DTRACE_NET_SERVER_CONNECTION(socket);
-    // COUNTER_NET_SERVER_CONNECTION(socket);
-    self.emit('connection', socket);
-  };
-  server._handle.owner = server;
-  process.nextTick(function() {
-    // ensure handle hasn't closed
-    if (server._handle)
-      console.log("Server listening on fd://" + argv.fd);
+  server.listen({fd: fd}, function() {
+    console.log('Server listening on fd://' + fd);
   });
 } else {
-  server.listen(conf.get('port'), conf.get('host'), function(){
+  server.listen(conf.get('port'), conf.get('host'), function() {
     console.log('Server listening on http://' +
                 conf.get('host') + ':' + conf.get('port'));
   });
