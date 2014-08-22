@@ -127,7 +127,7 @@ if (argv.hasOwnProperty("fd")) {
     var handle = this;
     var self = handle.owner;
     if (err) {
-      self.emit('error', utils._errnoException(err, 'accept'));
+      self.emit('error', util._errnoException(err, 'accept'));
       return;
     }
     if (self.maxConnections && self._connections >= self.maxConnections) {
@@ -141,8 +141,8 @@ if (argv.hasOwnProperty("fd")) {
     socket.readable = socket.writable = true;
     self._connections++;
     socket.server = self;
-    DTRACE_NET_SERVER_CONNECTION(socket);
-    COUNTER_NET_SERVER_CONNECTION(socket);
+    // DTRACE_NET_SERVER_CONNECTION(socket);
+    // COUNTER_NET_SERVER_CONNECTION(socket);
     self.emit('connection', socket);
   };
   server._handle.owner = server;
