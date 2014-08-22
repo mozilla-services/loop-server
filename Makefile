@@ -8,7 +8,9 @@ NODE_LOCAL_BIN=./node_modules/.bin
 test: lint cover-mocha spaceleft
 
 .PHONY: travis
-travis: lint loadtests-check
+travis: lint separate-tests loadtests-check
+
+separate-tests:
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
 
