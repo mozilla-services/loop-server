@@ -14,7 +14,6 @@ http.globalAgent.maxSockets = conf.get('maxHTTPSockets');
 
 var express = require('express');
 var bodyParser = require('body-parser');
-var request = require('request');
 var raven = require('raven');
 var cors = require('cors');
 var StatsdClient = require('statsd-node').client;
@@ -49,7 +48,9 @@ if (conf.get('statsdEnabled') === true) {
 }
 
 function logError(err) {
-  console.log(err);
+  if (conf.get('env') !== 'test') {
+    console.log(err);
+  }
   ravenClient.captureError(err);
 }
 
@@ -102,6 +103,12 @@ var storeUserCallTokens = calls(app, conf, logError, storage, tokBox,
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(app, conf);
 
+var fxaOAuth = require("./routes/fxa-oauth");
+fxaOAuth(app, conf, logError, storage, auth);
+
+var session = require("./routes/session");
+session(app, auth);
+
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
 
@@ -146,7 +153,6 @@ module.exports = {
   server: server,
   conf: conf,
   storage: storage,
-  request: request,
   tokBox: tokBox,
   statsdClient: statsdClient,
   shutdown: shutdown,

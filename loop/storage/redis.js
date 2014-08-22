@@ -610,6 +610,31 @@ RedisStorage.prototype = {
     this._client.del('hawk.' + hawkIdHmac, callback);
   },
 
+  setHawkOAuthToken: function(hawkIdHmac, token, callback) {
+    this._client.set('oauth.token.' + hawkIdHmac, token, callback);
+  },
+
+  getHawkOAuthToken: function(hawkIdHmac, callback) {
+    this._client.get('oauth.token.' + hawkIdHmac, callback);
+  },
+
+  setHawkOAuthState: function(hawkIdHmac, state, callback) {
+    this._client.setex(
+      'oauth.state.' + hawkIdHmac,
+      this._settings.hawkSessionDuration,
+      state,
+      callback
+    );
+  },
+
+  getHawkOAuthState: function(hawkIdHmac, callback) {
+    this._client.get('oauth.state.' + hawkIdHmac, callback);
+  },
+
+  clearHawkOAuthState: function(hawkIdHmac, callback) {
+    this._client.del('oauth.state.' + hawkIdHmac, callback);
+  },
+
   drop: function(callback) {
     this._client.flushdb(callback);
   },

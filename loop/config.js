@@ -334,6 +334,38 @@ var conf = convict({
     doc: "An array of push server URIs",
     format: Array,
     default: ["wss://push.services.mozilla.com/"]
+  },
+  fxaOAuth: {
+    client_id: {
+      doc: "The FxA client_id (8 bytes key encoded as hex)",
+      format: hexKeyOfSize(8),
+      default: ""
+    },
+    client_secret: {
+      doc: "The FxA client secret (32 bytes key encoded as hex)",
+      format: hexKeyOfSize(32),
+      default: ""
+    },
+    oauth_uri: {
+      doc: "The location of the FxA OAuth server.",
+      format: "url",
+      default: "https://oauth.accounts.firefox.com/v1"
+    },
+    redirect_uri: {
+      doc: "The redirect_uri.",
+      format: String,
+      default: "urn:ietf:wg:oauth:2.0:fx:webchannel"
+    },
+    profile_uri: {
+      doc: "The FxA profile uri.",
+      format: "url",
+      default: "https://profile.firefox.com/v1"
+    },
+    scope: {
+      doc: "The scope we're requesting access to",
+      format: String,
+      default: "profile"
+    }
   }
 });
 
