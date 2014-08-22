@@ -5,3 +5,4 @@ lib-cov
 config/dev.json
 config/stage.json
 config/prod.json
+circus/*.log

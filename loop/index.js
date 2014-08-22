@@ -106,12 +106,20 @@ pushServerConfig(app, conf);
 app.use(raven.middleware.express(conf.get('sentryDSN')));
 
 // Starts HTTP server.
+var argv = require('yargs').argv;
 var server = http.createServer(app);
-server.listen(conf.get('port'), conf.get('host'), function(){
-  console.log('Server listening on http://' +
-              conf.get('host') + ':' + conf.get('port'));
-});
 
+if (argv.hasOwnProperty("fd")) {
+  var fd = parseInt(argv.fd, 10);
+  server.listen({fd: fd}, function() {
+    console.log('Server listening on fd://' + fd);
+  });
+} else {
+  server.listen(conf.get('port'), conf.get('host'), function() {
+    console.log('Server listening on http://' +
+                conf.get('host') + ':' + conf.get('port'));
+  });
+}
 
 // Handle websockets.
 var ws = websockets(storage, logError, conf);
