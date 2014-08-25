@@ -17,12 +17,13 @@ module.exports = function (app, conf, logError, storage, auth) {
   /**
    * Provide the client with the parameters needed for the OAuth dance.
    **/
-  app.get('/fxa-oauth/parameters', auth.requireHawkSession,
+  app.post('/fxa-oauth/params', auth.requireHawkSession,
     function(req, res) {
       var callback = function(state) {
         res.status(200).json({
           client_id: oauthConf.client_id,
           redirect_uri: oauthConf.redirect_uri,
+          content_uri: oauthConf.content_uri,
           oauth_uri: oauthConf.oauth_uri,
           scope: oauthConf.scope,
           state: state
@@ -50,7 +51,7 @@ module.exports = function (app, conf, logError, storage, auth) {
     storage.getHawkOAuthToken(req.hawkIdHmac, function(err, token) {
       if (res.serverError(err)) return;
       res.status(200).json({
-        oauthToken: token || undefined
+        access_token: token || undefined
       });
     });
   });
@@ -59,8 +60,8 @@ module.exports = function (app, conf, logError, storage, auth) {
    * Trade an OAuth code with an oauth bearer token.
    **/
   app.post('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
-      var state = req.query.state;
-      var code = req.query.code;
+      var state = req.body.state;
+      var code = req.body.code;
 
       var missingParams = [];
       if (!state) {
@@ -102,6 +103,8 @@ module.exports = function (app, conf, logError, storage, auth) {
           if (res.serverError(err)) return;
 
           var token = body.access_token;
+          var tokenType = body.token_type;
+          var scope = body.scope;
 
           // store the bearer token
           storage.setHawkOAuthToken(req.hawkIdHmac, token);
@@ -127,7 +130,9 @@ module.exports = function (app, conf, logError, storage, auth) {
             storage.setHawkUser(userHmac, req.hawkIdHmac, function(err) {
               if (res.serverError(err)) return;
               res.status(200).json({
-                oauthToken: token
+                token_type: tokenType,
+                access_token: token,
+                scope: scope
               });
             });
           });

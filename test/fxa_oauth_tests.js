@@ -48,16 +48,17 @@ describe('/fxa-oauth', function () {
     sandbox.restore();
   });
 
-  describe('GET /parameters', function() {
+  describe('POST /params', function() {
     it('should return the stored parameters from the config', function(done) {
       supertest(app)
-        .get(apiPrefix + '/fxa-oauth/parameters')
+        .post(apiPrefix + '/fxa-oauth/params')
         .hawk(hawkCredentials)
         .expect(200)
         .end(function(err, resp) {
           if (err) throw err;
           expect(resp.body.client_id).eql(oauthConf.client_id);
           expect(resp.body.oauth_uri).eql(oauthConf.oauth_uri);
+          expect(resp.body.content_uri).eql(oauthConf.content_uri);
           expect(resp.body.scope).eql(oauthConf.scope);
           expect(resp.body.redirect_uri).eql(oauthConf.redirect_uri);
           expect(resp.body.state).to.not.eql(undefined);
@@ -69,7 +70,7 @@ describe('/fxa-oauth', function () {
       storage.setHawkOAuthState(hawkIdHmac, "1234", function(err) {
         if (err) throw err;
         supertest(app)
-          .get(apiPrefix + '/fxa-oauth/parameters')
+          .post(apiPrefix + '/fxa-oauth/params')
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err, resp) {
@@ -92,7 +93,7 @@ describe('/fxa-oauth', function () {
           .expect(200)
           .end(function(err, resp) {
             if (err) throw err;
-            expect(resp.body.oauthToken).eql("1234");
+            expect(resp.body.access_token).eql("1234");
             done();
           });
       });
@@ -105,7 +106,7 @@ describe('/fxa-oauth', function () {
         .expect(200)
         .end(function(err, resp) {
           if (err) throw err;
-          expect(resp.body.oauthToken).eql(undefined);
+          expect(resp.body.access_token).eql(undefined);
           done();
         });
     });
@@ -114,7 +115,8 @@ describe('/fxa-oauth', function () {
   describe('POST /token', function() {
     it('should error out if no state is given', function(done) {
       supertest(app)
-        .post(apiPrefix + '/fxa-oauth/token?code=1234')
+        .post(apiPrefix + '/fxa-oauth/token')
+        .send({ code: '1234' })
         .hawk(hawkCredentials)
         .expect(400)
         .end(done);
@@ -122,7 +124,8 @@ describe('/fxa-oauth', function () {
 
     it('should error out if no code is given', function(done) {
       supertest(app)
-        .post(apiPrefix + '/fxa-oauth/token?state=1234')
+        .post(apiPrefix + '/fxa-oauth/token')
+        .send({ state: '1234' })
         .hawk(hawkCredentials)
         .expect(400)
         .end(done);
@@ -132,7 +135,8 @@ describe('/fxa-oauth', function () {
       storage.setHawkOAuthState(hawkIdHmac, "1234", function(err) {
         if (err) throw err;
         supertest(app)
-          .post(apiPrefix + '/fxa-oauth/token?code=1234&state=5678')
+          .post(apiPrefix + '/fxa-oauth/token')
+          .send({ code: '1234', state: '5678' })
           .hawk(hawkCredentials)
           .expect(400)
           .end(function(err, res) {
@@ -157,7 +161,8 @@ describe('/fxa-oauth', function () {
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
         if (err) throw err;
         supertest(app)
-          .post(apiPrefix + '/fxa-oauth/token?code=1234&state=5678')
+          .post(apiPrefix + '/fxa-oauth/token')
+          .send({ code: '1234', state: '5678' })
           .hawk(hawkCredentials)
           .expect(503)
           .end(done);
@@ -176,7 +181,8 @@ describe('/fxa-oauth', function () {
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
         if (err) throw err;
         supertest(app)
-          .post(apiPrefix + '/fxa-oauth/token?code=1234&state=5678')
+          .post(apiPrefix + '/fxa-oauth/token')
+          .send({ code: '1234', state: '5678' })
           .hawk(hawkCredentials)
           .expect(503)
           .end(done);
@@ -195,7 +201,8 @@ describe('/fxa-oauth', function () {
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
         if (err) throw err;
         supertest(app)
-          .post(apiPrefix + '/fxa-oauth/token?code=1234&state=5678')
+          .post(apiPrefix + '/fxa-oauth/token')
+          .send({ code: '1234', state: '5678' })
           .hawk(hawkCredentials)
           .expect(503)
           .end(done);
@@ -214,12 +221,13 @@ describe('/fxa-oauth', function () {
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
         if (err) throw err;
         supertest(app)
-          .post(apiPrefix + '/fxa-oauth/token?code=1234&state=5678')
+          .post(apiPrefix + '/fxa-oauth/token')
+          .send({ code: '1234', state: '5678' })
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err, resp) {
             if (err) throw err;
-            expect(resp.body.oauthToken).eql("token");
+            expect(resp.body.access_token).eql("token");
             storage.getHawkOAuthToken(hawkIdHmac, function(err, token) {
               if (err) throw err;
               expect(token).eql("token");

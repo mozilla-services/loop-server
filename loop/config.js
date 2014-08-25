@@ -351,6 +351,11 @@ var conf = convict({
       format: "url",
       default: "https://oauth.accounts.firefox.com/v1"
     },
+    content_uri: {
+      doc: "The location of the FxA content server.",
+      format: "url",
+      default: "https://accounts.firefox.com"
+    },
     redirect_uri: {
       doc: "The redirect_uri.",
       format: String,
