@@ -32,7 +32,6 @@ module.exports = function (app, conf, logError, storage, auth, validators,
       function(req, res) {
         if (statsdClient !== undefined) {
           statsdClient.count('loop-call-urls', 1);
-          statsdClient.count('loop-call-urls-' + req.user, 1);
         }
 
         storage.addUserCallUrlData(req.user, req.token, req.urlData,
