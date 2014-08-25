@@ -10,6 +10,7 @@ var sinon = require("sinon");
 var loop = require("../loop");
 var app = loop.app;
 var logMetrics = require("../loop/middlewares").logMetrics;
+var hekaLogger = require("../loop/middlewares").hekaLogger;
 var expect = require("chai").expect;
 var conf = loop.conf;
 var pjson = require('../package.json');
@@ -35,7 +36,7 @@ describe("metrics middleware", function() {
     clock = sinon.useFakeTimers(fakeNow);
     old_metrics = conf.get('metrics');
     conf.set('metrics', true);
-    sandbox.stub(console, "log", function(log) {
+    sandbox.stub(hekaLogger, "log", function(info, log) {
       logs.push(log);
     });
   });
@@ -58,7 +59,7 @@ describe("metrics middleware", function() {
         if (err) {
           throw err;
         }
-        var logged = JSON.parse(logs[0]);
+        var logged = logs[0];
 
         expect(logged.op).to.eql('request.summary');
         expect(logged.code).to.eql(200);
