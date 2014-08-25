@@ -107,13 +107,13 @@ var storeUserCallTokens = calls(apiRouter, conf, logError, storage, tokBox,
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(apiRouter, conf);
 
-app.use(apiPrefix, apiRouter);
-
 var fxaOAuth = require("./routes/fxa-oauth");
-fxaOAuth(app, conf, logError, storage, auth);
+fxaOAuth(apiRouter, conf, logError, storage, auth);
 
 var session = require("./routes/session");
-session(app, auth);
+session(apiRouter, auth);
+
+app.use(apiPrefix, apiRouter);
 
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
@@ -129,7 +129,9 @@ app.use(function(req, res) {
   sendError(res, 404, 999, "Ressource not found.");
 });
 
+/* eslint-disable */
 app.use(function(error, req, res, next) {
+/* eslint-enable */
   sendError(res, 500, 999, "" + error);
 });
 

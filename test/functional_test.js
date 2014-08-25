@@ -506,13 +506,13 @@ describe("HTTP API exposed by the server", function() {
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .post('/session')
+        .post(apiPrefix + '/session')
         .hawk(hawkCredentials);
     });
 
     it("should have the attachOrCreateHawkSession middleware installed",
       function() {
-        expect(getMiddlewares(app, 'post', '/session'))
+        expect(getMiddlewares(apiRouter, 'post', '/session'))
           .include(attachOrCreateHawkSession);
       });
 
@@ -533,7 +533,7 @@ describe("HTTP API exposed by the server", function() {
     it("should count new users if the session is created", function(done) {
       sandbox.stub(statsdClient, "count");
       supertest(app)
-        .post('/session')
+        .post(apiPrefix + '/session')
         .type('json')
         .send({}).expect(204).end(function(err) {
           if (err) throw err;

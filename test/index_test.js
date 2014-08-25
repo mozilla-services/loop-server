@@ -183,9 +183,7 @@ describe("index.js", function() {
         .post(apiPrefix + '/validateSP/')
         .send({'simplePushURL': 'http://this-is-an-url'})
         .expect(200)
-        .end(function(err, res) {
-          done(err);
-        });
+        .end(done);
     });
 
   });
