@@ -13,7 +13,16 @@ var hostname = os.hostname();
 var sendError = require("./utils").sendError;
 var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
+var winston = require('winston');
 
+var metricsFileParams = JSON.parse(JSON.stringify(conf.get('metricsFileParams')));
+metricsFileParams.timestamp = false;
+
+var hekaLogger = new winston.Logger({
+  transports: [
+    new winston.transports.File(metricsFileParams)
+  ]
+});
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
@@ -76,7 +85,7 @@ function logMetrics(req, res, next) {
         errno: res.errno || 0
       };
 
-      console.log(JSON.stringify(line));
+      hekaLogger.log('info', line);
     });
   }
   next();
@@ -86,5 +95,6 @@ function logMetrics(req, res, next) {
 module.exports = {
   handle503: handle503,
   addHeaders: addHeaders,
-  logMetrics: logMetrics
+  logMetrics: logMetrics,
+  hekaLogger: hekaLogger
 };

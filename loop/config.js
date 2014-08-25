@@ -366,6 +366,23 @@ var conf = convict({
       format: String,
       default: "profile"
     }
+  },
+  metricsFileParams: {
+    filename: {
+      doc: "Heka logger file path",
+      format: String,
+      default: path.join(__dirname, "..", "heka.log")
+    },
+    maxsize: {
+      doc: "Max size in bytes of the logfile before creating a new one.",
+      format: Number,
+      default: 2097152  // 2MB === 2097152
+    },
+    maxFiles: {
+      doc: "Limit the number of files created when logfile size is exeeded.",
+      format: Number,
+      default: 5
+    }
   }
 });
 

@@ -30,6 +30,7 @@ var hmac = require("../loop/hmac");
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
 var errors = require("../loop/errno.json");
+var hekaLogger = require("../loop/middlewares").hekaLogger;
 
 var auth = loop.auth;
 var authenticate = auth.authenticate;
@@ -1214,9 +1215,9 @@ describe("HTTP API exposed by the server", function() {
 
         beforeEach(function() {
           conf.set('metrics', true);
-          sandbox.stub(console, "log", function(log) {
+          sandbox.stub(hekaLogger, "log", function(level, log) {
             try {
-              _logs.push(JSON.parse(log));
+              _logs.push(log);
             } catch (e) {
             }
           });
