@@ -367,7 +367,7 @@ var conf = convict({
       default: "profile"
     }
   },
-  hekaLogParams: {
+  metricsFileParams: {
     filename: {
       doc: "Heka logger file path",
       format: String,

@@ -15,12 +15,12 @@ var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
 var winston = require('winston');
 
-var hekaParams = JSON.parse(JSON.stringify(conf.get('hekaLogParams')));
-hekaParams.timestamp = false;
+var metricsFileParams = JSON.parse(JSON.stringify(conf.get('metricsFileParams')));
+metricsFileParams.timestamp = false;
 
 var hekaLogger = new winston.Logger({
   transports: [
-    new winston.transports.File(hekaParams)
+    new winston.transports.File(metricsFileParams)
   ]
 });
 
