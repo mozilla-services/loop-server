@@ -20,6 +20,7 @@ var StatsdClient = require('statsd-node').client;
 var addHeaders = require('./middlewares').addHeaders;
 var handle503 = require("./middlewares").handle503;
 var logMetrics = require('./middlewares').logMetrics;
+var sendError = require('./utils').sendError;
 var websockets = require('./websockets');
 
 var TokBox;
@@ -78,6 +79,9 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(handle503(logError));
 app.use(logMetrics);
 
+var apiRouter = express.Router();
+var loopPackageData = require('../package.json');
+var apiPrefix = "/v" + loopPackageData.version.split(".")[0];
 var authMiddlewares = require("./auth");
 var auth = authMiddlewares(conf, logError, storage, statsdClient);
 
@@ -85,32 +89,51 @@ var getValidators = require("./routes/validators");
 var validators = getValidators(conf, logError, storage);
 
 var home = require("./routes/home");
-home(app, conf, logError, storage, tokBox);
+home(apiRouter, conf, logError, storage, tokBox);
 
 var registration = require("./routes/registration");
-registration(app, conf, logError, storage, auth, validators);
+registration(apiRouter, conf, logError, storage, auth, validators);
 
 var account = require("./routes/account");
-account(app, storage, auth);
+account(apiRouter, storage, auth);
 
 var callUrl = require("./routes/call-url");
-callUrl(app, conf, logError, storage, auth, validators, statsdClient);
+callUrl(apiRouter, conf, logError, storage, auth, validators, statsdClient);
 
 var calls = require("./routes/calls");
-var storeUserCallTokens = calls(app, conf, logError, storage, tokBox,
+var storeUserCallTokens = calls(apiRouter, conf, logError, storage, tokBox,
                                 auth, validators);
 
 var pushServerConfig = require("./routes/push-server-config");
-pushServerConfig(app, conf);
+pushServerConfig(apiRouter, conf);
 
 var fxaOAuth = require("./routes/fxa-oauth");
-fxaOAuth(app, conf, logError, storage, auth);
+fxaOAuth(apiRouter, conf, logError, storage, auth);
 
 var session = require("./routes/session");
-session(app, auth);
+session(apiRouter, auth);
+
+app.use(apiPrefix, apiRouter);
 
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
+
+// In case of apiPrefix missing redirect the user to the right URL
+// In case of apiPrefix present, raise a 404 error.
+// Must be the last middleware.
+app.use(function(req, res) {
+  if (req.path.indexOf(apiPrefix) !== 0) {
+    res.redirect(301, apiPrefix + req.path);
+    return;
+  }
+  sendError(res, 404, 999, "Ressource not found.");
+});
+
+/* eslint-disable */
+app.use(function(error, req, res, next) {
+/* eslint-enable */
+  sendError(res, 500, 999, "" + error);
+});
 
 // Starts HTTP server.
 var argv = require('yargs').argv;
@@ -150,6 +173,8 @@ process.on('SIGTERM', shutdown);
 
 module.exports = {
   app: app,
+  apiRouter: apiRouter,
+  apiPrefix: apiPrefix,
   server: server,
   conf: conf,
   storage: storage,

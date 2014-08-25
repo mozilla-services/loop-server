@@ -11,6 +11,10 @@ from loads.case import TestCase
 
 
 class TestLoop(TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestLoop, self).__init__(*args, **kwargs)
+        r = self.session.get(self.server_url)
+        self.base_url = r.request.url.rstrip('/')
 
     def setUp(self):
         self.wss = []
@@ -120,7 +124,7 @@ class TestLoop(TestCase):
 
     def register(self):
         resp = self.session.post(
-            self.server_url + '/registration',
+            self.base_url + '/registration',
             data={'simple_push_url': 'http://httpbin.org/deny'})
         self.assertEquals(200, resp.status_code,
                           "Registration failed: %s" % resp.content)
@@ -135,7 +139,7 @@ class TestLoop(TestCase):
 
     def generate_token(self):
         resp = self.session.post(
-            self.server_url + '/call-url',
+            self.base_url + '/call-url',
             data=json.dumps({'callerId': 'alexis@mozilla.com'}),
             headers={'Content-Type': 'application/json'},
             auth=self.hawk_auth
@@ -149,7 +153,7 @@ class TestLoop(TestCase):
     def initiate_call(self, token):
         # This happens when not authenticated.
         resp = self.session.post(
-            self.server_url + '/calls/%s' % token,
+            self.base_url + '/calls/%s' % token,
             data=json.dumps({"callType": "audio-video"}),
             headers={'Content-Type': 'application/json'}
         )
@@ -160,11 +164,11 @@ class TestLoop(TestCase):
 
     def list_pending_calls(self):
         resp = self.session.get(
-            self.server_url + '/calls?version=200',
+            self.base_url + '/calls?version=200',
             auth=self.hawk_auth)
         data = self._get_json(resp)
         return data['calls']
 
     def revoke_token(self, token):
         # You don't need to be authenticated to revoke a token.
-        self.session.delete(self.server_url + '/call-url/%s' % token)
+        self.session.delete(self.base_url + '/call-url/%s' % token)

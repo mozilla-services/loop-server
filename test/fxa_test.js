@@ -7,7 +7,10 @@ var expect = require("chai").expect;
 var supertest = require("supertest");
 var sinon = require("sinon");
 
-var app = require("../loop").app;
+var loop = require("../loop");
+var app = loop.app;
+var apiRouter = loop.apiRouter;
+var apiPrefix = loop.apiPrefix;
 var fxa = require("../loop/fxa");
 var user = "alexis@notmyidea.org";
 
@@ -26,7 +29,7 @@ describe("fxa authentication", function() {
     var jsonReq, expectedAssertion;
 
     // Create a route with the auth middleware installed.
-    app.post('/with-middleware',
+    apiRouter.post('/with-middleware',
       fxa.getMiddleware("audience", function(req, res, assertion, next) {
         req.user = assertion.email;
         next();
@@ -36,7 +39,7 @@ describe("fxa authentication", function() {
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .post('/with-middleware');
+        .post(apiPrefix + '/with-middleware');
 
       expectedAssertion = "BID-ASSERTION";
 

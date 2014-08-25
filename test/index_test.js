@@ -14,8 +14,10 @@ var fxaAuth = require("../loop/fxa");
 var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
 var loop = require("../loop");
+var apiPrefix = loop.apiPrefix;
 var conf = loop.conf;
 var app = loop.app;
+var apiRouter = loop.apiRouter;
 var server = loop.server;
 var shutdown = loop.shutdown;
 var storage = loop.storage;
@@ -95,7 +97,7 @@ describe("index.js", function() {
   describe("#validateToken", function(){
 
     // Create a route with the validateToken middleware installed.
-    app.get('/validateToken/:token', validateToken, function(req, res) {
+    apiRouter.get('/validateToken/:token', validateToken, function(req, res) {
       res.status(200).json();
     });
 
@@ -105,14 +107,14 @@ describe("index.js", function() {
 
     it("should return a 404 if the token is missing.", function(done) {
       jsonReq
-        .get('/validateToken/')
+        .get(apiPrefix + '/validateToken/')
         .expect(404)
         .end(done);
     });
 
     it("should return a 404 if the token is invalid.", function(done) {
       jsonReq
-        .get('/validateToken/invalidToken')
+        .get(apiPrefix + '/validateToken/invalidToken')
         .expect(404)
         .end(function(err, res) {
           if (err) throw err;
@@ -131,7 +133,7 @@ describe("index.js", function() {
         storage.revokeURLToken("1234", function(err) {
           if (err) throw err;
           jsonReq
-            .get('/validateToken/1234')
+            .get(apiPrefix + '/validateToken/1234')
             .expect(404)
             .end(function(err, res) {
               if (err) throw err;
@@ -150,7 +152,7 @@ describe("index.js", function() {
       }, function(err) {
         if (err) throw err;
         jsonReq
-          .get('/validateToken/1234')
+          .get(apiPrefix + '/validateToken/1234')
           .expect(200)
           .end(done);
       });
@@ -159,13 +161,13 @@ describe("index.js", function() {
 
   describe("#validateSimplePushURL", function() {
     // Create a route with the validateSimplePushURL middleware installed.
-    app.post('/validateSP/', validateSimplePushURL, function(req, res) {
+    apiRouter.post('/validateSP/', validateSimplePushURL, function(req, res) {
       res.status(200).json();
     });
 
     it("should validate the simple push url", function(done) {
       jsonReq
-        .post('/validateSP/')
+        .post(apiPrefix + '/validateSP/')
         .send({'simplePushURL': 'not-an-url'})
         .expect(400)
         .end(function(err, res) {
@@ -178,26 +180,23 @@ describe("index.js", function() {
 
     it("should work with a valid simple push url", function(done) {
       jsonReq
-        .post('/validateSP/')
+        .post(apiPrefix + '/validateSP/')
         .send({'simplePushURL': 'http://this-is-an-url'})
         .expect(200)
-        .end(function(err, res) {
-          console.log(res.text);
-          done(err);
-        });
+        .end(done);
     });
 
   });
 
   describe("#validateCallType", function() {
     // Create a route with the validateSimplePushURL middleware installed.
-    app.post('/validateCallType/', validateCallType, function(req, res) {
+    apiRouter.post('/validateCallType/', validateCallType, function(req, res) {
       res.status(200).json();
     });
 
     it("should error on empty callType", function(done) {
       jsonReq
-        .post('/validateCallType/')
+        .post(apiPrefix + '/validateCallType/')
         .send({})
         .expect(400)
         .end(function(err, res) {
@@ -210,7 +209,7 @@ describe("index.js", function() {
 
     it("should error on wrong callType", function(done) {
       jsonReq
-        .post('/validateCallType/')
+        .post(apiPrefix + '/validateCallType/')
         .send({'callType': 'wrong-type'})
         .expect(400)
         .end(function(err, res) {
@@ -223,7 +222,7 @@ describe("index.js", function() {
 
     it("should accept a valid 'audio' callType", function(done) {
       jsonReq
-        .post('/validateCallType/')
+        .post(apiPrefix + '/validateCallType/')
         .send({callType: 'audio'})
         .expect(200)
         .end(done);
@@ -231,7 +230,7 @@ describe("index.js", function() {
 
     it("should accept a valid'audio-video' callType", function(done) {
       jsonReq
-        .post('/validateCallType/')
+        .post(apiPrefix + '/validateCallType/')
         .send({callType: 'audio-video'})
         .expect(200)
         .end(done);
@@ -241,18 +240,19 @@ describe("index.js", function() {
 
   describe("#requireParams", function(){
     // Create a route with the requireParams middleware installed.
-    app.post('/requireParams/', requireParams('a', 'b'), function(req, res) {
-      res.status(200).json();
-    });
-
-    app.post('/requireParams/simplePushURL', requireParams('simplePushURL'),
+    apiRouter.post('/requireParams/', requireParams('a', 'b'),
       function(req, res) {
+        res.status(200).json();
+      });
+
+    apiRouter.post('/requireParams/simplePushURL',
+      requireParams('simplePushURL'), function(req, res) {
         res.status(200).json();
       });
 
     it("should return a 406 if the body is not in JSON.", function(done) {
       jsonReq
-        .post('/requireParams/')
+        .post(apiPrefix + '/requireParams/')
         .set('Accept', 'text/html')
         .expect(406, /json/)
         .end(done);
@@ -261,7 +261,7 @@ describe("index.js", function() {
     it("should accept simple_push_url when requesting simplePushURL.",
       function(done) {
         jsonReq
-          .post('/requireParams/simplePushURL')
+          .post(apiPrefix + '/requireParams/simplePushURL')
           .send({simple_push_url: "http://deny"})
           .expect(200)
           .end(done);
@@ -270,7 +270,7 @@ describe("index.js", function() {
     it("should return a 400 if one of the required params are missing.",
       function(done) {
         jsonReq
-          .post('/requireParams/')
+          .post(apiPrefix + '/requireParams/')
           .send({a: "Ok"})
           .expect(400)
           .end(function(err, res) {
@@ -283,7 +283,7 @@ describe("index.js", function() {
 
     it("should return a 400 if all params are missing.", function(done) {
       jsonReq
-        .post('/requireParams/')
+        .post(apiPrefix + '/requireParams/')
         .send({})
         .expect(400)
         .end(function(err, res) {
@@ -296,7 +296,7 @@ describe("index.js", function() {
 
     it("should return a 200 if all the params are presents.", function(done) {
       jsonReq
-        .post('/requireParams/')
+        .post(apiPrefix + '/requireParams/')
         .send({a: "Ok", b: "Ok"})
         .expect(200)
         .end(done);
@@ -307,7 +307,7 @@ describe("index.js", function() {
     var expectedAssertion, sandbox, user;
     user = "alexis";
 
-    app.post("/with-authenticate", authenticate, function(req, res) {
+    apiRouter.post("/with-authenticate", authenticate, function(req, res) {
       res.status(200).json();
     });
 
@@ -334,7 +334,7 @@ describe("index.js", function() {
       it("should accept assertions and return hawk credentials",
         function(done) {
           supertest(app)
-            .post("/with-authenticate")
+            .post(apiPrefix + "/with-authenticate")
             .set('Authorization', 'BrowserID ' + expectedAssertion)
             .expect(200)
             .end(function(err, res) {
@@ -348,7 +348,7 @@ describe("index.js", function() {
 
       it("shouldn't accept invalid assertions", function(done) {
           supertest(app)
-            .post("/with-authenticate")
+            .post(apiPrefix + "/with-authenticate")
             .set('Authorization', 'BrowserID wrongAssertion')
             .expect(401)
             .end(done);
@@ -374,7 +374,7 @@ describe("index.js", function() {
 
       it("should accept valid hawk sessions", function(done) {
           supertest(app)
-            .post("/with-authenticate")
+            .post(apiPrefix + "/with-authenticate")
             .hawk(hawkCredentials)
             .expect(200)
             .end(done);
@@ -383,7 +383,7 @@ describe("index.js", function() {
       it("shouldn't accept invalid hawk credentials", function(done) {
           hawkCredentials.id = randomBytes(16).toString("hex");
           supertest(app)
-            .post("/with-authenticate")
+            .post(apiPrefix + "/with-authenticate")
             .hawk(hawkCredentials)
             .expect(401)
             .end(done);
@@ -391,7 +391,7 @@ describe("index.js", function() {
       it("should update session expiration time on auth", function(done) {
         sandbox.spy(storage, "touchHawkSession");
         supertest(app)
-          .post("/with-authenticate")
+          .post(apiPrefix + "/with-authenticate")
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err) {
@@ -410,7 +410,7 @@ describe("index.js", function() {
     it("should generate new hawk sessions if no authentication is provided",
       function(done) {
         supertest(app)
-          .post("/with-authenticate")
+          .post(apiPrefix + "/with-authenticate")
           .expect(200)
           .end(function(err, res) {
             if (err) {
@@ -426,7 +426,7 @@ describe("index.js", function() {
   describe("#storeUserCallTokens", function() {
     var sandbox;
 
-    app.post('/storeUserCallTokens', function(req, res) {
+    apiRouter.post('/storeUserCallTokens', function(req, res) {
       storeUserCallTokens({
         callerId: req.body.callerId,
         calleeFriendlyName: req.body.calleeFriendlyName,
@@ -453,7 +453,7 @@ describe("index.js", function() {
       });
 
       supertest(app)
-        .post('/storeUserCallTokens')
+        .post(apiPrefix + '/storeUserCallTokens')
         .send({callType: "audio"})
         .expect(503)
         .end(done);
@@ -484,7 +484,7 @@ describe("index.js", function() {
         function(done) {
           sandbox.stub(request, "put");
           supertest(app)
-            .post('/storeUserCallTokens')
+            .post(apiPrefix + '/storeUserCallTokens')
             .send({
               callerId: callerId,
               callToken: callToken,
@@ -518,6 +518,33 @@ describe("index.js", function() {
               });
               done();
             });
+        });
+    });
+  });
+
+  describe("404 error page and 301 redirection", function() {
+    it("should return a 301 if apiPrefix is missing.", function(done) {
+      supertest(app)
+        .get('/toto')
+        .send()
+        .expect(301)
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.headers.location).to.equal(apiPrefix + "/toto");
+          done();
+        });
+    });
+
+    it("should return a 404 if apiPrefix and page not found.", function(done) {
+      supertest(app)
+        .get(apiPrefix + '/toto')
+        .send()
+        .expect(404)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res, 404, 999,
+                              "Ressource not found.");
+          done();
         });
     });
   });

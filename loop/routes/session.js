@@ -4,7 +4,7 @@
 
 'use strict';
 
-module.exports = function (app, auth) {
+module.exports = function (apiRouter, auth) {
 
   /**
    * An endpoint you can use to retrieve a hawk session.
@@ -12,7 +12,7 @@ module.exports = function (app, auth) {
    * In the case of OAuth, this session will be upgraded at the end of the
    * authentication flow, with an attached identity.
    **/
-  app.post('/session', auth.attachOrCreateHawkSession, function(req, res) {
+  apiRouter.post('/session', auth.attachOrCreateHawkSession, function(req, res) {
     res.status(204).json();
   });
 };

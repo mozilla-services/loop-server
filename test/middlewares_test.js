@@ -9,6 +9,8 @@ var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var loop = require("../loop");
 var app = loop.app;
+var apiRouter = loop.apiRouter;
+var apiPrefix = loop.apiPrefix;
 var logMetrics = require("../loop/middlewares").logMetrics;
 var hekaLogger = require("../loop/middlewares").hekaLogger;
 var expect = require("chai").expect;
@@ -25,7 +27,7 @@ describe("metrics middleware", function() {
   var old_metrics;
   var clock;
 
-  app.get("/with-metrics-middleware", logMetrics, function(req, res) {
+  apiRouter.get("/with-metrics-middleware", logMetrics, function(req, res) {
     req.user = 'uuid';
     req.callUrlData = 'data';
     res.status(200).json();
@@ -50,7 +52,7 @@ describe("metrics middleware", function() {
 
   it("should write logs to stdout", function(done) {
     supertest(app)
-      .get('/with-metrics-middleware')
+      .get(apiPrefix + '/with-metrics-middleware')
       .set('user-agent', 'Mouzilla')
       .set('accept-language', 'Breton du sud')
       .set('x-forwarded-for', 'ip1, ip2, ip3')
