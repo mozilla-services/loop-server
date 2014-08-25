@@ -490,13 +490,8 @@ describe("HTTP API exposed by the server", function() {
         .send({callerId: callerId})
         .end(function(err) {
           if (err) throw err;
-          assert.calledTwice(statsdClient.count);
+          assert.calledOnce(statsdClient.count);
           assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
-          assert.calledWithExactly(
-            statsdClient.count,
-            "loop-call-urls-" + userHmac,
-            1
-          );
           done();
         });
     });
