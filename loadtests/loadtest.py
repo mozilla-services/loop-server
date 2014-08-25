@@ -11,10 +11,13 @@ from loads.case import TestCase
 
 
 class TestLoop(TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestLoop, self).__init__(*args, **kwargs)
+        r = self.session.get(self.server_url)
+        self.base_url = r.request.url.rstrip('/')
 
     def setUp(self):
         self.wss = []
-        self.base_url = self.server_url + "/v0"
 
     def tearDown(self):
         for ws in self.wss:
