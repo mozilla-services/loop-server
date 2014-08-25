@@ -67,6 +67,7 @@ function logMetrics(req, res, next) {
         agent: req.headers['user-agent'],
         time: isoDateString(new Date()),
         uid: req.user,
+        callId: req.callId,
         token: req.token,
         v: loopPackageData.version,
         name: loopPackageData.name,
