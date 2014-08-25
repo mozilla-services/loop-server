@@ -543,7 +543,7 @@ describe("index.js", function() {
         .end(function(err, res) {
           if (err) throw err;
           expectFormatedError(res, 404, 999,
-                              "Ressource not found.");
+                              "Resource not found.");
           done();
         });
     });

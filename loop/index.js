@@ -126,7 +126,7 @@ app.use(function(req, res) {
     res.redirect(301, apiPrefix + req.path);
     return;
   }
-  sendError(res, 404, 999, "Ressource not found.");
+  sendError(res, 404, 999, "Resource not found.");
 });
 
 /* eslint-disable */
