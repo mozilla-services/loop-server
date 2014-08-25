@@ -5,6 +5,8 @@
 "use strict";
 
 var PubSub = require('./pubsub');
+var hekaLogger = require('./logger').hekaLogger;
+var isoDateString = require("./utils").isoDateString;
 
 /**
  * Sends an error to the given callback, if there is any.
@@ -324,7 +326,12 @@ MessageHandler.prototype = {
     var state = parts[0];
     self.storage.setCallState(callId, state, ttl, function(err) {
       if (serverError(err)) return;
-
+      hekaLogger.log('info', {
+        op: 'websocket.summary',
+        callId: callId,
+        state: state,
+        time: isoDateString(new Date())
+      });
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
 

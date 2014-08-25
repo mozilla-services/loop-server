@@ -13,16 +13,7 @@ var hostname = os.hostname();
 var sendError = require("./utils").sendError;
 var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
-var winston = require('winston');
-
-var metricsFileParams = JSON.parse(JSON.stringify(conf.get('metricsFileParams')));
-metricsFileParams.timestamp = false;
-
-var hekaLogger = new winston.Logger({
-  transports: [
-    new winston.transports.File(metricsFileParams)
-  ]
-});
+var hekaLogger = require('./logger').hekaLogger;
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
