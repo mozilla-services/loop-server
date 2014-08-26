@@ -48,7 +48,8 @@ var validateSimplePushURL = validators.validateSimplePushURL;
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
 var user2 = "alexis@mozilla.com";
-var userHmac, userHmac2;
+var user3 = "+33675002145";
+var userHmac, userHmac2, userHmac3;
 var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
@@ -70,7 +71,7 @@ function register(url, assertion, credentials, cb) {
 
 describe("HTTP API exposed by the server", function() {
 
-  var sandbox, expectedAssertion, pushURL, pushURL2, hawkCredentials,
+  var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3, hawkCredentials,
        hawkCredentials2, fakeCallInfo, genuineOrigins;
 
   var routes = {
@@ -111,6 +112,10 @@ describe("HTTP API exposed by the server", function() {
                'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
                'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
 
+    pushURL3 = 'https://push3.services.mozilla.com/update/MGlYke2SrEmYE8ceyu' +
+               'STwxawxuEJnMeHtTCFDckvUo9Gwat44C5Z5vjlQEd1od1hj6o38UB6Ytc5x' +
+               'gXwSLAH2VS8qKyZ1eLNTQSX6_AEeH73ohUy2A==';
+
     // Generate Hawk credentials.
     var token = new Token();
     token.getCredentials(function(tokenId, authKey) {
@@ -137,7 +142,19 @@ describe("HTTP API exposed by the server", function() {
             userHmac2 = hmac(user2, conf.get('userMacSecret'));
             storage.setHawkSession(hawkIdHmac2, authKey2, function(err) {
               if (err) throw err;
-              storage.setHawkUser(userHmac2, hawkIdHmac2, done);
+              storage.setHawkUser(userHmac2, hawkIdHmac2, function(err) {
+                if (err) throw err;
+                // Generate Hawk credentials.
+                var token3 = new Token();
+                token3.getCredentials(function(tokenId3, authKey3) {
+                  var hawkIdHmac3 = hmac(tokenId3, conf.get('hawkIdSecret'));
+                  userHmac3 = hmac(user3, conf.get('userMacSecret'));
+                  storage.setHawkSession(hawkIdHmac3, authKey3, function(err) {
+                    if (err) throw err;
+                    storage.setHawkUser(userHmac3, hawkIdHmac3, done);
+                  });
+                });
+              });
             });
           });
         });
@@ -1387,15 +1404,36 @@ describe("HTTP API exposed by the server", function() {
             if (err) throw err;
             storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
               if (err) throw err;
+              storage.addUserSimplePushURL(userHmac3, pushURL3, function(err) {
+                if (err) throw err;
 
-              addCallReq
-                .send({calleeId: [user, user2], callType: "audio"})
-                .expect(200)
-                .end(function(err) {
-                  if (err) throw err;
-                  expect(requests).to.length(2);
-                  done();
-                });
+                addCallReq
+                  .send({
+                    calleeId: [
+                      user, user2,
+                      // French number with French MCC should works
+                      {phoneNumber: "0675002145", "mcc": 208},
+
+                      // MSISDN without mcc should works
+                      {phoneNumber: "+33675002145"},
+
+                      // MCC doesn't match MSISDN Country Code, should find out
+                      {phoneNumber: "+33675002145", mcc: 310},
+
+                      // Will be ignored wrong MSISDN and no MCC
+                      {phoneNumber: "0675002145"},
+
+                      // Wrong object will be ignored (no phoneNumber)
+                      {number: "+33675002145"}],
+                    callType: "audio"
+                  })
+                  .expect(200)
+                  .end(function(err) {
+                    if (err) throw err;
+                    expect(requests).to.length(5);
+                    done();
+                  });
+              });
             });
           });
         });
