@@ -145,6 +145,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
         }, function(err, callInfo) {
           if (res.serverError(err)) return;
 
+          req.callId = callInfo.callId;
           var callerToken = callInfo.callerToken;
           // Don't save the callerToken information in the database.
           delete callInfo.callerToken;
@@ -250,6 +251,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
               if (res.serverError(err)) return;
 
               callInfo = JSON.parse(JSON.stringify(callInfo));
+              req.callId = callInfo.callId;
               var callerToken = callInfo.callerToken;
               // Don't save the callerToken information in the database.
               delete callInfo.callerToken;

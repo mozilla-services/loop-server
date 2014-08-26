@@ -5,6 +5,9 @@
 "use strict";
 
 var PubSub = require('./pubsub');
+var conf = require('./config').conf;
+var hekaLogger = require('./logger').hekaLogger;
+var isoDateString = require("./utils").isoDateString;
 
 /**
  * Sends an error to the given callback, if there is any.
@@ -324,7 +327,6 @@ MessageHandler.prototype = {
     var state = parts[0];
     self.storage.setCallState(callId, state, ttl, function(err) {
       if (serverError(err)) return;
-
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
 
@@ -335,6 +337,17 @@ MessageHandler.prototype = {
         if (redisCurrentState !== "half-initiated") {
           self.pub.publish(callId, redisCurrentState, function(err) {
             if (serverError(err)) return;
+          });
+        }
+
+        if (conf.get("metrics") &&
+            (redisCurrentState === "connected" ||
+             redisCurrentState === "terminated")) {
+          hekaLogger.log('info', {
+            op: 'websocket.summary',
+            callId: callId,
+            state: redisCurrentState,
+            time: isoDateString(new Date())
           });
         }
       });

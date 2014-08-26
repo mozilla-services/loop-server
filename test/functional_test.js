@@ -1238,7 +1238,7 @@ describe("HTTP API exposed by the server", function() {
         it("should log metrics with the user hash", function(done) {
           addCallReq
             .send({calleeId: user, callType: 'audio'})
-            .end(function () {
+            .end(function() {
               expect(_logs[0].uid).to.eql(userHmac);
               done();
             });
