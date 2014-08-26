@@ -10,7 +10,7 @@ var sendError = require('../utils').sendError;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
 
-module.exports = function (app, conf, logError, storage, auth) {
+module.exports = function (app, conf, logError, storage, auth, validators) {
 
   var oauthConf = conf.get('fxaOAuth');
 
@@ -59,22 +59,10 @@ module.exports = function (app, conf, logError, storage, auth) {
   /**
    * Trade an OAuth code with an oauth bearer token.
    **/
-  app.post('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
+  app.post('/fxa-oauth/token', auth.requireHawkSession,
+    validators.requireParams('state', 'code'), function (req, res) {
       var state = req.body.state;
       var code = req.body.code;
-
-      var missingParams = [];
-      if (!state) {
-        missingParams.push('state');
-      }
-      if (!code) {
-        missingParams.push('code');
-      }
-      if (missingParams.length > 0) {
-        sendError(res, 400, errors.MISSING_PARAMETERS,
-                  "Missing: " + missingParams.join(", "));
-        return;
-      }
 
       // State should match an existing state.
       storage.getHawkOAuthState(req.hawkIdHmac, function(err, storedState) {
