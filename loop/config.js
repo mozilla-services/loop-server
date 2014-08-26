@@ -422,6 +422,11 @@ if (conf.get('hawkSessionDuration') <
     conf.get('callUrlMaxTimeout') * 60 * 60) {
   throw "hawkSessionDuration should be longer or equal to callUrlMaxTimeout.";
 }
+
+if (conf.get('fxaOAuth').client_id === "") {
+  throw "Please define a client_id for fxA OAuth";
+}
+
 module.exports = {
   conf: conf,
   hexKeyOfSize: hexKeyOfSize,
