@@ -522,12 +522,12 @@ describe("index.js", function() {
     });
   });
 
-  describe("404 error page and 301 redirection", function() {
-    it("should return a 301 if apiPrefix is missing.", function(done) {
+  describe("404 error page and 307 redirection", function() {
+    it("should return a 307 if apiPrefix is missing.", function(done) {
       supertest(app)
         .get('/toto')
         .send()
-        .expect(301)
+        .expect(307)
         .end(function(err, res) {
           if (err) throw err;
           expect(res.headers.location).to.equal(apiPrefix + "/toto");

@@ -123,7 +123,7 @@ app.use(raven.middleware.express(conf.get('sentryDSN')));
 // Must be the last middleware.
 app.use(function(req, res) {
   if (req.path.indexOf(apiPrefix) !== 0) {
-    res.redirect(301, apiPrefix + req.path);
+    res.redirect(307, apiPrefix + req.path);
     return;
   }
   sendError(res, 404, 999, "Resource not found.");
