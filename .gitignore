@@ -9,3 +9,4 @@ circus/*.log
 heka*.log
 *.pyc
 loadtests/venv/
+loadtest.log
