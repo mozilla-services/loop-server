@@ -44,7 +44,12 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
   if (Object.prototype.toString.call(audiences) !== '[object Array]' ) {
     throw new Error("The 'audiences' parameter should be an array");
   }
-  var assertionAudience = exports.getAssertionAudience(assertion);
+  try {
+    var assertionAudience = exports.getAssertionAudience(assertion);
+  } catch (e) {
+    callback("Malformed audience");
+    return;
+  }
   var audience;
 
   // Check we trust the audience of the assertion.
@@ -53,6 +58,7 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
     audience = audiences[trustedAudienceIndex];
   } else {
     callback("Invalid audience");
+    return;
   }
 
   request.post({
