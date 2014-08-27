@@ -22,7 +22,7 @@ describe("utils", function() {
       expect(progressURL).to.match(/127.0.0.1:5123/);
     });
 
-    it("should return a ws:// url if the protocol is https.", function() {
+    it("should return a wss:// url if the protocol is https.", function() {
       var host = "127.0.0.1:5123";
       conf.set("protocol", "https");
       var progressURL = utils.getProgressURL(host);

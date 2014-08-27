@@ -114,6 +114,7 @@ var session = require("./routes/session");
 session(apiRouter, auth);
 
 app.use(apiPrefix, apiRouter);
+app.use("/", apiRouter);
 
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
