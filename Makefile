@@ -43,7 +43,8 @@ mocha:
 spaceleft:
 	@if which grin 2>&1 >/dev/null; \
 	then \
-	  grin " $$" loop/ test/ config/; \
+      test "$$(grin " $$" loop/ test/ config/ -l | wc -l)" -ne "0"  && \
+	  grin -l " $$" loop/ test/ config/ | xargs sed -i 's/\s*$$//' || exit 0; \
 	fi
 
 .PHONY: runserver
