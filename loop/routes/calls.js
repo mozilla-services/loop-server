@@ -12,7 +12,7 @@ var hmac = require('../hmac');
 var getProgressURL = require('../utils').getProgressURL;
 var request = require('request');
 var sendError = require('../utils').sendError;
-
+var phone = require('phone');
 
 module.exports = function(app, conf, logError, storage, tokBox, auth,
   validators) {
@@ -151,6 +151,36 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
           delete callInfo.callerToken;
 
           async.each(calleeId, function(identity, callback) {
+            if (typeof identity === 'object') {
+              if (identity.hasOwnProperty("phoneNumber")) {
+                var phoneNumber = identity.phoneNumber.trim();
+                if (!identity.hasOwnProperty("mcc") &&
+                    !phoneNumber.match(/^\+/)) {
+                  // Ignore objects without a MSISDN phoneNumber or a MCC
+                  callback();
+                  return;
+                }
+                var makePhone = phone(phoneNumber, parseInt(identity.mcc, 10) || undefined);
+                if (makePhone.length === 2) {
+                  // Continue with the MSISDN as identity
+                  identity = makePhone[0];
+                } else {
+                  // Try again without the given MCC
+                  makePhone = phone(phoneNumber);
+                  if (makePhone.length === 2) {
+                    identity = makePhone[0];
+                  } else {
+                    // Ignore wrong numbers
+                    callback();
+                    return;
+                  }
+                }
+              } else {
+                // Ignore objects without phoneNumber
+                callback();
+                return;
+              }
+            }
             var calleeMac = hmac(identity, conf.get('userMacSecret'));
             storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
               if (err) {
