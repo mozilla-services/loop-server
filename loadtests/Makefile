@@ -10,10 +10,11 @@ INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 # Build virtualenv, to ensure we have all the dependencies.
 build:
 	virtualenv --no-site-packages ./venv
-	$(INSTALL) pexpect
-	$(INSTALL) gevent
-	$(INSTALL) git+git://github.com/mozilla-services/loads.git
-	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git
+	$(INSTALL) pexpect >> loadtest.log && \
+	$(INSTALL) gevent >> loadtest.log && \
+	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
+	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
+	rm loadtest.log || cat loadtest.log
 
 install: build
 
