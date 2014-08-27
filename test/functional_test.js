@@ -311,6 +311,28 @@ describe("HTTP API exposed by the server", function() {
         });
     });
 
+    it("and /" + apiPrefix + "/ should return the same endpoint.",
+      function(done) {
+        supertest(app)
+          .get(apiPrefix + '/')
+          .expect(200)
+          .expect('Content-Type', /json/)
+          .end(function(err, res) {
+            if (err) throw err;
+            supertest(app)
+              .get('/')
+              .expect(200)
+              .expect('Content-Type', /json/)
+              .end(function(err, res2) {
+                if (err) throw err;
+                delete res.body.endpoint;
+                delete res2.body.endpoint;
+                expect(res.body).to.eql(res2.body);
+                done();
+              });
+          });
+      });
+
     it("should not display server version if displayVersion is false.",
       function(done) {
         conf.set("displayVersion", false);
@@ -363,6 +385,22 @@ describe("HTTP API exposed by the server", function() {
         done();
       });
     });
+
+    it("should return an empty list if no call-url without /" + apiPrefix,
+      function(done) {
+        supertest(app)
+          .get('/call-url')
+          .hawk(hawkCredentials)
+          .type('json')
+          .expect('Content-Type', /json/)
+          .send({})
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.eql([]);
+            done();
+          });
+      });
 
     it("should return a list of call-url with some information",
       function(done) {
