@@ -21,5 +21,12 @@
   "sentryDSN": false,
   "allowedOrigins": ["*"],
   "statsdEnabled": false,
-  "fxaAudiences": ["app://loop.services.mozilla.com", "http://loop.services.mozilla.com"]
+  "fxaAudiences": ["app://loop.services.mozilla.com", "http://loop.services.mozilla.com"],
+  "fxaOAuth": {
+    "client_id": "cdaf76e75c7f7a00",
+    "client_secret": "74a35b3eeef81a4f36ba8e7bf76e9972a3af6bd7c4c2fba7db7ccfc8b324cb8b",
+    "profile_uri": "https://accounts.firefox.com/profile/v1",
+    "oauth_uri": "https://api.accounts.firefox.com/v1",
+    "content_uri": "https://accounts.firefox.com"
+  }
 }
