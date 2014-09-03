@@ -59,6 +59,7 @@ describe('/fxa-oauth', function () {
           expect(resp.body.client_id).eql(oauthConf.client_id);
           expect(resp.body.oauth_uri).eql(oauthConf.oauth_uri);
           expect(resp.body.content_uri).eql(oauthConf.content_uri);
+          expect(resp.body.profile_uri).eql(oauthConf.profile_uri);
           expect(resp.body.scope).eql(oauthConf.scope);
           expect(resp.body.redirect_uri).eql(oauthConf.redirect_uri);
           expect(resp.body.state).to.not.eql(undefined);

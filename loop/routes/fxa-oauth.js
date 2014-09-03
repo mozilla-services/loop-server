@@ -23,6 +23,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
         res.status(200).json({
           client_id: oauthConf.client_id,
           redirect_uri: oauthConf.redirect_uri,
+          profile_uri: oauthConf.profile_uri,
           content_uri: oauthConf.content_uri,
           oauth_uri: oauthConf.oauth_uri,
           scope: oauthConf.scope,
