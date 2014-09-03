@@ -12,11 +12,11 @@ services: redis-server
 
 before_install:
   - "sudo apt-get install python-virtualenv"
+  - npm i grunt-cli -g
 
 script: make travis
 
 after_script:
-  - npm install nsp -g
   - npm run outdated
   - npm run audit-shrinkwrap
 
