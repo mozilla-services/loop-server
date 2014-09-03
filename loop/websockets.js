@@ -148,6 +148,7 @@ MessageHandler.prototype = {
         // keep track of the active listeners
         session.subListeners.push(listener);
 
+        // Wait for the other caller to connect for the time of the call.
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
           setTimeout(function() {
@@ -155,6 +156,7 @@ MessageHandler.prototype = {
               if (serverError(err, callback)) return;
               if (state === 'terminated' || state === 'half-initiated') {
                 self.broadcastState(session.callId, "terminated:timeout");
+                self.storage.setCallState(session.callId, 'terminated');
               }
             });
           }, timeoutTTL * 1000);
@@ -186,6 +188,7 @@ MessageHandler.prototype = {
                   if (serverError(err, callback)) return;
                   if (state === "alerting" || state === "terminated") {
                     self.broadcastState(session.callId, "terminated:timeout");
+                    self.storage.setCallState(session.callId, 'terminated');
                   }
                 });
               }, self.conf.ringingDuration * 1000);
@@ -263,6 +266,7 @@ MessageHandler.prototype = {
                 if (serverError(err, callback)) return;
                 if (state !== "connected") {
                   self.broadcastState(session.callId, "terminated:timeout");
+                  self.storage.setCallState(session.callId, 'terminated');
                 }
               });
             }, self.conf.connectionDuration * 1000);
