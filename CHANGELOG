@@ -3,10 +3,16 @@ Changelog
 
 This document describes changes between each past release.
 
-0.11.0 (unreleased)
+0.11.0 (2014-09-03)
 -------------------
 
-- [feature] 1041814 — Add FxA oauth support
+- [feature] 1041814 — Add FxA oauth support;
+- [api-change] 1025792 — Add a /v1/ prefix to all resources;
+- [api-change] 1039444 — Transform phoneNumber and MCC to MSISDN on server side;
+- [config] 103541 — Setup Winston for heka metrics logging;
+- [feature] 1043875 — Add a --fd parameter to specify the fd to bind to;
+- [feature] 1055143 — Add a push server configuration endpoint;
+- [api-change] 1043686 — Add a GET /call-url endpoint
 
 
 0.10.0 (2014-08-05)
