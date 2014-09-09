@@ -24,5 +24,9 @@
   "fxaAudiences": [
     "https://loop.services.mozilla.com",
     "app://loop.services.mozilla.com"
-  ]
+  ],
+  "fxaOAuth": {
+    "client_id": "cdaf76e75c7f7a00",
+    "client_secret": "74a35b3eeef81a4f36ba8e7bf76e9972a3af6bd7c4c2fba7db7ccfc8b324cb8b"
+  }
 }
