@@ -19,7 +19,7 @@ install:
 
 .PHONY: lint
 lint:
-	@grunt lint
+	@$(NODE_LOCAL_BIN)/grunt lint
 
 clean:
 	rm -rf .venv node_modules coverage lib-cov html-report
@@ -33,7 +33,7 @@ cover-mocha:
 
 .PHONY: eslint
 eslint:
-	@grunt eslint
+	@$(NODE_LOCAL_BIN)/grunt eslint
 
 .PHONY: mocha
 mocha:
