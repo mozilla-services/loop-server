@@ -1,6 +1,6 @@
 {
   "host": "localhost",
-  "port": 5000,
+  "port": 54321,
   "storage": {
     "engine": "redis",
     "settings": {
