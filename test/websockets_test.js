@@ -605,6 +605,10 @@ describe('websockets', function() {
           if (message.messageType === "progress") {
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
         });
 
@@ -627,6 +631,10 @@ describe('websockets', function() {
           if (message.messageType === "progress") {
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
         });
 
@@ -729,6 +737,10 @@ describe('websockets', function() {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
           calleeMsgCount++;
         });
@@ -830,6 +842,10 @@ describe('websockets', function() {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
           callerMsgCount++;
         });
@@ -853,6 +869,10 @@ describe('websockets', function() {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
           calleeMsgCount++;
         });
@@ -911,6 +931,10 @@ describe('websockets', function() {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
           callerMsgCount++;
         });
@@ -937,6 +961,10 @@ describe('websockets', function() {
             expect(message.messageType).eql("progress");
             expect(message.state).eql("terminated");
             expect(message.reason).eql("timeout");
+            storage.getCallState(callId, function(err, state) {
+              if (err) throw err;
+              expect(state).eql("terminated");
+            });
           }
           calleeMsgCount++;
         });

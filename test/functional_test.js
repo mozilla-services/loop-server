@@ -959,7 +959,7 @@ function runOnPrefix(apiPrefix) {
         ];
 
         req = supertest(app)
-          .get(apiPrefix + '/calls?version=' + calls[2].timestamp)
+          .get(apiPrefix + '/calls?version=' + calls[1].timestamp)
           .hawk(hawkCredentials)
           .expect('Content-Type', /json/);
 
@@ -978,7 +978,9 @@ function runOnPrefix(apiPrefix) {
           .expect(200).end(function(err, res) {
             if (err) throw err;
 
-            var callsList = calls.map(function(call) {
+            var callsList = calls.filter(function(call) {
+              return call.callState !== "terminated";
+            }).map(function(call) {
               return {
                 callId: call.callId,
                 callType: call.callType,
@@ -1007,18 +1009,18 @@ function runOnPrefix(apiPrefix) {
           if (err) throw err;
 
           var callsList = [{
-            callId: calls[2].callId,
-            callType: calls[2].callType,
-            callerId: calls[2].callerId,
-            websocketToken: calls[2].wsCalleeToken,
+            callId: calls[1].callId,
+            callType: calls[1].callType,
+            callerId: calls[1].callerId,
+            websocketToken: calls[1].wsCalleeToken,
             apiKey: tokBoxConfig.credentials.default.apiKey,
-            sessionId: calls[2].sessionId,
-            sessionToken: calls[2].calleeToken,
+            sessionId: calls[1].sessionId,
+            sessionToken: calls[1].calleeToken,
             callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
             call_url: conf.get('webAppUrl')
-              .replace('{token}', calls[2].callToken),
-            callToken: calls[2].callToken,
-            urlCreationDate: calls[2].urlCreationDate,
+              .replace('{token}', calls[1].callToken),
+            callToken: calls[1].callToken,
+            urlCreationDate: calls[1].urlCreationDate,
             progressURL: progressURL
           }];
 

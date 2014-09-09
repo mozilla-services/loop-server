@@ -83,7 +83,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
         if (res.serverError(err)) return;
 
         var calls = records.filter(function(record) {
-          return record.timestamp >= version;
+          return record.timestamp >= version &&
+                 record.callState !== "terminated";
         }).map(function(record) {
           // XXX Bug 1032966 - call_url is deprecated
           var result = {
