@@ -17,7 +17,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Provide the client with the parameters needed for the OAuth dance.
    **/
-  app.post('/fxa-oauth/params', auth.requireHawkSession,
+  app.post('/fxa-oauth/params', auth.attachOrCreateHawkSession,
     function(req, res) {
       var callback = function(state) {
         res.status(200).json({

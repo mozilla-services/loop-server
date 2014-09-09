@@ -6,15 +6,21 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
+var assert = sinon.assert;
 var Token = require("express-hawkauth").Token;
 var request = require("request");
 
 var loop = require("../loop");
 var apiPrefix = loop.apiPrefix;
+var apiRouter = loop.apiRouter;
 var hmac = require("../loop/hmac");
 var errors = require("../loop/errno.json");
 
+var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
+
+var attachOrCreateHawkSession = loop.auth.attachOrCreateHawkSession;
+var statsdClient = loop.statsdClient;
 
 var conf = loop.conf;
 var oauthConf = conf.get('fxaOAuth');
@@ -82,6 +88,42 @@ describe('/fxa-oauth', function () {
 
       });
     });
+
+    it("should have the attachOrCreateHawkSession middleware installed",
+       function() {
+         expect(getMiddlewares(apiRouter, 'post', '/fxa-oauth/params'))
+           .include(attachOrCreateHawkSession);
+       });
+
+    it("should return a 503 if the database isn't available",
+      function(done) {
+        sandbox.stub(storage, "getHawkSession",
+          function(tokenId, cb) {
+            cb(new Error("error"));
+          });
+        supertest(app)
+          .post(apiPrefix + '/fxa-oauth/params')
+          .type('json')
+          .hawk(hawkCredentials)
+          .send({}).expect(503).end(done);
+      });
+
+      it("should count new users if the session is created", function(done) {
+        sandbox.stub(statsdClient, "count");
+        supertest(app)
+          .post(apiPrefix + '/fxa-oauth/params')
+          .type('json')
+          .send({}).expect(200).end(function(err) {
+            if (err) throw err;
+            assert.calledOnce(statsdClient.count);
+            assert.calledWithExactly(
+              statsdClient.count,
+              "loop-activated-users",
+              1
+            );
+            done();
+          });
+      });
   });
 
   describe('GET /token', function() {
