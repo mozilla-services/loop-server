@@ -4,7 +4,8 @@
 
 "use strict";
 var redis = require("redis");
-var async = require('async');
+var async = require("async");
+var constants = require("../constants");
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -412,7 +413,7 @@ RedisStorage.prototype = {
 
     var key = 'callstate.' + callId;
 
-    if(state === "terminated") {
+    if(state === constants.CALL_STATES.TERMINATED) {
       self._client.del(key, callback);
       return;
     }
@@ -450,22 +451,22 @@ RedisStorage.prototype = {
       }
       switch (score) {
       case 1:
-        callback(null, "init");
+        callback(null, constants.CALL_STATES.INIT);
         break;
       case 2:
-        callback(null, "half-initiated");
+        callback(null, constants.CALL_STATES.HALF_INITIATED);
         break;
       case 3:
-        callback(null, "alerting");
+        callback(null, constants.CALL_STATES.ALERTING);
         break;
       case 4:
-        callback(null, "connecting");
+        callback(null, constants.CALL_STATES.CONNECTING);
         break;
       case 5:
-        callback(null, "half-connected");
+        callback(null, constants.CALL_STATES.HALF_CONNECTED);
         break;
       case 6:
-        callback(null, "connected");
+        callback(null, constants.CALL_STATES.CONNECTED);
         break;
       default:
         // Ensure a call exists if nothing is stored on this key.
@@ -475,7 +476,7 @@ RedisStorage.prototype = {
             return;
           }
           if (result !== null) {
-            callback(null, "terminated");
+            callback(null, constants.CALL_STATES.TERMINATED);
             return;
           }
           callback(null, null);
