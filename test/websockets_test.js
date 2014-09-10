@@ -605,7 +605,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (message.messageType === constants.MESSAGE_TYPES.PROGRESS) {
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
@@ -631,7 +631,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (message.messageType === constants.MESSAGE_TYPES.PROGRESS) {
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
@@ -737,7 +737,7 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
@@ -842,7 +842,7 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
@@ -869,7 +869,7 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
@@ -931,7 +931,7 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
@@ -961,7 +961,7 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
-            expect(message.reason).eql("timeout");
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
               expect(state).eql(constants.CALL_STATES.TERMINATED);
