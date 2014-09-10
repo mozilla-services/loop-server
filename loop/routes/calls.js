@@ -13,6 +13,8 @@ var getProgressURL = require('../utils').getProgressURL;
 var request = require('request');
 var sendError = require('../utils').sendError;
 var phone = require('phone');
+var constants = require("../constants");
+
 
 module.exports = function(app, conf, logError, storage, tokBox, auth,
   validators) {
@@ -46,7 +48,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
       var callInfo = {
         'callId': callId,
         'callType': options.callType,
-        'callState': "init",
+        'callState': constants.CALL_STATES.INIT,
         'timestamp': currentTimestamp,
 
         'callerId': options.callerId,
@@ -84,7 +86,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
 
         var calls = records.filter(function(record) {
           return record.timestamp >= version &&
-                 record.callState !== "terminated";
+                 record.callState !== constants.CALL_STATES.TERMINATED;
         }).map(function(record) {
           // XXX Bug 1032966 - call_url is deprecated
           var result = {
@@ -200,7 +202,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                     return;
                   }
 
-                  storage.setCallState(callInfo.callId, "init",
+                  storage.setCallState(
+                    callInfo.callId, constants.CALL_STATES.INIT,
                     conf.get("timers").supervisoryDuration, function() {
                       if (res.serverError(err)) return;
 
@@ -291,7 +294,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                 function(err) {
                   if (res.serverError(err)) return;
 
-                  storage.setCallState(callInfo.callId, "init",
+                  storage.setCallState(
+                    callInfo.callId, constants.CALL_STATES.INIT,
                     conf.get("timers").supervisoryDuration, function() {
                       if (res.serverError(err)) return;
 

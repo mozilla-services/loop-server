@@ -12,6 +12,7 @@ var sinon = require("sinon");
 var assert = sinon.assert;
 var fxaAuth = require("../loop/fxa");
 var Token = require("express-hawkauth").Token;
+var constants = require("../loop/constants");
 var hmac = require("../loop/hmac");
 var loop = require("../loop");
 var apiPrefix = loop.apiPrefix;
@@ -507,7 +508,7 @@ describe("index.js", function() {
               delete res.body.wsCalleeToken;
               expect(res.body).eql({
                 apiKey: "123456",
-                callState: "init",
+                callState: constants.CALL_STATES.INIT,
                 callToken: callToken,
                 callType: "audio",
                 calleeFriendlyName: calleeFriendlyName,

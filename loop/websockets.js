@@ -70,7 +70,9 @@ MessageHandler.prototype = {
   },
 
   handleEcho: function(session, message, callback) {
-    callback(null, {messageType: "echo", echo: message.echo});
+    callback(
+      null, {messageType: constants.MESSAGE_TYPES.ECHO, echo: message.echo}
+    );
   },
 
   /**
@@ -248,7 +250,7 @@ MessageHandler.prototype = {
 
     // If terminate, close the call
     if (event === constants.MESSAGE_EVENTS.TERMINATE) {
-      var state = "terminated";
+      var state = constants.CALL_STATES.TERMINATED;
 
       // Check the reason is valid.
       if (message.reason !== undefined) {
@@ -270,7 +272,7 @@ MessageHandler.prototype = {
       var validateState = function(currentState) {
         if (currentState === constants.CALL_STATES.CONNECTING ||
             currentState === constants.CALL_STATES.HALF_CONNECTED) {
-          return "connected." + session.type;
+          return constants.CALL_STATES.CONNECTED + "." + session.type;
         }
         return null;
       };

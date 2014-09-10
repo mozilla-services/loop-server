@@ -10,6 +10,7 @@ var sinon = require("sinon");
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
 var hmac = require("../loop/hmac");
+var constants = require("../loop/constants");
 var generateToken = require("../loop/tokenlib").generateToken;
 
 var uuid = "1234";
@@ -31,7 +32,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
-          callState:    "init",
+          callState:    constants.CALL_STATES.INIT,
           timestamp:    parseInt(Date.now() / 1000, 10) - 3
         },
         {
@@ -40,7 +41,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
-          callState:    "init",
+          callState:    constants.CALL_STATES.INIT,
           timestamp:    parseInt(Date.now() / 1000, 10) - 2
         },
         {
@@ -49,7 +50,7 @@ describe("Storage", function() {
           userMac:      userMac,
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
-          callState:    "terminated",
+          callState:    constants.CALL_STATES.TERMINATED,
           timestamp:    parseInt(Date.now() / 1000, 10) - 1
         }
       ],
@@ -436,7 +437,11 @@ describe("Storage", function() {
                   if (err) throw err;
                   expect(results).to.have.length(3);
                   expect(results).to.eql(calls.map(function(call, key) {
-                    call.callState = (key === 2) ? "terminated" : "init";
+                    if (key === 2) {
+                      call.callState = constants.CALL_STATES.TERMINATED;
+                    } else {
+                      call.callState = constants.CALL_STATES.INIT;
+                    }
                     return call;
                   }));
                   done();
@@ -650,19 +655,22 @@ describe("Storage", function() {
 
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
-          storage.setCallState("12345", "init", 10, function(err) {
-            if (err) throw err;
-            storage.getCallState("12345", function(err, state) {
+          storage.setCallState("12345", constants.CALL_STATES.INIT, 10,
+            function(err) {
               if (err) throw err;
-              expect(state).to.eql("init");
-              done();
+              storage.getCallState("12345", function(err, state) {
+                if (err) throw err;
+                expect(state).to.eql(constants.CALL_STATES.INIT);
+                done();
+              });
             });
-          });
         });
 
         it("should check the states are valid before storing them",
           function(done) {
-            storage.setCallState("12345", "terminated:unauthorized",
+            storage.setCallState(
+              "12345",
+              constants.CALL_STATES.TERMINATED + ":unauthorized",
               function(err) {
                 expect(err).to.not.eql(null);
                 expect(err.message).match(/should be one of/);

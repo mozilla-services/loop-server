@@ -400,8 +400,13 @@ RedisStorage.prototype = {
     }
 
     var validStates = [
-      "init", "init.caller", "init.callee", "connecting",
-      "connected.caller", "connected.callee", "terminated"
+      constants.CALL_STATES.INIT,
+      constants.CALL_STATES.INIT + ".caller",
+      constants.CALL_STATES.INIT + ".callee",
+      constants.CALL_STATES.CONNECTING,
+      constants.CALL_STATES.CONNECTED + ".caller",
+      constants.CALL_STATES.CONNECTED + ".callee",
+      constants.CALL_STATES.TERMINATED
     ];
 
     if (validStates.indexOf(state) === -1) {
