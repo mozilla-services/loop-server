@@ -12,7 +12,6 @@ services: redis-server
 
 before_install:
   - "sudo apt-get install python-virtualenv"
-  - npm i grunt-cli -g
 
 script: make travis
 

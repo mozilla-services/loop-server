@@ -8,6 +8,7 @@ var PubSub = require('./pubsub');
 var conf = require('./config').conf;
 var hekaLogger = require('./logger').hekaLogger;
 var isoDateString = require("./utils").isoDateString;
+var constants = require("./constants");
 
 /**
  * Sends an error to the given callback, if there is any.
@@ -69,7 +70,9 @@ MessageHandler.prototype = {
   },
 
   handleEcho: function(session, message, callback) {
-    callback(null, {messageType: "echo", echo: message.echo});
+    callback(
+      null, {messageType: constants.MESSAGE_TYPES.ECHO, echo: message.echo}
+    );
   },
 
   /**
@@ -99,7 +102,7 @@ MessageHandler.prototype = {
       if (serverError(err, callback)) return;
 
       if (call === null) {
-        callback(new Error("bad callId"));
+        callback(new Error(constants.ERROR_REASONS.BAD_CALLID));
         return;
       }
 
@@ -108,7 +111,7 @@ MessageHandler.prototype = {
       } else if (call.wsCallerToken === tokenId) {
         session.type = "caller";
       } else {
-        callback(new Error("bad authentication"));
+        callback(new Error(constants.ERROR_REASONS.BAD_AUTHENTICATION));
         return;
       }
 
@@ -124,15 +127,15 @@ MessageHandler.prototype = {
           var terminate;
 
           if (channel === session.callId) {
-            if (receivedState === "terminated" ||
-                receivedState === "connected") {
+            if (receivedState === constants.CALL_STATES.TERMINATED ||
+                receivedState === constants.CALL_STATES.CONNECTED) {
               terminate = "closeConnection";
             }
             if (session.receivedState !== receivedState) {
               session.receivedState = receivedState;
 
               var message = {
-                messageType: "progress",
+                messageType: constants.MESSAGE_TYPES.PROGRESS,
                 state: receivedState
               };
               if (reason !== undefined) {
@@ -154,9 +157,12 @@ MessageHandler.prototype = {
           setTimeout(function() {
             self.storage.getCallState(session.callId, function(err, state) {
               if (serverError(err, callback)) return;
-              if (state === 'terminated' || state === 'half-initiated') {
-                self.broadcastState(session.callId, "terminated:timeout");
-                self.storage.setCallState(session.callId, 'terminated');
+              if (state === constants.CALL_STATES.TERMINATED ||
+                  state === constants.CALL_STATES.HALF_INITIATED) {
+                self.broadcastState(session.callId,
+                                    constants.CALL_STATES.TERMINATED + ":" +
+                                    constants.MESSAGE_REASONS.TIMEOUT);
+                self.storage.setCallState(session.callId, constants.CALL_STATES.TERMINATED);
               }
             });
           }, timeoutTTL * 1000);
@@ -167,28 +173,40 @@ MessageHandler.prototype = {
           // Don't publish the half-initiated state, it's only for internal
           // use.
           var helloState = currentState;
-          if (currentState === "half-initiated") {
-            helloState = "init";
+          if (currentState === constants.CALL_STATES.HALF_INITIATED) {
+            helloState = constants.CALL_STATES.INIT;
           }
 
           callback(null, {
-            messageType: "hello",
+            messageType: constants.MESSAGE_TYPES.HELLO,
             state: helloState
           });
 
           // After the hello phase and as soon the callee is connected,
           // the call changes to the "alerting" state.
-          if (currentState === "init" || currentState === "half-initiated") {
-            self.broadcastState(session.callId, "init." + session.type,
-              timeoutTTL);
+          if (currentState === constants.CALL_STATES.INIT ||
+              currentState === constants.CALL_STATES.HALF_INITIATED) {
+            self.broadcastState(
+              session.callId,
+              constants.CALL_STATES.INIT + "." + session.type,
+              timeoutTTL
+            );
             if (session.type === "callee") {
               // We are now in "alerting" mode.
               setTimeout(function() {
                 self.storage.getCallState(session.callId, function(err, state) {
                   if (serverError(err, callback)) return;
-                  if (state === "alerting" || state === "terminated") {
-                    self.broadcastState(session.callId, "terminated:timeout");
-                    self.storage.setCallState(session.callId, 'terminated');
+                  if (state === constants.CALL_STATES.ALERTING ||
+                      state === constants.CALL_STATES.TERMINATED) {
+                    self.broadcastState(
+                      session.callId,
+                      constants.CALL_STATES.TERMINATED + ":" +
+                      constants.MESSAGE_REASONS.TIMEOUT
+                    );
+                    self.storage.setCallState(
+                      session.callId,
+                      constants.CALL_STATES.TERMINATED
+                    );
                   }
                 });
               }, self.conf.ringingDuration * 1000);
@@ -214,7 +232,11 @@ MessageHandler.prototype = {
       return;
     }
 
-    var validEvents = ["accept", "media-up", "terminate"];
+    var validEvents = [
+      constants.MESSAGE_EVENTS.ACCEPT,
+      constants.MESSAGE_EVENTS.MEDIA_UP,
+      constants.MESSAGE_EVENTS.TERMINATE
+    ];
     var event = message.event;
     var self = this;
 
@@ -227,13 +249,13 @@ MessageHandler.prototype = {
     }
 
     // If terminate, close the call
-    if (event === "terminate") {
-      var state = "terminated";
+    if (event === constants.MESSAGE_EVENTS.TERMINATE) {
+      var state = constants.CALL_STATES.TERMINATED;
 
       // Check the reason is valid.
       if (message.reason !== undefined) {
-        if (message.reason.match(/^[a-zA-Z0-9-]+$/) === null) {
-          callback(new Error("Invalid reason: should be alphanumeric"));
+        if (message.reason.match(/^[a-zA-Z0-9\-]+$/) === null) {
+          callback(new Error(constants.ERROR_REASONS.BAD_REASON));
           return;
         }
         state += ":" + message.reason;
@@ -248,9 +270,9 @@ MessageHandler.prototype = {
 
       // Ensure half-connected is not send twice by the same party.
       var validateState = function(currentState) {
-        if (currentState === "connecting" ||
-            currentState === "half-connected") {
-          return "connected." + session.type;
+        if (currentState === constants.CALL_STATES.CONNECTING ||
+            currentState === constants.CALL_STATES.HALF_CONNECTED) {
+          return constants.CALL_STATES.CONNECTED + "." + session.type;
         }
         return null;
       };
@@ -258,15 +280,19 @@ MessageHandler.prototype = {
       var stateMachine = {
         "accept": {
           transitions: [
-            ["alerting", "connecting"]
+            [constants.CALL_STATES.ALERTING, constants.CALL_STATES.CONNECTING]
           ],
           actuator: function() {
             setTimeout(function() {
+              // Alerting for too long
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
-                if (state !== "connected") {
-                  self.broadcastState(session.callId, "terminated:timeout");
-                  self.storage.setCallState(session.callId, 'terminated');
+                if (state !== constants.CALL_STATES.CONNECTED) {
+                  self.broadcastState(session.callId,
+                                      constants.CALL_STATES.TERMINATED + ":" +
+                                      constants.MESSAGE_REASONS.TIMEOUT);
+                  self.storage.setCallState(session.callId,
+                                            constants.CALL_STATES.TERMINATED);
                 }
               });
             }, self.conf.connectionDuration * 1000);
@@ -274,8 +300,8 @@ MessageHandler.prototype = {
         },
         "media-up": {
           transitions: [
-            ["connecting"],
-            ["half-connected"]
+            [constants.CALL_STATES.CONNECTING],
+            [constants.CALL_STATES.HALF_CONNECTED]
           ],
           validator: validateState
         }
@@ -334,19 +360,20 @@ MessageHandler.prototype = {
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
 
-        if (redisCurrentState === "terminated" && parts[1] !== undefined) {
+        if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
+            parts[1] !== undefined) {
           redisCurrentState += ":" + parts[1];
         }
 
-        if (redisCurrentState !== "half-initiated") {
+        if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
           self.pub.publish(callId, redisCurrentState, function(err) {
             if (serverError(err)) return;
           });
         }
 
         if (conf.get("metrics") &&
-            (redisCurrentState === "connected" ||
-             redisCurrentState === "terminated")) {
+            (redisCurrentState === constants.CALL_STATES.CONNECTED ||
+             redisCurrentState === constants.CALL_STATES.TERMINATED)) {
           hekaLogger.log('info', {
             op: 'websocket.summary',
             callId: callId,
@@ -363,7 +390,7 @@ MessageHandler.prototype = {
    **/
   createError: function(errorMessage) {
     return this.encode({
-      messageType: "error",
+      messageType: constants.MESSAGE_TYPES.ERROR,
       reason: errorMessage
     });
   },

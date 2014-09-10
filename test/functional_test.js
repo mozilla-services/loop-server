@@ -11,6 +11,7 @@ var sinon = require("sinon");
 var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
 
+var constants = require("../loop/constants");
 var loop = require("../loop");
 var apiRouter = loop.apiRouter;
 var app = loop.app;
@@ -923,7 +924,7 @@ function runOnPrefix(apiPrefix) {
             callToken:       callToken,
             callType:        'audio',
             urlCreationDate: urlCreationDate,
-            callState:       "init",
+            callState:       constants.CALL_STATES.INIT,
             timestamp:       parseInt(Date.now() / 1000, 10)
           },
           {
@@ -938,7 +939,7 @@ function runOnPrefix(apiPrefix) {
             callToken:       callToken,
             callType:        'audio-video',
             urlCreationDate: urlCreationDate,
-            callState:       "init",
+            callState:       constants.CALL_STATES.INIT,
             timestamp:       parseInt(Date.now() / 1000, 10) + 1
           },
           {
@@ -950,7 +951,7 @@ function runOnPrefix(apiPrefix) {
             apiKey:          tokBoxConfig.credentials.default.apiKey,
             sessionId:       fakeCallInfo.session3,
             calleeToken:     fakeCallInfo.token2,
-            callState:       "terminated",
+            callState:       constants.CALL_STATES.TERMINATED,
             callToken:       callToken,
             callType:        'audio-video',
             urlCreationDate: urlCreationDate,
@@ -979,7 +980,7 @@ function runOnPrefix(apiPrefix) {
             if (err) throw err;
 
             var callsList = calls.filter(function(call) {
-              return call.callState !== "terminated";
+              return call.callState !== constants.CALL_STATES.TERMINATED;
             }).map(function(call) {
               return {
                 callId: call.callId,
@@ -1039,7 +1040,7 @@ function runOnPrefix(apiPrefix) {
           apiKey:          tokBoxConfig.credentials.default.apiKey,
           sessionId:       fakeCallInfo.session3,
           calleeToken:     fakeCallInfo.token2,
-          callState:       "init",
+          callState:       constants.CALL_STATES.INIT,
           callType:        'audio-video',
           timestamp:       parseInt(Date.now() / 1000, 10) + 3
         };

@@ -12,6 +12,7 @@ var ws = require('ws');
 var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
 
+var constants = require("../loop/constants");
 var loop = require("../loop");
 var server = loop.server;
 var storage = loop.storage;
@@ -24,7 +25,7 @@ function createCall(callId, user, cb) {
     userMac: user,
     sessionId: '1234',
     calleeToken: '1234',
-    callState: "init",
+    callState: constants.CALL_STATES.INIT,
     timestamp: Date.now(),
     wsCallerToken: "callerToken",
     wsCalleeToken: "calleeToken"
@@ -73,12 +74,12 @@ describe('websockets', function() {
   it('should echo back a message', function(done) {
     client.on('message', function(data) {
       var message = JSON.parse(data);
-      expect(message.messageType).eql('echo');
+      expect(message.messageType).eql(constants.MESSAGE_TYPES.ECHO);
       expect(message.echo).eql('foo');
       done();
     });
     client.send(JSON.stringify({
-      messageType: 'echo',
+      messageType: constants.MESSAGE_TYPES.ECHO,
       echo: 'foo'
     }));
   });
@@ -89,12 +90,12 @@ describe('websockets', function() {
       if (err) throw err;
       client.on('message', function(data) {
         var error = JSON.parse(data);
-        expect(error.messageType).eql('error');
-        expect(error.reason).eql('bad authentication');
+        expect(error.messageType).eql(constants.MESSAGE_TYPES.ERROR);
+        expect(error.reason).eql(constants.ERROR_REASONS.BAD_AUTHENTICATION);
         done();
       });
       client.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: 'wrongCalleeToken',
         callId: callId
       }));
@@ -105,13 +106,13 @@ describe('websockets', function() {
     function(done) {
       client.on('message', function(data) {
         var error = JSON.parse(data);
-        expect(error.messageType).eql('error');
-        expect(error.reason).eql('bad callId');
+        expect(error.messageType).eql(constants.MESSAGE_TYPES.ERROR);
+        expect(error.reason).eql(constants.ERROR_REASONS.BAD_CALLID);
         done();
       });
 
       client.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "calleeToken",
         callId: '1234'
       }));
@@ -124,17 +125,17 @@ describe('websockets', function() {
       // Create a call and set its state to "init".
       createCall(callId, hawkCredentials.id, function(err) {
         if (err) throw err;
-        storage.setCallState(callId, "init", function(err) {
+        storage.setCallState(callId, constants.CALL_STATES.INIT, function(err) {
           if (err) throw err;
           client.on('message', function(data) {
             var message = JSON.parse(data);
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
             done();
           });
 
           client.send(JSON.stringify({
-            messageType: 'hello',
+            messageType: constants.MESSAGE_TYPES.HELLO,
             auth: "callerToken",
             callId: callId
           }));
@@ -147,17 +148,17 @@ describe('websockets', function() {
 
     createCall(callId, hawkCredentials.id, function(err) {
       if (err) throw err;
-      storage.setCallState(callId, "init", function(err) {
+      storage.setCallState(callId, constants.CALL_STATES.INIT, function(err) {
         if (err) throw err;
         client.on('message', function(data) {
           var message = JSON.parse(data);
-          expect(message.messageType).eql("hello");
-          expect(message.state).eql("init");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+          expect(message.state).eql(constants.CALL_STATES.INIT);
           done();
         });
 
         client.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -190,7 +191,7 @@ describe('websockets', function() {
         // Create a call and initialize its state to "init".
         createCall(callId, hawkCredentials.id, function(err) {
           if (err) throw err;
-          storage.setCallState(callId, "init",
+          storage.setCallState(callId, constants.CALL_STATES.INIT,
             conf.get("timers").supervisoryDuration, function(err) {
               if (err) throw err;
               done();
@@ -216,12 +217,12 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           // First message should be "hello/init".
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else {
             // Second should be "progress/alerting".
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
             done();
           }
           calleeMsgCount++;
@@ -229,14 +230,14 @@ describe('websockets', function() {
 
         // Caller registers to the socket.
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         // Callee registers to the socket.
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -256,24 +257,24 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
 
           } else if (callerMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
 
           } else if (callerMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
             caller.send(JSON.stringify({
-              messageType: 'action',
-              event: 'media-up'
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.MEDIA_UP
             }));
 
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTED);
           }
           callerMsgCount++;
         });
@@ -288,41 +289,41 @@ describe('websockets', function() {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
 
           } else if (calleeMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
             callee.send(JSON.stringify({
-              messageType: 'action',
-              event: 'accept'
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.ACCEPT
             }));
 
           } else if (calleeMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
             callee.send(JSON.stringify({
-              messageType: 'action',
-              event: 'media-up'
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.MEDIA_UP
             }));
 
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTED);
           }
           calleeMsgCount++;
         });
 
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -335,32 +336,32 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
 
           } else if (callerMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
 
           } else if (callerMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
             caller.send(JSON.stringify({
-              messageType: 'action',
-              event: 'media-up'
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.MEDIA_UP
             }));
 
           } else if (callerMsgCount === 3) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("half-connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
             callee.send(JSON.stringify({
-              messageType: 'action',
-              event: 'media-up'
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.MEDIA_UP
             }));
 
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTED);
             caller.isClosed = true;
             if (callee.isClosed) done();
           }
@@ -370,24 +371,24 @@ describe('websockets', function() {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (calleeMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
             callee.send(JSON.stringify({
-              messageType: 'action',
-              event: 'accept'
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.ACCEPT
             }));
           } else if (calleeMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
           } else if (calleeMsgCount === 3) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("half-connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTED);
             callee.isClosed = true;
             if (caller.isClosed) done();
           }
@@ -396,13 +397,13 @@ describe('websockets', function() {
 
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -425,37 +426,37 @@ describe('websockets', function() {
 
       caller.on('message', function(data) {
         var message = JSON.parse(data);
-        if (message.state === "half-connected") {
+        if (message.state === constants.CALL_STATES.HALF_CONNECTED) {
           caller.send(JSON.stringify({
-            messageType: 'action',
-            event: 'media-up'
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.MEDIA_UP
           }));
         }
       });
 
       callee.on('message', function(data) {
         var message = JSON.parse(data);
-        if (message.state === "alerting") {
+        if (message.state === constants.CALL_STATES.ALERTING) {
           callee.send(JSON.stringify({
-            messageType: 'action',
-            event: 'accept'
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.ACCEPT
           }));
-        } else if (message.state === "connecting") {
+        } else if (message.state === constants.CALL_STATES.CONNECTING) {
           callee.send(JSON.stringify({
-            messageType: 'action',
-            event: 'media-up'
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.MEDIA_UP
           }));
         }
       });
 
       caller.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "callerToken",
         callId: callId
       }));
 
       callee.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "calleeToken",
         callId: callId
       }));
@@ -469,17 +470,17 @@ describe('websockets', function() {
 
       caller.on('message', function(data) {
         var message = JSON.parse(data);
-        if (message.messageType === "hello") {
+        if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
           caller.send(JSON.stringify({
-            messageType: 'action',
-            event: 'terminate',
-            reason: 'cancel'
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.TERMINATE,
+            reason: constants.MESSAGE_REASONS.CANCEL
           }));
         }
       });
 
       caller.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "callerToken",
         callId: callId
       }));
@@ -496,7 +497,7 @@ describe('websockets', function() {
       });
 
       caller.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "callerToken",
         callId: callId
       }));
@@ -511,21 +512,21 @@ describe('websockets', function() {
 
         caller.on('message', function(data) {
           var message = JSON.parse(data);
-          if (message.messageType === "hello") {
+          if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
             caller.send(JSON.stringify({
-              messageType: 'action',
-              event: 'terminate',
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.TERMINATE,
               reason: 't#i5-!s-the-@nd'
             }));
           } else {
-            expect(message.messageType).eql("error");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.ERROR);
             expect(message.reason)
-              .eql("Invalid reason: should be alphanumeric");
+              .eql(constants.ERROR_REASONS.BAD_REASON);
           }
         });
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
@@ -539,21 +540,21 @@ describe('websockets', function() {
 
       caller.on('message', function(data) {
         var message = JSON.parse(data);
-        if (message.messageType === "hello") {
+        if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
           caller.send(JSON.stringify({
-            messageType: 'action',
-            event: 'terminate',
-            reason: 'cancel'
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.TERMINATE,
+            reason: constants.MESSAGE_REASONS.CANCEL
           }));
         } else {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("terminated");
-          expect(message.reason).eql("cancel");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+          expect(message.reason).eql(constants.MESSAGE_REASONS.CANCEL);
         }
       });
 
       caller.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "callerToken",
         callId: callId
       }));
@@ -567,27 +568,27 @@ describe('websockets', function() {
 
       caller.on('message', function(data) {
         var message = JSON.parse(data);
-        if (message.messageType === "hello") return;
-        if (message.messageType === "progress") {
+        if (message.messageType === constants.MESSAGE_TYPES.HELLO) return;
+        if (message.messageType === constants.MESSAGE_TYPES.PROGRESS) {
           caller.send(JSON.stringify({
-            messageType: 'action',
-            event: 'media-up'
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.MEDIA_UP
           }));
         } else {
-          expect(message.messageType).eql("error");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.ERROR);
           expect(message.reason).eql(
             "No transition from alerting state with media-up event.");
         }
       });
 
       caller.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "callerToken",
         callId: callId
       }));
 
       callee.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "calleeToken",
         callId: callId
       }));
@@ -602,18 +603,18 @@ describe('websockets', function() {
 
         caller.on('message', function(data) {
           var message = JSON.parse(data);
-          if (message.messageType === "progress") {
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+          if (message.messageType === constants.MESSAGE_TYPES.PROGRESS) {
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
         });
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
@@ -628,18 +629,18 @@ describe('websockets', function() {
 
         callee.on('message', function(data) {
           var message = JSON.parse(data);
-          if (message.messageType === "progress") {
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+          if (message.messageType === constants.MESSAGE_TYPES.PROGRESS) {
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
         });
 
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -649,20 +650,20 @@ describe('websockets', function() {
        "less than X seconds", function(done) {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
-          if (message.messageType === "hello") {
+          if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
             // The callee connects!
             callee.send(JSON.stringify({
-              messageType: 'hello',
+              messageType: constants.MESSAGE_TYPES.HELLO,
               auth: "calleeToken",
               callId: callId
             }));
-          } else if (message.messageType === "progress"){
-            expect(message.state).not.eql("terminated");
+          } else if (message.messageType === constants.MESSAGE_TYPES.PROGRESS){
+            expect(message.state).not.eql(constants.CALL_STATES.TERMINATED);
             done();
           }
         });
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
@@ -672,20 +673,20 @@ describe('websockets', function() {
        "less than X seconds", function(done) {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
-          if (message.messageType === "hello") {
+          if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
             // The callee connects!
             caller.send(JSON.stringify({
-              messageType: 'hello',
+              messageType: constants.MESSAGE_TYPES.HELLO,
               auth: "callerToken",
               callId: callId
             }));
-          } else if (message.messageType === "progress"){
-            expect(message.state).not.eql("terminated");
+          } else if (message.messageType === constants.MESSAGE_TYPES.PROGRESS){
+            expect(message.state).not.eql(constants.CALL_STATES.TERMINATED);
             done();
           }
         });
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -716,11 +717,11 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           }
           callerMsgCount++;
         });
@@ -728,32 +729,32 @@ describe('websockets', function() {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (calleeMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
           calleeMsgCount++;
         });
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -766,11 +767,11 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           }
           callerMsgCount++;
         });
@@ -778,32 +779,32 @@ describe('websockets', function() {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
             callee.send(JSON.stringify({
-              messageType: "action",
-              event: "accept"
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.ACCEPT
             }));
           } else if (calleeMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
             done();
           }
           calleeMsgCount++;
         });
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -830,21 +831,21 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           } else if (callerMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
           callerMsgCount++;
@@ -853,39 +854,39 @@ describe('websockets', function() {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
             callee.send(JSON.stringify({
-              messageType: "action",
-              event: "accept"
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.ACCEPT
             }));
           } else if (calleeMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           } else if (calleeMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
           calleeMsgCount++;
         });
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -912,28 +913,28 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           } else if (callerMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
             callee.send(JSON.stringify({
-              messageType: "action",
-              event: "media-up"
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.MEDIA_UP
             }));
           } else if (callerMsgCount === 3) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("half-connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
           callerMsgCount++;
@@ -942,42 +943,42 @@ describe('websockets', function() {
         callee.on('message', function(data) {
           var message = JSON.parse(data);
           if (calleeMsgCount === 0) {
-            expect(message.messageType).eql("hello");
-            expect(message.state).eql("init");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
             caller.send(JSON.stringify({
-              messageType: "action",
-              event: "accept"
+              messageType: constants.MESSAGE_TYPES.ACTION,
+              event: constants.MESSAGE_EVENTS.ACCEPT
             }));
           } else if (calleeMsgCount === 1) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("alerting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.ALERTING);
           } else if (calleeMsgCount === 2) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("connecting");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.CONNECTING);
           } else if (calleeMsgCount === 3) {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("half-connected");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
           } else {
-            expect(message.messageType).eql("progress");
-            expect(message.state).eql("terminated");
-            expect(message.reason).eql("timeout");
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.TIMEOUT);
             storage.getCallState(callId, function(err, state) {
               if (err) throw err;
-              expect(state).eql("terminated");
+              expect(state).eql(constants.CALL_STATES.TERMINATED);
             });
           }
           calleeMsgCount++;
         });
 
         caller.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "callerToken",
           callId: callId
         }));
 
         // The callee connects!
         callee.send(JSON.stringify({
-          messageType: 'hello',
+          messageType: constants.MESSAGE_TYPES.HELLO,
           auth: "calleeToken",
           callId: callId
         }));
@@ -1003,24 +1004,24 @@ describe('websockets', function() {
       caller.on('message', function(data) {
         var message = JSON.parse(data);
         if (callerMsgCount === 0) {
-          expect(message.messageType).eql("hello");
-          expect(message.state).eql("init");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+          expect(message.state).eql(constants.CALL_STATES.INIT);
         } else if (callerMsgCount === 1) {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("alerting");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.ALERTING);
         } else if (callerMsgCount === 2) {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("connecting");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.CONNECTING);
           caller.send(JSON.stringify({
-            messageType: "action",
-            event: "media-up"
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.MEDIA_UP
           }));
         } else if (callerMsgCount === 3) {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("half-connected");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
         } else {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("connected");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.CONNECTED);
         }
         callerMsgCount++;
       });
@@ -1028,41 +1029,41 @@ describe('websockets', function() {
       callee.on('message', function(data) {
         var message = JSON.parse(data);
         if (calleeMsgCount === 0) {
-          expect(message.messageType).eql("hello");
-          expect(message.state).eql("init");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+          expect(message.state).eql(constants.CALL_STATES.INIT);
           callee.send(JSON.stringify({
-            messageType: "action",
-            event: "accept"
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.ACCEPT
           }));
         } else if (calleeMsgCount === 1) {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("alerting");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.ALERTING);
         } else if (calleeMsgCount === 2) {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("connecting");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.CONNECTING);
         } else if (calleeMsgCount === 3) {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("half-connected");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
           callee.send(JSON.stringify({
-            messageType: "action",
-            event: "media-up"
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            event: constants.MESSAGE_EVENTS.MEDIA_UP
           }));
         } else {
-          expect(message.messageType).eql("progress");
-          expect(message.state).eql("connected");
+          expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+          expect(message.state).eql(constants.CALL_STATES.CONNECTED);
         }
         calleeMsgCount++;
       });
 
       caller.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "callerToken",
         callId: callId
       }));
 
       // The callee connects!
       callee.send(JSON.stringify({
-        messageType: 'hello',
+        messageType: constants.MESSAGE_TYPES.HELLO,
         auth: "calleeToken",
         callId: callId
       }));
