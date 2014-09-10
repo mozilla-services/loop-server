@@ -77,6 +77,12 @@ function logMetrics(req, res, next) {
         errno: res.errno || 0
       };
 
+      if (res.statusCode === 401) {
+        line.authorization = req.headers.authorization;
+        line.hawk = req.hawk;
+        line.error = res.headers["www-authenticate"];
+      }
+
       hekaLogger.log('info', line);
     });
   }
