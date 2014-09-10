@@ -19,7 +19,7 @@ var errors = require("../loop/errno.json");
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
 
-var createAndAttachHawkSession = loop.auth.createAndAttachHawkSession;
+var attachOrCreateOauthHawkSession = loop.auth.attachOrCreateOauthHawkSession;
 var statsdClient = loop.statsdClient;
 
 var conf = loop.conf;
@@ -72,10 +72,33 @@ describe('/fxa-oauth', function () {
         });
     });
 
-    it("should have the createAndAttachHawkSession middleware installed",
+    it('should return the existing state if it does exist', function(done) {
+      storage.setHawkOAuthState(hawkIdHmac, "1234", function(err) {
+        if (err) throw err;
+        supertest(app)
+          .post(apiPrefix + '/fxa-oauth/params')
+          .hawk(hawkCredentials)
+          .expect(200)
+          .end(function(err, resp) {
+            if (err) throw err;
+            expect(resp.body.state).eql("1234");
+            done();
+          });
+      });
+    });
+
+    it("should not accept an non OAuth Hawk Session token.", function(done) {
+      supertest(app)
+        .post(apiPrefix + '/fxa-oauth/params')
+        .hawk(hawkCredentials)
+        .expect(401)
+        .end(done);
+    });
+
+    it("should have the attachOrCreateOauthHawkSession middleware installed",
        function() {
          expect(getMiddlewares(apiRouter, 'post', '/fxa-oauth/params'))
-           .include(createAndAttachHawkSession);
+           .include(attachOrCreateOauthHawkSession);
        });
 
     it("should return a 503 if the database isn't available",

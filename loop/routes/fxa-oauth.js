@@ -17,11 +17,9 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Provide the client with the parameters needed for the OAuth dance.
    **/
-  app.post('/fxa-oauth/params', auth.createAndAttachHawkSession,
+  app.post('/fxa-oauth/params', auth.attachOrCreateOauthHawkSession,
     function(req, res) {
-      var state = randomBytes(32).toString('hex');
-      storage.setHawkOAuthState(req.hawkIdHmac, state, function(err) {
-        if (res.serverError(err)) return;
+      var callback = function(state) {
         res.status(200).json({
           client_id: oauthConf.client_id,
           redirect_uri: oauthConf.redirect_uri,
@@ -31,6 +29,18 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
           scope: oauthConf.scope,
           state: state
         });
+      };
+      storage.getHawkOAuthState(req.hawkIdHmac, function(err, state) {
+        if (res.serverError(err)) return;
+        if (state === null) {
+          state = randomBytes(32).toString('hex');
+          storage.setHawkOAuthState(req.hawkIdHmac, state, function(err) {
+            if (res.serverError(err)) return;
+            callback(state);
+          });
+        } else {
+          callback(state);
+        }
       });
     });
 
