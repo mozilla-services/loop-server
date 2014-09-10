@@ -304,7 +304,7 @@ function runOnPrefix(apiPrefix) {
           .end(function(err, res) {
             if (err) throw err;
             ["name", "description", "version", "homepage", "endpoint",
-             "fakeTokBox"].forEach(function(key) {
+             "fakeTokBox", "fxaOAuth"].forEach(function(key) {
               expect(res.body).to.have.property(key);
             });
             done();

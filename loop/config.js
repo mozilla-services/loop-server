@@ -336,6 +336,11 @@ var conf = convict({
     default: ["wss://push.services.mozilla.com/"]
   },
   fxaOAuth: {
+    activated: {
+      doc: "Set to false if you want to deactivate FxA-Oauth on this instance.",
+      format: Boolean,
+      default: true
+    },
     client_id: {
       doc: "The FxA client_id (8 bytes key encoded as hex)",
       format: hexKeyOfSize(8),
@@ -423,8 +428,9 @@ if (conf.get('hawkSessionDuration') <
   throw "hawkSessionDuration should be longer or equal to callUrlMaxTimeout.";
 }
 
-if (conf.get('fxaOAuth').client_id === "") {
-  throw "Please define a client_id for fxA OAuth";
+if (conf.get('fxaOAuth').activated && conf.get('fxaOAuth').client_id === "") {
+  throw "fxaOAuth is activated but not well configured. " +
+    "Set fxaOAuth.activated config key to false to continue";
 }
 
 module.exports = {

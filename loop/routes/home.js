@@ -47,6 +47,7 @@ module.exports = function(app, conf, logError, storage, tokBox) {
 
     // Adding information about the tokbox backend
     credentials.fakeTokBox = conf.get('fakeTokBox');
+    credentials.fxaOAuth = conf.get('fxaOAuth').activated;
 
     // Adding localization information for the client.
     credentials.i18n = {
