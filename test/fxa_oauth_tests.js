@@ -132,6 +132,10 @@ describe('/fxa-oauth', function () {
   });
 
   describe('GET /token', function() {
+    beforeEach(function(done) {
+      storage.setHawkOAuthState(hawkIdHmac, "1234", done);
+    });
+
     it('should return the stored OAuth token if there is one', function(done) {
       storage.setHawkOAuthToken(hawkIdHmac, "1234", function(err) {
         if (err) throw err;
@@ -161,6 +165,10 @@ describe('/fxa-oauth', function () {
   });
 
   describe('POST /token', function() {
+    beforeEach(function(done) {
+      storage.setHawkOAuthState(hawkIdHmac, "1234", done);
+    });
+
     it('should error out if no state is given', function(done) {
       supertest(app)
         .post(apiPrefix + '/fxa-oauth/token')

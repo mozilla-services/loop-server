@@ -100,6 +100,16 @@ module.exports = function(conf, logError, storage, statsdClient) {
   });
 
   /**
+   * Middleware that requires a valid Oauth hawk session.
+   **/
+  var requireOauthHawkSession = hawk.getMiddleware({
+    hawkOptions: hawkOptions,
+    getSession: getOauthHawkSession,
+    setUser: setUser,
+    sendError: hawkSendError
+  });
+
+  /**
    * Middleware that uses a valid Oauth hawk session or create one if none already
    * exist.
    **/
@@ -204,6 +214,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     authenticate: authenticate,
     requireHawkSession: requireHawkSession,
     attachOrCreateHawkSession: attachOrCreateHawkSession,
+    requireOauthHawkSession: requireOauthHawkSession,
     attachOrCreateOauthHawkSession: attachOrCreateOauthHawkSession,
     requireFxA: requireFxA
   };

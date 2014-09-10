@@ -48,7 +48,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * Returns the current status of the hawk session (e.g. if it's authenticated
    * or not.
    **/
-  app.get('/fxa-oauth/token', auth.requireHawkSession, function (req, res) {
+  app.get('/fxa-oauth/token', auth.requireOauthHawkSession, function (req, res) {
     storage.getHawkOAuthToken(req.hawkIdHmac, function(err, token) {
       if (res.serverError(err)) return;
       res.status(200).json({
@@ -60,7 +60,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Trade an OAuth code with an oauth bearer token.
    **/
-  app.post('/fxa-oauth/token', auth.requireHawkSession,
+  app.post('/fxa-oauth/token', auth.requireOauthHawkSession,
     validators.requireParams('state', 'code'), function (req, res) {
       var state = req.body.state;
       var code = req.body.code;
