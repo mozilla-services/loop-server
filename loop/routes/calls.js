@@ -203,7 +203,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
 
                   storage.setCallState(
                     callInfo.callId, constants.CALL_STATES.INIT,
-                    conf.get("timers").supervisoryDuration, function() {
+                    function() {
                       if (res.serverError(err)) return;
 
                       urls.forEach(function(simplePushUrl) {
@@ -295,7 +295,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
 
                   storage.setCallState(
                     callInfo.callId, constants.CALL_STATES.INIT,
-                    conf.get("timers").supervisoryDuration, function() {
+                    function() {
                       if (res.serverError(err)) return;
 
                       // Call SimplePush urls.

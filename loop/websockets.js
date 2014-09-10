@@ -162,7 +162,8 @@ MessageHandler.prototype = {
                 self.broadcastState(session.callId,
                                     constants.CALL_STATES.TERMINATED + ":" +
                                     constants.MESSAGE_REASONS.TIMEOUT);
-                self.storage.setCallState(session.callId, constants.CALL_STATES.TERMINATED);
+                self.storage.setCallState(session.callId,
+                                          constants.CALL_STATES.TERMINATED);
               }
             });
           }, timeoutTTL * 1000);
@@ -188,8 +189,7 @@ MessageHandler.prototype = {
               currentState === constants.CALL_STATES.HALF_INITIATED) {
             self.broadcastState(
               session.callId,
-              constants.CALL_STATES.INIT + "." + session.type,
-              timeoutTTL
+              constants.CALL_STATES.INIT + "." + session.type
             );
             if (session.type === "callee") {
               // We are now in "alerting" mode.
@@ -351,11 +351,11 @@ MessageHandler.prototype = {
    * In case there a reason to broadcast, it's specified as
    * "terminated:{reason}".
    **/
-  broadcastState: function(callId, stateData, ttl) {
+  broadcastState: function(callId, stateData) {
     var self = this;
     var parts = stateData.split(":");
     var state = parts[0];
-    self.storage.setCallState(callId, state, ttl, function(err) {
+    self.storage.setCallState(callId, state, function(err) {
       if (serverError(err)) return;
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
