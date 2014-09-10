@@ -33,6 +33,7 @@ module.exports = {
   },
   ERROR_REASONS: {
     BAD_AUTHENTICATION: "bad authentication",
-    BAD_CALLID: "bad callId"
+    BAD_CALLID: "bad callId",
+    BAD_REASON: "Invalid reason: should be alphanumeric"
   }
 };

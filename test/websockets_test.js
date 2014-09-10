@@ -122,7 +122,7 @@ describe('websockets', function() {
     function(done) {
       var callId = randomBytes(16).toString('hex');
 
-      // Create a call and set its state to constants.CALL_STATES.INIT.
+      // Create a call and set its state to "init".
       createCall(callId, hawkCredentials.id, function(err) {
         if (err) throw err;
         storage.setCallState(callId, constants.CALL_STATES.INIT, function(err) {
@@ -188,7 +188,7 @@ describe('websockets', function() {
       caller.on('close', function() { caller.isClosed = true; });
 
       caller.on('open', function() {
-        // Create a call and initialize its state to constants.CALL_STATES.INIT.
+        // Create a call and initialize its state to "init".
         createCall(callId, hawkCredentials.id, function(err) {
           if (err) throw err;
           storage.setCallState(callId, constants.CALL_STATES.INIT,
@@ -521,7 +521,7 @@ describe('websockets', function() {
           } else {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.ERROR);
             expect(message.reason)
-              .eql("Invalid reason: should be alphanumeric");
+              .eql(constants.ERROR_REASONS.BAD_REASON);
           }
         });
 

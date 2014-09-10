@@ -254,8 +254,8 @@ MessageHandler.prototype = {
 
       // Check the reason is valid.
       if (message.reason !== undefined) {
-        if (message.reason.match(/^[a-zA-Z0-9-]+$/) === null) {
-          callback(new Error("Invalid reason: should be alphanumeric"));
+        if (message.reason.match(/^[a-zA-Z0-9\-]+$/) === null) {
+          callback(new Error(constants.ERROR_REASONS.BAD_REASON));
           return;
         }
         state += ":" + message.reason;

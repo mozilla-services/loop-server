@@ -15,7 +15,6 @@ var sendError = require('../utils').sendError;
 var phone = require('phone');
 var constants = require("../constants");
 
-
 module.exports = function(app, conf, logError, storage, tokBox, auth,
   validators) {
   var progressURL = getProgressURL(conf.get('publicServerAddress'));
