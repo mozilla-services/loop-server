@@ -155,10 +155,10 @@ MessageHandler.prototype = {
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
           setTimeout(function() {
+            // Supervisory timer: Until the callee says HELLO
             self.storage.getCallState(session.callId, function(err, state) {
               if (serverError(err, callback)) return;
-              if (state === constants.CALL_STATES.TERMINATED ||
-                  state === constants.CALL_STATES.HALF_INITIATED) {
+              if (state === constants.CALL_STATES.HALF_INITIATED) {
                 self.broadcastState(session.callId,
                                     constants.CALL_STATES.TERMINATED + ":" +
                                     constants.MESSAGE_REASONS.TIMEOUT);
@@ -192,12 +192,11 @@ MessageHandler.prototype = {
               constants.CALL_STATES.INIT + "." + session.type
             );
             if (session.type === "callee") {
-              // We are now in "alerting" mode.
               setTimeout(function() {
+                // Ringing timer until the callee picks up the phone
                 self.storage.getCallState(session.callId, function(err, state) {
                   if (serverError(err, callback)) return;
-                  if (state === constants.CALL_STATES.ALERTING ||
-                      state === constants.CALL_STATES.TERMINATED) {
+                  if (state === constants.CALL_STATES.ALERTING) {
                     self.broadcastState(
                       session.callId,
                       constants.CALL_STATES.TERMINATED + ":" +
@@ -284,7 +283,7 @@ MessageHandler.prototype = {
           ],
           actuator: function() {
             setTimeout(function() {
-              // Alerting for too long
+              // Connection timer until both sends media-up
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
                 if (state !== constants.CALL_STATES.CONNECTED) {
