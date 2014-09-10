@@ -110,9 +110,6 @@ pushServerConfig(apiRouter, conf);
 var fxaOAuth = require("./routes/fxa-oauth");
 fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
 
-var session = require("./routes/session");
-session(apiRouter, auth);
-
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);
 

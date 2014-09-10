@@ -43,6 +43,22 @@ module.exports = function(conf, logError, storage, statsdClient) {
     storage.getHawkSession(hmac(tokenId, conf.get("hawkIdSecret")), callback);
   }
 
+  function getOauthHawkSession(tokenId, callback) {
+    var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
+    storage.getHawkOAuthState(hawkIdHmac, function(err, state) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      if (state === null) {
+        // This means it is not an OAuth session
+        callback(null, null);
+        return;
+      }
+      storage.getHawkSession(hawkIdHmac, callback);
+    });
+  }
+
   function createHawkSession(tokenId, authKey, callback) {
     var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
     storage.setHawkSession(hawkIdHmac, authKey, function(err) {
@@ -78,6 +94,28 @@ module.exports = function(conf, logError, storage, statsdClient) {
   var attachOrCreateHawkSession = hawk.getMiddleware({
     hawkOptions: hawkOptions,
     getSession: getHawkSession,
+    createSession: createHawkSession,
+    setUser: setUser,
+    sendError: hawkSendError
+  });
+
+  /**
+   * Middleware that requires a valid Oauth hawk session.
+   **/
+  var requireOauthHawkSession = hawk.getMiddleware({
+    hawkOptions: hawkOptions,
+    getSession: getOauthHawkSession,
+    setUser: setUser,
+    sendError: hawkSendError
+  });
+
+  /**
+   * Middleware that uses a valid Oauth hawk session or create one if none already
+   * exist.
+   **/
+  var attachOrCreateOauthHawkSession = hawk.getMiddleware({
+    hawkOptions: hawkOptions,
+    getSession: getOauthHawkSession,
     createSession: createHawkSession,
     setUser: setUser,
     sendError: hawkSendError
@@ -176,6 +214,8 @@ module.exports = function(conf, logError, storage, statsdClient) {
     authenticate: authenticate,
     requireHawkSession: requireHawkSession,
     attachOrCreateHawkSession: attachOrCreateHawkSession,
+    requireOauthHawkSession: requireOauthHawkSession,
+    attachOrCreateOauthHawkSession: attachOrCreateOauthHawkSession,
     requireFxA: requireFxA
   };
 };
