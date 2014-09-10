@@ -19,7 +19,7 @@ var errors = require("../loop/errno.json");
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
 
-var attachOrCreateHawkSession = loop.auth.attachOrCreateHawkSession;
+var createAndAttachHawkSession = loop.auth.createAndAttachHawkSession;
 var statsdClient = loop.statsdClient;
 
 var conf = loop.conf;
@@ -58,7 +58,6 @@ describe('/fxa-oauth', function () {
     it('should return the stored parameters from the config', function(done) {
       supertest(app)
         .post(apiPrefix + '/fxa-oauth/params')
-        .hawk(hawkCredentials)
         .expect(200)
         .end(function(err, resp) {
           if (err) throw err;
@@ -73,38 +72,21 @@ describe('/fxa-oauth', function () {
         });
     });
 
-    it('should return the existing state if it does exist', function(done) {
-      storage.setHawkOAuthState(hawkIdHmac, "1234", function(err) {
-        if (err) throw err;
-        supertest(app)
-          .post(apiPrefix + '/fxa-oauth/params')
-          .hawk(hawkCredentials)
-          .expect(200)
-          .end(function(err, resp) {
-            if (err) throw err;
-            expect(resp.body.state).eql("1234");
-            done();
-          });
-
-      });
-    });
-
-    it("should have the attachOrCreateHawkSession middleware installed",
+    it("should have the createAndAttachHawkSession middleware installed",
        function() {
          expect(getMiddlewares(apiRouter, 'post', '/fxa-oauth/params'))
-           .include(attachOrCreateHawkSession);
+           .include(createAndAttachHawkSession);
        });
 
     it("should return a 503 if the database isn't available",
       function(done) {
-        sandbox.stub(storage, "getHawkSession",
-          function(tokenId, cb) {
+        sandbox.stub(storage, "setHawkSession",
+          function(tokenId, authKey, cb) {
             cb(new Error("error"));
           });
         supertest(app)
           .post(apiPrefix + '/fxa-oauth/params')
           .type('json')
-          .hawk(hawkCredentials)
           .send({}).expect(503).end(done);
       });
 

@@ -84,6 +84,18 @@ module.exports = function(conf, logError, storage, statsdClient) {
   });
 
   /**
+   * Middleware that reject all provided hawk session and always create
+   * a new one.
+   **/
+  var createAndAttachHawkSession = hawk.getMiddleware({
+    hawkOptions: hawkOptions,
+    getSession: function(tokenId, callback) { callback(null, null); },
+    createSession: createHawkSession,
+    setUser: setUser,
+    sendError: hawkSendError
+  });
+
+  /**
    * Middleware that requires a valid FxA assertion.
    *
    * In case of success, return an hawk session token in the headers.
@@ -176,6 +188,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     authenticate: authenticate,
     requireHawkSession: requireHawkSession,
     attachOrCreateHawkSession: attachOrCreateHawkSession,
+    createAndAttachHawkSession: createAndAttachHawkSession,
     requireFxA: requireFxA
   };
 };
