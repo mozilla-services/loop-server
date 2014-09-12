@@ -111,7 +111,15 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             try {
               data = JSON.parse(body);
             } catch (e) {
-              if (res.serverError(new Error(e + " JSON: " + body))) return;
+              res.serverError(new Error(e + " JSON: " + body));
+              return;
+            }
+
+            if (!data.hasOwnProperty("email")) {
+              res.serverError(new Error(
+                "email not found in the oauth server request. " + data
+              ));
+              return;
             }
             // Store the appropriate profile information into the database,
             // associated with the hawk session.
