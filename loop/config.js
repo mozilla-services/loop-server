@@ -280,7 +280,7 @@ var conf = convict({
   callDuration: {
     doc: "The duration we want to store the call info (in seconds)",
     format: Number,
-    default: 30
+    default: 60
   },
   maxHTTPSockets: {
     doc: "The maximum of HTTP sockets to use when doing requests",
@@ -431,6 +431,15 @@ if (conf.get('hawkSessionDuration') <
 if (conf.get('fxaOAuth').activated && conf.get('fxaOAuth').client_id === "") {
   throw "fxaOAuth is activated but not well configured. " +
     "Set fxaOAuth.activated config key to false to continue";
+}
+
+// Verify timers
+var timers = conf.get("timers");
+var minCallDuration = timers.supervisoryDuration +
+  timers.ringingDuration +
+  timers.connectionDuration;
+if (minCallDuration > conf.get("callDuration")) {
+  throw "the callDuration should be at least " + minCallDuration + " seconds";
 }
 
 module.exports = {

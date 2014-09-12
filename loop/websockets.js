@@ -152,66 +152,63 @@ MessageHandler.prototype = {
         session.subListeners.push(listener);
 
         // Wait for the other caller to connect for the time of the call.
-        self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
-          if (serverError(err, callback)) return;
-          setTimeout(function() {
-            // Supervisory timer: Until the callee says HELLO
-            self.storage.getCallState(session.callId, function(err, state) {
-              if (serverError(err, callback)) return;
-              if (state === constants.CALL_STATES.HALF_INITIATED) {
-                self.broadcastState(session.callId,
-                                    constants.CALL_STATES.TERMINATED + ":" +
-                                    constants.MESSAGE_REASONS.TIMEOUT);
-                self.storage.setCallState(session.callId,
-                                          constants.CALL_STATES.TERMINATED);
-              }
-            });
-          }, timeoutTTL * 1000);
-
-          // Subscribe to the channel to setup progress updates.
-          self.sub.subscribe(session.callId);
-
-          // Don't publish the half-initiated state, it's only for internal
-          // use.
-          var helloState = currentState;
-          if (currentState === constants.CALL_STATES.HALF_INITIATED) {
-            helloState = constants.CALL_STATES.INIT;
-          }
-
-          callback(null, {
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            state: helloState
-          });
-
-          // After the hello phase and as soon the callee is connected,
-          // the call changes to the "alerting" state.
-          if (currentState === constants.CALL_STATES.INIT ||
-              currentState === constants.CALL_STATES.HALF_INITIATED) {
-            self.broadcastState(
-              session.callId,
-              constants.CALL_STATES.INIT + "." + session.type
-            );
-            if (session.type === "callee") {
-              setTimeout(function() {
-                // Ringing timer until the callee picks up the phone
-                self.storage.getCallState(session.callId, function(err, state) {
-                  if (serverError(err, callback)) return;
-                  if (state === constants.CALL_STATES.ALERTING) {
-                    self.broadcastState(
-                      session.callId,
-                      constants.CALL_STATES.TERMINATED + ":" +
-                      constants.MESSAGE_REASONS.TIMEOUT
-                    );
-                    self.storage.setCallState(
-                      session.callId,
-                      constants.CALL_STATES.TERMINATED
-                    );
-                  }
-                });
-              }, self.conf.ringingDuration * 1000);
+        setTimeout(function() {
+          // Supervisory timer: Until the callee says HELLO
+          self.storage.getCallState(session.callId, function(err, state) {
+            if (serverError(err, callback)) return;
+            if (state === constants.CALL_STATES.HALF_INITIATED) {
+              self.broadcastState(session.callId,
+                                  constants.CALL_STATES.TERMINATED + ":" +
+                                  constants.MESSAGE_REASONS.TIMEOUT);
+              self.storage.setCallState(session.callId,
+                                        constants.CALL_STATES.TERMINATED);
             }
-          }
+          });
+        }, conf.get("timers").supervisoryDuration * 1000);
+
+        // Subscribe to the channel to setup progress updates.
+        self.sub.subscribe(session.callId);
+
+        // Don't publish the half-initiated state, it's only for internal
+        // use.
+        var helloState = currentState;
+        if (currentState === constants.CALL_STATES.HALF_INITIATED) {
+          helloState = constants.CALL_STATES.INIT;
+        }
+
+        callback(null, {
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          state: helloState
         });
+
+        // After the hello phase and as soon the callee is connected,
+        // the call changes to the "alerting" state.
+        if (currentState === constants.CALL_STATES.INIT ||
+            currentState === constants.CALL_STATES.HALF_INITIATED) {
+          self.broadcastState(
+            session.callId,
+            constants.CALL_STATES.INIT + "." + session.type
+          );
+          if (session.type === "callee") {
+            setTimeout(function() {
+              // Ringing timer until the callee picks up the phone
+              self.storage.getCallState(session.callId, function(err, state) {
+                if (serverError(err, callback)) return;
+                if (state === constants.CALL_STATES.ALERTING) {
+                  self.broadcastState(
+                    session.callId,
+                    constants.CALL_STATES.TERMINATED + ":" +
+                    constants.MESSAGE_REASONS.TIMEOUT
+                  );
+                  self.storage.setCallState(
+                    session.callId,
+                    constants.CALL_STATES.TERMINATED
+                  );
+                }
+              });
+            }, self.conf.ringingDuration * 1000);
+          }
+        }
       });
     });
   },
