@@ -41,14 +41,6 @@ module.exports = function(conf, logError, storage) {
         return;
       }
 
-      // Bug 1032966 - Handle old simple_push_url format
-      if (params.indexOf("simplePushURL") !== -1) {
-        if (req.body.hasOwnProperty("simple_push_url")) {
-          req.body.simplePushURL = req.body.simple_push_url;
-          delete req.body.simple_push_url;
-        }
-      }
-
       missingParams = params.filter(function(param) {
         return req.body[param] === undefined;
       });
@@ -66,15 +58,28 @@ module.exports = function(conf, logError, storage) {
    * Middleware that ensures a valid simple push url is present in the request.
    **/
   function validateSimplePushURL(req, res, next) {
-    requireParams("simplePushURL")(req, res, function() {
-      req.simplePushURL = req.body.simplePushURL;
+      if (!req.accepts("json")) {
+        sendError(res, 406, errors.BADJSON,
+                  "Request body should be defined as application/json");
+        return;
+      }
+
+    req.simplePushURL = req.body.simplePushURL ||
+      req.query.simplePushURL ||
+      req.body.simple_push_url;  // Bug 1032966 - Handle old simple_push_url format
+
+    if (req.simplePushURL !== undefined) {
       if (req.simplePushURL.indexOf('http') !== 0) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "simplePushURL should be a valid url");
         return;
       }
       next();
-    });
+    } else {
+      sendError(res, 400, errors.MISSING_PARAMETERS,
+                "Missing: simplePushURL");
+      return;
+    }
   }
 
   /**

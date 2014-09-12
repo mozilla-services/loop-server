@@ -10,6 +10,7 @@ var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
+var querystring = require("querystring");
 
 var constants = require("../loop/constants");
 var loop = require("../loop");
@@ -702,6 +703,19 @@ function runOnPrefix(apiPrefix) {
       it("should remove an existing simple push url for an user", function(done) {
         register(url, expectedAssertion, hawkCredentials, function() {
           jsonReq.send({'simple_push_url': url})
+            .expect(204)
+            .end(done);
+        });
+      });
+
+      it("should remove a simple push url send in the query", function(done) {
+        register(url, expectedAssertion, hawkCredentials, function() {
+          supertest(app)
+            .del(apiPrefix + '/registration?' +
+                 querystring.stringify({simplePushURL: url}))
+            .hawk(hawkCredentials)
+            .type('json')
+            .send({})
             .expect(204)
             .end(done);
         });
