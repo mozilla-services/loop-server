@@ -4,6 +4,7 @@
 /* jshint expr: true */
 "use strict";
 
+var querystring = require("querystring");
 var expect = require("chai").expect;
 var randomBytes = require("crypto").randomBytes;
 var addHawk = require("superagent-hawk");
@@ -187,6 +188,26 @@ describe("index.js", function() {
         .end(done);
     });
 
+    it("should work with a valid simple push url in the querystring",
+      function(done) {
+        jsonReq
+          .post(apiPrefix + '/validateSP/?' + querystring.stringify({
+            simplePushURL: 'http://this-is-an-url'
+          }))
+          .send({})
+          .expect(200)
+          .end(done);
+      });
+
+    it("should accept simple_push_url when requesting simplePushURL.",
+      function(done) {
+        jsonReq
+          .post(apiPrefix + '/validateSP')
+          .send({simple_push_url: "http://deny"})
+          .expect(200)
+          .end(done);
+      });
+
   });
 
   describe("#validateCallType", function() {
@@ -258,15 +279,6 @@ describe("index.js", function() {
         .expect(406, /json/)
         .end(done);
     });
-
-    it("should accept simple_push_url when requesting simplePushURL.",
-      function(done) {
-        jsonReq
-          .post(apiPrefix + '/requireParams/simplePushURL')
-          .send({simple_push_url: "http://deny"})
-          .expect(200)
-          .end(done);
-      });
 
     it("should return a 400 if one of the required params are missing.",
       function(done) {
