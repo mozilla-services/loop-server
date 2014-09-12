@@ -155,14 +155,15 @@ MessageHandler.prototype = {
         self.storage.getCallStateTTL(session.callId, function(err, timeoutTTL) {
           if (serverError(err, callback)) return;
           setTimeout(function() {
+            // Supervisory timer: Until the callee says HELLO
             self.storage.getCallState(session.callId, function(err, state) {
               if (serverError(err, callback)) return;
-              if (state === constants.CALL_STATES.TERMINATED ||
-                  state === constants.CALL_STATES.HALF_INITIATED) {
+              if (state === constants.CALL_STATES.HALF_INITIATED) {
                 self.broadcastState(session.callId,
                                     constants.CALL_STATES.TERMINATED + ":" +
                                     constants.MESSAGE_REASONS.TIMEOUT);
-                self.storage.setCallState(session.callId, constants.CALL_STATES.TERMINATED);
+                self.storage.setCallState(session.callId,
+                                          constants.CALL_STATES.TERMINATED);
               }
             });
           }, timeoutTTL * 1000);
@@ -188,16 +189,14 @@ MessageHandler.prototype = {
               currentState === constants.CALL_STATES.HALF_INITIATED) {
             self.broadcastState(
               session.callId,
-              constants.CALL_STATES.INIT + "." + session.type,
-              timeoutTTL
+              constants.CALL_STATES.INIT + "." + session.type
             );
             if (session.type === "callee") {
-              // We are now in "alerting" mode.
               setTimeout(function() {
+                // Ringing timer until the callee picks up the phone
                 self.storage.getCallState(session.callId, function(err, state) {
                   if (serverError(err, callback)) return;
-                  if (state === constants.CALL_STATES.ALERTING ||
-                      state === constants.CALL_STATES.TERMINATED) {
+                  if (state === constants.CALL_STATES.ALERTING) {
                     self.broadcastState(
                       session.callId,
                       constants.CALL_STATES.TERMINATED + ":" +
@@ -284,7 +283,7 @@ MessageHandler.prototype = {
           ],
           actuator: function() {
             setTimeout(function() {
-              // Alerting for too long
+              // Connection timer until both sends media-up
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
                 if (state !== constants.CALL_STATES.CONNECTED) {
@@ -351,11 +350,11 @@ MessageHandler.prototype = {
    * In case there a reason to broadcast, it's specified as
    * "terminated:{reason}".
    **/
-  broadcastState: function(callId, stateData, ttl) {
+  broadcastState: function(callId, stateData) {
     var self = this;
     var parts = stateData.split(":");
     var state = parts[0];
-    self.storage.setCallState(callId, state, ttl, function(err) {
+    self.storage.setCallState(callId, state, function(err) {
       if (serverError(err)) return;
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
