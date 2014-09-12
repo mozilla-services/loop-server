@@ -107,8 +107,10 @@ var storeUserCallTokens = calls(apiRouter, conf, logError, storage, tokBox,
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(apiRouter, conf);
 
-var fxaOAuth = require("./routes/fxa-oauth");
-fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
+if (conf.get("fxaOAuth").activated !== false) {
+  var fxaOAuth = require("./routes/fxa-oauth");
+  fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
+}
 
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);
