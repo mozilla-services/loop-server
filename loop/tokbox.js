@@ -32,7 +32,8 @@ function TokBox(settings) {
 }
 
 TokBox.prototype = {
-  getSessionTokens: function(options, cb) {
+
+  getSession: function(options, cb) {
     if (cb === undefined) {
       cb = options;
       options = undefined;
@@ -65,23 +66,29 @@ TokBox.prototype = {
           self.getSessionTokens(options, cb);
           return;
         }
-        var sessionId = session.sessionId;
-        var now = Math.round(Date.now() / 1000.0);
-        var expirationTime = now + self.tokenDuration;
-        cb(null, {
-          apiKey: opentok.apiKey,
-          sessionId: sessionId,
-          callerToken: opentok.generateToken(sessionId, {
-            role: 'publisher',
-            expireTime: expirationTime
-          }),
-          calleeToken: opentok.generateToken(sessionId, {
-            role: 'publisher',
-            expireTime: expirationTime
-          })
-        });
-      }
-    );
+        cb(session, opentok);
+    });
+  },
+
+  getSessionTokens: function(options, cb) {
+    var self = this;
+    this.getSession(options, function(session, opentok) {
+      var sessionId = session.sessionId;
+      var now = Math.round(Date.now() / 1000.0);
+      var expirationTime = now + self.tokenDuration;
+      cb(null, {
+        apiKey: opentok.apiKey,
+        sessionId: sessionId,
+        callerToken: opentok.generateToken(sessionId, {
+          role: 'publisher',
+          expireTime: expirationTime
+        }),
+        calleeToken: opentok.generateToken(sessionId, {
+          role: 'publisher',
+          expireTime: expirationTime
+        })
+      });
+    });
   },
   ping: function(options, cb) {
     if (cb === undefined) {
