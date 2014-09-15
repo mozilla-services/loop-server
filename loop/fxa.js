@@ -98,7 +98,9 @@ function getMiddleware(conf, callback) {
     var authorization, assertion, policy, splitted;
 
     function _unauthorized(message){
-      res.set('WWW-Authenticate', 'BrowserID');
+      var header = "BrowserID";
+      if (message) header += ": " + message;
+      res.set('WWW-Authenticate', header);
       sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
     }
 
