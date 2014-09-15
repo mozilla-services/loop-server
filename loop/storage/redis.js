@@ -205,7 +205,7 @@ RedisStorage.prototype = {
         });
 
         if (expired.length > 0) {
-          self._client.srem(expired, function(err) {
+          self._client.srem('userUrls.' + userMac, expired, function(err) {
             if (err) {
               callback(err);
               return;
@@ -344,7 +344,7 @@ RedisStorage.prototype = {
         }
 
         if (expired.length > 0) {
-          self._client.srem(expired, function(err) {
+          self._client.srem('userCalls.' + userMac, expired, function(err) {
             if (err) {
               callback(err);
               return;
