@@ -245,6 +245,27 @@ describe('/fxa-oauth', function () {
       });
     });
 
+    it('should error if the request to the profile does not have an email',
+      function(done) {
+        sandbox.stub(request, "post", function(options, cb) {
+          cb(null, null, {access_token: "token"});
+        });
+
+        sandbox.stub(request, "get", function(options, cb) {
+          cb(null, null, {error: "500"});
+        });
+
+        storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
+          if (err) throw err;
+          supertest(app)
+            .post(apiPrefix + '/fxa-oauth/token')
+            .send({ code: '1234', state: '5678' })
+            .hawk(hawkCredentials)
+            .expect(503)
+            .end(done);
+        });
+      });
+
     it('should error if the returned json is invalid', function(done) {
       sandbox.stub(request, "post", function(options, cb) {
         cb(null, null, {access_token: "token"});
