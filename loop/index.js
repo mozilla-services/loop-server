@@ -112,6 +112,9 @@ if (conf.get("fxaOAuth").activated !== false) {
   fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
 }
 
+var rooms = require("./routes/rooms");
+rooms(apiRouter, conf, logError, storage, auth, validators, tokBox);
+
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);
 
