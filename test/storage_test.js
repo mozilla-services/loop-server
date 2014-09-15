@@ -294,9 +294,10 @@ describe("Storage", function() {
         });
 
         it("should keep a list of the user urls", function(done) {
+          var token1 = generateToken(conf.get("callUrlTokenSize"));
           storage.addUserCallUrlData(
             userMac,
-            generateToken(conf.get("callUrlTokenSize")),
+            token1,
             urls[0],
             function() {
               storage.addUserCallUrlData(
@@ -310,9 +311,17 @@ describe("Storage", function() {
                     urls[2],
                     function() {
                       storage.getUserCallUrls(userMac, function(err, results) {
+                        if (err) throw err;
                         expect(results).to.have.length(3);
                         expect(results).to.eql(urls);
-                        done(err);
+                        storage.revokeURLToken(token1, function(err) {
+                          if (err) throw err;
+                          storage.getUserCallUrls(userMac, function(err, results) {
+                            if (err) throw err;
+                            expect(results).to.have.length(2);
+                            done();
+                          });
+                        });
                       });
                     });
                 });
@@ -409,7 +418,14 @@ describe("Storage", function() {
               }
               expect(results).to.have.length(1);
               expect(results).to.eql([call]);
-              done();
+              storage.deleteCall(call.callId, function(err) {
+                if (err) throw err;
+                storage.getUserCalls(userMac, function(err, results) {
+                  if (err) throw err;
+                  expect(results).to.have.length(0);
+                  done();
+                });
+              });
             });
           });
         });
