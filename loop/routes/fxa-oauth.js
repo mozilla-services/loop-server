@@ -111,14 +111,15 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             try {
               data = JSON.parse(body);
             } catch (e) {
-              res.serverError(new Error(e + " JSON: " + body));
+              sendError(res, 503, errors.BACKEND,
+                        e + " JSON: " + body);
               return;
             }
 
             if (!data.hasOwnProperty("email")) {
-              res.serverError(new Error(
-                "email not found in the oauth server request. " + data
-              ));
+              sendError(res, 503, errors.BACKEND,
+                        "email not found in the oauth server request. " + data
+              );
               return;
             }
             // Store the appropriate profile information into the database,
