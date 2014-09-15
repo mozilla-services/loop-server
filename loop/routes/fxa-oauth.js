@@ -111,7 +111,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
             try {
               data = JSON.parse(body);
             } catch (e) {
-              sendError(res, 503, errors.BACKEND,
+              sendError(res, 503, errors.BADJSON,
                         e + " JSON: " + body);
               return;
             }
