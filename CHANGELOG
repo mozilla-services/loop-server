@@ -3,8 +3,14 @@ Changelog
 
 This document describes changes between each past release.
 
-0.12 (2014-09-15)
------------------
+0.13.0 (unreleased)
+-------------------
+
+- No changes yet.
+
+
+0.12.0 (2014-09-15)
+-------------------
 
 - [feature] Use Grunt to run various developer tasks
 - [feature] 1058706 — Filter out terminated calls from /calls
@@ -12,12 +18,12 @@ This document describes changes between each past release.
 - [feature] 1064845 — Use constants to define and test websocket protocol
 - [api-change] 1059131 — Update the FxA Oauth workflow /session -> /fxa-oauth/params
 - [config] 1059731 — Add sample configuration for FxA
-- [config] 1058589 — Let the user run loop-server without having to configure FxA OAuth
+- [config] 1058589 — Let the loop-server run without having to configure FxA OAuth
 - [feature] 1062266 — Keep the call state for the whole call duration
 - [config] 1062266 — Make sure the callDuration covers all the timeout timeline
-- [api-change] 1047667 — Let the user provide the simplePushURL as a querystring parameter
-	                 on the DELETE /registration endpoint.
-- [feature] 1064971 — Log the Authorization header and the reason on 401 error to be able to debug
+- [api-change] 1047667 — Let the user provide the simplePushURL as a querystring
+	                 parameter on the DELETE /registration endpoint.
+- [feature] 1064971 — Log the Authorization header and the reason on 401 error
 - [feature] 1059131 — Return a 503 on /fxa-oauth endpoints when the OAuth service is down
 
 
