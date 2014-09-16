@@ -11,7 +11,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    **/
   app.post('/registration', auth.authenticate,
     validators.validateSimplePushURL, function(req, res) {
-      storage.addUserSimplePushURL(req.user, req.simplePushURL,
+      storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
         function(err) {
           if (res.serverError(err)) return;
           res.status(200).json();
@@ -22,11 +22,10 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * Deletes the given simple push URL (you need to have registered it
    * to be able to unregister).
    **/
-  app.delete('/registration', auth.requireHawkSession,
-    validators.validateSimplePushURL, function(req, res) {
-      storage.removeSimplePushURL(req.user, req.simplePushUrl, function(err) {
-        if (res.serverError(err)) return;
-        res.status(204).json();
-      });
+  app.delete('/registration', auth.requireHawkSession, function(req, res) {
+    storage.removeSimplePushURL(req.user, req.hawkIdHmac, function(err) {
+      if (res.serverError(err)) return;
+      res.status(204).json();
     });
+  });
 };

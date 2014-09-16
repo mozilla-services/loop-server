@@ -175,7 +175,7 @@ describe("index.js", function() {
         .end(function(err, res) {
           if (err) throw err;
           expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-                              "simplePushURL should be a valid url");
+                              "simplePushURLs.calls should be a valid url");
           done();
         });
     });
@@ -208,6 +208,16 @@ describe("index.js", function() {
           .end(done);
       });
 
+    it("should works with simplePushURLs.", function(done) {
+        jsonReq
+          .post(apiPrefix + '/validateSP')
+          .send({simplePushURLs: {
+            "calls": "http://deny",
+            "rooms": "http://rooms"
+          }})
+          .expect(200)
+          .end(done);
+      });
   });
 
   describe("#validateCallType", function() {
