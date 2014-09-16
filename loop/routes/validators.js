@@ -64,20 +64,29 @@ module.exports = function(conf, logError, storage) {
         return;
       }
 
-    req.simplePushURL = req.body.simplePushURL ||
+    req.simplePushURLs = req.body.simplePushURLs || {};
+
+    var simplePushURL = req.body.simplePushURL ||
       req.query.simplePushURL ||
       req.body.simple_push_url;  // Bug 1032966 - Handle old simple_push_url format
 
-    if (req.simplePushURL !== undefined) {
-      if (req.simplePushURL.indexOf('http') !== 0) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "simplePushURL should be a valid url");
-        return;
+    if (simplePushURL !== undefined) {
+      req.simplePushURLs.calls = simplePushURL;
+    }
+
+    if (Object.keys(req.simplePushURLs).length !== 0) {
+
+      for (var topic in req.simplePushURLs) {
+        if (req.simplePushURLs[topic].indexOf('http') !== 0) {
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "simplePushURLs." + topic + " should be a valid url");
+          return;
+        }
       }
       next();
     } else {
       sendError(res, 400, errors.MISSING_PARAMETERS,
-                "Missing: simplePushURL");
+                "Missing: simplePushURLs.calls, simplePushURLs.rooms");
       return;
     }
   }

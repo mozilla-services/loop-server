@@ -184,11 +184,12 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
               }
             }
             var calleeMac = hmac(identity, conf.get('userMacSecret'));
-            storage.getUserSimplePushURLs(calleeMac, function(err, urls) {
+            storage.getUserSimplePushURLs(calleeMac, function(err, simplePushURLsMapping) {
               if (err) {
                 callback(err);
                 return;
               }
+              var urls = simplePushURLsMapping.calls;
               if (urls.length === 0) {
                 callback();
                 return;

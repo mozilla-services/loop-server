@@ -18,6 +18,7 @@ var user = "alexis@notmyidea.com";
 var userMac = hmac(user, conf.get("userMacSecret"));
 var callerId = 'natim@mozilla.com';
 var simplePushURL = "https://push.mozilla.com/test";
+var simplePushURL2 = "https://push.mozilla.com/test2";
 var fakeCallInfo = conf.get("fakeCallInfo");
 
 
@@ -103,64 +104,66 @@ describe("Storage", function() {
         });
       });
 
-      describe("#addUserSimplePushURL", function() {
+      describe("#addUserSimplePushURLs", function() {
         it("should be able to add a user simple push URL", function(done) {
-          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+          storage.addUserSimplePushURLs(userMac, "1234", {
+            calls: simplePushURL,
+            rooms: simplePushURL2
+          }, function(err) {
             if (err) throw err;
             storage.getUserSimplePushURLs(userMac, function(err, urls) {
-              expect(urls).to.have.length(1);
-              expect(urls).to.eql([simplePushURL]);
+              expect(urls.calls).to.have.length(1);
+              expect(urls.calls).to.eql([simplePushURL]);
+              expect(urls.rooms).to.have.length(1);
+              expect(urls.rooms).to.eql([simplePushURL2]);
               done(err);
             });
           });
         });
 
         it("should not overwrite existing simple push URLs", function(done) {
-          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+          storage.addUserSimplePushURLs(userMac, "1234", {
+            calls: simplePushURL,
+            rooms: simplePushURL
+          }, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURL(userMac, simplePushURL + '2',
-              function(err) {
-                if (err) throw err;
-                storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                  expect(urls).to.have.length(2);
-                  expect(urls).to.contain(simplePushURL);
-                  expect(urls).to.contain(simplePushURL + '2');
-                  done(err);
-                });
+            storage.addUserSimplePushURLs(userMac, "5678", {
+              calls: simplePushURL2,
+              rooms: simplePushURL2
+            }, function(err) {
+              if (err) throw err;
+              storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                expect(urls.calls).to.have.length(2);
+                expect(urls.calls).to.contain(simplePushURL);
+                expect(urls.calls).to.contain(simplePushURL2);
+
+                expect(urls.rooms).to.have.length(2);
+                expect(urls.rooms).to.contain(simplePushURL);
+                expect(urls.rooms).to.contain(simplePushURL2);
+                done(err);
               });
+            });
           });
         });
 
         it("should dedupe URLs", function(done) {
-          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+          storage.addUserSimplePushURLs(userMac, "1234", {
+            calls: simplePushURL,
+            rooms: simplePushURL2
+          }, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURL(userMac, simplePushURL,
-              function(err) {
-                if (err) throw err;
-                storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                  expect(urls).to.have.length(1);
-                  expect(urls).to.contain(simplePushURL);
+            storage.addUserSimplePushURLs(userMac, "4567", {
+              calls: simplePushURL,
+              rooms: simplePushURL2
+            }, function(err) {
+              if (err) throw err;
+              storage.getUserSimplePushURLs(userMac, function(err, urls) {
+                  expect(urls.calls).to.have.length(1);
+                  expect(urls.calls).to.contain(simplePushURL);
+                  expect(urls.rooms).to.have.length(1);
+                  expect(urls.rooms).to.contain(simplePushURL2);
                   done(err);
                 });
-              });
-          });
-        });
-
-        it("should not store more than X records", function(done) {
-          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
-            if (err) throw err;
-            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
-              function(err) {
-                if (err) throw err;
-                storage.addUserSimplePushURL(userMac, simplePushURL + "3",
-                  function(err) {
-                    if (err) throw err;
-                    storage.getUserSimplePushURLs(userMac, function(err, urls) {
-                      expect(urls).to.have.length(2);
-                      expect(urls).to.not.contain(simplePushURL);
-                      done(err);
-                    });
-                  });
               });
           });
         });
@@ -168,12 +171,12 @@ describe("Storage", function() {
       });
 
       describe("#getUserSimplePushURLs", function() {
-        it("should return an empty list if nothing had been registered",
+        it("should return empty lists if nothing had been registered",
           function(done) {
             storage.getUserSimplePushURLs("does-not-exist",
               function(err, urls) {
                 if (err) throw err;
-                expect(urls).to.eql([]);
+                expect(urls).to.eql({calls: [], rooms: []});
                 done();
               });
           });
@@ -181,19 +184,19 @@ describe("Storage", function() {
 
       describe("#removeSimplePushURL", function() {
         it("should delete an existing simple push URL", function(done) {
-          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+          storage.addUserSimplePushURLs(userMac, "1234", {calls: simplePushURL}, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+            storage.addUserSimplePushURLs(userMac, "4567", {calls: simplePushURL2},
               function(err) {
                 if (err) throw err;
-                storage.removeSimplePushURL(userMac, simplePushURL,
+                storage.removeSimplePushURL(userMac, "4567",
                   function(err) {
                     if (err) throw err;
                     storage.getUserSimplePushURLs(userMac,
                       function(err, urls) {
                         if (err) throw err;
-                        expect(urls.length).to.eql(1);
-                        expect(urls).to.not.contain(simplePushURL);
+                        expect(urls.calls.length).to.eql(1);
+                        expect(urls.calls).to.not.contain(simplePushURL2);
                         done();
                       });
                   });
@@ -204,16 +207,16 @@ describe("Storage", function() {
 
       describe("#deleteUserSimplePushURLs", function() {
         it("should delete all existing simple push URLs", function(done) {
-          storage.addUserSimplePushURL(userMac, simplePushURL, function(err) {
+          storage.addUserSimplePushURLs(userMac, "1234", {calls: simplePushURL}, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURL(userMac, simplePushURL + "2",
+            storage.addUserSimplePushURLs(userMac, "4567", {calls: simplePushURL2},
               function(err) {
                 if (err) throw err;
                 storage.deleteUserSimplePushURLs(userMac, function(err) {
                   if (err) throw err;
                   storage.getUserSimplePushURLs(userMac, function(err, urls) {
                     if (err) throw err;
-                    expect(urls).to.length(0);
+                    expect(urls.calls).to.length(0);
                     done();
                   });
                 });

@@ -7,6 +7,9 @@ var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
 
+var VALID_TOPICS = ["calls", "rooms"];
+
+
 function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(
@@ -20,43 +23,87 @@ function RedisStorage(options, settings) {
 }
 
 RedisStorage.prototype = {
-  addUserSimplePushURL: function(userMac, simplepushURL, callback) {
-    // delete the SP url if it exists
+  addUserSimplePushURLs: function(userHmac, hawkHmacId, simplePushURLs, callback) {
     var self = this;
-    self._client.lrem('spurl.' + userMac, 0, simplepushURL,
-      function(err) {
-        if (err) {
-          callback(err);
+    // Remove any previous storage spurl.{userHmac} LIST
+    // XXX - Remove this two month after 0.13 release
+    self._client.del('spurl.' + userHmac, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      for (var topic in simplePushURLs) {
+        if (VALID_TOPICS.indexOf(topic) === -1) {
+          callback(new Error(topic + " should be one of " +
+                             VALID_TOPICS.join(", ")));
           return;
         }
-        // And add it back.
-        self._client.lpush('spurl.' + userMac, simplepushURL,
-          function(err, size) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            // Keep the X most recent URLs.
-            if (size > self._settings.maxSimplePushUrls) {
-              self._client.ltrim(
-                'spurl.' + userMac,
-                0,
-                self._settings.maxSimplePushUrls - 1,
-                callback);
-            } else {
-              callback(null);
-            }
-          });
+      }
+
+      self._client.set('spurl.' + userHmac + '.' + hawkHmacId,
+        JSON.stringify(simplePushURLs), function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
       });
   },
 
   getUserSimplePushURLs: function(userMac, callback) {
-    this._client.lrange('spurl.' + userMac,
-      0, this._settings.maxSimplePushUrls, callback);
+    var self = this;
+
+    var result = {};
+    for (var i = 0; i < VALID_TOPICS.length; i++) {
+      result[VALID_TOPICS[i]] = [];
+    }
+
+    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (spurl_keys.length === 0) {
+        callback(null, result);
+        return;
+      }
+
+      self._client.mget(spurl_keys, function(err, simplePushURLsJSONList) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var simplePushURLsList = simplePushURLsJSONList.map(function(json) {
+          if (json) {
+            try {
+              return JSON.parse(json);
+            } catch (e) {}
+          }
+          return null;
+        }).filter(function (dict) { return dict !== null; });
+
+        for (var i = 0; i < simplePushURLsList.length; i++) {
+          var item = simplePushURLsList[i];
+
+          for (var j = 0; j < VALID_TOPICS.length; j++) {
+            var topic = VALID_TOPICS[j];
+            var sp_topic = item[topic];
+            if (sp_topic !== undefined) {
+              if (result[topic].indexOf(sp_topic) === -1)
+                result[topic].push(sp_topic);
+            }
+          }
+        }
+        callback(null, result);
+      });
+    });
   },
 
-  removeSimplePushURL: function(userMac, simplepushURL, callback) {
-    this._client.lrem('spurl.' + userMac, 0, simplepushURL, callback);
+  removeSimplePushURL: function(userMac, hawkHmacId, callback) {
+    this._client.del('spurl.' + userMac + '.' + hawkHmacId, callback);
   },
 
   /**
@@ -65,7 +112,20 @@ RedisStorage.prototype = {
    * @param String the user mac.
    **/
   deleteUserSimplePushURLs: function(userMac, callback) {
-    this._client.del('spurl.' + userMac, callback);
+    var self = this;
+
+    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (spurl_keys.length > 0) {
+        self._client.del(spurl_keys, callback);
+        return;
+      }
+      callback(null);
+    });
   },
 
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {

@@ -64,13 +64,23 @@ TokBox.prototype = {
           self.getSessionTokens(options, cb);
           return;
         }
-        cb(session, opentok);
+        cb(null, session, opentok);
     });
   },
 
   getSessionTokens: function(options, cb) {
     var self = this;
-    this.getSession(options, function(session, opentok) {
+
+    if (cb === undefined) {
+      cb = options;
+      options = undefined;
+    }
+
+    this.getSession(options, function(err, session, opentok) {
+      if (err) {
+        cb(err);
+        return;
+      }
       var sessionId = session.sessionId;
       var now = Math.round(Date.now() / 1000.0);
       var expirationTime = now + self.tokenDuration;

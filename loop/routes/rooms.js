@@ -5,8 +5,9 @@
 'use strict';
 
 var errors = require('../errno.json');
-var sendError = require('./utils').sendError;
+var sendError = require('../utils').sendError;
 
+/* eslint-disable */
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
@@ -155,3 +156,4 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
   });
 };
+/* eslint-enable */
