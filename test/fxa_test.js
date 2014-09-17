@@ -49,7 +49,7 @@ describe("fxa authentication", function() {
           if (assertion === expectedAssertion) {
             cb(null, {email: user});
           } else {
-            cb("error");
+            cb("invalid assertion \"1a2w3e4r5t6y\"");
           }
         });
     });
@@ -69,7 +69,12 @@ describe("fxa authentication", function() {
       jsonReq
         .set('Authorization', 'BrowserID ' + "invalid-assertion")
         .expect(401)
-        .end(done);
+        .end(function(err, res) {
+          if (err) throw err;
+          expect(res.headers['www-authenticate'])
+            .to.eql('BrowserID error="invalid assertion \"1a2w3e4r5t6y\""');
+          done();
+        });
     });
 
     it("should accept valid browserid assertions", function(done) {

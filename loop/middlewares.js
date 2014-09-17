@@ -80,7 +80,7 @@ function logMetrics(req, res, next) {
       if (res.statusCode === 401) {
         line.authorization = req.headers.authorization;
         line.hawk = req.hawk;
-        line.error = res.headers["www-authenticate"];
+        line.error = res.get("www-authenticate");
       }
 
       hekaLogger.log('info', line);

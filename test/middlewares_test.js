@@ -23,7 +23,7 @@ var fakeNow = 1393595554796;
 
 describe("metrics middleware", function() {
   var sandbox;
-  var logs = [];
+  var logs;
   var old_metrics;
   var clock;
 
@@ -34,6 +34,13 @@ describe("metrics middleware", function() {
     res.status(200).json();
   });
 
+  apiRouter.get("/with-401-on-metrics-middleware", logMetrics, function(req, res) {
+    req.headers.authorization = "Hawk abcd";
+    req.hawk = {hawk: "hawk"};
+    res.set("WWW-Authenticate", 'Hawk error="boom"');
+    res.status(401).json();
+  });
+
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
     clock = sinon.useFakeTimers(fakeNow);
@@ -42,6 +49,7 @@ describe("metrics middleware", function() {
     sandbox.stub(hekaLogger, "log", function(info, log) {
       logs.push(log);
     });
+    logs = [];
   });
 
   afterEach(function() {
@@ -51,7 +59,7 @@ describe("metrics middleware", function() {
   });
 
 
-  it("should write logs to stdout", function(done) {
+  it("should write logs to heka", function(done) {
     supertest(app)
       .get(apiPrefix + '/with-metrics-middleware')
       .set('user-agent', 'Mouzilla')
@@ -79,6 +87,27 @@ describe("metrics middleware", function() {
         expect(logged.time).to.eql('2014-02-28T13:52:34Z');
         expect(logged.method).to.eql('get');
 
+        done();
+      });
+  });
+
+  it("should write 401 errors to heka", function(done) {
+    supertest(app)
+      .get(apiPrefix + '/with-401-on-metrics-middleware')
+      .expect(401)
+      .end(function(err) {
+        if (err) {
+          throw err;
+        }
+        var logged = logs[0];
+
+        expect(logged.op).to.eql('request.summary');
+        expect(logged.code).to.eql(401);
+        expect(logged.path).to.eql('/with-401-on-metrics-middleware');
+        expect(logged.method).to.eql('get');
+        expect(logged.authorization).to.eql("Hawk abcd");
+        expect(logged.hawk).to.eql({hawk: "hawk"});
+        expect(logged.error).to.eql('Hawk error="boom"');
         done();
       });
   });
