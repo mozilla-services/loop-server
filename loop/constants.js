@@ -29,7 +29,8 @@ module.exports = {
   MESSAGE_REASONS: {
     BUSY: "busy",
     CANCEL: "cancel",
-    TIMEOUT: "timeout"
+    TIMEOUT: "timeout",
+    CLOSED: "closed"
   },
   ERROR_REASONS: {
     BAD_AUTHENTICATION: "bad authentication",

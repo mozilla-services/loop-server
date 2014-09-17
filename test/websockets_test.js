@@ -243,6 +243,49 @@ describe('websockets', function() {
         }));
       });
 
+    it('should broadcast progress terminated:closed to other interested parties',
+      function(done) {
+        caller.on('error', function(data) {
+          throw new Error('Error: ' + data);
+        });
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          // First message should be "hello/init".
+          if (calleeMsgCount === 0) {
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+            expect(message.state).eql(constants.CALL_STATES.INIT);
+          } else if (calleeMsgCount === 2) {
+            // Third should be "progress/alerting".
+            expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+            expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+            expect(message.reason).eql(constants.MESSAGE_REASONS.CLOSED);
+            done();
+          }
+          calleeMsgCount++;
+        });
+
+        callee.on('message', function() {
+          // The callee websocket closed unexpectedly
+          callee.isClosed = true;
+          callee.close();
+        });
+
+        // Caller registers to the socket.
+        caller.send(JSON.stringify({
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          auth: "callerToken",
+          callId: callId
+        }));
+
+        // Callee registers to the socket.
+        callee.send(JSON.stringify({
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          auth: "calleeToken",
+          callId: callId
+        }));
+      });
+
     it('should broadcast action change and handle race condition.',
       function(done) {
         var callerMsgCount = 0;
