@@ -99,7 +99,7 @@ function getMiddleware(conf, callback) {
 
     function _unauthorized(message){
       var header = "BrowserID";
-      if (message) header += ": " + message;
+      if (message) header += ' error="' + message.replace(/"/g, '\"') + '"';
       res.set('WWW-Authenticate', header);
       sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
     }
