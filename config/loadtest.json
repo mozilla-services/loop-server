@@ -1,5 +1,5 @@
 {
-  "host": "localhost",
+  "ip": "127.0.0.1",
   "port": 5000,
   "publicServerAddress": "127.0.0.1:5000",
   "macSecret": "263ceaa5546dce837191be98db91e852ae8d050d6805a402272e0c776193cfba",
