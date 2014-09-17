@@ -152,7 +152,7 @@ MessageHandler.prototype = {
         session.subListeners.push(listener);
 
         // Wait for the other caller to connect for the time of the call.
-        setTimeout(function() {
+        session.timeouts.push(setTimeout(function() {
           // Supervisory timer: Until the callee says HELLO
           self.storage.getCallState(session.callId, function(err, state) {
             if (serverError(err, callback)) return;
@@ -164,7 +164,7 @@ MessageHandler.prototype = {
                                         constants.CALL_STATES.TERMINATED);
             }
           });
-        }, conf.get("timers").supervisoryDuration * 1000);
+        }, conf.get("timers").supervisoryDuration * 1000));
 
         // Subscribe to the channel to setup progress updates.
         self.sub.subscribe(session.callId);
@@ -190,7 +190,7 @@ MessageHandler.prototype = {
             constants.CALL_STATES.INIT + "." + session.type
           );
           if (session.type === "callee") {
-            setTimeout(function() {
+            session.timeouts.push(setTimeout(function() {
               // Ringing timer until the callee picks up the phone
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
@@ -206,7 +206,7 @@ MessageHandler.prototype = {
                   );
                 }
               });
-            }, self.conf.ringingDuration * 1000);
+            }, self.conf.ringingDuration * 1000));
           }
         }
       });
@@ -279,7 +279,7 @@ MessageHandler.prototype = {
             [constants.CALL_STATES.ALERTING, constants.CALL_STATES.CONNECTING]
           ],
           actuator: function() {
-            setTimeout(function() {
+            session.timeouts.push(setTimeout(function() {
               // Connection timer until both sends media-up
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
@@ -291,7 +291,7 @@ MessageHandler.prototype = {
                                             constants.CALL_STATES.TERMINATED);
                 }
               });
-            }, self.conf.connectionDuration * 1000);
+            }, self.conf.connectionDuration * 1000));
           }
         },
         "media-up": {
@@ -423,6 +423,9 @@ MessageHandler.prototype = {
     session.subListeners.forEach(function(listener) {
       self.sub.removeListener("message", listener);
     });
+    session.timeouts.forEach(function(timeout) {
+      clearTimeout(timeout);
+    });
   }
 };
 
@@ -447,7 +450,8 @@ module.exports = function(storage, logError, conf) {
     wss.on('connection', function(ws) {
       // We have a different session for each connection.
       var session = {
-        subListeners: []
+        subListeners: [],
+        timeouts: []
       };
       ws.on('message', function(data) {
         try {
