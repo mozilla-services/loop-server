@@ -182,14 +182,14 @@ describe("Storage", function() {
           });
       });
 
-      describe("#removeSimplePushURL", function() {
+      describe("#removeSimplePushURLs", function() {
         it("should delete an existing simple push URL", function(done) {
           storage.addUserSimplePushURLs(userMac, "1234", {calls: simplePushURL}, function(err) {
             if (err) throw err;
             storage.addUserSimplePushURLs(userMac, "4567", {calls: simplePushURL2},
               function(err) {
                 if (err) throw err;
-                storage.removeSimplePushURL(userMac, "4567",
+                storage.removeSimplePushURLs(userMac, "4567",
                   function(err) {
                     if (err) throw err;
                     storage.getUserSimplePushURLs(userMac,

@@ -7,7 +7,7 @@ var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
 
-var VALID_SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
+var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
 
 function RedisStorage(options, settings) {
@@ -26,7 +26,7 @@ RedisStorage.prototype = {
   addUserSimplePushURLs: function(userHmac, hawkHmacId, simplePushURLs, callback) {
     var self = this;
     // Remove any previous storage spurl.{userHmac} LIST
-    // XXX - Remove this two month after 0.13 release
+    // XXX - Bug 1069208 — Remove this two month after 0.13 release
     self._client.del('spurl.' + userHmac, function(err) {
       if (err) {
         callback(err);
@@ -34,9 +34,9 @@ RedisStorage.prototype = {
       }
 
       for (var topic in simplePushURLs) {
-        if (VALID_SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
+        if (SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
           callback(new Error(topic + " should be one of " +
-                             VALID_SIMPLE_PUSH_TOPICS.join(", ")));
+                             SIMPLE_PUSH_TOPICS.join(", ")));
           return;
         }
       }
@@ -56,8 +56,8 @@ RedisStorage.prototype = {
     var self = this;
 
     var result = {};
-    for (var i = 0; i < VALID_SIMPLE_PUSH_TOPICS.length; i++) {
-      result[VALID_SIMPLE_PUSH_TOPICS[i]] = [];
+    for (var i = 0; i < SIMPLE_PUSH_TOPICS.length; i++) {
+      result[SIMPLE_PUSH_TOPICS[i]] = [];
     }
 
     this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
@@ -86,8 +86,8 @@ RedisStorage.prototype = {
         for (var i = 0; i < simplePushURLsList.length; i++) {
           var item = simplePushURLsList[i];
 
-          for (var j = 0; j < VALID_SIMPLE_PUSH_TOPICS.length; j++) {
-            var topic = VALID_SIMPLE_PUSH_TOPICS[j];
+          for (var j = 0; j < SIMPLE_PUSH_TOPICS.length; j++) {
+            var topic = SIMPLE_PUSH_TOPICS[j];
             var sp_topic = item[topic];
             if (sp_topic !== undefined) {
               if (result[topic].indexOf(sp_topic) === -1)
@@ -100,7 +100,7 @@ RedisStorage.prototype = {
     });
   },
 
-  removeSimplePushURL: function(userMac, hawkHmacId, callback) {
+  removeSimplePushURLs: function(userMac, hawkHmacId, callback) {
     this._client.del('spurl.' + userMac + '.' + hawkHmacId, callback);
   },
 
