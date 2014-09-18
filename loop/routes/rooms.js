@@ -6,11 +6,14 @@
 
 var errors = require('../errno.json');
 var sendError = require('../utils').sendError;
+var tokenlib = require('../tokenlib');
+
 
 /* eslint-disable */
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
+  var roomsConf = conf.get("rooms");
 
   /**
    * Room creation.
@@ -28,10 +31,13 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *
    **/
   apiRouter.post('/rooms', validators.validateRoomUrlParams, function(req, res) {
+    var token = tokenlib.generateToken(conf.get("rooms").tokenSize);
+    var now = parseInt(Date.now() / 1000, 10);
+    var expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
 
-    res.status(200).json({
+    res.status(201).json({
       roomToken: token,
-      roomUrl: roomUrl,
+      roomUrl: roomsConf.webAppUrl.replace('{token}', token),
       expiresAt: expiresAt
     });
 

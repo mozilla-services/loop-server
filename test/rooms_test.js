@@ -23,7 +23,7 @@ var conf = loop.conf;
 describe("/rooms", function() {
   describe("validators", function() {
     apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
-      res.status(200).json(req.roomUrlData);
+      res.status(200).json(req.roomData);
     });
 
     var validateRoomReq;
@@ -169,10 +169,29 @@ describe("/rooms", function() {
 
   describe("POST for room creation", function() {
 
-    it("should create a new room", function(done) {
-
+    it("should return appropriate info", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+      .post('/rooms')
+      .type('json')
+      .send({
+        roomOwner: "Alexis",
+        roomName: "UX discussion",
+        maxSize: "3",
+        expiresIn: "10"
+      })
+      .expect(201)
+      .end(function(err, res) {
+        if (err) throw err;
+        expect(res.body.roomToken).to.not.be.undefined;
+        expect(res.body.roomUrl).to.eql(
+          conf.get('rooms').webAppUrl.replace('{token}', res.body.roomToken));
+        expect(res.body.expiresAt).to.be.gte(startTime + 10 * 60);
+        done();
+      });
     });
+  });
 
-    it("should error-out if the ")
+  it("should not use two times the same token", function() {
   });
 });

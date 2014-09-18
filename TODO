@@ -4,3 +4,10 @@
 - We should add CORs handling and test it.
 - Ask what the default configuration should be, with hints from us.
 - Client max size shouldn't be needed by default.
+- It's not a 200 it's a 201 on resource creation.
+- What should be the size of the room token.
+
+(not directly related, but still)
+
+- webappUrl and a bunch of config related to calls should go in calls.*
+

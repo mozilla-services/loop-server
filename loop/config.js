@@ -424,6 +424,17 @@ var conf = convict({
       doc: "The maximum number of chars for the owner of a room",
       format: Number,
       default: 100
+    },
+    tokenSize: {
+      doc: "The room token size (in bytes).",
+      format: Number,
+      default: 8
+    },
+    webAppUrl: {
+      doc: "Loop Web App rooms url.",
+      format: "url",
+      default: "http://localhost:3000/#room/{token}",
+      env: "ROOMS_WEB_APP_URL"
     }
   }
 });
