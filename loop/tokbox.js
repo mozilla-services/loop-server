@@ -55,7 +55,7 @@ TokBox.prototype = {
 
     var self = this;
     opentok.createSession({
-      mediaMode: 'relayed'
+      mediaMode: options.mediaMode || "relayed"
     }, function(err, session) {
         if (err !== null) {
           options.retry--;
@@ -63,20 +63,32 @@ TokBox.prototype = {
             cb(err);
             return;
           }
-          self.getSessionTokens(options, cb);
+          self.getSession(options, cb);
           return;
         }
         cb(null, session, opentok);
     });
   },
-
+  getSessionToken: function(sessionId) {
+    var now = parseInt(Date.now() / 1000, 10);
+    var expirationTime = now + this.tokenDuration;
+      
+    return this._opentok["default"].generateToken(
+      sessionId, {
+        role: 'publisher',
+        expireTime: expirationTime
+      }
+    );
+  },
   getSessionTokens: function(options, cb) {
     var self = this;
 
     if (cb === undefined) {
       cb = options;
-      options = undefined;
+      options = {};
     }
+
+    options.mediaMode = options.mediaMode || "relayed";
 
     this.getSession(options, function(err, session, opentok) {
       if (err) {
@@ -84,7 +96,7 @@ TokBox.prototype = {
         return;
       }
       var sessionId = session.sessionId;
-      var now = Math.round(Date.now() / 1000.0);
+      var now = parseInt(Date.now() / 1000, 10);
       var expirationTime = now + self.tokenDuration;
       cb(null, {
         apiKey: opentok.apiKey,

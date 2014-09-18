@@ -6,6 +6,7 @@
 - Client max size shouldn't be needed by default.
 - It's not a 200 it's a 201 on resource creation.
 - What should be the size of the room token.
+- Handle the TokBox channel on /rooms
 
 (not directly related, but still)
 

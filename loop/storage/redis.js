@@ -699,6 +699,45 @@ RedisStorage.prototype = {
     this._client.del('oauth.state.' + hawkIdHmac, callback);
   },
 
+  addUserRoomData: function(userMac, roomToken, roomData, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    } else if (roomToken === undefined) {
+      callback(new Error("roomToken should be defined."));
+      return;
+    } else if (roomData.expiresAt === undefined) {
+      callback(new Error("roomData should have an expiresAt property."));
+      return;
+    }
+    var self = this;
+    // In that case use setex to add the metadata of the url.
+    this._client.setex(
+      'room.' + roomToken,
+      roomData.expiresAt - parseInt(Date.now() / 1000, 10),
+      JSON.stringify(roomData),
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.sadd(
+          'userRooms.' + userMac,
+          'room.' + roomToken, callback
+        );
+      });
+  },
+
+  getRoomData: function(roomToken, callback) {
+    this._client.get('room.' + roomToken, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, JSON.parse(data));
+    });
+  },
+
   drop: function(callback) {
     this._client.flushdb(callback);
   },

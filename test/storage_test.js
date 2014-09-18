@@ -71,7 +71,15 @@ describe("Storage", function() {
         }
       ],
     urlData = urls[0],
-    token = generateToken(conf.get("callUrlTokenSize"));
+    callToken = generateToken(conf.get("callUrlTokenSize")),
+    roomToken = generateToken(conf.get("rooms").tokenSize),
+    roomData = {
+      sessionId: fakeCallInfo.session1,
+      roomName: "UX Discussion",
+      roomOwner: "Alexis",
+      maxSize: 3,
+      expiresAt: parseInt(Date.now() / 1000, 10) + 60 * 24
+    };
 
     describe(name, function() {
       beforeEach(function() {
@@ -227,7 +235,7 @@ describe("Storage", function() {
 
       describe("#addUserCallUrlData", function() {
         it("should be able to add one call-url to the store", function(done) {
-          storage.addUserCallUrlData(userMac, token, urlData, function(err) {
+          storage.addUserCallUrlData(userMac, callToken, urlData, function(err) {
             if (err) throw err;
             storage.getUserCallUrls(userMac, function(err, results) {
               if (err) throw err;
@@ -242,7 +250,7 @@ describe("Storage", function() {
           function(done) {
             var invalidData = JSON.parse(JSON.stringify(urlData));
             invalidData.timestamp = undefined;
-            storage.addUserCallUrlData(userMac, token, invalidData,
+            storage.addUserCallUrlData(userMac, callToken, invalidData,
               function(err) {
                 expect(err.message)
                   .eql("urlData should have a timestamp property.");
@@ -254,7 +262,7 @@ describe("Storage", function() {
       describe("#updateUserCallUrlData", function() {
         it("should error in case there is no existing calls for this user",
           function(done) {
-            storage.updateUserCallUrlData(userMac, token, urlData,
+            storage.updateUserCallUrlData(userMac, callToken, urlData,
             function(err) {
               expect(err.notFound).to.eql(true);
               done();
@@ -262,15 +270,15 @@ describe("Storage", function() {
           });
 
         it("should update an existing call", function(done) {
-          storage.addUserCallUrlData(userMac, token, urlData, function(err) {
+          storage.addUserCallUrlData(userMac, callToken, urlData, function(err) {
             if (err) throw err;
             var updatedData = JSON.parse(JSON.stringify(urlData));
             updatedData.callerId = "natim@moz";
             updatedData.issuer = "alexis@moz";
-            storage.updateUserCallUrlData(userMac, token, updatedData,
+            storage.updateUserCallUrlData(userMac, callToken, updatedData,
               function(err) {
                 expect(err).to.eql(null);
-                storage.getCallUrlData(token, function(err, data) {
+                storage.getCallUrlData(callToken, function(err, data) {
                   if (err) throw err;
                   expect(data).eql({
                     callerId: "natim@moz",
@@ -354,11 +362,11 @@ describe("Storage", function() {
 
       describe("#getCallUrlData", function() {
         it("should be able to list a call-url by its id", function(done) {
-          storage.addUserCallUrlData(userMac, token, urlData, function(err) {
+          storage.addUserCallUrlData(userMac, callToken, urlData, function(err) {
             if (err) {
               throw err;
             }
-            storage.getCallUrlData(token, function(err, result) {
+            storage.getCallUrlData(callToken, function(err, result) {
               if (err) {
                 throw err;
               }
@@ -715,6 +723,31 @@ describe("Storage", function() {
             done();
           });
         });
+      });
+    
+      describe("#addUserRoomData", function() {
+        it("should be able to add one room to the store", function(done) {
+          storage.addUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.getRoomData(roomToken, function(err, storedRoomData) {
+              if (err) throw err;
+              expect(storedRoomData).to.eql(roomData);
+              done();
+            });
+          });
+        });
+
+        it("should require an expiresAt property for the roomData",
+          function(done) {
+            var invalidData = JSON.parse(JSON.stringify(roomData));
+            invalidData.expiresAt = undefined;
+            storage.addUserRoomData(userMac, roomToken, invalidData,
+              function(err) {
+                expect(err.message)
+                  .eql("roomData should have an expiresAt property.");
+                done();
+              });
+          });
       });
     });
   }

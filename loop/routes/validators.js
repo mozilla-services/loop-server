@@ -205,7 +205,7 @@ module.exports = function(conf, logError, storage) {
         roomName: req.body.roomName,
         expiresIn: expiresIn,
         roomOwner: req.body.roomOwner,
-        maxSize: req.body.maxSize
+        maxSize: maxSize
       };
 
       next();

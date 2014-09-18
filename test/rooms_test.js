@@ -12,15 +12,52 @@ var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
 var expectFormatedError = require("./support").expectFormatedError;
 var errors = require("../loop/errno.json");
+var Token = require("express-hawkauth").Token;
+var hmac = require("../loop/hmac");
 
 var loop = require("../loop");
 var app = loop.app;
 var validators = loop.validators;
 var apiRouter = loop.apiRouter;
 var conf = loop.conf;
+var storage = loop.storage;
+var tokBox = loop.tokBox;
 
+var sessionId = conf.get("fakeCallInfo").session1;
+var user = "alexis@notmyidea.org";
 
 describe("/rooms", function() {
+  var sandbox, hawkIdHmac, hawkCredentials, userHmac;
+
+  beforeEach(function(done) {
+    sandbox = sinon.sandbox.create();
+
+    sandbox.stub(tokBox._opentok.default, "createSession",
+      function(options, cb) {
+        cb(null, {sessionId: sessionId});
+      });
+
+    var token = new Token();
+    token.getCredentials(function(tokenId, authKey) {
+      hawkCredentials = {
+        id: tokenId,
+        key: authKey,
+        algorithm: "sha256"
+      };
+      hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+      userHmac = hmac(user, conf.get('userMacSecret'));
+      storage.setHawkSession(hawkIdHmac, authKey, function(err) {
+        if (err) throw err;
+        storage.setHawkUser(userHmac, hawkIdHmac, done);
+      });
+    });
+  });
+
+  afterEach(function(done) {
+    sandbox.restore();
+    storage.drop(done);
+  });
+
   describe("validators", function() {
     apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
       res.status(200).json(req.roomData);
@@ -174,6 +211,7 @@ describe("/rooms", function() {
       supertest(app)
       .post('/rooms')
       .type('json')
+      .hawk(hawkCredentials)
       .send({
         roomOwner: "Alexis",
         roomName: "UX discussion",
@@ -186,11 +224,28 @@ describe("/rooms", function() {
         expect(res.body.roomToken).to.not.be.undefined;
         expect(res.body.roomUrl).to.eql(
           conf.get('rooms').webAppUrl.replace('{token}', res.body.roomToken));
+
         expect(res.body.expiresAt).to.be.gte(startTime + 10 * 60);
-        done();
-      });
+
+        storage.getRoomData(res.body.roomToken, function(err, roomData) {
+          if (err) throw err;
+
+          expect(roomData.expiresAt).to.not.eql(undefined);
+          delete roomData.expiresAt;
+          expect(roomData).to.eql({
+            sessionId: sessionId,
+            roomName: "UX discussion",
+            maxSize: 3,
+            roomOwner: "Alexis",
+            expiresIn: 10
+          });
+          done();
+        });
+     });
     });
   });
+
+  it("should use the hawk middleware");
 
   it("should not use two times the same token", function() {
   });

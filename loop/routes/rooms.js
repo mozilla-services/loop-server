@@ -30,18 +30,28 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *   expiresAt - The date after which the room will no longer be valid (in seconds since the Unix epoch).
    *
    **/
-  apiRouter.post('/rooms', validators.validateRoomUrlParams, function(req, res) {
-    var token = tokenlib.generateToken(conf.get("rooms").tokenSize);
-    var now = parseInt(Date.now() / 1000, 10);
-    var expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
+  apiRouter.post('/rooms', auth.requireHawkSession,
+    validators.validateRoomUrlParams, function(req, res) {
+      var token = tokenlib.generateToken(conf.get("rooms").tokenSize);
+      var now = parseInt(Date.now() / 1000, 10);
+      req.roomData.expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
 
-    res.status(201).json({
-      roomToken: token,
-      roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-      expiresAt: expiresAt
+      tokBox.getSession(function(err, session) {
+        if (res.serverError(err)) return;
+
+        req.roomData.sessionId = session.sessionId;
+
+        storage.addUserRoomData(req.user, token, req.roomData, function(err) {
+          if (res.serverError(err)) return;
+
+          res.status(201).json({
+            roomToken: token,
+            roomUrl: roomsConf.webAppUrl.replace('{token}', token),
+            expiresAt: req.roomData.expiresAt
+          });
+        });
+      });
     });
-
-  });
 
   /**
    * PUT /rooms/{id}
@@ -57,16 +67,16 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * expiresAt - The date after which the room will no longer be valid (in
    * seconds since the Unix epoch).
    **/
-  apiRouter.put('/rooms/:id', function(req, res) {
+  apiRouter.put('/rooms/:token', function(req, res) {
 
   });
 
-  apiRouter.delete('/rooms/:id', function(req, res) {
+  apiRouter.delete('/rooms/:token', function(req, res) {
 
   });
 
-  apiRouter.get('/rooms/:id', function(req, res) {
-
+  apiRouter.get('/rooms/:token', function(req, res) {
+    res.status(200).json("ok");
   });
 
   /**
@@ -76,7 +86,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * displayName - User-friendly display name for the joining user.
    * clientMaxSize - Maximum number of room participants the user's client is capable of supporting.
    **/
-  apiRouter.post('/rooms/:id', function(req, res) {
+  apiRouter.post('/rooms/:token', function(req, res) {
 
   });
 
