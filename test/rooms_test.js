@@ -60,7 +60,7 @@ describe("/rooms", function() {
         });
       });
 
-    it.only("should fail in case roomName parameter is missing", function(done) {
+    it("should fail in case roomName parameter is missing", function(done) {
       validateRoomReq.send({
         roomOwner: "Alexis",
         maxSize: "2"
