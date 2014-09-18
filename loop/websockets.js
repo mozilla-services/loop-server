@@ -507,9 +507,12 @@ module.exports = function(storage, logError, conf) {
       });
       ws.on('close', function() {
         ws.close();
+        messageHandler.broadcastState(session.callId,
+                                      constants.CALL_STATES.TERMINATED + ":" +
+                                      constants.MESSAGE_REASONS.CLOSED);
         messageHandler.clearSession(session);
       });
-      ws.on('error', console.log);
+      ws.on('error', console.error);
     });
   };
 
