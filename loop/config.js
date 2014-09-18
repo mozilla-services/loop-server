@@ -207,6 +207,11 @@ var conf = convict({
       doc: 'how many times to retry on error',
       format: "nat",
       default: 3
+    },
+    timeout: {
+      doc: "Timeout for requests when trying to create the session (ms)",
+      format: Number,
+      default: 2000
     }
   },
   webAppUrl: {
