@@ -78,9 +78,7 @@ RedisStorage.prototype = {
         }
         var simplePushURLsList = simplePushURLsJSONList.map(function(json) {
           if (json) {
-            try {
-              return JSON.parse(json);
-            } catch (e) {}
+            return JSON.parse(json);
           }
           return null;
         }).filter(function (dict) { return dict !== null; });
