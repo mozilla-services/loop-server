@@ -23,7 +23,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * to be able to unregister).
    **/
   app.delete('/registration', auth.requireHawkSession, function(req, res) {
-    storage.removeSimplePushURL(req.user, req.hawkIdHmac, function(err) {
+    storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
       if (res.serverError(err)) return;
       res.status(204).json();
     });
