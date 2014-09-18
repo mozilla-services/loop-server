@@ -145,9 +145,9 @@ if (argv.hasOwnProperty("fd")) {
     console.log('Server listening on fd://' + fd);
   });
 } else {
-  server.listen(conf.get('port'), conf.get('host'), function() {
+  server.listen(conf.get('port'), conf.get('ip'), function() {
     console.log('Server listening on http://' +
-                conf.get('host') + ':' + conf.get('port'));
+                conf.get('ip') + ':' + conf.get('port'));
   });
 }
 
