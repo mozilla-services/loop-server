@@ -23,8 +23,10 @@ function TokBox(settings) {
   for (var channel in this.credentials) {
     this._opentok[channel] = new exports.OpenTok(
       this.credentials[channel].apiKey,
-      this.credentials[channel].apiSecret,
-      this.credentials[channel].apiUrl || conf.get("tokBox").apiUrl
+      this.credentials[channel].apiSecret, {
+        apiUrl: this.credentials[channel].apiUrl || conf.get("tokBox").apiUrl,
+        timeout: settings.timeout
+      }
     );
   }
 }
