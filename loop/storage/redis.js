@@ -7,7 +7,7 @@ var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
 
-var VALID_TOPICS = ["calls", "rooms"];
+var VALID_SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
 
 function RedisStorage(options, settings) {
@@ -34,9 +34,9 @@ RedisStorage.prototype = {
       }
 
       for (var topic in simplePushURLs) {
-        if (VALID_TOPICS.indexOf(topic) === -1) {
+        if (VALID_SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
           callback(new Error(topic + " should be one of " +
-                             VALID_TOPICS.join(", ")));
+                             VALID_SIMPLE_PUSH_TOPICS.join(", ")));
           return;
         }
       }
@@ -56,8 +56,8 @@ RedisStorage.prototype = {
     var self = this;
 
     var result = {};
-    for (var i = 0; i < VALID_TOPICS.length; i++) {
-      result[VALID_TOPICS[i]] = [];
+    for (var i = 0; i < VALID_SIMPLE_PUSH_TOPICS.length; i++) {
+      result[VALID_SIMPLE_PUSH_TOPICS[i]] = [];
     }
 
     this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
@@ -88,8 +88,8 @@ RedisStorage.prototype = {
         for (var i = 0; i < simplePushURLsList.length; i++) {
           var item = simplePushURLsList[i];
 
-          for (var j = 0; j < VALID_TOPICS.length; j++) {
-            var topic = VALID_TOPICS[j];
+          for (var j = 0; j < VALID_SIMPLE_PUSH_TOPICS.length; j++) {
+            var topic = VALID_SIMPLE_PUSH_TOPICS[j];
             var sp_topic = item[topic];
             if (sp_topic !== undefined) {
               if (result[topic].indexOf(sp_topic) === -1)
