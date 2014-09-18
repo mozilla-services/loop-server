@@ -398,6 +398,33 @@ var conf = convict({
       format: Number,
       default: 5
     }
+  },
+  rooms: {
+    defaultTTL: {
+      doc: "The default TTL for a room (in hours)",
+      format: Number,
+      default: 24 * 30 // One month.
+    },
+    maxTTL: {
+      doc: "The maximum TTL for a room (in hours) allowed by the server",
+      format: Number,
+      default: 24 * 60 // Two months.
+    },
+    maxSize: {
+      doc: "The maximum size of a room",
+      format: Number,
+      default: 5
+    },
+    maxRoomNameSize: {
+      doc: "The maximum number of chars to name a room",
+      format: Number,
+      default: 100
+    },
+    maxRoomOwnerSize: {
+      doc: "The maximum number of chars for the owner of a room",
+      format: Number,
+      default: 100
+    }
   }
 });
 

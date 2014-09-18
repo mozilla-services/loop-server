@@ -12,61 +12,6 @@ var sendError = require('../utils').sendError;
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
 
-  function validateRoomUrlParams(req, res, next) {
-    var expiresIn = conf.get('rooms').urlTimeout,
-        maxTimeout = conf.get('rooms').maxTimeout,
-        serverMaxSize = conf.get('rooms').maxSize,
-        maxSize;
-
-    if (req.body.hasOwnProperty("roomName")) {
-      if (req.body.roomName.length > 100) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "roomName should be shorter than 100 characters");
-        return;
-      }
-    }
-    if (req.body.hasOwnProperty("roomOwner")) {
-      if (req.body.roomOwner.length > 100) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "roomOwner should be shorter than 100 characters");
-        return;
-      }
-    }
-
-    if (req.body.hasOwnProperty("expiresIn")) {
-      expiresIn = parseInt(req.body.expiresIn, 10);
-
-      if (isNaN(expiresIn)) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "expiresIn should be a valid number");
-        return;
-      } else if (expiresIn > maxTimeout) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "expiresIn should be less than " + maxTimeout);
-        return;
-      }
-    }
-
-    if(req.body.hasOwnProperty("maxSize")) {
-      maxSize = parseInt(req.body.maxSize);
-
-      if (maxSize > serverMaxSize) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "rooms maxSize cannot be greater than " + serverMaxSize);
-      }
-    }
-
-    req.roomUrlData = {
-      roomName: req.body.roomName,
-      expiresIn: expiresIn,
-      roomOwner: req.body.roomOwner,
-      maxSize: req.body.maxSize,
-    };
-
-    next();
-  }
-
-
   /**
    * Room creation.
    *
@@ -82,7 +27,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *   expiresAt - The date after which the room will no longer be valid (in seconds since the Unix epoch).
    *
    **/
-  apiRouter.post('/rooms', validateRoomUrlParams, function(req, res) {
+  apiRouter.post('/rooms', validators.validateRoomUrlParams, function(req, res) {
 
     res.status(200).json({
       roomToken: token,
