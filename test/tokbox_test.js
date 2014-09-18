@@ -42,11 +42,12 @@ describe("TokBox", function() {
             apiSecret: apiSecret
           }
         },
-        tokenDuration: 3600
+        tokenDuration: 3600,
+        timeout: 2000
       });
       assert.calledOnce(loopTokbox.OpenTok);
       assert.calledWithExactly(loopTokbox.OpenTok, apiKey,
-                               apiSecret, apiUrl);
+                               apiSecret, {apiUrl: apiUrl, timeout: 2000});
     });
 
     it("should create an OpenTok object and override the apiUrl", function() {
@@ -60,11 +61,12 @@ describe("TokBox", function() {
             apiUrl: "http://test"
           }
         },
-        tokenDuration: 3600
+        tokenDuration: 3600,
+        timeout: 1500
       });
       assert.calledOnce(loopTokbox.OpenTok);
       assert.calledWithExactly(loopTokbox.OpenTok, apiKey,
-                               apiSecret, "http://test");
+                               apiSecret, {apiUrl: "http://test", timeout: 1500});
     });
   });
 
@@ -101,7 +103,8 @@ describe("TokBox", function() {
             apiSecret: apiSecret
           }
         },
-        tokenDuration: 3600 // 1h.
+        tokenDuration: 3600, // 1h.
+        timeout: 2000
       });
     });
 
@@ -182,7 +185,7 @@ describe("TokBox", function() {
           expect(openTokSpy.withArgs(
             apiKey + "_release",
             apiSecret + "_release",
-            releaseUrl
+            {apiUrl: releaseUrl, timeout: 2000}
           ).calledOnce).to.eql(true);
           assert.calledOnce(tokBox._opentok.release.createSession);
           done(error);
@@ -201,7 +204,7 @@ describe("TokBox", function() {
           expect(openTokSpy.withArgs(
             apiKey + "_nightly",
             apiSecret + "_nightly",
-            apiUrl
+            {apiUrl: apiUrl, timeout: 2000}
           ).calledOnce).to.eql(true);
           assert.calledOnce(tokBox._opentok.nightly.createSession);
           done(error);
