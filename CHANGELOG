@@ -3,11 +3,13 @@ Changelog
 
 This document describes changes between each past release.
 
-0.13.0 (unreleased)
+0.12.2 (2014-09-18)
 -------------------
 
-- No changes yet.
-
+- [bugfix] Clear the setTimeout() on connection close (ws);
+- [bugfix] Check the headers using .get, not .headers;
+- [bugfix] Be sure to handle tokbox failures on time;
+- [config] Rename "host" into "ip".
 
 0.12.0 (2014-09-15)
 -------------------
