@@ -3,6 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
+0.11.2 (2014-09-18)
+-------------------
+
+- [bugfix] 1069168 — Handle TokBox timeout on usual calls.
+
+
 0.11.1 (2014-09-15)
 -------------------
 
