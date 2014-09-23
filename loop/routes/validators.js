@@ -212,12 +212,31 @@ module.exports = function(conf, logError, storage) {
     });
   }
 
+  /**
+   * Middleware that validates the given token is valid (should be included into
+   * the "token" parameter.
+   **/
+  function validateRoomToken(req, res, next) {
+    req.token = req.param('token');
+    storage.getRoomData(req.token, function(err, roomData) {
+      if (res.serverError(err)) return;
+      if (roomData === null) {
+        sendError(res, 404, errors.INVALID_TOKEN, "Token not found.");
+        return;
+      }
+      req.roomData = roomData;
+      next();
+    });
+  }
+
+
   return {
     validateToken: validateToken,
     requireParams: requireParams,
     validateSimplePushURL: validateSimplePushURL,
     validateCallType: validateCallType,
     validateCallUrlParams: validateCallUrlParams,
-    validateRoomUrlParams: validateRoomUrlParams
+    validateRoomUrlParams: validateRoomUrlParams,
+    validateRoomToken: validateRoomToken
   };
 };

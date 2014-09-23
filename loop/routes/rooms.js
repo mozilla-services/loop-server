@@ -34,6 +34,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomUrlParams, function(req, res) {
       var token = tokenlib.generateToken(conf.get("rooms").tokenSize);
       var now = parseInt(Date.now() / 1000, 10);
+      req.roomData.creationTime = now;
       req.roomData.expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
 
       tokBox.getSession(function(err, session) {
@@ -75,8 +76,19 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
   });
 
-  apiRouter.get('/rooms/:token', function(req, res) {
-    res.status(200).json("ok");
+  apiRouter.get('/rooms/:token', validators.validateRoomToken, function(req, res) {
+    var clientMaxSize = req.roomData.maxSize;
+    var participants = [];
+
+    res.status(200).json({
+      roomName: req.roomData.roomName,
+      roomOwner: req.roomData.roomOwner,
+      maxSize: req.roomData.maxSize,
+      clientMaxSize: clientMaxSize,
+      creationTime: req.roomData.creationTime,
+      expiresAt: req.roomData.expiresAt,
+      participants: participants
+    });
   });
 
   /**

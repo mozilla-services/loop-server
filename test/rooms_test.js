@@ -8,20 +8,23 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
-var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
 var expectFormatedError = require("./support").expectFormatedError;
 var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
+var getMiddlewares = require("./support").getMiddlewares;
 
 var loop = require("../loop");
 var app = loop.app;
+var auth = loop.auth;
 var validators = loop.validators;
 var apiRouter = loop.apiRouter;
 var conf = loop.conf;
 var storage = loop.storage;
 var tokBox = loop.tokBox;
+
+var requireHawkSession = auth.requireHawkSession;
 
 var sessionId = conf.get("fakeCallInfo").session1;
 var user = "alexis@notmyidea.org";
@@ -204,7 +207,7 @@ describe("/rooms", function() {
 
   });
 
-  describe("POST for room creation", function() {
+  describe("POST /room for room creation", function() {
 
     it("should return appropriate info", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
@@ -232,6 +235,8 @@ describe("/rooms", function() {
 
           expect(roomData.expiresAt).to.not.eql(undefined);
           delete roomData.expiresAt;
+          expect(roomData.creationTime).to.not.eql(undefined);
+          delete roomData.creationTime;
           expect(roomData).to.eql({
             sessionId: sessionId,
             roomName: "UX discussion",
@@ -243,10 +248,88 @@ describe("/rooms", function() {
         });
      });
     });
+
+    it("should have the requireHawkSession middleware installed", function() {
+      expect(getMiddlewares(apiRouter, 'post', '/rooms'))
+        .include(requireHawkSession);
+    });
+
+    it("should not use two times the same token");
   });
 
-  it("should use the hawk middleware");
-
-  it("should not use two times the same token", function() {
+  describe("GET /room/:token", function() {
+    it("should return appropriate info", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          supertest(app)
+            .get('/rooms/' + postRes.body.roomToken)
+            .type('json')
+            .hawk(hawkCredentials)
+            .expect(200)
+            .end(function(err, getRes) {
+              if (err) throw err;
+              expect(getRes.body).to.eql({
+                roomOwner: "Alexis",
+                roomName: "UX discussion",
+                maxSize: 3,
+                clientMaxSize: 3,
+                creationTime: startTime,
+                expiresAt: startTime + 10 * 3600,
+                participants: []
+              });
+              done();
+            });
+        });
+    });
   });
+
+  describe.skip("GET /rooms/", function() {
+    it("should return appropriate info", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          supertest(app)
+            .get('/rooms/')
+            .type('json')
+            .hawk(hawkCredentials)
+            .expect(200)
+            .end(function(err, getRes) {
+              if (err) throw err;
+              expect(getRes.body).to.eql({
+                roomToken: postRes.roomToken,
+                roomName: "UX discussion",
+                maxSize: "3",
+                clientMaxSize: "3",
+                currSize: "0",
+                ctime: startTime
+              });
+              done();
+            });
+        });
+    });
+  });
+
 });

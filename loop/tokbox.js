@@ -72,7 +72,7 @@ TokBox.prototype = {
   getSessionToken: function(sessionId) {
     var now = parseInt(Date.now() / 1000, 10);
     var expirationTime = now + this.tokenDuration;
-      
+
     return this._opentok["default"].generateToken(
       sessionId, {
         role: 'publisher',

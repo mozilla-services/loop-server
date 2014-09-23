@@ -724,7 +724,7 @@ describe("Storage", function() {
           });
         });
       });
-    
+
       describe("#addUserRoomData", function() {
         it("should be able to add one room to the store", function(done) {
           storage.addUserRoomData(userMac, roomToken, roomData, function(err) {
