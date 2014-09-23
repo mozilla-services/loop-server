@@ -749,6 +749,22 @@ describe("Storage", function() {
               });
           });
       });
+
+      describe("#deleteRoomData", function() {
+        it("should remove the room from the store", function(done) {
+          storage.addUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.deleteRoomData(roomToken, function(err) {
+              if (err) throw err;
+              storage.getRoomData(roomToken, function(err, storedRoomData) {
+                if (err) throw err;
+                expect(storedRoomData).to.eql(null);
+                done();
+              });
+            });
+          });
+        });
+      });
     });
   }
 

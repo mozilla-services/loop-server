@@ -72,9 +72,13 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
   });
 
-  apiRouter.delete('/rooms/:token', function(req, res) {
-
-  });
+  apiRouter.delete('/rooms/:token', validators.validateRoomToken,
+    function(req, res) {
+      storage.deleteRoomData(req.token, function(err) {
+        if (res.serverError(err)) return;
+        res.status(204).json({});
+      });
+    });
 
   apiRouter.get('/rooms/:token', validators.validateRoomToken, function(req, res) {
     var clientMaxSize = req.roomData.maxSize;

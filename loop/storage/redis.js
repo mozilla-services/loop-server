@@ -738,6 +738,13 @@ RedisStorage.prototype = {
     });
   },
 
+  deleteRoomData: function(roomToken, callback) {
+    this._client.del('room.' + roomToken, function(err) {
+      // XXX — Handle participants deletion
+      callback(err);
+    });
+  },
+
   drop: function(callback) {
     this._client.flushdb(callback);
   },

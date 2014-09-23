@@ -258,6 +258,11 @@ describe("/rooms", function() {
   });
 
   describe("GET /room/:token", function() {
+    it("should have the validateRoomToken middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'get', '/rooms/:token'))
+        .include(validators.validateRoomToken);
+    });
+
     it("should return appropriate info", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
@@ -290,6 +295,46 @@ describe("/rooms", function() {
                 participants: []
               });
               done();
+            });
+        });
+    });
+  });
+
+  describe.only("DELETE /room/:token", function() {
+    it("should have the validateRoomToken middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
+        .include(validators.validateRoomToken);
+    });
+
+    it("should return a 204.", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          supertest(app)
+            .delete('/rooms/' + postRes.body.roomToken)
+            .hawk(hawkCredentials)
+            .expect(204)
+            .end(function(err, delRes) {
+              if (err) throw err;
+              supertest(app)
+                .get('/rooms/' + postRes.body.roomToken)
+                .type('json')
+                .hawk(hawkCredentials)
+                .expect(404)
+                .end(function(err, getRes) {
+                  done(err);
+                });
             });
         });
     });
