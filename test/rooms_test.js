@@ -63,7 +63,7 @@ describe("/rooms", function() {
 
   describe("validators", function() {
     apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
-      res.status(200).json(req.roomData);
+      res.status(200).json(req.roomBodyData);
     });
 
     var validateRoomReq;
@@ -99,48 +99,6 @@ describe("/rooms", function() {
           done();
         });
       });
-
-    it("should fail in case roomName parameter is missing", function(done) {
-      validateRoomReq.send({
-        roomOwner: "Alexis",
-        maxSize: "2"
-      })
-      .expect(400)
-      .end(function(err, res) {
-        if (err) throw err;
-        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
-                            "Missing: roomName");
-        done();
-      });
-    });
-
-    it("should fail in case roomOwner parameter is missing", function(done) {
-      validateRoomReq.send({
-        roomName: "UX Discussion",
-        maxSize: "2"
-      })
-      .expect(400)
-      .end(function(err, res) {
-        if (err) throw err;
-        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
-                            "Missing: roomOwner");
-        done();
-      });
-    });
-
-    it("should fail in case maxSize parameter is missing", function(done) {
-      validateRoomReq.send({
-        roomOwner: "Alexis",
-        roomName: "UX Discussion"
-      })
-      .expect(400)
-      .end(function(err, res) {
-        if (err) throw err;
-        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
-                            "Missing: maxSize");
-        done();
-      });
-    });
 
     it("should fail if roomName exceeds maxRoomNameSize chars", function(done) {
       validateRoomReq.send({
@@ -207,7 +165,62 @@ describe("/rooms", function() {
 
   });
 
-  describe("POST /room for room creation", function() {
+  describe("POST /rooms for room creation", function() {
+    var postRoomReq;
+
+    beforeEach(function() {
+      postRoomReq = supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials);
+    });
+
+    it("should have the validateRoomUrlParams middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'post', '/rooms'))
+        .include(validators.validateRoomUrlParams);
+    });
+
+    it("should fail in case roomName parameter is missing", function(done) {
+      postRoomReq.send({
+        roomOwner: "Alexis",
+        maxSize: "2"
+      })
+      .expect(400)
+      .end(function(err, res) {
+        if (err) throw err;
+        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                            "Missing: roomName");
+        done();
+      });
+    });
+
+    it("should fail in case roomOwner parameter is missing", function(done) {
+      postRoomReq.send({
+        roomName: "UX Discussion",
+        maxSize: "2"
+      })
+      .expect(400)
+      .end(function(err, res) {
+        if (err) throw err;
+        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                            "Missing: roomOwner");
+        done();
+      });
+    });
+
+    it("should fail in case maxSize parameter is missing", function(done) {
+      postRoomReq.send({
+        roomOwner: "Alexis",
+        roomName: "UX Discussion"
+      })
+      .expect(400)
+      .end(function(err, res) {
+        if (err) throw err;
+        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                            "Missing: maxSize");
+        done();
+      });
+    });
 
     it("should return appropriate info", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
@@ -228,7 +241,7 @@ describe("/rooms", function() {
         expect(res.body.roomUrl).to.eql(
           conf.get('rooms').webAppUrl.replace('{token}', res.body.roomToken));
 
-        expect(res.body.expiresAt).to.be.gte(startTime + 10 * 60);
+        expect(res.body.expiresAt).to.equal(startTime + 10 * 3600);
 
         storage.getRoomData(res.body.roomToken, function(err, roomData) {
           if (err) throw err;
@@ -237,6 +250,9 @@ describe("/rooms", function() {
           delete roomData.expiresAt;
           expect(roomData.creationTime).to.not.eql(undefined);
           delete roomData.creationTime;
+          expect(roomData.updateTime).to.not.eql(undefined);
+          delete roomData.updateTime;
+
           expect(roomData).to.eql({
             sessionId: sessionId,
             roomName: "UX discussion",
@@ -300,7 +316,75 @@ describe("/rooms", function() {
     });
   });
 
-  describe.only("DELETE /room/:token", function() {
+  describe("PUT /room/:token", function() {
+    it("should have the validateRoomToken middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
+        .include(validators.validateRoomToken);
+    });
+
+    it("should have the validateRoomUrlParams middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
+        .include(validators.validateRoomUrlParams);
+    });
+
+    it("should return a 200.", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+
+          var updateTime = parseInt(Date.now() / 1000, 10);
+          supertest(app)
+            .put('/rooms/' + postRes.body.roomToken)
+            .hawk(hawkCredentials)
+            .send({
+              roomOwner: "Natim",
+              roomName: "About UX",
+              maxSize: "2",
+              expiresIn: "5"
+            })
+            .expect(200)
+            .end(function(err, putRes) {
+              if (err) throw err;
+              expect(putRes.body.expiresAt).to.equal(
+                updateTime + 5 * 3600
+              );
+
+              supertest(app)
+                .get('/rooms/' + postRes.body.roomToken)
+                .type('json')
+                .hawk(hawkCredentials)
+                .expect(200)
+                .end(function(err, getRes) {
+                  if (err) throw err;
+
+                  expect(getRes.body).to.eql({
+                    "clientMaxSize": 2,
+                    "creationTime": startTime,
+                    "expiresAt": updateTime + 5 * 3600,
+                    "maxSize": 2,
+                    "participants": [],
+                    "roomName": "About UX",
+                    "roomOwner": "Natim"
+                  });
+                  done(err);
+                });
+            });
+        });
+    });
+  });
+
+  describe("DELETE /room/:token", function() {
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
         .include(validators.validateRoomToken);

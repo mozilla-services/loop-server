@@ -31,24 +31,26 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *
    **/
   apiRouter.post('/rooms', auth.requireHawkSession,
+    validators.requireParams('roomName', 'roomOwner', 'maxSize'),
     validators.validateRoomUrlParams, function(req, res) {
       var token = tokenlib.generateToken(conf.get("rooms").tokenSize);
       var now = parseInt(Date.now() / 1000, 10);
-      req.roomData.creationTime = now;
-      req.roomData.expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
+      req.roomBodyData.creationTime = now;
+      req.roomBodyData.updateTime = now;
+      req.roomBodyData.expiresAt = now + req.roomBodyData.expiresIn * tokenlib.ONE_HOUR;
 
       tokBox.getSession(function(err, session) {
         if (res.serverError(err)) return;
 
-        req.roomData.sessionId = session.sessionId;
+        req.roomBodyData.sessionId = session.sessionId;
 
-        storage.addUserRoomData(req.user, token, req.roomData, function(err) {
+        storage.addUserRoomData(req.user, token, req.roomBodyData, function(err) {
           if (res.serverError(err)) return;
 
           res.status(201).json({
             roomToken: token,
             roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-            expiresAt: req.roomData.expiresAt
+            expiresAt: req.roomBodyData.expiresAt
           });
         });
       });
@@ -68,32 +70,50 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * expiresAt - The date after which the room will no longer be valid (in
    * seconds since the Unix epoch).
    **/
-  apiRouter.put('/rooms/:token', function(req, res) {
-
-  });
-
-  apiRouter.delete('/rooms/:token', validators.validateRoomToken,
+  apiRouter.put('/rooms/:token', auth.requireHawkSession,
+    validators.validateRoomToken, validators.validateRoomUrlParams,
     function(req, res) {
+      var now = parseInt(Date.now() / 1000, 10);
+      req.roomData.updateTime = now;
+
+      // Update the object with new data
+      Object.keys(req.roomBodyData).map(function(key) {
+        req.roomData[key] = req.roomBodyData[key];
+      });
+
+      req.roomData.expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
+
+      storage.addUserRoomData(req.user, req.token, req.roomData, function(err) {
+        if (res.serverError(err)) return;
+        res.status(200).json({
+          expiresAt: req.roomData.expiresAt
+        });
+      });
+    });
+
+  apiRouter.delete('/rooms/:token', auth.requireHawkSession,
+    validators.validateRoomToken, function(req, res) {
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
         res.status(204).json({});
       });
     });
 
-  apiRouter.get('/rooms/:token', validators.validateRoomToken, function(req, res) {
-    var clientMaxSize = req.roomData.maxSize;
-    var participants = [];
+  apiRouter.get('/rooms/:token',  auth.requireHawkSession,
+    validators.validateRoomToken, function(req, res) {
+      var clientMaxSize = req.roomData.maxSize;
+      var participants = [];
 
-    res.status(200).json({
-      roomName: req.roomData.roomName,
-      roomOwner: req.roomData.roomOwner,
-      maxSize: req.roomData.maxSize,
-      clientMaxSize: clientMaxSize,
-      creationTime: req.roomData.creationTime,
-      expiresAt: req.roomData.expiresAt,
-      participants: participants
+      res.status(200).json({
+        roomName: req.roomData.roomName,
+        roomOwner: req.roomData.roomOwner,
+        maxSize: req.roomData.maxSize,
+        clientMaxSize: clientMaxSize,
+        creationTime: req.roomData.creationTime,
+        expiresAt: req.roomData.expiresAt,
+        participants: participants
+      });
     });
-  });
 
   /**
    * action - "join", "leave", "refresh".

@@ -153,63 +153,61 @@ module.exports = function(conf, logError, storage) {
   function validateRoomUrlParams(req, res, next) {
     var roomsConf = conf.get("rooms");
 
-    requireParams('roomName', 'roomOwner', 'maxSize')(req, res, function(){
-      var expiresIn = roomsConf.defaultTTL,
-          maxTTL = roomsConf.maxTTL,
-          serverMaxSize = roomsConf.maxSize,
-          maxSize;
+    var expiresIn = roomsConf.defaultTTL,
+        maxTTL = roomsConf.maxTTL,
+        serverMaxSize = roomsConf.maxSize,
+        maxSize;
 
-      if (req.body.hasOwnProperty("roomName")) {
-        if (req.body.roomName.length > roomsConf.maxRoomNameSize) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "roomName should be shorter than " +
-                    roomsConf.maxRoomNameSize + " characters");
-          return;
-        }
+    if (req.body.hasOwnProperty("roomName")) {
+      if (req.body.roomName.length > roomsConf.maxRoomNameSize) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "roomName should be shorter than " +
+                  roomsConf.maxRoomNameSize + " characters");
+        return;
       }
+    }
 
-      if (req.body.hasOwnProperty("roomOwner")) {
-        if (req.body.roomOwner.length > roomsConf.maxRoomOwnerSize) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "roomOwner should be shorter than " +
-                    roomsConf.maxRoomOwnerSize + " characters");
-          return;
-        }
+    if (req.body.hasOwnProperty("roomOwner")) {
+      if (req.body.roomOwner.length > roomsConf.maxRoomOwnerSize) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "roomOwner should be shorter than " +
+                  roomsConf.maxRoomOwnerSize + " characters");
+        return;
       }
+    }
 
-      if (req.body.hasOwnProperty("expiresIn")) {
-        expiresIn = parseInt(req.body.expiresIn, 10);
+    if (req.body.hasOwnProperty("expiresIn")) {
+      expiresIn = parseInt(req.body.expiresIn, 10);
 
-        if (isNaN(expiresIn)) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "expiresIn should be a valid number");
-          return;
-        } else if (expiresIn > maxTTL) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "expiresIn cannot be greater than " + maxTTL);
-          return;
-        }
+      if (isNaN(expiresIn)) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "expiresIn should be a valid number");
+        return;
+      } else if (expiresIn > maxTTL) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "expiresIn cannot be greater than " + maxTTL);
+        return;
       }
+    }
 
-      if(req.body.hasOwnProperty("maxSize")) {
-        maxSize = parseInt(req.body.maxSize);
+    if(req.body.hasOwnProperty("maxSize")) {
+      maxSize = parseInt(req.body.maxSize, 10);
 
-        if (maxSize > serverMaxSize) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "maxSize cannot be greater than " + serverMaxSize);
-          return;
-        }
+      if (maxSize > serverMaxSize) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "maxSize cannot be greater than " + serverMaxSize);
+        return;
       }
+    }
 
-      req.roomData = {
-        roomName: req.body.roomName,
-        expiresIn: expiresIn,
-        roomOwner: req.body.roomOwner,
-        maxSize: maxSize
-      };
+    req.roomBodyData = {
+      roomName: req.body.roomName,
+      expiresIn: expiresIn,
+      roomOwner: req.body.roomOwner,
+      maxSize: maxSize
+    };
 
-      next();
-    });
+    next();
   }
 
   /**
