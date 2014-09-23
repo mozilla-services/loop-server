@@ -410,6 +410,11 @@ var conf = convict({
       format: Number,
       default: 24 * 60 // Two months.
     },
+    participantTTL: {
+      doc: "The period (in seconds) were a participant is considered still in the room",
+      format: Number,
+      default: 5 * 60  // 5 minutes
+    },
     maxSize: {
       doc: "The maximum size of a room",
       format: Number,

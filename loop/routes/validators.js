@@ -227,7 +227,6 @@ module.exports = function(conf, logError, storage) {
     });
   }
 
-
   return {
     validateToken: validateToken,
     requireParams: requireParams,

@@ -26,6 +26,7 @@
     "hiredis": "0.1.17",
     "opentok": "2.2.4",
     "phone": "git://github.com/Natim/node-phone.git#83a4f48",
+    "node-uuid": "1.4.1",
     "raven": "0.7.0",
     "redis": "0.11.0",
     "request": "2.40.0",

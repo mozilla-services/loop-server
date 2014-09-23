@@ -7,7 +7,7 @@
 var errors = require('../errno.json');
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
-
+var uuid = require('node-uuid');
 
 /* eslint-disable */
 
@@ -33,16 +33,17 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.post('/rooms', auth.requireHawkSession,
     validators.requireParams('roomName', 'roomOwner', 'maxSize'),
     validators.validateRoomUrlParams, function(req, res) {
-      var token = tokenlib.generateToken(conf.get("rooms").tokenSize);
+      var token = tokenlib.generateToken(roomsConf.tokenSize);
       var now = parseInt(Date.now() / 1000, 10);
       req.roomBodyData.creationTime = now;
       req.roomBodyData.updateTime = now;
       req.roomBodyData.expiresAt = now + req.roomBodyData.expiresIn * tokenlib.ONE_HOUR;
 
-      tokBox.getSession(function(err, session) {
+      tokBox.getSession(function(err, session, opentok) {
         if (res.serverError(err)) return;
 
         req.roomBodyData.sessionId = session.sessionId;
+        req.roomBodyData.apiKey = opentok.apiKey;
 
         storage.addUserRoomData(req.user, token, req.roomBodyData, function(err) {
           if (res.serverError(err)) return;
@@ -99,7 +100,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       });
     });
 
-  apiRouter.get('/rooms/:token',  auth.requireHawkSession,
+  apiRouter.get('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, function(req, res) {
       var clientMaxSize = req.roomData.maxSize;
       var participants = [];
@@ -122,9 +123,74 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * displayName - User-friendly display name for the joining user.
    * clientMaxSize - Maximum number of room participants the user's client is capable of supporting.
    **/
-  apiRouter.post('/rooms/:token', function(req, res) {
+  apiRouter.post('/rooms/:token', auth.requireHawkSession,
+    validators.validateRoomToken, function(req, res) {
+      var ROOM_ACTIONS = ["join", "refresh", "leave"];
+      var action = req.body.action;
+      var code;
 
-  });
+      if (ROOM_ACTIONS.indexOf(action) === -1) {
+        if (req.body.hasOwnProperty('action')) {
+          code = errors.INVALID_PARAMETERS;
+        } else {
+          code = errors.MISSING_PARAMETERS;
+        }
+        sendError(res, 400, code,
+                  "action should be one of " + ROOM_ACTIONS.join(", "));
+        return;
+      }
+
+      var handlers = {
+        handleJoin: function() {
+          var ttl = roomsConf.participantTTL;
+          var sessionToken = tokBox.getSessionToken(req.roomData.sessionId);
+          storage.addRoomParticipant(req.token, req.user, {
+            id: uuid.v4(),
+            displayName: req.body.displayName,
+            clientMaxSize: req.body.clientMaxSize
+          }, ttl, function(err) {
+            if (res.serverError(err)) return;
+            res.status(200).json({
+              apiKey: req.roomData.apiKey,
+              sessionId: req.roomData.sessionId,
+              sessionToken: sessionToken,
+              expires: ttl
+            });
+          });
+        },
+        handleRefresh: function(req, res) {
+          var ttl = roomsConf.participantTTL;
+          storage.touchRoomParticipant(req.token, req.user, ttl,
+            function(err, success) {
+              if (res.serverError(err)) return;
+              if (success !== true) {
+                sendError(res, 410, errors.EXPIRED, "Participation has expired.");
+                return;
+              }
+              res.status(200).json({
+                expires: ttl
+              });
+            });
+        },
+        handleLeave: function(req, res) {
+          storage.deleteRoomParticipant(req.token, req.user, function(err) {
+            if (res.serverError(err)) return;
+            res.status(204).json();
+          });
+        }
+      };
+
+      if (action == "join") {
+        validators.requireParams('displayName', 'clientMaxSize')(
+          req, res, function() {
+            handlers.handleJoin(req, res);
+          });
+      } else if (action == "refresh") {
+        handlers.handleRefresh(req, res);
+      } else if (action == "leave") {
+        handlers.handleLeave(req, res);
+      }
+    });
 
   /**
    * returns:

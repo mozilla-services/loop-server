@@ -765,6 +765,69 @@ describe("Storage", function() {
           });
         });
       });
+
+      describe("#addRoomParticipant", function() {
+        it("should add a participant to the room", function(done) {
+          var ttl = 30;
+          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
+            function(err) {
+              if (err) throw err;
+              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
+                function(err) {
+                  if (err) throw err;
+                  storage.getRoomParticipants(roomToken, function(err, results) {
+                    if (err) throw err;
+                    expect(results).to.contain({"apiKey": "1"});
+                    expect(results).to.contain({"apiKey": "2"});
+                    done();
+                  });
+                });
+            });
+        });
+      });
+
+      describe("#touchRoomParticipant", function() {
+        it("should change the expiracy", function(done) {
+          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
+            function(err) {
+              if (err) throw err;
+              storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+                if (err) throw err;
+                expect(success).to.eql(true);
+                setTimeout(function() {
+                  storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
+                    if (err) return done(err);
+                    expect(success).to.eql(false);
+                    done();
+                  });
+                }, 15);
+              });
+            });
+        });
+      });
+
+      describe("#deleteRoomParticipant", function() {
+        it("should remove a participant to the room", function(done) {
+          var ttl = 30;
+          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
+            function(err) {
+              if (err) throw err;
+              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
+                function(err) {
+                  if (err) throw err;
+                  storage.deleteRoomParticipant(roomToken, "1234", function(err) {
+                    if (err) throw err;
+                    storage.getRoomParticipants(roomToken, function(err, results) {
+                      if (err) throw err;
+                      expect(results).to.not.contain({"apiKey": "1"});
+                      expect(results).to.contain({"apiKey": "2"});
+                      done();
+                    });
+                  });
+                });
+            });
+        });
+      });
     });
   }
 

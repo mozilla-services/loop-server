@@ -8,7 +8,6 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
-var assert = sinon.assert;
 var expectFormatedError = require("./support").expectFormatedError;
 var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
@@ -27,6 +26,7 @@ var tokBox = loop.tokBox;
 var requireHawkSession = auth.requireHawkSession;
 
 var sessionId = conf.get("fakeCallInfo").session1;
+var sessionToken = conf.get("fakeCallInfo").token1;
 var user = "alexis@notmyidea.org";
 
 describe("/rooms", function() {
@@ -38,6 +38,11 @@ describe("/rooms", function() {
     sandbox.stub(tokBox._opentok.default, "createSession",
       function(options, cb) {
         cb(null, {sessionId: sessionId});
+      });
+
+    sandbox.stub(tokBox._opentok.default, "generateToken",
+      function() {
+        return sessionToken;
       });
 
     var token = new Token();
@@ -180,6 +185,11 @@ describe("/rooms", function() {
         .include(validators.validateRoomUrlParams);
     });
 
+    it("should have the requireHawkSession middleware installed", function() {
+      expect(getMiddlewares(apiRouter, 'post', '/rooms'))
+        .include(requireHawkSession);
+    });
+
     it("should fail in case roomName parameter is missing", function(done) {
       postRoomReq.send({
         roomOwner: "Alexis",
@@ -254,6 +264,7 @@ describe("/rooms", function() {
           delete roomData.updateTime;
 
           expect(roomData).to.eql({
+            apiKey: tokBox._opentok.default.apiKey,
             sessionId: sessionId,
             roomName: "UX discussion",
             maxSize: 3,
@@ -265,11 +276,6 @@ describe("/rooms", function() {
      });
     });
 
-    it("should have the requireHawkSession middleware installed", function() {
-      expect(getMiddlewares(apiRouter, 'post', '/rooms'))
-        .include(requireHawkSession);
-    });
-
     it("should not use two times the same token");
   });
 
@@ -277,6 +283,11 @@ describe("/rooms", function() {
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'get', '/rooms/:token'))
         .include(validators.validateRoomToken);
+    });
+
+    it("should have the requireHawkSession middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'get', '/rooms/:token'))
+        .include(requireHawkSession);
     });
 
     it("should return appropriate info", function(done) {
@@ -301,13 +312,17 @@ describe("/rooms", function() {
             .expect(200)
             .end(function(err, getRes) {
               if (err) throw err;
+              expect(getRes.body.creationTime).to.be.gte(startTime);
+              expect(getRes.body.expiresAt).to.be.gte(startTime + 10 * 3600);
+
+              delete getRes.body.creationTime;
+              delete getRes.body.expiresAt;
+
               expect(getRes.body).to.eql({
                 roomOwner: "Alexis",
                 roomName: "UX discussion",
                 maxSize: 3,
                 clientMaxSize: 3,
-                creationTime: startTime,
-                expiresAt: startTime + 10 * 3600,
                 participants: []
               });
               done();
@@ -325,6 +340,11 @@ describe("/rooms", function() {
     it("should have the validateRoomUrlParams middleware.", function() {
       expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
         .include(validators.validateRoomUrlParams);
+    });
+
+    it("should have the requireHawkSession middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
+        .include(requireHawkSession);
     });
 
     it("should return a 200.", function(done) {
@@ -368,10 +388,14 @@ describe("/rooms", function() {
                 .end(function(err, getRes) {
                   if (err) throw err;
 
+                  expect(getRes.body.creationTime).to.be.gte(startTime);
+                  delete getRes.body.creationTime;
+
+                  expect(getRes.body.expiresAt).to.be.gte(updateTime + 5 * 3600);
+                  delete getRes.body.expiresAt;
+
                   expect(getRes.body).to.eql({
                     "clientMaxSize": 2,
-                    "creationTime": startTime,
-                    "expiresAt": updateTime + 5 * 3600,
                     "maxSize": 2,
                     "participants": [],
                     "roomName": "About UX",
@@ -384,14 +408,103 @@ describe("/rooms", function() {
     });
   });
 
+  describe("POST /room/:token", function() {
+    var token, postReq;
+
+    beforeEach(function(done) {
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          token = postRes.body.roomToken;
+          postReq = supertest(app)
+            .post('/rooms/' + token)
+            .type('json')
+            .hawk(hawkCredentials);
+          done();
+        });
+    });
+
+    it("should have the validateRoomToken middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'post', '/rooms/:token'))
+        .include(validators.validateRoomToken);
+    });
+
+    it("should have the requireHawkSession middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'post', '/rooms/:token'))
+        .include(requireHawkSession);
+    });
+
+    it("should fails if action is missing", function(done) {
+     postReq
+        .send({})
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                              "action should be one of join, refresh, leave");
+          done();
+        });
+    })
+
+    describe("Handle 'join'", function() {
+      it("should fail if params are missing.", function(done) {
+        postReq
+          .send({
+            action: "join"
+          })
+          .expect(400)
+          .end(function(err, res) {
+            if (err) throw err;
+            expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+                                "Missing: displayName, clientMaxSize");
+            done();
+          });
+      });
+
+      it("should return appropriate info.", function(done) {
+        postReq
+          .send({
+            action: "join",
+            clientMaxSize: 10,
+            displayName: "Natim"
+          })
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.eql({
+              "apiKey": tokBox._opentok.default.apiKey,
+              "expires": conf.get("rooms").participantTTL,
+              "sessionId": sessionId,
+              "sessionToken": sessionToken
+            });
+            done();
+          });
+      });
+    });
+  });
+
   describe("DELETE /room/:token", function() {
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
         .include(validators.validateRoomToken);
     });
 
+    it("should have the requireHawkSession middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
+        .include(requireHawkSession);
+    });
+
     it("should return a 204.", function(done) {
-      var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
         .post('/rooms')
         .type('json')
@@ -409,14 +522,14 @@ describe("/rooms", function() {
             .delete('/rooms/' + postRes.body.roomToken)
             .hawk(hawkCredentials)
             .expect(204)
-            .end(function(err, delRes) {
+            .end(function(err) {
               if (err) throw err;
               supertest(app)
                 .get('/rooms/' + postRes.body.roomToken)
                 .type('json')
                 .hawk(hawkCredentials)
                 .expect(404)
-                .end(function(err, getRes) {
+                .end(function(err) {
                   done(err);
                 });
             });
