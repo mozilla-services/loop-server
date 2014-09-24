@@ -24,7 +24,7 @@ var fakeNow = 1393595554796;
 describe("metrics middleware", function() {
   var sandbox;
   var logs;
-  var old_metrics;
+  var oldMetrics;
   var clock;
 
   apiRouter.get("/with-metrics-middleware", logMetrics, function(req, res) {
@@ -44,8 +44,11 @@ describe("metrics middleware", function() {
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
     clock = sinon.useFakeTimers(fakeNow);
-    old_metrics = conf.get('metrics');
-    conf.set('metrics', true);
+
+    oldMetrics = conf.get('hekaMetrics');
+    var hekaMetrics = JSON.parse(JSON.stringify(oldMetrics));
+    hekaMetrics.activated = true;
+    conf.set('hekaMetrics', hekaMetrics);
     sandbox.stub(hekaLogger, "log", function(info, log) {
       logs.push(log);
     });
@@ -54,7 +57,7 @@ describe("metrics middleware", function() {
 
   afterEach(function() {
     sandbox.restore();
-    conf.set('metrics', old_metrics);
+    conf.set('hekaMetrics', oldMetrics);
     clock.restore();
   });
 

@@ -18,6 +18,7 @@
     "atob": "1.1.2",
     "body-parser": "1.6.5",
     "connect-validation": "0.2.0",
+    "express-logging": "git://github.com/mozilla-services/express-logging.git",
     "convict": "0.4.2",
     "cors": "2.4.1",
     "eslint": "0.7.x",

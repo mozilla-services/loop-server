@@ -250,11 +250,6 @@ var conf = convict({
     format: Number,
     default: 30
   },
-  consoleDateFormat: {
-    doc: "Date format of the logging line in development.",
-    format: String,
-    default: "%y/%b/%d %H:%M:%S"
-  },
   fxaAudiences: {
     doc: "List of accepted fxa audiences.",
     format: Array,
@@ -319,11 +314,6 @@ var conf = convict({
     format: Number,
     default: 10
   },
-  metrics: {
-    doc: "Defines if metrics should be dumped to the stdout",
-    default: false,
-    format: Boolean
-  },
   progressURLEndpoint: {
     doc: "The endpoint to use for the progressURL.",
     format: String,
@@ -382,7 +372,24 @@ var conf = convict({
       default: "profile"
     }
   },
-  metricsFileParams: {
+  logRequests: {
+    activated: {
+      doc: "Defines if requests should be logged to Stdout",
+      default: false,
+      format: Boolean
+    },
+    consoleDateFormat: {
+      doc: "Date format of the logging line.",
+      format: String,
+      default: "%y/%b/%d %H:%M:%S"
+    }
+  },
+  hekaMetrics: {
+    activated: {
+      doc: "Defines if metrics should be directed to hekad",
+      default: false,
+      format: Boolean
+    },
     filename: {
       doc: "Heka logger file path",
       format: String,
@@ -411,7 +418,7 @@ var conf = convict({
       default: 24 * 60 // Two months.
     },
     participantTTL: {
-      doc: "The period (in seconds) were a participant is considered still in the room",
+      doc: "The TTL (in seconds) for a participant in the room",
       format: Number,
       default: 5 * 60  // 5 minutes
     },

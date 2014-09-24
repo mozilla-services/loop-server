@@ -1155,10 +1155,13 @@ function runOnPrefix(apiPrefix) {
           });
 
         describe("With working tokbox APIs", function() {
-          var _logs = [];
+          var _logs = [], oldMetrics;
 
           beforeEach(function() {
-            conf.set('metrics', true);
+            oldMetrics = conf.get('hekaMetrics');
+            var hekaMetrics = JSON.parse(JSON.stringify(oldMetrics));
+            hekaMetrics.activated = true;
+            conf.set('hekaMetrics', hekaMetrics);
             sandbox.stub(hekaLogger, "log", function(level, log) {
               try {
                 _logs.push(log);
@@ -1178,7 +1181,7 @@ function runOnPrefix(apiPrefix) {
 
           afterEach(function() {
             _logs = [];
-            conf.set('metrics', false);
+            conf.set('hekaMetrics', oldMetrics);
           });
 
           it("should log metrics with the user hash", function(done) {

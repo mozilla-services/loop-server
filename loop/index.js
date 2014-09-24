@@ -74,6 +74,7 @@ var app = express();
 app.use(corsEnabled);
 app.use(addHeaders);
 app.disable('x-powered-by');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(handle503(logError));
