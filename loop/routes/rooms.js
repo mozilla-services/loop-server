@@ -141,21 +141,27 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       }
 
       var handlers = {
-        handleJoin: function() {
-          var ttl = roomsConf.participantTTL;
-          var sessionToken = tokBox.getSessionToken(req.roomData.sessionId);
-          storage.addRoomParticipant(req.token, req.user, {
-            id: uuid.v4(),
-            displayName: req.body.displayName,
-            clientMaxSize: req.body.clientMaxSize
-          }, ttl, function(err) {
-            if (res.serverError(err)) return;
-            res.status(200).json({
-              apiKey: req.roomData.apiKey,
-              sessionId: req.roomData.sessionId,
-              sessionToken: sessionToken,
-              expires: ttl
-            });
+        handleJoin: function(req, res) {
+          validators.requireParams('displayName', 'clientMaxSize')
+            (req, res, function() {
+              var ttl = roomsConf.participantTTL;
+              var sessionToken = tokBox.getSessionToken(
+                req.roomData.sessionId
+              );
+
+              storage.addRoomParticipant(req.token, req.user, {
+                id: uuid.v4(),
+                displayName: req.body.displayName,
+                clientMaxSize: req.body.clientMaxSize
+              }, ttl, function(err) {
+                if (res.serverError(err)) return;
+                res.status(200).json({
+                  apiKey: req.roomData.apiKey,
+                  sessionId: req.roomData.sessionId,
+                  sessionToken: sessionToken,
+                  expires: ttl
+                });
+              });
           });
         },
         handleRefresh: function(req, res) {
@@ -181,10 +187,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       };
 
       if (action == "join") {
-        validators.requireParams('displayName', 'clientMaxSize')(
-          req, res, function() {
-            handlers.handleJoin(req, res);
-          });
+        handlers.handleJoin(req, res);
       } else if (action == "refresh") {
         handlers.handleRefresh(req, res);
       } else if (action == "leave") {

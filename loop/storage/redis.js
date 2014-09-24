@@ -709,12 +709,15 @@ RedisStorage.prototype = {
     } else if (roomData.expiresAt === undefined) {
       callback(new Error("roomData should have an expiresAt property."));
       return;
+    } else if (roomData.updateTime === undefined) {
+      callback(new Error("roomData should have an updateTime property."));
+      return;
     }
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'room.' + roomToken,
-      roomData.expiresAt - parseInt(Date.now() / 1000, 10),
+      roomData.expiresAt - roomData.updateTime,
       JSON.stringify(roomData),
       function(err) {
         if (err) {

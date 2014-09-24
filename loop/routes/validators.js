@@ -211,8 +211,8 @@ module.exports = function(conf, logError, storage) {
   }
 
   /**
-   * Middleware that validates the given token is valid (should be included into
-   * the "token" parameter.
+   * Middleware that validates the given token (should be included into
+   * the "token" parameter).
    **/
   function validateRoomToken(req, res, next) {
     req.token = req.param('token');
