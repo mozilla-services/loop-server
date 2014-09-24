@@ -1,0 +1,26 @@
+# Rooms
+
+## Questions
+
+- Do we want to have a default value for some parameters on POST /rooms?
+- What the default configuration should be, with hints from us.
+- What should be the size of the room token? 8 Bytes for now.
+- Should we dedupe the users in the room?
+
+## Code & Test
+
+- We should add CORS handling and test it.
+- Handle the TokBox channel on /rooms (+to say)
+- WebApp Url should be refactored.
+- PUT /rooms/token should be PATCH. (+to say)
+- Rename req.roomData in req.roomStorageData
+- Use a local roomData var istead of updating req.roomData
+- Check the room owner on put, patch and delete
+- add user renamed to set user (addUserRoomData)
+- manage the participants in GET /rooms/token and DELETE
+
+## To say
+
+- It's not a 200 it's a 201 on resource creation;
+- Handle the TokBox channel on /rooms;
+- PUT /rooms/token should be PATCH.
