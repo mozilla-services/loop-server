@@ -6,19 +6,25 @@ This document describes changes between each past release.
 0.13.0 (Unreleased)
 -------------------
 
+- [config] 1072293 — Consolidated call url configuration;
+- [config] 1072271 — Refactor logging configuration;
+
+
 0.12.3 (2014-10-02)
 -------------------
 
 - [bugfix] 1071247 — Fix OAuth implementation;
 - [tooling] Add a command to calculate the hawkIdHmac from the hawkId+hawkIdSecret
 
+
 0.12.2 (2014-09-18)
 -------------------
 
 - [bugfix] Clear the setTimeout() on connection close (ws);
-- [bugfix] Check the headers using .get, not .headers;
-- [bugfix] Be sure to handle tokbox failures on time;
+- [bugfix] 1068602 — Check the headers using .get, not .headers;
+- [bugfix] 1069168 — Be sure to handle tokbox failures on time;
 - [config] Rename "host" into "ip".
+
 
 0.12.0 (2014-09-15)
 -------------------
