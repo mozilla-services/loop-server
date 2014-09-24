@@ -113,10 +113,10 @@ module.exports = function(conf, logError, storage) {
    * If they are valid, store them in the urlData parameter of the request.
    **/
   function validateCallUrlParams(req, res, next) {
-    var expiresIn = conf.get('callUrlTimeout'),
-        maxTimeout = conf.get('callUrlMaxTimeout');
+    var expiresIn = conf.get('callUrls').timeout,
+        maxTimeout = conf.get('callUrls').maxTimeout;
 
-    if (req.body.hasOwnProperty("expiresIn")) {
+    if (req.body.hasOwnProperty('expiresIn')) {
       expiresIn = parseInt(req.body.expiresIn, 10);
 
       if (isNaN(expiresIn)) {
@@ -130,7 +130,7 @@ module.exports = function(conf, logError, storage) {
       }
     }
     if (req.token === undefined) {
-      req.token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+      req.token = tokenlib.generateToken(conf.get('callUrls').tokenSize);
     }
 
     req.urlData = {
@@ -151,14 +151,14 @@ module.exports = function(conf, logError, storage) {
    * Validate the room url parameters passed in the body.
    **/
   function validateRoomUrlParams(req, res, next) {
-    var roomsConf = conf.get("rooms");
+    var roomsConf = conf.get('rooms');
 
     var expiresIn = roomsConf.defaultTTL,
         maxTTL = roomsConf.maxTTL,
         serverMaxSize = roomsConf.maxSize,
         maxSize;
 
-    if (req.body.hasOwnProperty("roomName")) {
+    if (req.body.hasOwnProperty('roomName')) {
       if (req.body.roomName.length > roomsConf.maxRoomNameSize) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "roomName should be shorter than " +
@@ -167,7 +167,7 @@ module.exports = function(conf, logError, storage) {
       }
     }
 
-    if (req.body.hasOwnProperty("roomOwner")) {
+    if (req.body.hasOwnProperty('roomOwner')) {
       if (req.body.roomOwner.length > roomsConf.maxRoomOwnerSize) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "roomOwner should be shorter than " +
@@ -176,7 +176,7 @@ module.exports = function(conf, logError, storage) {
       }
     }
 
-    if (req.body.hasOwnProperty("expiresIn")) {
+    if (req.body.hasOwnProperty('expiresIn')) {
       expiresIn = parseInt(req.body.expiresIn, 10);
 
       if (isNaN(expiresIn)) {
@@ -190,7 +190,7 @@ module.exports = function(conf, logError, storage) {
       }
     }
 
-    if(req.body.hasOwnProperty("maxSize")) {
+    if(req.body.hasOwnProperty('maxSize')) {
       maxSize = parseInt(req.body.maxSize, 10);
 
       if (maxSize > serverMaxSize) {

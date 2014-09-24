@@ -52,7 +52,7 @@ var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
 var progressURL = getProgressURL(conf.get('publicServerAddress'));
-
+var callUrls = conf.get('callUrls');
 
 function runOnPrefix(apiPrefix) {
   var userHmac, userHmac2, userHmac3, hawkIdHmac, hawkIdHmac2, hawkIdHmac3;
@@ -198,7 +198,7 @@ function runOnPrefix(apiPrefix) {
     Object.keys(routes).forEach(function(route) {
       routes[route].forEach(function(method) {
         if (route.indexOf('token') !== -1) {
-          var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+          var token = tokenlib.generateToken(callUrls.tokenSize);
           route = route.replace('token', token);
         }
 
@@ -432,21 +432,33 @@ function runOnPrefix(apiPrefix) {
           });
       });
 
-      it("should check the given expiration is not greater than the max",
-        function(done) {
-          var oldMaxTimeout = conf.get('callUrlMaxTimeout');
-          conf.set('callUrlMaxTimeout', 5);
-          jsonReq
-            .send({callerId: callerId, expiresIn: "10"})
-            .expect(400)
-            .end(function(err, res) {
-              if (err) throw err;
-              expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-                                  "expiresIn should be less than 5");
-              conf.set('callUrlMaxTimeout', oldMaxTimeout);
-              done();
-            });
+      describe("with mocked maxTimeout", function() {
+        var oldMaxTimeout;
+
+        beforeEach(function() {
+          oldMaxTimeout = callUrls.maxTimeout;
+          callUrls.maxTimeout = 5;
+          conf.set('callUrls', callUrls);
         });
+
+        afterEach(function() {
+          callUrls.maxTimeout = oldMaxTimeout;
+          conf.set('callUrls', callUrls);
+        });
+
+        it("should check the given expiration is not greater than the max",
+          function(done) {
+            jsonReq
+              .send({callerId: callerId, expiresIn: "10"})
+              .expect(400)
+              .end(function(err, res) {
+                if (err) throw err;
+                expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                                    "expiresIn should be less than 5");
+                done();
+              });
+          });
+      });
 
       it("should accept an expiresIn parameter", function(done) {
         jsonReq
@@ -689,13 +701,13 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a the calleeFriendlyName", function(done) {
         var calleeFriendlyName = "Adam Roach";
-        var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        var token = tokenlib.generateToken(callUrls.tokenSize);
         var timestamp = parseInt(Date.now() / 1000, 10);
         storage.addUserCallUrlData(userHmac, token, {
           userMac: userHmac,
           issuer: calleeFriendlyName,
           timestamp: timestamp,
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }, function(err) {
           if (err) throw err;
 
@@ -719,10 +731,10 @@ function runOnPrefix(apiPrefix) {
     describe("PUT /call-url/:token", function() {
       var token;
       beforeEach(function(done) {
-        token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        token = tokenlib.generateToken(callUrls.tokenSize);
         storage.addUserCallUrlData(userHmac, token, {
           timestamp: parseInt(Date.now() / 1000, 10),
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }, function(err) {
           if (err) throw err;
           done();
@@ -774,11 +786,11 @@ function runOnPrefix(apiPrefix) {
       beforeEach(function(done) {
         clock = sinon.useFakeTimers(fakeNow);
 
-        token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        token = tokenlib.generateToken(callUrls.tokenSize);
         storage.addUserCallUrlData(userHmac, token, {
           userMac: userHmac,
           timestamp: parseInt(Date.now() / 1000, 10),
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }, function(err) {
           if (err) throw err;
           req = supertest(app)
@@ -815,7 +827,7 @@ function runOnPrefix(apiPrefix) {
           storage.addUserCallUrlData(userHmac, token, {
             userMac: "h4x0r",
             timestamp: parseInt(Date.now() / 1000, 10),
-            expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+            expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
           }, function(err) {
             if (err) throw err;
             req = supertest(app)
@@ -1026,7 +1038,7 @@ function runOnPrefix(apiPrefix) {
           requests.push(options);
         });
 
-        token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        token = tokenlib.generateToken(callUrls.tokenSize);
 
         var timestamp = parseInt(Date.now() / 1000, 10);
 
@@ -1034,7 +1046,7 @@ function runOnPrefix(apiPrefix) {
           userMac: userHmac,
           callerId: callerId,
           timestamp: timestamp,
-          expires: timestamp + conf.get("callUrlTimeout")
+          expires: timestamp + callUrls.timeout
         }, done);
       });
 

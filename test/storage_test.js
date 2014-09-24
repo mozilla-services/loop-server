@@ -20,6 +20,7 @@ var callerId = 'natim@mozilla.com';
 var simplePushURL = "https://push.mozilla.com/test";
 var simplePushURL2 = "https://push.mozilla.com/test2";
 var fakeCallInfo = conf.get("fakeCallInfo");
+var callUrls = conf.get('callUrls');
 
 
 describe("Storage", function() {
@@ -59,19 +60,19 @@ describe("Storage", function() {
       urls = [
         {
           timestamp:  parseInt(Date.now() / 1000, 10),
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         },
         {
           timestamp:  parseInt(Date.now() / 1000, 10) + 1,
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         },
         {
           timestamp:  parseInt(Date.now() / 1000, 10) + 2,
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }
       ],
     urlData = urls[0],
-    callToken = generateToken(conf.get("callUrlTokenSize")),
+    callToken = generateToken(callUrls.tokenSize),
     roomToken = generateToken(conf.get("rooms").tokenSize),
     roomData = {
       sessionId: fakeCallInfo.session1,
@@ -305,7 +306,7 @@ describe("Storage", function() {
         });
 
         it("should keep a list of the user urls", function(done) {
-          var token1 = generateToken(conf.get("callUrlTokenSize"));
+          var token1 = generateToken(callUrls.tokenSize);
           storage.addUserCallUrlData(
             userMac,
             token1,
@@ -313,12 +314,12 @@ describe("Storage", function() {
             function() {
               storage.addUserCallUrlData(
                 userMac,
-                generateToken(conf.get("callUrlTokenSize")),
+                generateToken(callUrls.tokenSize),
                 urls[1],
                 function() {
                   storage.addUserCallUrlData(
                     userMac,
-                    generateToken(conf.get("callUrlTokenSize")),
+                    generateToken(callUrls.tokenSize),
                     urls[2],
                     function() {
                       storage.getUserCallUrls(userMac, function(err, results) {
@@ -389,17 +390,17 @@ describe("Storage", function() {
         it("should delete all call data for a given user", function(done){
           storage.addUserCallUrlData(
             userMac,
-            generateToken(conf.get("callUrlTokenSize")),
+            generateToken(callUrls.tokenSize),
             urls[0],
             function() {
               storage.addUserCallUrlData(
                 userMac,
-                generateToken(conf.get("callUrlTokenSize")),
+                generateToken(callUrls.tokenSize),
                 urls[1],
                 function() {
                   storage.addUserCallUrlData(
                     userMac,
-                    generateToken(conf.get("callUrlTokenSize")),
+                    generateToken(callUrls.tokenSize),
                     urls[2],
                     function() {
                       storage.deleteUserCallUrls(userMac, function(err) {

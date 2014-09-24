@@ -140,20 +140,22 @@ var conf = convict({
     default: "sha256",
     env: "USER_MAC_ALGORITHM"
   },
-  callUrlTokenSize: {
-    doc: "The callUrl token size (in bytes).",
-    format: Number,
-    default: 8
-  },
-  callUrlTimeout: {
-    doc: "How much time a token is valid for (in hours)",
-    format: Number,
-    default: 24 * 30 // One month.
-  },
-  callUrlMaxTimeout: {
-    doc: "The maximum number of hours a token can be valid for.",
-    format: Number,
-    default: 24 * 30
+  callUrls: {
+    tokenSize: {
+      doc: "The callUrl token size (in bytes).",
+      format: Number,
+      default: 8
+    },
+    timeout: {
+      doc: "How much time a token is valid for (in hours)",
+      format: Number,
+      default: 24 * 30 // One month.
+    },
+    maxTimeout: {
+      doc: "The maximum number of hours a token can be valid for.",
+      format: Number,
+      default: 24 * 30
+    }
   },
   displayVersion: {
     doc: "Display the server version on the homepage.",
@@ -479,8 +481,8 @@ if (conf.get('fxaAudiences').length === 0) {
 }
 
 if (conf.get('hawkSessionDuration') <
-    conf.get('callUrlMaxTimeout') * 60 * 60) {
-  throw "hawkSessionDuration should be longer or equal to callUrlMaxTimeout.";
+    conf.get('callUrls').maxTimeout * 60 * 60) {
+  throw "hawkSessionDuration should be longer or equal to callUrls.maxTimeout";
 }
 
 if (conf.get('fxaOAuth').activated && conf.get('fxaOAuth').client_id === "") {

@@ -16,6 +16,10 @@ var Token = require("express-hawkauth").Token;
 var constants = require("../loop/constants");
 var hmac = require("../loop/hmac");
 var loop = require("../loop");
+var request = require("request");
+var expectFormatedError = require("./support").expectFormatedError;
+var errors = require("../loop/errno.json");
+
 var apiPrefix = loop.apiPrefix;
 var conf = loop.conf;
 var app = loop.app;
@@ -25,7 +29,6 @@ var shutdown = loop.shutdown;
 var storage = loop.storage;
 var storeUserCallTokens = loop.storeUserCallTokens;
 var tokBox = loop.tokBox;
-var request = require("request");
 var auth = loop.auth;
 var authenticate = auth.authenticate;
 var validators = loop.validators;
@@ -33,8 +36,8 @@ var validateToken = validators.validateToken;
 var requireParams = validators.requireParams;
 var validateSimplePushURL = validators.validateSimplePushURL;
 var validateCallType = validators.validateCallType;
-var expectFormatedError = require("./support").expectFormatedError;
-var errors = require("../loop/errno.json");
+
+var callUrls = conf.get('callUrls');
 
 describe("index.js", function() {
   var jsonReq;
@@ -129,7 +132,7 @@ describe("index.js", function() {
     it("should return a 404 if the token had been revoked", function(done) {
       storage.addUserCallUrlData("natim", "1234", {
         timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
+        expires: Date.now() + callUrls.timeout
       }, function(err) {
         if (err) throw err;
         storage.revokeURLToken("1234", function(err) {
@@ -150,7 +153,7 @@ describe("index.js", function() {
     it("should return a 200 if the token is valid.", function(done) {
       storage.addUserCallUrlData("natim", "1234", {
         timestamp: Date.now(),
-        expires: Date.now() + conf.get("callUrlTimeout")
+        expires: Date.now() + callUrls.timeout
       }, function(err) {
         if (err) throw err;
         jsonReq
