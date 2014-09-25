@@ -331,19 +331,19 @@ describe("/rooms", function() {
     });
   });
 
-  describe("PUT /room/:token", function() {
+  describe("PATCH /room/:token", function() {
     it("should have the validateRoomToken middleware.", function() {
-      expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
+      expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
         .include(validators.validateRoomToken);
     });
 
     it("should have the validateRoomUrlParams middleware.", function() {
-      expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
+      expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
         .include(validators.validateRoomUrlParams);
     });
 
     it("should have the requireHawkSession middleware.", function() {
-      expect(getMiddlewares(apiRouter, 'put', '/rooms/:token'))
+      expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
         .include(requireHawkSession);
     });
 
@@ -365,7 +365,7 @@ describe("/rooms", function() {
 
           var updateTime = parseInt(Date.now() / 1000, 10);
           supertest(app)
-            .put('/rooms/' + postRes.body.roomToken)
+            .patch('/rooms/' + postRes.body.roomToken)
             .hawk(hawkCredentials)
             .send({
               roomOwner: "Natim",
@@ -374,9 +374,9 @@ describe("/rooms", function() {
               expiresIn: "5"
             })
             .expect(200)
-            .end(function(err, putRes) {
+            .end(function(err, patchRes) {
               if (err) throw err;
-              expect(putRes.body.expiresAt).to.equal(
+              expect(patchRes.body.expiresAt).to.equal(
                 updateTime + 5 * 3600
               );
 

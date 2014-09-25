@@ -71,7 +71,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * expiresAt - The date after which the room will no longer be valid (in
    * seconds since the Unix epoch).
    **/
-  apiRouter.put('/rooms/:token', auth.requireHawkSession,
+  apiRouter.patch('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.validateRoomUrlParams,
     function(req, res) {
       var now = parseInt(Date.now() / 1000, 10);
