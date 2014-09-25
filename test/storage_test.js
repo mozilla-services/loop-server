@@ -729,9 +729,9 @@ describe("Storage", function() {
         });
       });
 
-      describe("#addUserRoomData", function() {
+      describe("#setUserRoomData", function() {
         it("should be able to add one room to the store", function(done) {
-          storage.addUserRoomData(userMac, roomToken, roomData, function(err) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
             storage.getRoomData(roomToken, function(err, storedRoomData) {
               if (err) throw err;
@@ -745,7 +745,7 @@ describe("Storage", function() {
           function(done) {
             var invalidData = JSON.parse(JSON.stringify(roomData));
             invalidData.expiresAt = undefined;
-            storage.addUserRoomData(userMac, roomToken, invalidData,
+            storage.setUserRoomData(userMac, roomToken, invalidData,
               function(err) {
                 expect(err.message)
                   .eql("roomData should have an expiresAt property.");
@@ -756,7 +756,7 @@ describe("Storage", function() {
 
       describe("#deleteRoomData", function() {
         it("should remove the room from the store", function(done) {
-          storage.addUserRoomData(userMac, roomToken, roomData, function(err) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
             storage.deleteRoomData(roomToken, function(err) {
               if (err) throw err;

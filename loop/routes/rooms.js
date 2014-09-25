@@ -47,7 +47,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         roomData.sessionId = session.sessionId;
         roomData.apiKey = opentok.apiKey;
 
-        storage.addUserRoomData(req.user, token, roomData, function(err) {
+        storage.setUserRoomData(req.user, token, roomData, function(err) {
           if (res.serverError(err)) return;
 
           res.status(201).json({
@@ -88,7 +88,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
 
-      storage.addUserRoomData(req.user, req.token, roomData, function(err) {
+      storage.setUserRoomData(req.user, req.token, roomData, function(err) {
         if (res.serverError(err)) return;
         res.status(200).json({
           expiresAt: roomData.expiresAt

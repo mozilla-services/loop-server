@@ -699,7 +699,7 @@ RedisStorage.prototype = {
     this._client.del('oauth.state.' + hawkIdHmac, callback);
   },
 
-  addUserRoomData: function(userMac, roomToken, roomData, callback) {
+  setUserRoomData: function(userMac, roomToken, roomData, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
       return;

@@ -13,11 +13,11 @@
 + Rename req.roomData in req.roomStorageData
 + Use a local roomData var instead of updating req.roomData
 + Check the room owner on patch and delete
-- WebApp Url should be refactored.
-- add user renamed to set user (addUserRoomData)
++ Rename addUserRoomData to setUserRoomData
 - manage the participants in GET /rooms/token and DELETE
 - Handle the TokBox channel on /rooms (+to say)
 - We should add CORS handling and test it.
+- WebApp Url should be refactored.
 
 ## To say
 
