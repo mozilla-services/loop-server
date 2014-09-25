@@ -35,23 +35,23 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomUrlParams, function(req, res) {
       var token = tokenlib.generateToken(roomsConf.tokenSize);
       var now = parseInt(Date.now() / 1000, 10);
-      req.roomBodyData.creationTime = now;
-      req.roomBodyData.updateTime = now;
-      req.roomBodyData.expiresAt = now + req.roomBodyData.expiresIn * tokenlib.ONE_HOUR;
+      req.roomRequestData.creationTime = now;
+      req.roomRequestData.updateTime = now;
+      req.roomRequestData.expiresAt = now + req.roomRequestData.expiresIn * tokenlib.ONE_HOUR;
 
       tokBox.getSession(function(err, session, opentok) {
         if (res.serverError(err)) return;
 
-        req.roomBodyData.sessionId = session.sessionId;
-        req.roomBodyData.apiKey = opentok.apiKey;
+        req.roomRequestData.sessionId = session.sessionId;
+        req.roomRequestData.apiKey = opentok.apiKey;
 
-        storage.addUserRoomData(req.user, token, req.roomBodyData, function(err) {
+        storage.addUserRoomData(req.user, token, req.roomRequestData, function(err) {
           if (res.serverError(err)) return;
 
           res.status(201).json({
             roomToken: token,
             roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-            expiresAt: req.roomBodyData.expiresAt
+            expiresAt: req.roomRequestData.expiresAt
           });
         });
       });
@@ -78,8 +78,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       req.roomStorageData.updateTime = now;
 
       // Update the object with new data
-      Object.keys(req.roomBodyData).map(function(key) {
-        req.roomStorageData[key] = req.roomBodyData[key];
+      Object.keys(req.roomRequestData).map(function(key) {
+        req.roomStorageData[key] = req.roomRequestData[key];
       });
 
       req.roomStorageData.expiresAt = now + req.roomStorageData.expiresIn * tokenlib.ONE_HOUR;

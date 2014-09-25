@@ -200,7 +200,7 @@ module.exports = function(conf, logError, storage) {
       }
     }
 
-    req.roomBodyData = {
+    req.roomRequestData = {
       roomName: req.body.roomName,
       expiresIn: expiresIn,
       roomOwner: req.body.roomOwner,

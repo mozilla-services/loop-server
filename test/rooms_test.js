@@ -68,7 +68,7 @@ describe("/rooms", function() {
 
   describe("validators", function() {
     apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
-      res.status(200).json(req.roomBodyData);
+      res.status(200).json(req.roomRequestData);
     });
 
     var validateRoomReq;
