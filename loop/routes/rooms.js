@@ -39,6 +39,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       roomData.creationTime = now;
       roomData.updateTime = now;
       roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
+      roomData.roomOwnerHmac = req.user;
 
       tokBox.getSession(function(err, session, opentok) {
         if (res.serverError(err)) return;
@@ -74,7 +75,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    **/
   apiRouter.patch('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.validateRoomUrlParams,
-    function(req, res) {
+    validators.isRoomOwner, function(req, res) {
       var now = parseInt(Date.now() / 1000, 10);
       var roomData = req.roomStorageData;
 
@@ -96,7 +97,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
 
   apiRouter.delete('/rooms/:token', auth.requireHawkSession,
-    validators.validateRoomToken, function(req, res) {
+    validators.validateRoomToken, validators.isRoomOwner,
+    function(req, res) {
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
         res.status(204).json({});

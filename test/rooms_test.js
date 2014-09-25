@@ -67,105 +67,160 @@ describe("/rooms", function() {
   });
 
   describe("validators", function() {
-    apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
-      res.status(200).json(req.roomRequestData);
-    });
+    describe("#validateRoomUrlParams", function() {
+      apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
+        res.status(200).json(req.roomRequestData);
+      });
 
-    var validateRoomReq;
+      var validateRoomReq;
 
-    beforeEach(function() {
-      validateRoomReq = supertest(app)
-        .post('/validate-room-url')
-        .type('json');
-    });
+      beforeEach(function() {
+        validateRoomReq = supertest(app)
+          .post('/validate-room-url')
+          .type('json');
+      });
 
-    it("should not fail if all parameters validate", function(done) {
-      validateRoomReq.send({
-        roomName: "UX Discussion",
-        expiresIn: "5",
-        roomOwner: "Alexis",
-        maxSize: "2"
-      })
-      .expect(200)
-      .end(done);
-    });
-
-    it("should use default value if expiresIn parameter is missing",
-      function(done) {
+      it("should not fail if all parameters validate", function(done) {
         validateRoomReq.send({
           roomName: "UX Discussion",
+          expiresIn: "5",
           roomOwner: "Alexis",
           maxSize: "2"
         })
         .expect(200)
-        .end(function(err, res) {
-          if (err) throw err;
-          expect(res.body.expiresIn).to.eql(conf.get('rooms').defaultTTL);
-          done();
+        .end(done);
+      });
+
+      it("should use default value if expiresIn parameter is missing",
+        function(done) {
+          validateRoomReq.send({
+            roomName: "UX Discussion",
+            roomOwner: "Alexis",
+            maxSize: "2"
+          })
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body.expiresIn).to.eql(conf.get('rooms').defaultTTL);
+            done();
+          });
         });
-      });
 
-    it("should fail if roomName exceeds maxRoomNameSize chars", function(done) {
-      validateRoomReq.send({
-        roomOwner: "Alexis",
-        roomName: "This is too long for loop",
-        maxSize: "3"
-      })
-      .expect(400)
-      .end(function(err, res) {
-        if (err) throw err;
-        expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-          "roomName should be shorter than 15 characters");
-        done();
-      });
-    });
-
-    it("should fail if roomOwner exceeds 100 chars", function(done) {
-      validateRoomReq.send({
-        roomOwner: "Alexis has a name that's too long",
-        roomName: "UX discussion",
-        maxSize: "3"
-      })
-      .expect(400)
-      .end(function(err, res) {
-        if (err) throw err;
-        expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-          "roomOwner should be shorter than 10 characters");
-        done();
-      });
-    });
-
-    it("should fail if expiresIn exceeds the server max value",
-      function(done) {
+      it("should fail if roomName exceeds maxRoomNameSize chars", function(done) {
         validateRoomReq.send({
           roomOwner: "Alexis",
-          roomName: "UX discussion",
-          maxSize: "3",
-          expiresIn: "11"
+          roomName: "This is too long for loop",
+          maxSize: "3"
         })
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
           expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-            "expiresIn cannot be greater than 10");
+            "roomName should be shorter than 15 characters");
           done();
         });
       });
 
-    it("should fail if maxSize exceeds the server max value", function(done) {
-      validateRoomReq.send({
-        roomOwner: "Alexis",
-        roomName: "UX discussion",
-        maxSize: "4",
-        expiresIn: "10"
-      })
-      .expect(400)
-      .end(function(err, res) {
-        if (err) throw err;
-        expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-          "maxSize cannot be greater than 3");
-        done();
+      it("should fail if roomOwner exceeds 100 chars", function(done) {
+        validateRoomReq.send({
+          roomOwner: "Alexis has a name that's too long",
+          roomName: "UX discussion",
+          maxSize: "3"
+        })
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+            "roomOwner should be shorter than 10 characters");
+          done();
+        });
       });
+
+      it("should fail if expiresIn exceeds the server max value",
+        function(done) {
+          validateRoomReq.send({
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "3",
+            expiresIn: "11"
+          })
+          .expect(400)
+          .end(function(err, res) {
+            if (err) throw err;
+            expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+              "expiresIn cannot be greater than 10");
+            done();
+          });
+        });
+
+      it("should fail if maxSize exceeds the server max value", function(done) {
+        validateRoomReq.send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "4",
+          expiresIn: "10"
+        })
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+            "maxSize cannot be greater than 3");
+          done();
+        });
+      });
+    });
+
+    describe("#isRoomOwner", function() {
+      apiRouter.get('/should-be-room-owner', function(req, res, next) {
+        req.roomStorageData = {roomOwnerHmac: userHmac};
+        next();
+      }, requireHawkSession, validators.isRoomOwner, function(req, res) {
+        res.status(200).json("ok");
+      });
+
+      var req;
+      beforeEach(function() {
+        req = supertest(app).get('/should-be-room-owner');
+      });
+
+      it("should return a 403 if user is not a room owner", function(done) {
+        // Create a valid hawk session, which is not a room owner.
+        var token = new Token();
+        var wrongOwnerCredentials;
+        token.getCredentials(function(tokenId, authKey) {
+          wrongOwnerCredentials = {
+            id: tokenId,
+            key: authKey,
+            algorithm: "sha256"
+          };
+          var wrongHawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+          var wrongUserHmac = hmac("remy", conf.get('userMacSecret'));
+          storage.setHawkSession(wrongHawkIdHmac, authKey, function(err) {
+            if (err) throw err;
+            storage.setHawkUser(wrongUserHmac, wrongHawkIdHmac, function(err) {
+              if (err) throw err;
+              req
+                .hawk(wrongOwnerCredentials)
+                .expect(403)
+                .end(function(err, res) {
+                  if (err) throw err;
+                  expectFormatedError(res, 403, errors.UNDEFINED,
+                    "Authenticated user is not the owner of this room.");
+                  done();
+                });
+            });
+          });
+        });
+
+      });
+
+      it("should return a 200 if user is the room owner", function(done) {
+        req
+          .hawk(hawkCredentials)
+          .expect(200)
+          .end(done);
+      });
+
     });
 
   });
@@ -269,7 +324,8 @@ describe("/rooms", function() {
             roomName: "UX discussion",
             maxSize: 3,
             roomOwner: "Alexis",
-            expiresIn: 10
+            expiresIn: 10,
+            roomOwnerHmac: userHmac
           });
           done();
         });
@@ -345,6 +401,11 @@ describe("/rooms", function() {
     it("should have the requireHawkSession middleware.", function() {
       expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
         .include(requireHawkSession);
+    });
+
+    it("should have the isRoomOwner middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
+        .include(validators.isRoomOwner);
     });
 
     it("should return a 200.", function(done) {
@@ -502,6 +563,11 @@ describe("/rooms", function() {
     it("should have the requireHawkSession middleware.", function() {
       expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
         .include(requireHawkSession);
+    });
+
+    it("should have the isRoomOwner middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
+        .include(validators.isRoomOwner);
     });
 
     it("should return a 204.", function(done) {

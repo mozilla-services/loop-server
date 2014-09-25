@@ -227,6 +227,17 @@ module.exports = function(conf, logError, storage) {
     });
   }
 
+  function isRoomOwner(req, res, next) {
+    if (req.user === req.roomStorageData.roomOwnerHmac) {
+      next();
+      return;
+    }
+    sendError(
+      res, 403, errors.UNDEFINED,
+      "Authenticated user is not the owner of this room."
+    );
+  }
+
   return {
     validateToken: validateToken,
     requireParams: requireParams,
@@ -234,6 +245,7 @@ module.exports = function(conf, logError, storage) {
     validateCallType: validateCallType,
     validateCallUrlParams: validateCallUrlParams,
     validateRoomUrlParams: validateRoomUrlParams,
-    validateRoomToken: validateRoomToken
+    validateRoomToken: validateRoomToken,
+    isRoomOwner: isRoomOwner
   };
 };

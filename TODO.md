@@ -12,7 +12,7 @@
 + PUT /rooms/token should be PATCH. (+to say)
 + Rename req.roomData in req.roomStorageData
 + Use a local roomData var instead of updating req.roomData
-- Check the room owner on put, patch and delete
++ Check the room owner on patch and delete
 - WebApp Url should be refactored.
 - add user renamed to set user (addUserRoomData)
 - manage the participants in GET /rooms/token and DELETE
