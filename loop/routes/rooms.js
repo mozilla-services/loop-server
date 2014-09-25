@@ -33,25 +33,26 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.post('/rooms', auth.requireHawkSession,
     validators.requireParams('roomName', 'roomOwner', 'maxSize'),
     validators.validateRoomUrlParams, function(req, res) {
+      var roomData = req.roomRequestData;
       var token = tokenlib.generateToken(roomsConf.tokenSize);
       var now = parseInt(Date.now() / 1000, 10);
-      req.roomRequestData.creationTime = now;
-      req.roomRequestData.updateTime = now;
-      req.roomRequestData.expiresAt = now + req.roomRequestData.expiresIn * tokenlib.ONE_HOUR;
+      roomData.creationTime = now;
+      roomData.updateTime = now;
+      roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
 
       tokBox.getSession(function(err, session, opentok) {
         if (res.serverError(err)) return;
 
-        req.roomRequestData.sessionId = session.sessionId;
-        req.roomRequestData.apiKey = opentok.apiKey;
+        roomData.sessionId = session.sessionId;
+        roomData.apiKey = opentok.apiKey;
 
-        storage.addUserRoomData(req.user, token, req.roomRequestData, function(err) {
+        storage.addUserRoomData(req.user, token, roomData, function(err) {
           if (res.serverError(err)) return;
 
           res.status(201).json({
             roomToken: token,
             roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-            expiresAt: req.roomRequestData.expiresAt
+            expiresAt: roomData.expiresAt
           });
         });
       });
@@ -75,19 +76,21 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomToken, validators.validateRoomUrlParams,
     function(req, res) {
       var now = parseInt(Date.now() / 1000, 10);
-      req.roomStorageData.updateTime = now;
+      var roomData = req.roomStorageData;
+
+      roomData.updateTime = now;
 
       // Update the object with new data
       Object.keys(req.roomRequestData).map(function(key) {
-        req.roomStorageData[key] = req.roomRequestData[key];
+        roomData[key] = req.roomRequestData[key];
       });
 
-      req.roomStorageData.expiresAt = now + req.roomStorageData.expiresIn * tokenlib.ONE_HOUR;
+      roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
 
-      storage.addUserRoomData(req.user, req.token, req.roomStorageData, function(err) {
+      storage.addUserRoomData(req.user, req.token, roomData, function(err) {
         if (res.serverError(err)) return;
         res.status(200).json({
-          expiresAt: req.roomStorageData.expiresAt
+          expiresAt: roomData.expiresAt
         });
       });
     });
