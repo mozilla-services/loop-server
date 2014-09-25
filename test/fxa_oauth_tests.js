@@ -202,9 +202,29 @@ describe('/fxa-oauth', function () {
 
             storage.getHawkOAuthState(hawkIdHmac, function(err, state) {
               if (err) throw err;
-              expect(state).to.eql(null);
+              expect(state).to.not.eql(null);
+              expect(state).to.not.eql('5678');
               done();
             });
+          });
+      });
+    });
+
+    it('should accept requests even after a POST on /token', function(done) {
+      storage.setHawkOAuthState(hawkIdHmac, "1234", function(err) {
+        if (err) throw err;
+        supertest(app)
+          .post(apiPrefix + '/fxa-oauth/token')
+          .send({ code: '1234', state: '5678' })
+          .hawk(hawkCredentials)
+          .expect(400)
+          .end(function(err) {
+            if (err) throw err;
+            supertest(app)
+              .post(apiPrefix + '/fxa-oauth/params')
+              .hawk(hawkCredentials)
+              .expect(200)
+              .end(done);
           });
       });
     });
