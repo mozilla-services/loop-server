@@ -222,7 +222,7 @@ module.exports = function(conf, logError, storage) {
         sendError(res, 404, errors.INVALID_TOKEN, "Token not found.");
         return;
       }
-      req.roomData = roomData;
+      req.roomStorageData = roomData;
       next();
     });
   }

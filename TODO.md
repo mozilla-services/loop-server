@@ -10,7 +10,7 @@
 ## Code & Test
 
 + PUT /rooms/token should be PATCH. (+to say)
-- Rename req.roomData in req.roomStorageData
++ Rename req.roomData in req.roomStorageData
 - Use a local roomData var istead of updating req.roomData
 - Check the room owner on put, patch and delete
 - WebApp Url should be refactored.

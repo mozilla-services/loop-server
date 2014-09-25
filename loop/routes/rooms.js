@@ -75,19 +75,19 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomToken, validators.validateRoomUrlParams,
     function(req, res) {
       var now = parseInt(Date.now() / 1000, 10);
-      req.roomData.updateTime = now;
+      req.roomStorageData.updateTime = now;
 
       // Update the object with new data
       Object.keys(req.roomBodyData).map(function(key) {
-        req.roomData[key] = req.roomBodyData[key];
+        req.roomStorageData[key] = req.roomBodyData[key];
       });
 
-      req.roomData.expiresAt = now + req.roomData.expiresIn * tokenlib.ONE_HOUR;
+      req.roomStorageData.expiresAt = now + req.roomStorageData.expiresIn * tokenlib.ONE_HOUR;
 
-      storage.addUserRoomData(req.user, req.token, req.roomData, function(err) {
+      storage.addUserRoomData(req.user, req.token, req.roomStorageData, function(err) {
         if (res.serverError(err)) return;
         res.status(200).json({
-          expiresAt: req.roomData.expiresAt
+          expiresAt: req.roomStorageData.expiresAt
         });
       });
     });
@@ -102,16 +102,16 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
   apiRouter.get('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, function(req, res) {
-      var clientMaxSize = req.roomData.maxSize;
+      var clientMaxSize = req.roomStorageData.maxSize;
       var participants = [];
 
       res.status(200).json({
-        roomName: req.roomData.roomName,
-        roomOwner: req.roomData.roomOwner,
-        maxSize: req.roomData.maxSize,
+        roomName: req.roomStorageData.roomName,
+        roomOwner: req.roomStorageData.roomOwner,
+        maxSize: req.roomStorageData.maxSize,
         clientMaxSize: clientMaxSize,
-        creationTime: req.roomData.creationTime,
-        expiresAt: req.roomData.expiresAt,
+        creationTime: req.roomStorageData.creationTime,
+        expiresAt: req.roomStorageData.expiresAt,
         participants: participants
       });
     });
@@ -146,7 +146,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             (req, res, function() {
               var ttl = roomsConf.participantTTL;
               var sessionToken = tokBox.getSessionToken(
-                req.roomData.sessionId
+                req.roomStorageData.sessionId
               );
 
               storage.addRoomParticipant(req.token, req.user, {
@@ -156,8 +156,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               }, ttl, function(err) {
                 if (res.serverError(err)) return;
                 res.status(200).json({
-                  apiKey: req.roomData.apiKey,
-                  sessionId: req.roomData.sessionId,
+                  apiKey: req.roomStorageData.apiKey,
+                  sessionId: req.roomStorageData.sessionId,
                   sessionToken: sessionToken,
                   expires: ttl
                 });
