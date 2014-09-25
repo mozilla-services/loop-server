@@ -25,6 +25,7 @@ var callUrls = conf.get('callUrls');
 
 describe("Storage", function() {
   function testStorage(name, createStorage) {
+    var now = parseInt(Date.now() / 1000, 10);
     var storage,
         a_second = 1 / 3600,  // A second in hours.
         calls = [
@@ -35,7 +36,7 @@ describe("Storage", function() {
           sessionId:    fakeCallInfo.session1,
           calleeToken:  fakeCallInfo.token1,
           callState:    constants.CALL_STATES.INIT,
-          timestamp:    parseInt(Date.now() / 1000, 10) - 3
+          timestamp:    now - 3
         },
         {
           callId:       randomBytes(16).toString("hex"),
@@ -44,7 +45,7 @@ describe("Storage", function() {
           sessionId:    fakeCallInfo.session2,
           calleeToken:  fakeCallInfo.token2,
           callState:    constants.CALL_STATES.INIT,
-          timestamp:    parseInt(Date.now() / 1000, 10) - 2
+          timestamp:    now - 2
         },
         {
           callId:       randomBytes(16).toString("hex"),
@@ -53,22 +54,22 @@ describe("Storage", function() {
           sessionId:    fakeCallInfo.session3,
           calleeToken:  fakeCallInfo.token2,
           callState:    constants.CALL_STATES.TERMINATED,
-          timestamp:    parseInt(Date.now() / 1000, 10) - 1
+          timestamp:    now - 1
         }
       ],
       call = calls[0],
       urls = [
         {
-          timestamp:  parseInt(Date.now() / 1000, 10),
-          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
+          timestamp:  now,
+          expires: now + callUrls.timeout
         },
         {
-          timestamp:  parseInt(Date.now() / 1000, 10) + 1,
-          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
+          timestamp:  now + 1,
+          expires: now + callUrls.timeout
         },
         {
-          timestamp:  parseInt(Date.now() / 1000, 10) + 2,
-          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
+          timestamp:  now + 2,
+          expires: now + callUrls.timeout
         }
       ],
     urlData = urls[0],
@@ -79,7 +80,9 @@ describe("Storage", function() {
       roomName: "UX Discussion",
       roomOwner: "Alexis",
       maxSize: 3,
-      expiresAt: parseInt(Date.now() / 1000, 10) + 60 * 24
+      expiresAt: now + 60 * 24,
+      updateTime: now,
+      creationTime: now
     };
 
     describe(name, function() {
