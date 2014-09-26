@@ -15,14 +15,19 @@
 + Use a local roomData var instead of updating req.roomData
 + Check the room owner on patch and delete
 + Rename addUserRoomData to setUserRoomData
-- manage the participants in GET /rooms/token and DELETE
++ manage the participants in GET /rooms/token and DELETE
+- Do not let non-participants get room info (appart owner).
+- Handle rejection of new participants if the room is full.
 - Write storage test for participant related methods
 - We should add CORS handling and test it.
 - WebApp Url should be refactored.
 - Handle the TokBox channel on /rooms (+to say)
 - Handle the account property in the participant obj.
-- Handle rejection of new participants if the room is full.
-- Do not let non-participants get room info (appart owner).
+- Add a test to check participants expiricy (doesn't return items when not needed);
+- get rooms (/rooms) to return user rooms
+- update the memory usage script with rooms (+ other stuff that needs to be updated)
+- update the load test scripts
+
 
 ## To say
 

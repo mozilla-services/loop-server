@@ -238,6 +238,45 @@ module.exports = function(conf, logError, storage) {
     );
   }
 
+  /**
+   * Checks that the current user is either a room participant or a room
+   * owner.
+   **/
+  function isRoomParticipant(req, res, next) {
+    if (req.token === undefined) {
+      throw new Error("req.token should be defined to use isRoomParticipant");
+    }
+    if (req.roomStorageData === undefined) {
+      throw new Error("req.roomStorageData should be defined to use " +
+                      "isRoomParticipant");
+    }
+
+    storage.getRoomParticipants(req.token, function(err, participants) {
+      if (res.serverError(err)) return;
+
+      var isParticipant = participants.some(function(p) {
+        return p.hawkIdHmac === req.hawkIdHmac;
+      });
+
+      var isOwner = (req.user === req.roomStorageData.roomOwnerHmac);
+
+      if (!isParticipant && !isOwner) {
+        sendError(
+          res, 403, errors.UNDEFINED,
+          "Authenticated user is neither a participant of the room" +
+          " nor the room owner."
+        );
+        return;
+      }
+
+      req.roomStorageData.participants = participants.map(function(participant) {
+        delete participant.hawkIdHmac;
+        return participant;
+      });;
+      next();
+    });
+  }
+
   return {
     validateToken: validateToken,
     requireParams: requireParams,
@@ -246,6 +285,7 @@ module.exports = function(conf, logError, storage) {
     validateCallUrlParams: validateCallUrlParams,
     validateRoomUrlParams: validateRoomUrlParams,
     validateRoomToken: validateRoomToken,
-    isRoomOwner: isRoomOwner
+    isRoomOwner: isRoomOwner,
+    isRoomParticipant: isRoomParticipant
   };
 };

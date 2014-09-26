@@ -742,20 +742,43 @@ RedisStorage.prototype = {
   },
 
   deleteRoomData: function(roomToken, callback) {
-    this._client.del('room.' + roomToken, function(err) {
-      // XXX — Handle participants deletion
-      callback(err);
+    var self = this;
+    self._client.del('room.' + roomToken, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self.deleteRoomParticipants(roomToken, callback);
     });
   },
 
-  addRoomParticipant: function(roomToken, userIdHmac, participantData, ttl,
-                               callback) {
-    this._client.setex('roomparticipant.' + roomToken + '.' + userIdHmac, ttl,
-     JSON.stringify(participantData), callback);
+  deleteRoomParticipants: function(roomToken, callback) {
+    var self = this;
+    self._client.keys('roomparticipant.' + roomToken + '.*',
+      function(err, participantsKeys) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (participantsKeys.length === 0) {
+          callback(null);
+          return;
+        }
+        self._client.del(participantsKeys, callback);
+      });
   },
 
-  touchRoomParticipant: function(roomToken, userIdHmac, ttl, callback) {
-    this._client.pexpire('roomparticipant.' + roomToken + '.' + userIdHmac,
+  addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
+                               callback) {
+    var data = JSON.parse(JSON.stringify(participantData));
+    data.hawkIdHmac = hawkIdHmac;
+
+    this._client.setex('roomparticipant.' + roomToken + '.' + hawkIdHmac, ttl,
+     JSON.stringify(data), callback);
+  },
+
+  touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
+    this._client.pexpire('roomparticipant.' + roomToken + '.' + hawkIdHmac,
       ttl * 1000, function(err, result) {
         if (err) {
           callback(err);
@@ -769,9 +792,9 @@ RedisStorage.prototype = {
       });
   },
 
-  deleteRoomParticipant: function(roomToken, userIdHmac, callback) {
+  deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
     this._client.del(
-      'roomparticipant.' + roomToken + '.' + userIdHmac, callback
+      'roomparticipant.' + roomToken + '.' + hawkIdHmac, callback
     );
   },
 
@@ -797,7 +820,9 @@ RedisStorage.prototype = {
             return;
           }
 
-          callback(null, participants.map(function(participant) {
+          callback(null, participants.filter(function(p) {
+            return p !== null;
+          }).map(function(participant) {
             return JSON.parse(participant);
           }));
         });

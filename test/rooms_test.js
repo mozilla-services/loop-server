@@ -49,29 +49,53 @@ function generateHawkCredentials(storage, user, callback) {
   });
 }
 
-var getRoomInfo = function(hawkCredentials, roomToken) {
+var getRoomInfo = function(hawkCredentials, roomToken, status) {
   return supertest(app)
     .get('/rooms/' + roomToken)
     .type('json')
     .hawk(hawkCredentials)
-    .expect(200);
-}
-var actionRoom = function(hawkCredentials, roomToken, data) {
+    .expect(status || 200);
+};
+
+var joinRoom = function(hawkCredentials, roomToken, data, status) {
+  if (data === undefined) {
+    data = {
+      displayName: "Alexis",
+      clientMaxSize: 2
+    };
+  }
+  data.action = "join";
+
   return supertest(app)
     .post('/rooms/' + roomToken)
     .hawk(hawkCredentials)
     .send(data)
     .type("json")
-    .expect(200);
+    .expect(status || 200);
 };
 
-var createRoom = function(hawkCredentials, data) {
+var createRoom = function(hawkCredentials, data, status) {
+  if (data === undefined) {
+    data = {
+      roomOwner: "Alexis",
+      roomName: "UX discussion",
+      maxSize: "3",
+      expiresIn: "10"
+    };
+  }
   return supertest(app)
     .post('/rooms')
     .type('json')
     .hawk(hawkCredentials)
     .send(data)
-    .expect(201);
+    .expect(status || 201);
+};
+
+var deleteRoom = function(hawkCredentials, roomToken, status) {
+  return supertest(app)
+    .delete('/rooms/' + roomToken)
+    .hawk(hawkCredentials)
+    .expect(status || 204);
 };
 
 describe("/rooms", function() {
@@ -112,6 +136,50 @@ describe("/rooms", function() {
   });
 
   describe("validators", function() {
+
+    describe("#isRoomParticipant", function() {
+      apiRouter.post('/is-room-participant', auth.requireHawkSession,
+        validators.validateRoomToken, validators.isRoomParticipant,
+        function(req, res) {
+          res.status(200).json(req.roomStorageData);
+        });
+
+      var request, roomToken, participantCredentials;
+
+      beforeEach(function(done) {
+        request = supertest(app)
+          .post('/is-room-participant')
+          .type('json');
+
+        // Create a room as "Alex" and join as "Natim".
+        generateHawkCredentials(storage, "Natim",
+          function(credentials, id, userMac) {
+            participantCredentials = credentials;
+            createRoom(hawkCredentials).end(function(err, res) {
+              if (err) throw err;
+              roomToken = res.body.roomToken;
+              joinRoom(credentials, roomToken)
+                .end(done);
+            });
+          });
+      });
+
+      it("should 403 in case user is not a room participant or room owner",
+        function(done) {
+        generateHawkCredentials(storage, "unknown-user",
+          function(credentials, id, userMac) {
+            getRoomInfo(credentials, roomToken, 403).end(done);
+          });
+        });
+
+      it("should 200 ok if the user is a room participant", function(done){
+        getRoomInfo(participantCredentials, roomToken, 200).end(done);
+      });
+
+      it("should 200 ok if the user is the room owner", function(done) {
+        getRoomInfo(hawkCredentials, roomToken, 200).end(done);
+      });
+    });
     describe("#validateRoomUrlParams", function() {
       apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
         res.status(200).json(req.roomRequestData);
@@ -428,22 +496,18 @@ describe("/rooms", function() {
         if (err) throw err;
         roomToken = postRes.body.roomToken;
 
-        actionRoom(hawkCredentials, postRes.body.roomToken, {
-          action: "join",
-          displayName: "Alexis",
-          clientMaxSize: 2
-        }).end(function(err, res) {
+        joinRoom(hawkCredentials, postRes.body.roomToken).end(function(err, res) {
           if (err) throw err;
           getRoomInfo(hawkCredentials, postRes.body.roomToken).end(
             function(err, getRes) {
               if (err) throw err;
               expect(getRes.body.participants).to.length(1);
               expect(getRes.body.participants[0].id).to.not.eql(undefined);
+              expect(getRes.body.participants[0].hawkIdHmac).to.eql(undefined);
               expect(getRes.body.participants[0].id).to.length(36);
               expect(getRes.body.clientMaxSize).to.eql(2);
 
-              actionRoom(hawkCredentials2, postRes.body.roomToken, {
-                action: "join",
+              joinRoom(hawkCredentials2, postRes.body.roomToken, {
                 displayName: "Remy",
                 clientMaxSize: 20
               }).end(function(err) {
@@ -651,37 +715,36 @@ describe("/rooms", function() {
         .include(validators.isRoomOwner);
     });
 
-    it("should return a 204.", function(done) {
-      supertest(app)
-        .post('/rooms')
-        .type('json')
-        .hawk(hawkCredentials)
-        .send({
-          roomOwner: "Alexis",
-          roomName: "UX discussion",
-          maxSize: "3",
-          expiresIn: "10"
-        })
-        .expect(201)
-        .end(function(err, postRes) {
+    it("should clear the participants list", function(done) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+
+        joinRoom(hawkCredentials, roomToken).end(function(err) {
           if (err) throw err;
-          supertest(app)
-            .delete('/rooms/' + postRes.body.roomToken)
-            .hawk(hawkCredentials)
-            .expect(204)
-            .end(function(err) {
+          deleteRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            storage.getRoomParticipants(roomToken, function(err, participants) {
               if (err) throw err;
-              supertest(app)
-                .get('/rooms/' + postRes.body.roomToken)
-                .type('json')
-                .hawk(hawkCredentials)
-                .expect(404)
-                .end(function(err) {
-                  done(err);
-                });
+              expect(participants).to.length(0);
+              done();
             });
-        });
+          });
+        })
+      });
     });
+
+    it("should delete room if the user is the room owner", function(done) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        deleteRoom(hawkCredentials, roomToken).end(function(err) {
+          if (err) throw err;
+          getRoomInfo(hawkCredentials, roomToken, 404).end(done);
+        });
+      });
+    });
+
   });
 
   describe.skip("GET /rooms/", function() {

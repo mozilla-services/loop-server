@@ -106,24 +106,23 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
 
   apiRouter.get('/rooms/:token', auth.requireHawkSession,
-    validators.validateRoomToken, function(req, res) {
-      storage.getRoomParticipants(req.token, function(err, participants) {
-        if (res.serverError(err)) return;
-        var clientMaxSize = Math.min.apply(Math, participants.map(
-          function(participant) {
-            return participant.clientMaxSize;
-          })
-        );
-        clientMaxSize = Math.min(clientMaxSize, req.roomStorageData.maxSize);
-        res.status(200).json({
-          roomName: req.roomStorageData.roomName,
-          roomOwner: req.roomStorageData.roomOwner,
-          maxSize: req.roomStorageData.maxSize,
-          clientMaxSize: clientMaxSize,
-          creationTime: req.roomStorageData.creationTime,
-          expiresAt: req.roomStorageData.expiresAt,
-          participants: participants
-        });
+    validators.validateRoomToken, validators.isRoomParticipant,
+    function(req, res) {
+      var participants = req.roomStorageData.participants;
+      var clientMaxSize = Math.min.apply(Math, participants.map(
+        function(participant) {
+          return participant.clientMaxSize;
+        })
+      );
+      clientMaxSize = Math.min(clientMaxSize, req.roomStorageData.maxSize);
+      res.status(200).json({
+        roomName: req.roomStorageData.roomName,
+        roomOwner: req.roomStorageData.roomOwner,
+        maxSize: req.roomStorageData.maxSize,
+        clientMaxSize: clientMaxSize,
+        creationTime: req.roomStorageData.creationTime,
+        expiresAt: req.roomStorageData.expiresAt,
+        participants: participants
       });
     });
 

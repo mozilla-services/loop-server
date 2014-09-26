@@ -86,6 +86,8 @@ describe("Storage", function() {
     };
 
     describe(name, function() {
+      var sandbox;
+
       beforeEach(function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
@@ -93,9 +95,11 @@ describe("Storage", function() {
           callDuration: conf.get('callDuration'),
           maxSimplePushUrls: conf.get('maxSimplePushUrls')
         });
+        sandbox = sinon.sandbox.create();
       });
 
       afterEach(function(done) {
+        sandbox.restore();
         storage.drop(function(err) {
           // Remove the storage reference so tests blow up in an explicit way.
           storage = undefined;
@@ -298,16 +302,6 @@ describe("Storage", function() {
       });
 
       describe("#getUserCallUrls", function() {
-        var sandbox;
-
-        beforeEach(function() {
-          sandbox = sinon.sandbox.create();
-        });
-
-        afterEach(function() {
-          sandbox.restore();
-        });
-
         it("should keep a list of the user urls", function(done) {
           var token1 = generateToken(callUrls.tokenSize);
           storage.addUserCallUrlData(
@@ -755,6 +749,11 @@ describe("Storage", function() {
       });
 
       describe("#deleteRoomData", function() {
+        var spy;
+        beforeEach(function() {
+          spy = sandbox.spy(storage, 'deleteRoomParticipants');
+        });
+
         it("should remove the room from the store", function(done) {
           storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
@@ -763,10 +762,29 @@ describe("Storage", function() {
               storage.getRoomData(roomToken, function(err, storedRoomData) {
                 if (err) throw err;
                 expect(storedRoomData).to.eql(null);
+                expect(spy.calledOnce).to.eql(true);
                 done();
               });
             });
           });
+        });
+      });
+
+      describe("#deleteRoomParticipants", function() {
+        it("should remove all the room participants", function(done) {
+          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
+            function(err) {
+              if (err) throw err;
+              storage.deleteRoomParticipants(roomToken, function(err) {
+                if (err) throw err;
+                storage.getRoomParticipants(roomToken,
+                  function(err, participants) {
+                    if (err) throw err;
+                    expect(participants).to.length(0);
+                    done();
+                  });
+              });
+            });
         });
       });
 
@@ -781,8 +799,8 @@ describe("Storage", function() {
                   if (err) throw err;
                   storage.getRoomParticipants(roomToken, function(err, results) {
                     if (err) throw err;
-                    expect(results).to.contain({"apiKey": "1"});
-                    expect(results).to.contain({"apiKey": "2"});
+                    expect(results).to.contain({"apiKey": "1", "hawkIdHmac": "1234"});
+                    expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
                     done();
                   });
                 });
@@ -823,8 +841,8 @@ describe("Storage", function() {
                     if (err) throw err;
                     storage.getRoomParticipants(roomToken, function(err, results) {
                       if (err) throw err;
-                      expect(results).to.not.contain({"apiKey": "1"});
-                      expect(results).to.contain({"apiKey": "2"});
+                      expect(results).to.not.contain({"apiKey": "1", "hawkIdHmac": "1234"});
+                      expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
                       done();
                     });
                   });
