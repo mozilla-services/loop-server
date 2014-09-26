@@ -230,16 +230,17 @@ describe("/rooms", function() {
 
       it("should return a 403 if user is not a room owner", function(done) {
         // Create a valid hawk session, which is not a room owner.
-        req
-          .hawk(hawkCredentials2)
-          .expect(403)
-          .end(function(err, res) {
-            if (err) throw err;
-            expectFormatedError(res, 403, errors.UNDEFINED,
-              "Authenticated user is not the owner of this room.");
-            done();
-          });
-
+        generateHawkCredentials(storage, "remy", function(hawkCredentials) {
+          req
+            .hawk(hawkCredentials)
+            .expect(403)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormatedError(res, 403, errors.UNDEFINED,
+                                  "Authenticated user is not the owner of this room.");
+              done();
+            });
+        });
       });
 
       it("should return a 200 if user is the room owner", function(done) {
@@ -449,6 +450,7 @@ describe("/rooms", function() {
                 if (err) throw err;
                 getRoomInfo(hawkCredentials2, roomToken).end(
                   function(err, getRes2) {
+                    if (err) throw err;
                     expect(getRes2.body.participants).to.length(2);
                     expect(getRes2.body.participants[0].id).not.eql(undefined);
                     expect(getRes2.body.participants[0].id).to.length(36);
