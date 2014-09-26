@@ -107,17 +107,23 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
   apiRouter.get('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, function(req, res) {
-      var clientMaxSize = req.roomStorageData.maxSize;
-      var participants = [];
-
-      res.status(200).json({
-        roomName: req.roomStorageData.roomName,
-        roomOwner: req.roomStorageData.roomOwner,
-        maxSize: req.roomStorageData.maxSize,
-        clientMaxSize: clientMaxSize,
-        creationTime: req.roomStorageData.creationTime,
-        expiresAt: req.roomStorageData.expiresAt,
-        participants: participants
+      storage.getRoomParticipants(req.token, function(err, participants) {
+        if (res.serverError(err)) return;
+        var clientMaxSize = Math.min.apply(Math, participants.map(
+          function(participant) {
+            return participant.clientMaxSize;
+          })
+        );
+        clientMaxSize = Math.min(clientMaxSize, req.roomStorageData.maxSize);
+        res.status(200).json({
+          roomName: req.roomStorageData.roomName,
+          roomOwner: req.roomStorageData.roomOwner,
+          maxSize: req.roomStorageData.maxSize,
+          clientMaxSize: clientMaxSize,
+          creationTime: req.roomStorageData.creationTime,
+          expiresAt: req.roomStorageData.expiresAt,
+          participants: participants
+        });
       });
     });
 
@@ -154,7 +160,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 req.roomStorageData.sessionId
               );
 
-              storage.addRoomParticipant(req.token, req.user, {
+              storage.addRoomParticipant(req.token, req.hawkIdHmac, {
                 id: uuid.v4(),
                 displayName: req.body.displayName,
                 clientMaxSize: req.body.clientMaxSize
@@ -171,7 +177,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         },
         handleRefresh: function(req, res) {
           var ttl = roomsConf.participantTTL;
-          storage.touchRoomParticipant(req.token, req.user, ttl,
+          storage.touchRoomParticipant(req.token, req.hawkIdHmac, ttl,
             function(err, success) {
               if (res.serverError(err)) return;
               if (success !== true) {
@@ -184,10 +190,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             });
         },
         handleLeave: function(req, res) {
-          storage.deleteRoomParticipant(req.token, req.user, function(err) {
-            if (res.serverError(err)) return;
-            res.status(204).json();
-          });
+          storage.deleteRoomParticipant(req.token, req.hawkIdHmac,
+            function(err) {
+              if (res.serverError(err)) return;
+              res.status(204).json();
+            });
         }
       };
 

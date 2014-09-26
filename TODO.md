@@ -5,7 +5,8 @@
 - Do we want to have a default value for some parameters on POST /rooms?
 - What the default configuration should be, with hints from us.
 - What should be the size of the room token? 8 Bytes for now.
-- Should we dedupe the users in the room?
+- Should we dedupe the users in the room? (a participant per device or per account)
+- Should everyone be able to list all the participants to a room, or should that be only for participants?
 
 ## Code & Test
 
@@ -15,9 +16,13 @@
 + Check the room owner on patch and delete
 + Rename addUserRoomData to setUserRoomData
 - manage the participants in GET /rooms/token and DELETE
-- Handle the TokBox channel on /rooms (+to say)
+- Write storage test for participant related methods
 - We should add CORS handling and test it.
 - WebApp Url should be refactored.
+- Handle the TokBox channel on /rooms (+to say)
+- Handle the account property in the participant obj.
+- Handle rejection of new participants if the room is full.
+- Do not let non-participants get room info (appart owner).
 
 ## To say
 

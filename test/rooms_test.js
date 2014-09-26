@@ -29,8 +29,54 @@ var sessionId = conf.get("fakeCallInfo").session1;
 var sessionToken = conf.get("fakeCallInfo").token1;
 var user = "alexis@notmyidea.org";
 
+function generateHawkCredentials(storage, user, callback) {
+  var token = new Token();
+  token.getCredentials(function(tokenId, authKey) {
+    var hawkCredentials = {
+      id: tokenId,
+      key: authKey,
+      algorithm: "sha256"
+    };
+    var hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+    var userHmac = hmac(user, conf.get('userMacSecret'));
+    storage.setHawkSession(hawkIdHmac, authKey, function(err) {
+      if (err) throw err;
+      storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
+        if (err) throw err;
+        callback(hawkCredentials, hawkIdHmac, userHmac);
+      });
+    });
+  });
+}
+
+var getRoomInfo = function(hawkCredentials, roomToken) {
+  return supertest(app)
+    .get('/rooms/' + roomToken)
+    .type('json')
+    .hawk(hawkCredentials)
+    .expect(200);
+}
+var actionRoom = function(hawkCredentials, roomToken, data) {
+  return supertest(app)
+    .post('/rooms/' + roomToken)
+    .hawk(hawkCredentials)
+    .send(data)
+    .type("json")
+    .expect(200);
+};
+
+var createRoom = function(hawkCredentials, data) {
+  return supertest(app)
+    .post('/rooms')
+    .type('json')
+    .hawk(hawkCredentials)
+    .send(data)
+    .expect(201);
+};
+
 describe("/rooms", function() {
-  var sandbox, hawkIdHmac, hawkCredentials, userHmac;
+  var sandbox, hawkIdHmac, hawkCredentials, userHmac,
+      hawkIdHmac2, hawkCredentials2, userHmac2;
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
@@ -45,19 +91,18 @@ describe("/rooms", function() {
         return sessionToken;
       });
 
-    var token = new Token();
-    token.getCredentials(function(tokenId, authKey) {
-      hawkCredentials = {
-        id: tokenId,
-        key: authKey,
-        algorithm: "sha256"
-      };
-      hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
-      userHmac = hmac(user, conf.get('userMacSecret'));
-      storage.setHawkSession(hawkIdHmac, authKey, function(err) {
-        if (err) throw err;
-        storage.setHawkUser(userHmac, hawkIdHmac, done);
-      });
+    generateHawkCredentials(storage, user, function(credentials, id, userMac) {
+      hawkCredentials = credentials;
+      hawkIdHmac = id;
+      userHmac = userMac;
+
+      generateHawkCredentials(storage, user,
+        function(credentials, id, userMac) {
+          hawkCredentials2 = credentials;
+          hawkIdHmac2 = id;
+          userHmac2 = userMac;
+          done();
+        });
     });
   });
 
@@ -185,32 +230,15 @@ describe("/rooms", function() {
 
       it("should return a 403 if user is not a room owner", function(done) {
         // Create a valid hawk session, which is not a room owner.
-        var token = new Token();
-        var wrongOwnerCredentials;
-        token.getCredentials(function(tokenId, authKey) {
-          wrongOwnerCredentials = {
-            id: tokenId,
-            key: authKey,
-            algorithm: "sha256"
-          };
-          var wrongHawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
-          var wrongUserHmac = hmac("remy", conf.get('userMacSecret'));
-          storage.setHawkSession(wrongHawkIdHmac, authKey, function(err) {
+        req
+          .hawk(hawkCredentials2)
+          .expect(403)
+          .end(function(err, res) {
             if (err) throw err;
-            storage.setHawkUser(wrongUserHmac, wrongHawkIdHmac, function(err) {
-              if (err) throw err;
-              req
-                .hawk(wrongOwnerCredentials)
-                .expect(403)
-                .end(function(err, res) {
-                  if (err) throw err;
-                  expectFormatedError(res, 403, errors.UNDEFINED,
-                    "Authenticated user is not the owner of this room.");
-                  done();
-                });
-            });
+            expectFormatedError(res, 403, errors.UNDEFINED,
+              "Authenticated user is not the owner of this room.");
+            done();
           });
-        });
 
       });
 
@@ -346,7 +374,7 @@ describe("/rooms", function() {
         .include(requireHawkSession);
     });
 
-    it("should return appropriate info", function(done) {
+    it("should return 200 with appropriate info", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
         .post('/rooms')
@@ -384,6 +412,53 @@ describe("/rooms", function() {
               done();
             });
         });
+    });
+
+    it("should return 200 with the list of participants", function(done) {
+      var roomToken;
+      var startTime = parseInt(Date.now() / 1000, 10);
+
+      createRoom(hawkCredentials, {
+        roomOwner: "Alexis",
+        roomName: "UX discussion",
+        maxSize: "3",
+        expiresIn: "10"
+      }).end(function(err, postRes) {
+        if (err) throw err;
+        roomToken = postRes.body.roomToken;
+
+        actionRoom(hawkCredentials, postRes.body.roomToken, {
+          action: "join",
+          displayName: "Alexis",
+          clientMaxSize: 2
+        }).end(function(err, res) {
+          if (err) throw err;
+          getRoomInfo(hawkCredentials, postRes.body.roomToken).end(
+            function(err, getRes) {
+              if (err) throw err;
+              expect(getRes.body.participants).to.length(1);
+              expect(getRes.body.participants[0].id).to.not.eql(undefined);
+              expect(getRes.body.participants[0].id).to.length(36);
+              expect(getRes.body.clientMaxSize).to.eql(2);
+
+              actionRoom(hawkCredentials2, postRes.body.roomToken, {
+                action: "join",
+                displayName: "Remy",
+                clientMaxSize: 20
+              }).end(function(err) {
+                if (err) throw err;
+                getRoomInfo(hawkCredentials2, roomToken).end(
+                  function(err, getRes2) {
+                    expect(getRes2.body.participants).to.length(2);
+                    expect(getRes2.body.participants[0].id).not.eql(undefined);
+                    expect(getRes2.body.participants[0].id).to.length(36);
+                    expect(getRes2.body.clientMaxSize).to.eql(2);
+                    done();
+                  });
+              });
+            });
+        });
+      });
     });
   });
 
@@ -515,7 +590,7 @@ describe("/rooms", function() {
                               "action should be one of join, refresh, leave");
           done();
         });
-    })
+    });
 
     describe("Handle 'join'", function() {
       it("should fail if params are missing.", function(done) {
@@ -532,7 +607,7 @@ describe("/rooms", function() {
           });
       });
 
-      it("should return appropriate info.", function(done) {
+      it("should return new participant information.", function(done) {
         postReq
           .send({
             action: "join",
@@ -548,7 +623,11 @@ describe("/rooms", function() {
               "sessionId": sessionId,
               "sessionToken": sessionToken
             });
-            done();
+            storage.getRoomParticipants(token, function(err, participants) {
+              if (err) throw err;
+              expect(participants).to.length(1);
+              done();
+            });
           });
       });
     });

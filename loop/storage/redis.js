@@ -783,9 +783,18 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
+        if (participantsKeys.length === 0) {
+          callback(null, []);
+          return;
+        }
         self._client.mget(participantsKeys, function(err, participants) {
           if (err) {
             callback(err);
+            return;
+          }
+          if (participants === null) {
+            callback(null, []);
+            return;
           }
 
           callback(null, participants.map(function(participant) {
