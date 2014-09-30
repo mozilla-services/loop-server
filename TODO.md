@@ -23,10 +23,12 @@
 + Write storage test for participant related methods
 + We should add CORS handling and test it.
 + WebApp Url should be refactored.
++ POST /rooms/:token — handle refresh
++ POST /rooms/:token — handle leave
+- Get rooms (/rooms) to return user rooms
 - Handle the TokBox channel on /rooms (+to say)
 - Handle the account property in the participant obj.
 - Add a test to check participants expiricy (doesn't return items when not needed);
-- get rooms (/rooms) to return user rooms
 - update the memory usage script with rooms (+ other stuff that needs to be updated)
 - update the load test scripts
 
@@ -35,4 +37,4 @@
 
 - It's not a 200 it's a 201 on resource creation;
 - Handle the TokBox channel on /rooms;
-- PUT /rooms/token should be PATCH.
++ PUT /rooms/token should be PATCH.

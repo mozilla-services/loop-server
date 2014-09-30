@@ -4,6 +4,7 @@
 
 "use strict";
 var expect = require("chai").expect;
+var assert = require("chai").assert;
 var randomBytes = require("crypto").randomBytes;
 var sinon = require("sinon");
 
@@ -272,7 +273,7 @@ describe("Storage", function() {
           function(done) {
             storage.updateUserCallUrlData(userMac, callToken, urlData,
             function(err) {
-              expect(err.notFound).to.eql(true);
+              assert(err.notFound);
               done();
             });
           });
@@ -528,7 +529,7 @@ describe("Storage", function() {
             if (err) throw err;
             storage.deleteCall(call.callId, function(err, result) {
               if (err) throw err;
-              expect(result).to.eql(true);
+              assert(result);
               storage.getCall(call.callId, function(err, result) {
                 if (err) throw err;
                 expect(result).to.equal(null);
@@ -717,7 +718,7 @@ describe("Storage", function() {
       describe("#ping", function() {
         it("should return true if we are connected", function(done) {
           storage.ping(function(connected) {
-            expect(connected).to.eql(true);
+            assert(connected);
             done();
           });
         });
@@ -762,7 +763,7 @@ describe("Storage", function() {
               storage.getRoomData(roomToken, function(err, storedRoomData) {
                 if (err) throw err;
                 expect(storedRoomData).to.eql(null);
-                expect(spy.calledOnce).to.eql(true);
+                assert(spy.calledOnce);
                 done();
               });
             });
@@ -820,7 +821,11 @@ describe("Storage", function() {
                   storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
                     if (err) return done(err);
                     expect(success).to.eql(false);
-                    done();
+                    storage.getRoomParticipants(roomToken, function(err, results) {
+                      if (err) throw err;
+                      expect(results).to.length(0);
+                      done();
+                    });
                   });
                 }, 15);
               });

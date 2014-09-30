@@ -5,6 +5,7 @@
 "use strict";
 
 var expect = require("chai").expect;
+var assert = require("chai").assert;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
@@ -72,6 +73,24 @@ var joinRoom = function(hawkCredentials, roomToken, data, status) {
     .send(data)
     .type("json")
     .expect(status || 200);
+};
+
+var refreshRoom = function(hawkCredentials, roomToken, status) {
+  return supertest(app)
+    .post('/rooms/' + roomToken)
+    .hawk(hawkCredentials)
+    .send({action: "refresh"})
+    .type("json")
+    .expect(status || 200);
+};
+
+var leaveRoom = function(hawkCredentials, roomToken, status) {
+  return supertest(app)
+    .post('/rooms/' + roomToken)
+    .hawk(hawkCredentials)
+    .send({action: "leave"})
+    .type("json")
+    .expect(status || 204);
 };
 
 var createRoom = function(hawkCredentials, data, status) {
@@ -755,6 +774,57 @@ describe("/rooms", function() {
              });
            });
         });
+    });
+
+    describe("Handle 'refresh'", function() {
+      var spy;
+      // Should touch the participant expiracy
+      beforeEach(function() {
+        spy = sandbox.spy(storage, "touchRoomParticipant");
+      });
+
+      it("should touch the participant and return the next expiration.",
+        function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.eql({
+                  expires: conf.get("rooms").participantTTL
+                });
+                assert(
+                  spy.calledWithMatch(roomToken, hawkIdHmac,
+                                      conf.get("rooms").participantTTL)
+                );
+                done();
+              });
+            });
+          });
+        });
+    });
+
+    describe("Handle 'leave'", function() {
+      it("should remove the participant from the room.", function(done) {
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          joinRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+              if (err) throw err;
+              getRoomInfo(hawkCredentials, roomToken).end(
+                function(err, getRes) {
+                  if (err) throw err;
+                  expect(getRes.body.participants).to.length(0);
+                  done();
+                });
+            });
+          });
+        });
+      });
     });
   });
 
