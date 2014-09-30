@@ -81,7 +81,9 @@ function runOnPrefix(apiPrefix) {
       '/call-url': ['post', 'del'],
       '/calls': ['get', 'post'],
       '/calls/token': ['get', 'post'],
-      '/calls/id/callId': ['get', 'del']
+      '/calls/id/callId': ['get', 'del'],
+      '/rooms': ['post', 'get'],
+      '/rooms/token': ['patch', 'del', 'get', 'post']
     };
 
     beforeEach(function(done) {

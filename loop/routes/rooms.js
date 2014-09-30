@@ -70,7 +70,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
 
   /**
-   * PUT /rooms/{id}
+   * PATCH /rooms/{id}
    *
    * accepts:
    * roomName - The room-owner-assigned name used to identify this room.
@@ -261,7 +261,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   **/
 
   apiRouter.get('/rooms', function(req, res) {
-
+    res.status(200).json();
   });
 };
 /* eslint-enable */
