@@ -25,7 +25,11 @@
 + WebApp Url should be refactored.
 + POST /rooms/:token — handle refresh
 + POST /rooms/:token — handle leave
-- Get rooms (/rooms) to return user rooms
++ GET /rooms should return user rooms
+- GET /rooms should handle the ?version parameter.
+- Add test to make sure updatedTime is updated on:
+   - user join
+   - user leaves
 - Handle the TokBox channel on /rooms (+to say)
 - Handle the account property in the participant obj.
 - Add a test to check participants expiricy (doesn't return items when not needed);

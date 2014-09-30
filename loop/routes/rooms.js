@@ -260,8 +260,19 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * - A user left the room
   **/
 
-  apiRouter.get('/rooms', function(req, res) {
-    res.status(200).json();
+  apiRouter.get('/rooms', auth.requireHawkSession, function(req, res) {
+    storage.getUserRooms(req.user, function(err, rooms) {
+      var roomsData = rooms.map(function(room) {
+        return {
+          roomToken: room.roomToken,
+          roomName: room.roomName,
+          maxSize: room.maxSize,
+          currSize: room.currSize,
+          ctime: room.updateTime
+        };
+      });
+      res.status(200).json(roomsData);
+    });
   });
 };
 /* eslint-enable */

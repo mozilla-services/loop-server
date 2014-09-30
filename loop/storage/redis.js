@@ -713,12 +713,14 @@ RedisStorage.prototype = {
       callback(new Error("roomData should have an updateTime property."));
       return;
     }
+    var data = JSON.parse(JSON.stringify(roomData));
+    data.roomToken = roomToken;
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'room.' + roomToken,
-      roomData.expiresAt - roomData.updateTime,
-      JSON.stringify(roomData),
+      data.expiresAt - data.updateTime,
+      JSON.stringify(data),
       function(err) {
         if (err) {
           callback(err);
@@ -729,6 +731,66 @@ RedisStorage.prototype = {
           'room.' + roomToken, callback
         );
       });
+  },
+
+  getUserRooms: function(userMac, callback) {
+    var self = this;
+    this._client.smembers('userRooms.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (members.length === 0) {
+        callback(null, []);
+        return;
+      }
+      self._client.mget(members, function(err, rooms) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var expired = rooms.map(function(val, index) {
+          return (val === null) ? index : null;
+        }).filter(function(val) {
+          return val !== null;
+        });
+
+        var pendingRooms = rooms.filter(function(val) {
+          return val !== null;
+        }).map(JSON.parse).sort(function(a, b) {
+          return a.updateTime - b.updateTime;
+        });
+
+        async.map(pendingRooms, function(room, cb) {
+          self._client.keys('roomparticipant.' + room.roomToken + '.*',
+            function(err, participantsKeys) {
+              if (err) {
+                cb(err);
+                return;
+              }
+              room.currSize = participantsKeys.length;
+              cb(null, room);
+            });
+        }, function(err, results) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (expired.length > 0) {
+            self._client.srem('userRooms.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null, results);
+            });
+            return;
+          }
+          callback(null, results);
+        });
+      });
+    });
   },
 
   getRoomData: function(roomToken, callback) {

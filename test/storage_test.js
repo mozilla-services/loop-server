@@ -730,6 +730,7 @@ describe("Storage", function() {
             if (err) throw err;
             storage.getRoomData(roomToken, function(err, storedRoomData) {
               if (err) throw err;
+              roomData.roomToken = roomToken;
               expect(storedRoomData).to.eql(roomData);
               done();
             });

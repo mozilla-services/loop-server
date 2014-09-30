@@ -110,6 +110,14 @@ var createRoom = function(hawkCredentials, data, status) {
     .expect(status || 201);
 };
 
+var getUserRoomsInfo = function(hawkCredentials, status) {
+  return supertest(app)
+    .get('/rooms')
+    .type('json')
+    .hawk(hawkCredentials)
+    .expect(status || 200);
+};
+
 var deleteRoom = function(hawkCredentials, roomToken, status) {
   return supertest(app)
     .delete('/rooms/' + roomToken)
@@ -438,6 +446,7 @@ describe("/rooms", function() {
             apiKey: tokBox._opentok.default.apiKey,
             sessionId: sessionId,
             roomName: "UX discussion",
+            roomToken: res.body.roomToken,
             maxSize: 3,
             roomOwner: "Alexis",
             expiresIn: 10,
@@ -873,44 +882,31 @@ describe("/rooms", function() {
         });
       });
     });
-
   });
 
-  describe.skip("GET /rooms/", function() {
+  describe("GET /rooms/", function() {
     it("should return appropriate info", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
-      supertest(app)
-        .post('/rooms')
-        .type('json')
-        .hawk(hawkCredentials)
-        .send({
-          roomOwner: "Alexis",
-          roomName: "UX discussion",
-          maxSize: "3",
-          expiresIn: "10"
-        })
-        .expect(201)
-        .end(function(err, postRes) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        joinRoom(hawkCredentials, roomToken).end(function(err) {
           if (err) throw err;
-          supertest(app)
-            .get('/rooms/')
-            .type('json')
-            .hawk(hawkCredentials)
-            .expect(200)
-            .end(function(err, getRes) {
-              if (err) throw err;
-              expect(getRes.body).to.eql({
-                roomToken: postRes.roomToken,
-                roomName: "UX discussion",
-                maxSize: "3",
-                clientMaxSize: "3",
-                currSize: "0",
-                ctime: startTime
-              });
-              done();
+          getUserRoomsInfo(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.length(1);
+            expect(res.body[0].ctime).to.be.gte(startTime);
+            delete res.body[0].ctime;
+            expect(res.body[0]).to.eql({
+              roomToken: roomToken,
+              roomName: 'UX discussion',
+              maxSize: 3,
+              currSize: 1
             });
+            done();
+          });
         });
+      });
     });
   });
-
 });
