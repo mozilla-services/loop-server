@@ -99,7 +99,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
             progressURL: progressURL
           };
           if (record.callToken !== undefined) {
-            result.callUrl = conf.get("webAppUrl")
+            result.callUrl = conf.get("callUrls").webAppUrl
               .replace("{token}", record.callToken);
             result.call_url = result.callUrl;
             result.callToken = record.callToken;

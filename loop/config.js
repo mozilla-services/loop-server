@@ -155,6 +155,12 @@ var conf = convict({
       doc: "The maximum number of hours a token can be valid for.",
       format: Number,
       default: 24 * 30
+    },
+    webAppUrl: {
+      doc: "Loop Web App Home Page.",
+      format: "url",
+      default: "http://localhost:3000/static/#call/{token}",
+      env: "WEB_APP_URL"
     }
   },
   displayVersion: {
@@ -215,12 +221,6 @@ var conf = convict({
       format: Number,
       default: 2000
     }
-  },
-  webAppUrl: {
-    doc: "Loop Web App Home Page.",
-    format: "url",
-    default: "http://localhost:3000/static/#call/{token}",
-    env: "WEB_APP_URL"
   },
   sentryDSN: {
     doc: "Sentry DSN",

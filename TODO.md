@@ -22,7 +22,7 @@
 + Handle rejection of new participants if the room is full.
 + Write storage test for participant related methods
 + We should add CORS handling and test it.
-- WebApp Url should be refactored.
++ WebApp Url should be refactored.
 - Handle the TokBox channel on /rooms (+to say)
 - Handle the account property in the participant obj.
 - Add a test to check participants expiricy (doesn't return items when not needed);

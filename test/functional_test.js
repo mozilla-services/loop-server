@@ -490,7 +490,8 @@ function runOnPrefix(apiPrefix) {
             var callUrl = res.body.callUrl, token;
 
             expect(callUrl).to.not.equal(null);
-            var urlStart = conf.get('webAppUrl').replace('{token}', '');
+            var urlStart = conf.get('callUrls').webAppUrl
+              .replace('{token}', '');
             expect(callUrl).to.contain(urlStart);
 
             token = callUrl.split("/").pop();
@@ -928,8 +929,9 @@ function runOnPrefix(apiPrefix) {
                 apiKey: tokBoxConfig.credentials.default.apiKey,
                 sessionId: call.sessionId,
                 sessionToken: call.calleeToken,
-                callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
-                call_url: conf.get('webAppUrl')
+                callUrl: conf.get('callUrls').webAppUrl
+                  .replace('{token}', call.callToken),
+                call_url: conf.get('callUrls').webAppUrl
                   .replace('{token}', call.callToken),
                 callToken: call.callToken,
                 urlCreationDate: call.urlCreationDate,
@@ -955,8 +957,9 @@ function runOnPrefix(apiPrefix) {
             apiKey: tokBoxConfig.credentials.default.apiKey,
             sessionId: calls[1].sessionId,
             sessionToken: calls[1].calleeToken,
-            callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
-            call_url: conf.get('webAppUrl')
+            callUrl: conf.get('callUrls').webAppUrl
+              .replace('{token}', calls[2].callToken),
+            call_url: conf.get('callUrls').webAppUrl
               .replace('{token}', calls[1].callToken),
             callToken: calls[1].callToken,
             urlCreationDate: calls[1].urlCreationDate,

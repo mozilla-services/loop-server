@@ -38,10 +38,11 @@ module.exports = function (app, conf, logError, storage, auth, validators,
           function(err) {
             if (res.serverError(err)) return;
             // XXX Bug 1032966 - call_url is deprecated
+            var webAppUrl = conf.get("callUrls").webAppUrl.replace("{token}", req.token);
             res.status(200).json({
-              callUrl: conf.get("webAppUrl").replace("{token}", req.token),
+              callUrl: webAppUrl,
               callToken: req.token,
-              call_url: conf.get("webAppUrl").replace("{token}", req.token),
+              call_url: webAppUrl,
               expiresAt: req.urlData.expires
             });
           });
