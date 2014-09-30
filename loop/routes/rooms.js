@@ -15,6 +15,16 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
   var roomsConf = conf.get("rooms");
 
+
+  function minClientSize(participants, roomMaxSize) {
+    var clientMaxSize = Math.min.apply(Math, participants.map(
+      function(participant) {
+        return participant.clientMaxSize;
+      }));
+    return Math.min(clientMaxSize, roomMaxSize);
+  }
+
+
   /**
    * Room creation.
    *
@@ -109,12 +119,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomToken, validators.isRoomParticipant,
     function(req, res) {
       var participants = req.roomStorageData.participants;
-      var clientMaxSize = Math.min.apply(Math, participants.map(
-        function(participant) {
-          return participant.clientMaxSize;
-        })
-      );
-      clientMaxSize = Math.min(clientMaxSize, req.roomStorageData.maxSize);
+      var clientMaxSize = minClientSize(participants,
+                                        req.roomStorageData.maxSize);
+
       res.status(200).json({
         roomName: req.roomStorageData.roomName,
         roomOwner: req.roomStorageData.roomOwner,
@@ -154,22 +161,46 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         handleJoin: function(req, res) {
           validators.requireParams('displayName', 'clientMaxSize')
             (req, res, function() {
+              var requestMaxSize = parseInt(req.body.clientMaxSize, 10);
+              if (requestMaxSize === NaN) {
+                sendError(res, 400, errors.INVALID_PARAMETERS,
+                          "clientMaxSize should be a number.");
+                return;
+              }
               var ttl = roomsConf.participantTTL;
               var sessionToken = tokBox.getSessionToken(
                 req.roomStorageData.sessionId
               );
-
-              storage.addRoomParticipant(req.token, req.hawkIdHmac, {
-                id: uuid.v4(),
-                displayName: req.body.displayName,
-                clientMaxSize: req.body.clientMaxSize
-              }, ttl, function(err) {
+              storage.getRoomParticipants(req.token, function(err, participants) {
                 if (res.serverError(err)) return;
-                res.status(200).json({
-                  apiKey: req.roomStorageData.apiKey,
-                  sessionId: req.roomStorageData.sessionId,
-                  sessionToken: sessionToken,
-                  expires: ttl
+                var clientMaxSize = minClientSize(participants,
+                                                  req.roomStorageData.maxSize);
+
+                if (requestMaxSize < clientMaxSize &&
+                    requestMaxSize <= participants.length) {
+                  // You cannot handle the number of actual participants.
+                  sendError(res, 400, errors.TOO_MANY_PARTICIPANTS_FOR_YOU,
+                            "Too many participants in the room for you to handle.");
+                  return;
+                } else if (clientMaxSize <= participants.length) {
+                  // The room is already full.
+                  sendError(res, 400, errors.ROOM_FULL,
+                            "The room is full.");
+                  return;
+                }
+
+                storage.addRoomParticipant(req.token, req.hawkIdHmac, {
+                  id: uuid.v4(),
+                  displayName: req.body.displayName,
+                  clientMaxSize: requestMaxSize
+                }, ttl, function(err) {
+                  if (res.serverError(err)) return;
+                  res.status(200).json({
+                    apiKey: req.roomStorageData.apiKey,
+                    sessionId: req.roomStorageData.sessionId,
+                    sessionToken: sessionToken,
+                    expires: ttl
+                  });
                 });
               });
           });

@@ -16,8 +16,8 @@
 + Check the room owner on patch and delete
 + Rename addUserRoomData to setUserRoomData
 + manage the participants in GET /rooms/token and DELETE
-- Do not let non-participants get room info (appart owner).
-- Handle rejection of new participants if the room is full.
++ Do not let non-participants get room info (appart owner).
++ Handle rejection of new participants if the room is full.
 - Write storage test for participant related methods
 - We should add CORS handling and test it.
 - WebApp Url should be refactored.

@@ -696,6 +696,65 @@ describe("/rooms", function() {
             });
           });
       });
+
+      it("should reject new participant if new participant clientMaxSize is " +
+         "lower or equal to the current number of participants.", function(done) {
+           createRoom(hawkCredentials).end(function(err, res) {
+             if (err) throw err;
+             var roomToken = res.body.roomToken;
+             joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+               if (err) throw err;
+               generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
+                 joinRoom(natimCredentials, roomToken, {
+                     displayName: "Natim",
+                     clientMaxSize: 1
+                 }, 400).end(function(err, res) {
+                   if (err) throw err;
+                   expectFormatedError(
+                     res, 400, errors.TOO_MANY_PARTICIPANTS_FOR_YOU,
+                     "Too many participants in the room for you to handle."
+                   );
+                   done();
+                 });
+               });
+             });
+           });
+         });
+
+      it("should reject new participant if the room clientMaxSize is already reached.",
+        function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+             if (err) throw err;
+             var roomToken = res.body.roomToken;
+             // Alexis joins
+             joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+               if (err) throw err;
+               generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
+                 // Natim joins
+                 joinRoom(natimCredentials, roomToken, {
+                     displayName: "Natim",
+                     clientMaxSize: 2
+                 }, 200).end(function(err, res) {
+                   if (err) throw err;
+                   generateHawkCredentials(storage, 'Julie', function(natimCredentials) {
+                     // Julie tries to joins
+                     joinRoom(natimCredentials, roomToken, {
+                       displayName: "Julie",
+                       clientMaxSize: 3
+                     }, 400).end(function(err, res) {
+                       if (err) throw err;
+                       expectFormatedError(
+                         res, 400, errors.ROOM_FULL,
+                         "The room is full."
+                       );
+                       done()
+                     });
+                   });
+                 });
+               });
+             });
+           });
+        });
     });
   });
 

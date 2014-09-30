@@ -272,7 +272,7 @@ module.exports = function(conf, logError, storage) {
       req.roomStorageData.participants = participants.map(function(participant) {
         delete participant.hawkIdHmac;
         return participant;
-      });;
+      });
       next();
     });
   }
@@ -288,4 +288,4 @@ module.exports = function(conf, logError, storage) {
     isRoomOwner: isRoomOwner,
     isRoomParticipant: isRoomParticipant
   };
-};
+}
