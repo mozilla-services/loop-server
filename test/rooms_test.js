@@ -739,7 +739,7 @@ describe("/rooms", function() {
                  }, 400).end(function(err, res) {
                    if (err) throw err;
                    expectFormatedError(
-                     res, 400, errors.TOO_MANY_PARTICIPANTS_FOR_YOU,
+                     res, 400, errors.CLIENT_REACHED_CAPACITY,
                      "Too many participants in the room for you to handle."
                    );
                    done();

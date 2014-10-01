@@ -127,8 +127,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomToken, validators.isRoomParticipant,
     function(req, res) {
       var participants = req.roomStorageData.participants;
-      var clientMaxSize = minClientSize(participants,
-                                        req.roomStorageData.maxSize);
+      var clientMaxSize = minClientSize(
+        participants,
+        req.roomStorageData.maxSize
+      );
 
       res.status(200).json({
         roomName: req.roomStorageData.roomName,
