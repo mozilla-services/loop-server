@@ -926,6 +926,17 @@ describe("/rooms", function() {
         });
       });
 
+    it("should return a 503 if the database errors out", function(done) {
+      sandbox.stub(storage, "getUserRooms", function(user, callback) {
+        callback("error");
+      });
+
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        getUserRoomsInfo(hawkCredentials, 0, 503).end(done);
+      });
+    });
+
     it("should only return the rooms with a timestamp greather than version.",
      function(done) {
        var startTime = parseInt(Date.now() / 1000, 10);

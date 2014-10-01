@@ -274,6 +274,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.get('/rooms', auth.requireHawkSession, function(req, res) {
     var version = req.query.version;
     storage.getUserRooms(req.user, function(err, rooms) {
+      if (res.serverError(err)) return;
       var roomsData = rooms.map(function(room) {
         if (version && room.updateTime < version) {
           return null;
