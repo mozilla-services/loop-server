@@ -188,16 +188,15 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                   req.roomStorageData.maxSize
                 );
 
-                if (requestMaxSize < clientMaxSize &&
-                    requestMaxSize <= participants.length) {
-                  // You cannot handle the number of actual participants.
-                  sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
-                            "Too many participants in the room for you to handle.");
-                  return;
-                } else if (clientMaxSize <= participants.length) {
+                if (clientMaxSize <= participants.length) {
                   // The room is already full.
                   sendError(res, 400, errors.ROOM_FULL,
                             "The room is full.");
+                  return;
+                } else if (requestMaxSize <= participants.length) {
+                  // You cannot handle the number of actual participants.
+                  sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
+                    "Too many participants in the room for you to handle.");
                   return;
                 }
 
