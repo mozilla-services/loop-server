@@ -132,7 +132,7 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
 
 describe("/rooms", function() {
   var sandbox, hawkIdHmac, hawkCredentials, userHmac,
-      hawkIdHmac2, hawkCredentials2, userHmac2;
+      hawkCredentials2;
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
@@ -153,10 +153,8 @@ describe("/rooms", function() {
       userHmac = userMac;
 
       generateHawkCredentials(storage, user,
-        function(credentials, id, userMac) {
+        function(credentials) {
           hawkCredentials2 = credentials;
-          hawkIdHmac2 = id;
-          userHmac2 = userMac;
           done();
         });
     });
@@ -176,16 +174,13 @@ describe("/rooms", function() {
           res.status(200).json(req.roomStorageData);
         });
 
-      var request, roomToken, participantCredentials;
+      var roomToken, participantCredentials;
 
       beforeEach(function(done) {
-        request = supertest(app)
-          .post('/is-room-participant')
-          .type('json');
 
         // Create a room as "Alex" and join as "Natim".
         generateHawkCredentials(storage, "Natim",
-          function(credentials, id, userMac) {
+          function(credentials) {
             participantCredentials = credentials;
             createRoom(hawkCredentials).end(function(err, res) {
               if (err) throw err;
@@ -199,7 +194,7 @@ describe("/rooms", function() {
       it("should 403 in case user is not a room participant or room owner",
         function(done) {
         generateHawkCredentials(storage, "unknown-user",
-          function(credentials, id, userMac) {
+          function(credentials) {
             getRoomInfo(credentials, roomToken, 403).end(done);
           });
         });
@@ -518,8 +513,6 @@ describe("/rooms", function() {
 
     it("should return 200 with the list of participants", function(done) {
       var roomToken;
-      var startTime = parseInt(Date.now() / 1000, 10);
-
       createRoom(hawkCredentials, {
         roomOwner: "Alexis",
         roomName: "UX discussion",
@@ -529,7 +522,7 @@ describe("/rooms", function() {
         if (err) throw err;
         roomToken = postRes.body.roomToken;
 
-        joinRoom(hawkCredentials, postRes.body.roomToken).end(function(err, res) {
+        joinRoom(hawkCredentials, postRes.body.roomToken).end(function(err) {
           if (err) throw err;
           getRoomInfo(hawkCredentials, postRes.body.roomToken).end(
             function(err, getRes) {
@@ -735,7 +728,7 @@ describe("/rooms", function() {
            createRoom(hawkCredentials).end(function(err, res) {
              if (err) throw err;
              var roomToken = res.body.roomToken;
-             joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+             joinRoom(hawkCredentials, roomToken).end(function(err) {
                if (err) throw err;
                generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
                  joinRoom(natimCredentials, roomToken, {
@@ -760,14 +753,14 @@ describe("/rooms", function() {
              if (err) throw err;
              var roomToken = res.body.roomToken;
              // Alexis joins
-             joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+             joinRoom(hawkCredentials, roomToken).end(function(err) {
                if (err) throw err;
                generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
                  // Natim joins
                  joinRoom(natimCredentials, roomToken, {
                      displayName: "Natim",
                      clientMaxSize: 2
-                 }, 200).end(function(err, res) {
+                 }, 200).end(function(err) {
                    if (err) throw err;
                    generateHawkCredentials(storage, 'Julie', function(natimCredentials) {
                      // Julie tries to joins
@@ -827,7 +820,7 @@ describe("/rooms", function() {
           var roomToken = res.body.roomToken;
           joinRoom(hawkCredentials, roomToken).end(function(err) {
             if (err) throw err;
-            leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+            leaveRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               getRoomInfo(hawkCredentials, roomToken).end(
                 function(err, getRes) {
@@ -931,7 +924,7 @@ describe("/rooms", function() {
         callback("error");
       });
 
-      createRoom(hawkCredentials).end(function(err, res) {
+      createRoom(hawkCredentials).end(function(err) {
         if (err) throw err;
         getUserRoomsInfo(hawkCredentials, 0, 503).end(done);
       });
@@ -939,13 +932,11 @@ describe("/rooms", function() {
 
     it("should only return the rooms with a timestamp greather than version.",
      function(done) {
-       var startTime = parseInt(Date.now() / 1000, 10);
-        createRoom(hawkCredentials).end(function(err, res) {
+        createRoom(hawkCredentials).end(function(err) {
           if (err) throw err;
-          var roomToken = res.body.roomToken;
           clock.tick(1000);
           var secondRoomStartTime = parseInt(Date.now() / 1000, 10);
-          createRoom(hawkCredentials).end(function(err, res) {
+          createRoom(hawkCredentials).end(function(err) {
             if (err) throw err;
             getUserRoomsInfo(hawkCredentials, secondRoomStartTime).end(
               function(err, res) {
