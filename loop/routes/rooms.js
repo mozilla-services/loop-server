@@ -16,6 +16,14 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   var roomsConf = conf.get("rooms");
 
 
+  /**
+   * Returns the minimum number of allowed participants, between a list of
+   * participants and the maximum size of a room.
+   *
+   * @param {Array} participants, the list of participants. Each participant
+   *                object should contain a "clientMaxSize" property.
+   * @param {Number} roomMaxSize, the maximum size of the room.
+   **/
   function minClientSize(participants, roomMaxSize) {
     var clientMaxSize = Math.min.apply(Math, participants.map(
       function(participant) {
