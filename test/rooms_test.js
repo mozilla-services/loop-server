@@ -110,9 +110,14 @@ var createRoom = function(hawkCredentials, data, status) {
     .expect(status || 201);
 };
 
-var getUserRoomsInfo = function(hawkCredentials, status) {
+var getUserRoomsInfo = function(hawkCredentials, version, status) {
+  var url = '/rooms';
+  if (version !== undefined) {
+    url += '?version=' + version;
+  }
+
   return supertest(app)
-    .get('/rooms')
+    .get(url)
     .type('json')
     .hawk(hawkCredentials)
     .expect(status || 200);
@@ -884,29 +889,62 @@ describe("/rooms", function() {
     });
   });
 
-  describe("GET /rooms/", function() {
-    it("should return appropriate info", function(done) {
-      var startTime = parseInt(Date.now() / 1000, 10);
-      createRoom(hawkCredentials).end(function(err, res) {
-        if (err) throw err;
-        var roomToken = res.body.roomToken;
-        joinRoom(hawkCredentials, roomToken).end(function(err) {
+  describe("GET /rooms", function() {
+    var clock;
+
+    beforeEach(function() {
+      clock = sinon.useFakeTimers();
+    });
+
+    afterEach(function() {
+      clock.restore();
+    });
+
+    it("should return the list of user rooms with current number of " +
+      "participants", function(done) {
+        var startTime = parseInt(Date.now() / 1000, 10);
+        createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
-          getUserRoomsInfo(hawkCredentials).end(function(err, res) {
+          var roomToken = res.body.roomToken;
+          joinRoom(hawkCredentials, roomToken).end(function(err) {
             if (err) throw err;
-            expect(res.body).to.length(1);
-            expect(res.body[0].ctime).to.be.gte(startTime);
-            delete res.body[0].ctime;
-            expect(res.body[0]).to.eql({
-              roomToken: roomToken,
-              roomName: 'UX discussion',
-              maxSize: 3,
-              currSize: 1
-            });
-            done();
+            getUserRoomsInfo(hawkCredentials).end(
+              function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.length(1);
+                expect(res.body[0].ctime).to.be.gte(startTime);
+                delete res.body[0].ctime;
+                expect(res.body[0]).to.eql({
+                  roomToken: roomToken,
+                  roomName: 'UX discussion',
+                  maxSize: 3,
+                  currSize: 1
+                });
+                done();
+              });
           });
         });
       });
-    });
+
+    it("should only return the rooms with a timestamp greather than version.",
+     function(done) {
+       var startTime = parseInt(Date.now() / 1000, 10);
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          clock.tick(1000);
+          var secondRoomStartTime = parseInt(Date.now() / 1000, 10);
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            getUserRoomsInfo(hawkCredentials, secondRoomStartTime).end(
+              function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.length(1);
+                expect(res.body[0].ctime).to.be.gte(secondRoomStartTime);
+                done();
+              });
+          });
+        });
+     });
   });
 });

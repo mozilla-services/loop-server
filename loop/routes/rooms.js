@@ -272,8 +272,12 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   **/
 
   apiRouter.get('/rooms', auth.requireHawkSession, function(req, res) {
+    var version = req.query.version;
     storage.getUserRooms(req.user, function(err, rooms) {
       var roomsData = rooms.map(function(room) {
+        if (version && room.updateTime < version) {
+          return null;
+        }
         return {
           roomToken: room.roomToken,
           roomName: room.roomName,
@@ -281,6 +285,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           currSize: room.currSize,
           ctime: room.updateTime
         };
+      }).filter(function(room) {
+        return room !== null;
       });
       res.status(200).json(roomsData);
     });

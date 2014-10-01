@@ -26,7 +26,7 @@
 + POST /rooms/:token — handle refresh
 + POST /rooms/:token — handle leave
 + GET /rooms should return user rooms
-- GET /rooms should handle the ?version parameter.
++ GET /rooms should handle the ?version parameter.
 - Add test to make sure updatedTime is updated on:
    - user join
    - user leaves
