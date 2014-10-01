@@ -17,14 +17,14 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
 
   /**
-   * Returns the minimum number of allowed participants, between a list of
+   * Returns the maximum number of allowed participants, between a list of
    * participants and the maximum size of a room.
    *
    * @param {Array} participants, the list of participants. Each participant
    *                object should contain a "clientMaxSize" property.
    * @param {Number} roomMaxSize, the maximum size of the room.
    **/
-  function minClientSize(participants, roomMaxSize) {
+  function getClientMaxSize(participants, roomMaxSize) {
     var clientMaxSize = Math.min.apply(Math, participants.map(
       function(participant) {
         return participant.clientMaxSize;
@@ -127,7 +127,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     validators.validateRoomToken, validators.isRoomParticipant,
     function(req, res) {
       var participants = req.roomStorageData.participants;
-      var clientMaxSize = minClientSize(
+      var clientMaxSize = getClientMaxSize(
         participants,
         req.roomStorageData.maxSize
       );
@@ -183,8 +183,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               );
               storage.getRoomParticipants(req.token, function(err, participants) {
                 if (res.serverError(err)) return;
-                var clientMaxSize = minClientSize(participants,
-                                                  req.roomStorageData.maxSize);
+                var clientMaxSize = getClientMaxSize(
+                  participants,
+                  req.roomStorageData.maxSize
+                );
 
                 if (requestMaxSize < clientMaxSize &&
                     requestMaxSize <= participants.length) {
