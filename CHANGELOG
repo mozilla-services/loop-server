@@ -3,11 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
-0.13.0 (2014-10-02)
+0.12.3 (2014-10-02)
 -------------------
 
 - [bugfix] 1071247 — Fix OAuth implementation;
-- [feature] Add a command to calculate the hawkIdHmac from the hawkId+hawkIdSecret
+- [tooling] Add a command to calculate the hawkIdHmac from the hawkId+hawkIdSecret
 
 0.12.2 (2014-09-18)
 -------------------
