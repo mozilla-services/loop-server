@@ -5,7 +5,6 @@
 "use strict";
 
 var expect = require("chai").expect;
-var assert = require("chai").assert;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
@@ -16,6 +15,7 @@ var hmac = require("../loop/hmac");
 var getMiddlewares = require("./support").getMiddlewares;
 
 var loop = require("../loop");
+var request = require("request");
 var app = loop.app;
 var auth = loop.auth;
 var validators = loop.validators;
@@ -29,6 +29,7 @@ var requireHawkSession = auth.requireHawkSession;
 var sessionId = conf.get("fakeCallInfo").session1;
 var sessionToken = conf.get("fakeCallInfo").token1;
 var user = "alexis@notmyidea.org";
+var spurl = "http://notmyidea.org";
 
 function generateHawkCredentials(storage, user, callback) {
   var token = new Token();
@@ -49,6 +50,25 @@ function generateHawkCredentials(storage, user, callback) {
     });
   });
 }
+
+function register(hawkCredentials, url, status) {
+  if (status === undefined) {
+    status = 200;
+  }
+
+  return supertest(app)
+    .post('/registration')
+    .hawk(hawkCredentials)
+    .type('json')
+    .send({
+      "simplePushURLs": {
+        "calls": url + "/calls",
+        "rooms": url
+      }
+    })
+    .expect(status);
+}
+
 
 var getRoomInfo = function(hawkCredentials, roomToken, status) {
   return supertest(app)
@@ -132,10 +152,15 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
 
 describe("/rooms", function() {
   var sandbox, hawkIdHmac, hawkCredentials, userHmac,
-      hawkCredentials2;
+      hawkCredentials2, requests;
 
   beforeEach(function(done) {
+    requests = [];
     sandbox = sinon.sandbox.create();
+
+    sandbox.stub(request, "put", function(options) {
+      requests.push(options);
+    });
 
     sandbox.stub(tokBox._opentok.default, "createSession",
       function(options, cb) {
@@ -152,11 +177,15 @@ describe("/rooms", function() {
       hawkIdHmac = id;
       userHmac = userMac;
 
-      generateHawkCredentials(storage, user,
-        function(credentials) {
-          hawkCredentials2 = credentials;
-          done();
-        });
+      register(hawkCredentials, spurl).end(function(err, res) {
+        if (err) throw err;
+
+        generateHawkCredentials(storage, user,
+          function(credentials) {
+            hawkCredentials2 = credentials;
+            done();
+          });
+      });
     });
   });
 
@@ -411,7 +440,7 @@ describe("/rooms", function() {
       });
     });
 
-    it("should return appropriate info", function(done) {
+    it("should create the room.", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
       .post('/rooms')
@@ -452,6 +481,8 @@ describe("/rooms", function() {
             expiresIn: 10,
             roomOwnerHmac: userHmac
           });
+
+          expect(requests).to.length(1);
           done();
         });
      });
@@ -460,7 +491,7 @@ describe("/rooms", function() {
     it("should not use two times the same token");
   });
 
-  describe("GET /room/:token", function() {
+  describe("GET /rooms/:token", function() {
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'get', '/rooms/:token'))
         .include(validators.validateRoomToken);
@@ -471,7 +502,7 @@ describe("/rooms", function() {
         .include(requireHawkSession);
     });
 
-    it("should return 200 with appropriate info", function(done) {
+    it("should return 200 with room info", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
         .post('/rooms')
@@ -494,9 +525,11 @@ describe("/rooms", function() {
             .end(function(err, getRes) {
               if (err) throw err;
               expect(getRes.body.creationTime).to.be.gte(startTime);
+              expect(getRes.body.ctime).to.be.gte(startTime);
               expect(getRes.body.expiresAt).to.be.gte(startTime + 10 * 3600);
 
               delete getRes.body.creationTime;
+              delete getRes.body.ctime;
               delete getRes.body.expiresAt;
 
               expect(getRes.body).to.eql({
@@ -554,7 +587,7 @@ describe("/rooms", function() {
     });
   });
 
-  describe("PATCH /room/:token", function() {
+  describe("PATCH /rooms/:token", function() {
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
         .include(validators.validateRoomToken);
@@ -575,7 +608,7 @@ describe("/rooms", function() {
         .include(validators.isRoomOwner);
     });
 
-    it("should return a 200.", function(done) {
+    it("should update the roomData.", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
         .post('/rooms')
@@ -590,7 +623,7 @@ describe("/rooms", function() {
         .expect(201)
         .end(function(err, postRes) {
           if (err) throw err;
-
+          requests = [];
           var updateTime = parseInt(Date.now() / 1000, 10);
           supertest(app)
             .patch('/rooms/' + postRes.body.roomToken)
@@ -619,6 +652,9 @@ describe("/rooms", function() {
                   expect(getRes.body.creationTime).to.be.gte(startTime);
                   delete getRes.body.creationTime;
 
+                  expect(getRes.body.ctime).to.be.gte(updateTime);
+                  delete getRes.body.ctime;
+
                   expect(getRes.body.expiresAt).to.be.gte(updateTime + 5 * 3600);
                   delete getRes.body.expiresAt;
 
@@ -629,14 +665,16 @@ describe("/rooms", function() {
                     "roomName": "About UX",
                     "roomOwner": "Natim"
                   });
-                  done(err);
+
+                  expect(requests).to.length(1);
+                  done();
                 });
             });
         });
     });
   });
 
-  describe("POST /room/:token", function() {
+  describe("POST /rooms/:token", function() {
     var token, postReq;
 
     beforeEach(function(done) {
@@ -762,9 +800,9 @@ describe("/rooms", function() {
                      clientMaxSize: 2
                  }, 200).end(function(err) {
                    if (err) throw err;
-                   generateHawkCredentials(storage, 'Julie', function(natimCredentials) {
+                   generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
                      // Julie tries to joins
-                     joinRoom(natimCredentials, roomToken, {
+                     joinRoom(julieCredentials, roomToken, {
                        displayName: "Julie",
                        clientMaxSize: 3
                      }, 400).end(function(err, res) {
@@ -781,32 +819,57 @@ describe("/rooms", function() {
              });
            });
         });
+
+      it("should notify all the room owner devices.", function(done) {
+          register(hawkCredentials2, spurl + "2").end(function(err) {
+            if (err) throw err;
+            createRoom(hawkCredentials).end(function(err, res) {
+              if (err) throw err;
+              var roomToken = res.body.roomToken;
+              generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+                var joinTime = parseInt(Date.now() / 1000, 10);
+                requests = [];
+                joinRoom(julieCredentials, roomToken).end(function(err) {
+                  if (err) throw err;
+                  expect(requests).to.length(2);
+                  expect(requests[0].url).to.match(/http:\/\/notmyidea/);
+                  expect(requests[0].form.version).to.gte(joinTime);
+                  done()
+                });
+              });
+            });
+          });
+      });
     });
 
     describe("Handle 'refresh'", function() {
-      var spy;
+      var clock;
+
       // Should touch the participant expiracy
       beforeEach(function() {
-        spy = sandbox.spy(storage, "touchRoomParticipant");
+        clock = sinon.useFakeTimers(Date.now());
+      });
+
+      afterEach(function() {
+        clock.restore();
       });
 
       it("should touch the participant and return the next expiration.",
         function(done) {
+          var startTime = parseInt(Date.now() / 1000, 10);
           createRoom(hawkCredentials).end(function(err, res) {
             if (err) throw err;
             var roomToken = res.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+              clock.tick(1000);
+              refreshRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
-                expect(res.body).to.eql({
-                  expires: conf.get("rooms").participantTTL
+                getRoomInfo(hawkCredentials, roomToken).end(function(err, res) {
+                  if (err) throw err;
+                  expect(res.body.creationTime).to.be.gte(startTime);
+                  done();
                 });
-                assert(
-                  spy.calledWithMatch(roomToken, hawkIdHmac,
-                                      conf.get("rooms").participantTTL)
-                );
-                done();
               });
             });
           });
@@ -832,10 +895,37 @@ describe("/rooms", function() {
           });
         });
       });
+
+      it("should notify all the room owner devices.", function(done) {
+        register(hawkCredentials, "http://notmyidea.org").end(function(err) {
+          if (err) throw err;
+          register(hawkCredentials2, "http://notmyidea2.org").end(function(err) {
+            if (err) throw err;
+            createRoom(hawkCredentials).end(function(err, res) {
+              if (err) throw err;
+              var roomToken = res.body.roomToken;
+              generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+                joinRoom(julieCredentials, roomToken).end(function(err) {
+                  if (err) throw err;
+                  requests = [];
+                  var leaveTime = parseInt(Date.now() / 1000, 10);
+                  leaveRoom(julieCredentials, roomToken).end(function(err) {
+                    if (err) throw err;
+                    expect(requests).to.length(2);
+                    expect(requests[0].url).to.match(/http:\/\/notmyidea/);
+                    expect(requests[0].form.version).to.gte(leaveTime);
+                    done()
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
     });
   });
 
-  describe("DELETE /room/:token", function() {
+  describe("DELETE /rooms/:token", function() {
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'delete', '/rooms/:token'))
         .include(validators.validateRoomToken);
@@ -874,8 +964,10 @@ describe("/rooms", function() {
       createRoom(hawkCredentials).end(function(err, res) {
         if (err) throw err;
         var roomToken = res.body.roomToken;
+        requests = [];
         deleteRoom(hawkCredentials, roomToken).end(function(err) {
           if (err) throw err;
+          expect(requests).to.length(1);
           getRoomInfo(hawkCredentials, roomToken, 404).end(done);
         });
       });
@@ -886,7 +978,7 @@ describe("/rooms", function() {
     var clock;
 
     beforeEach(function() {
-      clock = sinon.useFakeTimers();
+      clock = sinon.useFakeTimers(Date.now());
     });
 
     afterEach(function() {

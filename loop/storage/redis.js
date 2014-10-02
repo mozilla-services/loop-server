@@ -803,6 +803,24 @@ RedisStorage.prototype = {
     });
   },
 
+  touchRoomData: function(roomToken, callback) {
+    var self = this;
+    self.getRoomData(roomToken, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      data.updateTime = parseInt(Date.now() / 1000, 10);
+      self._client.setex(
+        'room.' + roomToken,
+        data.expiresAt - data.updateTime,
+        JSON.stringify(data),
+        function(err) {
+          callback(err, data.updateTime);
+        });
+    });
+  },
+
   deleteRoomData: function(roomToken, callback) {
     var self = this;
     self._client.del('room.' + roomToken, function(err) {

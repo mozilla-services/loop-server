@@ -27,9 +27,11 @@
 + POST /rooms/:token — handle leave
 + GET /rooms should return user rooms
 + GET /rooms should handle the ?version parameter.
-- Add test to make sure updatedTime is updated on:
-   - user join
-   - user leaves
++ Test roomUserSimplePush to be called on updateTime.
++ Add test to make sure updatedTime is updated on:
+   + user join
+   + user leaves
++ Test notification on POST / PATCH / DELETE /rooms
 - Handle the TokBox channel on /rooms (+to say)
 - Handle the account property in the participant obj.
 - Add a test to check participants expiricy (doesn't return items when not needed);

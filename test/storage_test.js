@@ -23,6 +23,7 @@ var simplePushURL2 = "https://push.mozilla.com/test2";
 var fakeCallInfo = conf.get("fakeCallInfo");
 var callUrls = conf.get('callUrls');
 
+var ttl = 30;
 
 describe("Storage", function() {
   function testStorage(name, createStorage) {
@@ -792,7 +793,6 @@ describe("Storage", function() {
 
       describe("#addRoomParticipant", function() {
         it("should add a participant to the room", function(done) {
-          var ttl = 30;
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
             function(err) {
               if (err) throw err;
@@ -836,7 +836,6 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipant", function() {
         it("should remove a participant to the room", function(done) {
-          var ttl = 30;
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
             function(err) {
               if (err) throw err;

@@ -8,6 +8,7 @@ var errors = require('../errno.json');
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
 var uuid = require('node-uuid');
+var request = require('request');
 
 /* eslint-disable */
 
@@ -32,6 +33,47 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     return Math.min(clientMaxSize, roomMaxSize);
   }
 
+
+  /**
+   * Ping the room Owner simplePush rooms endpoints
+   **/
+  function notifyOwner(roomOwnerHmac, version, callback) {
+    storage.getUserSimplePushURLs(roomOwnerHmac,
+      function(err, simplePushURLsMapping) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        simplePushURLsMapping.rooms.forEach(function(simplePushUrl) {
+          request.put({
+            url: simplePushUrl,
+            form: { version: version }
+          }, function() {
+            // Catch errors.
+          });
+        });
+        callback(null);
+      });
+  }
+
+  /**
+   * Emit an event on a room and trigger the following process:
+   *  - Update the room ctime
+   *  - Ping the room Owner simplePush rooms endpoints
+   *
+   * @param roomToken The roomToken
+   * @param userIdHmac The roomOwnerHmac
+   * @param callback The action to do next
+   **/
+  function emitRoomEvent(roomToken, roomOwnerHmac, callback) {
+    storage.touchRoomData(roomToken, function(err, version) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      notifyOwner(roomOwnerHmac, version, callback);
+    });
+  }
 
   /**
    * Room creation.
@@ -67,11 +109,13 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
         storage.setUserRoomData(req.user, token, roomData, function(err) {
           if (res.serverError(err)) return;
-
-          res.status(201).json({
-            roomToken: token,
-            roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-            expiresAt: roomData.expiresAt
+          notifyOwner(req.user, roomData.updateTime, function(err) {
+            if (res.serverError(err)) return;
+            res.status(201).json({
+              roomToken: token,
+              roomUrl: roomsConf.webAppUrl.replace('{token}', token),
+              expiresAt: roomData.expiresAt
+            });
           });
         });
       });
@@ -108,8 +152,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       storage.setUserRoomData(req.user, req.token, roomData, function(err) {
         if (res.serverError(err)) return;
-        res.status(200).json({
-          expiresAt: roomData.expiresAt
+        notifyOwner(req.user, now, function(err) {
+          if (res.serverError(err)) return;
+          res.status(200).json({
+            expiresAt: roomData.expiresAt
+          });
         });
       });
     });
@@ -119,7 +166,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     function(req, res) {
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
-        res.status(204).json({});
+        var now = parseInt(Date.now() / 1000, 10);
+        notifyOwner(req.user, now, function(err) {
+          if (res.serverError(err)) return;
+          res.status(204).json({});
+        });
       });
     });
 
@@ -139,6 +190,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         clientMaxSize: clientMaxSize,
         creationTime: req.roomStorageData.creationTime,
         expiresAt: req.roomStorageData.expiresAt,
+        ctime: req.roomStorageData.updateTime,
         participants: participants
       });
     });
@@ -203,15 +255,20 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 storage.addRoomParticipant(req.token, req.hawkIdHmac, {
                   id: uuid.v4(),
                   displayName: req.body.displayName,
-                  clientMaxSize: requestMaxSize
+                  clientMaxSize: requestMaxSize,
+                  userIdHmac: req.user
                 }, ttl, function(err) {
                   if (res.serverError(err)) return;
-                  res.status(200).json({
-                    apiKey: req.roomStorageData.apiKey,
-                    sessionId: req.roomStorageData.sessionId,
-                    sessionToken: sessionToken,
-                    expires: ttl
-                  });
+                  emitRoomEvent(req.token, req.roomStorageData.roomOwnerHmac,
+                    function(err) {
+                      if (res.serverError(err)) return;
+                      res.status(200).json({
+                        apiKey: req.roomStorageData.apiKey,
+                        sessionId: req.roomStorageData.sessionId,
+                        sessionToken: sessionToken,
+                        expires: ttl
+                      });
+                    });
                 });
               });
           });
@@ -234,7 +291,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           storage.deleteRoomParticipant(req.token, req.hawkIdHmac,
             function(err) {
               if (res.serverError(err)) return;
-              res.status(204).json();
+              emitRoomEvent(req.token, req.roomStorageData.roomOwnerHmac,
+                function(err) {
+                  if (res.serverError(err)) return;
+                  res.status(204).json();
+                });
             });
         }
       };
