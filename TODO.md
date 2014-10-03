@@ -32,15 +32,15 @@
    + user join
    + user leaves
 + Test notification on POST / PATCH / DELETE /rooms
-- Handle the TokBox channel on /rooms (+to say)
++ Add a test to check participants expiricy (doesn't return items when not needed);
 - Handle the account property in the participant obj.
-- Add a test to check participants expiricy (doesn't return items when not needed);
 - update the memory usage script with rooms (+ other stuff that needs to be updated)
 - update the load test scripts
+- Handle the TokBox channel on /rooms (+to say)
 
 
 ## To say
 
 - It's not a 200 it's a 201 on resource creation;
++ PUT /rooms/token should be PATCH;
 - Handle the TokBox channel on /rooms;
-+ PUT /rooms/token should be PATCH.

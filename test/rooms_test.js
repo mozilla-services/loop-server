@@ -923,6 +923,39 @@ describe("/rooms", function() {
         });
       });
     });
+    describe("Participants", function() {
+      it("should expire automatically.", function(done) {
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          generateHawkCredentials(storage, 'Julie',
+            function(julieCredentials, julieHawkIdHmac) {
+              joinRoom(julieCredentials, roomToken).end(function(err) {
+                if (err) throw err;
+                // Touch the participant value for a small time.
+                storage.touchRoomParticipant(roomToken, julieHawkIdHmac, 0.01,
+                  function(err, success) {
+                    if (err) throw err;
+                    expect(success).to.eql(true);
+                    getRoomInfo(hawkCredentials, roomToken).end(
+                      function(err, res) {
+                        if (err) throw err;
+                        expect(res.body.participants).to.length(1);
+                        setTimeout(function() {
+                          getRoomInfo(hawkCredentials, roomToken).end(
+                            function(err, res) {
+                              if (err) throw err;
+                              expect(res.body.participants).to.length(0);
+                              done();
+                            });
+                        }, 15);
+                      });
+                  });
+              });
+            });
+        });
+      });
+    });
   });
 
   describe("DELETE /rooms/:token", function() {
