@@ -3,23 +3,24 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 'use strict';
+
 var async = require('async');
+var HKDF = require('hkdf');
 var uuid = require('node-uuid');
 var request = require('request');
-var HKDF = require('hkdf');
 
+var decrypt = require('../encrypt').decrypt;
+var encrypt = require('../encrypt').encrypt;
 var errors = require('../errno.json');
+var getUserAccount = require('../utils').getUserAccount;
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
-var getUserAccount = require('../utils').getUserAccount;
-var encrypt = require('../encrypt').encrypt;
-var decrypt = require('../encrypt').decrypt;
 
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
-  var roomsConf = conf.get("rooms");
 
+  var roomsConf = conf.get("rooms");
 
   /**
    * Returns the maximum number of allowed participants, between a list of
@@ -39,7 +40,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
 
   /**
-   * Ping the room Owner simplePush rooms endpoints
+   * Ping the room Owner simplePush rooms endpoints.
+   *
+   * @param {String} roomOwnerHmac, the hmac-ed owner,
+   * @param {Number} version, the version to pass in the request,
+   * @param {Function} callback(err), called when notification is complete.
    **/
   function notifyOwner(roomOwnerHmac, version, callback) {
     storage.getUserSimplePushURLs(roomOwnerHmac,
@@ -61,9 +66,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   }
 
   /**
-   * Emit an event on a room and trigger the following process:
-   *  - Update the room ctime
-   *  - Ping the room Owner simplePush rooms endpoints
+   * Update room data and emit an event if needed so the owner is aware.
    *
    * @param roomToken The roomToken
    * @param userIdHmac The roomOwnerHmac
@@ -79,38 +82,42 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
   }
 
-  function encryptAccountName(roomId, account, callback) {
-    var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomId);
+  /**
+   * Encrypt an account name with the roomID and a secret known only by
+   * the server. This is useful as we don't want to store PII on our databases.
+   *
+   * @param {String} roomToken, the token of the room
+   * @param {String} account the account information to encrypt
+   * @param {Function} callback which will receive the encrypted account info.
+   **/
+  function encryptAccountName(roomToken, account, callback) {
+    var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomToken);
     hkdf.derive('account-name', 32, function(key) {
       callback(encrypt(key.toString('hex'), account));
     });
   }
-
-  function decryptAccountName(roomId, encryptedAccount, callback) {
-    var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomId);
+  /**
+   * Decrypts an encrypted account information using the roomID and a
+   * secret known only by the server.
+   *
+   * @param {String} roomToken, the token of the room
+   * @param {String} encrypted account information to decrypt.
+   * @param {Function} callback which will receive the decrypted account info.
+   **/
+  function decryptAccountName(roomToken, encryptedAccount, callback) {
+    var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomToken);
     hkdf.derive('account-name', 32, function(key) {
       callback(decrypt(key.toString('hex'), encryptedAccount));
     });
   }
 
   /**
-   * Room creation.
-   *
-   * accepts
-   *   roomName - The room-owner-assigned name used to identify this room.
-   *   expiresIn - The number of hours for which the room will exist.
-   *   roomOwner - The user-friendly display name indicating the name of the room's owner.
-   *   maxSize - The maximum number of users allowed in the room at one time.
-
-   * returns
-   *   roomToken - The token used to identify this room.
-   *   roomUrl - A URL that can be given to other users to allow them to join the room.
-   *   expiresAt - The date after which the room will no longer be valid (in seconds since the Unix epoch).
-   *
+   * Create a new room with the given information
    **/
   apiRouter.post('/rooms', auth.requireHawkSession,
     validators.requireParams('roomName', 'roomOwner', 'maxSize'),
     validators.validateRoomUrlParams, function(req, res) {
+
       var roomData = req.roomRequestData;
       var token = tokenlib.generateToken(roomsConf.tokenSize);
       var now = parseInt(Date.now() / 1000, 10);
@@ -140,18 +147,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
 
   /**
-   * PATCH /rooms/{id}
-   *
-   * accepts:
-   * roomName - The room-owner-assigned name used to identify this room.
-   * expiresIn - The number of hours for which the room will exist.
-   * roomOwner - The user-friendly display name indicating the name of the
-                 room's owner.
-   * maxSize - The maximum number of users allowed in the room at one time.
-   *
-   * returns
-   * expiresAt - The date after which the room will no longer be valid (in
-   * seconds since the Unix epoch).
+   * Updates information about a room.
    **/
   apiRouter.patch('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.validateRoomUrlParams,
@@ -161,7 +157,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       roomData.updateTime = now;
 
-      // Update the object with new data
+      // Update the roomData object with new data from the request.
       Object.keys(req.roomRequestData).map(function(key) {
         roomData[key] = req.roomRequestData[key];
       });
@@ -179,6 +175,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       });
     });
 
+  /**
+   * Deletes a room.
+   * This only works if you're the owner of this room.
+   **/
   apiRouter.delete('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.isRoomOwner,
     function(req, res) {
@@ -192,6 +192,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       });
     });
 
+  /**
+   * Retrieves information about a specific room.
+   **/
   apiRouter.get('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.isRoomParticipant,
     function(req, res) {
@@ -200,6 +203,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         req.roomStorageData.maxSize
       );
 
+      // Since the participant information is stored encrypted,
+      // there is a need to decrypt it using async.map as it is an async
+      // operation.
       async.map(req.roomStorageData.participants,
         function(participant, callback) {
           decryptAccountName(req.token, participant.account, function(account) {
@@ -222,11 +228,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
 
   /**
-   * action - "join", "leave", "refresh".
+   * Do an action on a room.
    *
-   * For join, accepts:
-   * displayName - User-friendly display name for the joining user.
-   * clientMaxSize - Maximum number of room participants the user's client is capable of supporting.
+   * Actions are "join", "leave", "refresh".
    **/
   apiRouter.post('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, function(req, res) {
@@ -344,27 +348,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
 
   /**
-   * returns:
-   *
-   * roomToken - The token that uniquely identifies this room
-   * roomName - The room-owner-assigned name used to identify this room
-   * maxSize - The maximum number of users allowed in the room at one time
-   *           (as configured by the room owner).
-   * clientMaxSize - The current maximum number of users allowed in the room,
-   *                 as constrained by the clients currently participating in
-   *                 the session. If no client has a supported size smaller
-   *                 than "maxSize", then this will be equal to "maxSize".
-   *                 Under no circumstances can "clientMaxSize" be larger than
-   *                 "maxSize".
-   * currSize - The number of users currently in the room
-   * ctime - Similar in spirit to the Unix filesystem "ctime" (change time)
-   *         attribute. The time, in seconds since the Unix epoch, that any
-   *         of the following happened to the room:
-   * - The room was created
-   * - The owner modified its attributes with "PUT /room-url/{token}"
-   * - A user joined the room
-   * - A user left the room
-  **/
+   * List all the rooms for the connected user.
+   **/
 
   apiRouter.get('/rooms', auth.requireHawkSession, function(req, res) {
     var version = req.query.version;

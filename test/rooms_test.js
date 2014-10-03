@@ -166,8 +166,7 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
 };
 
 describe("/rooms", function() {
-  var sandbox, hawkIdHmac, hawkCredentials, userHmac,
-      hawkCredentials2, requests;
+  var sandbox, hawkCredentials, userHmac, hawkCredentials2, requests;
 
   beforeEach(function(done) {
     requests = [];
@@ -189,7 +188,6 @@ describe("/rooms", function() {
 
     generateHawkCredentials(storage, user, function(credentials, id, userMac) {
       hawkCredentials = credentials;
-      hawkIdHmac = id;
       userHmac = userMac;
 
       register(hawkCredentials, spurl).end(function(err, res) {
