@@ -1,7 +1,8 @@
 import json
 from requests_hawk import HawkAuth
 
-class TestCallsMixin(object):    
+
+class TestCallsMixin(object):
     def setupCall(self):
         self.register()
         token = self.generate_call_url()

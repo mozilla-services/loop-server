@@ -8,6 +8,8 @@
 - What should be the size of the room token? 8 Bytes for now.
 - Should we dedupe the users in the room? (a participant per device or per account)
 - Should everyone be able to list all the participants to a room, or should that be only for participants?
+- How do we handle the link clicker session?
+- How do we handle two participants asking for the same displayName?
 
 
 ## Code & Test
