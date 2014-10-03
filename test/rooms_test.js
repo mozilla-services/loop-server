@@ -13,6 +13,8 @@ var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
 var getMiddlewares = require("./support").getMiddlewares;
+var encrypt = require('../loop/encrypt').encrypt;
+
 
 var loop = require("../loop");
 var request = require("request");
@@ -31,6 +33,11 @@ var sessionToken = conf.get("fakeCallInfo").token1;
 var user = "alexis@notmyidea.org";
 var spurl = "http://notmyidea.org";
 
+/**
+ * Generates hawk credentials for the given user and return them.
+ *
+ * These credentials are valid and match to a firefox account in the database.
+ **/
 function generateHawkCredentials(storage, user, callback) {
   var token = new Token();
   token.getCredentials(function(tokenId, authKey) {
@@ -45,7 +52,15 @@ function generateHawkCredentials(storage, user, callback) {
       if (err) throw err;
       storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
         if (err) throw err;
-        callback(hawkCredentials, hawkIdHmac, userHmac);
+        var encryptedIdentifier = encrypt(tokenId, user);
+        storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
+          if (err) throw err;
+          storage.setHawkUserId(hawkIdHmac, encryptedIdentifier,
+            function(err) {
+              if (err) throw err;
+              callback(hawkCredentials, hawkIdHmac, userHmac);
+            });
+        });
       });
     });
   });
@@ -566,21 +581,33 @@ describe("/rooms", function() {
               expect(getRes.body.participants[0].id).to.length(36);
               expect(getRes.body.clientMaxSize).to.eql(2);
 
-              joinRoom(hawkCredentials2, postRes.body.roomToken, {
-                displayName: "Remy",
-                clientMaxSize: 20
-              }).end(function(err) {
-                if (err) throw err;
-                getRoomInfo(hawkCredentials2, roomToken).end(
-                  function(err, getRes2) {
+              expect(getRes.body.participants[0].account)
+                .to.eql("alexis@notmyidea.org");
+
+              // Let's join with a second device.
+              generateHawkCredentials(storage, "remy@mozilla.com",
+                function(remyCredentials) {
+
+                  joinRoom(remyCredentials, postRes.body.roomToken, {
+                    displayName: "Remy",
+                    clientMaxSize: 20
+                  }).end(function(err) {
                     if (err) throw err;
-                    expect(getRes2.body.participants).to.length(2);
-                    expect(getRes2.body.participants[0].id).not.eql(undefined);
-                    expect(getRes2.body.participants[0].id).to.length(36);
-                    expect(getRes2.body.clientMaxSize).to.eql(2);
-                    done();
+                    getRoomInfo(remyCredentials, roomToken).end(
+                      function(err, getRes2) {
+                        if (err) throw err;
+
+                        var accounts = getRes2.body.participants.map(function(p) {
+                          return p.account;
+                        }).sort();
+
+                        expect(accounts).to.length(2);
+                        expect(accounts).to.eql(["alexis@notmyidea.org",
+                                                 "remy@mozilla.com"]);
+                        done();
+                      });
                   });
-              });
+                });
             });
         });
       });
@@ -811,7 +838,7 @@ describe("/rooms", function() {
                          res, 400, errors.ROOM_FULL,
                          "The room is full."
                        );
-                       done()
+                       done();
                      });
                    });
                  });
@@ -989,7 +1016,7 @@ describe("/rooms", function() {
               done();
             });
           });
-        })
+        });
       });
     });
 

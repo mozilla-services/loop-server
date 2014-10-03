@@ -6,12 +6,12 @@
 
 var async = require('async');
 var randomBytes = require("crypto").randomBytes;
-var decrypt = require("../encrypt").decrypt;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
 var getProgressURL = require('../utils').getProgressURL;
 var request = require('request');
 var sendError = require('../utils').sendError;
+var getUserAccount = require('../utils').getUserAccount;
 var phone = require('phone');
 var constants = require("../constants");
 
@@ -118,13 +118,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
   app.post('/calls', auth.requireHawkSession,
     validators.requireParams('calleeId'), validators.validateCallType,
     function(req, res) {
-      storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+      getUserAccount(storage, req, function(err, userId) {
         if (res.serverError(err)) return;
-
-        var userId;
-        if (encryptedUserId !== null) {
-          userId = decrypt(req.hawk.id, encryptedUserId);
-        }
 
         var calleeId = req.body.calleeId;
         if (!Array.isArray(calleeId)) {
