@@ -260,13 +260,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
             return;
           }
 
-          storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+          getUserAccount(storage, req, function(err, userId) {
             if (res.serverError(err)) return;
-
-            var userId;
-            if (encryptedUserId !== null) {
-              userId = decrypt(req.hawkIdHmac, encryptedUserId);
-            }
 
             storeUserCallTokens({
               callType: req.body.callType,

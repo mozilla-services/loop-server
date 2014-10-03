@@ -3,16 +3,18 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 'use strict';
+var async = require('async');
+var uuid = require('node-uuid');
+var request = require('request');
+var HKDF = require('hkdf');
 
 var errors = require('../errno.json');
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
-var uuid = require('node-uuid');
-var request = require('request');
 var getUserAccount = require('../utils').getUserAccount;
+var encrypt = require('../encrypt').encrypt;
+var decrypt = require('../encrypt').decrypt;
 
-
-/* eslint-disable */
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
@@ -74,6 +76,20 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         return;
       }
       notifyOwner(roomOwnerHmac, version, callback);
+    });
+  }
+
+  function encryptAccountName(roomId, account, callback) {
+    var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomId);
+    hkdf.derive('account-name', 32, function(key) {
+      callback(encrypt(key.toString('hex'), account));
+    });
+  }
+
+  function decryptAccountName(roomId, encryptedAccount, callback) {
+    var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomId);
+    hkdf.derive('account-name', 32, function(key) {
+      callback(decrypt(key.toString('hex'), encryptedAccount));
     });
   }
 
@@ -179,22 +195,30 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.get('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.isRoomParticipant,
     function(req, res) {
-      var participants = req.roomStorageData.participants;
       var clientMaxSize = getClientMaxSize(
-        participants,
+        req.roomStorageData.participants,
         req.roomStorageData.maxSize
       );
 
-      res.status(200).json({
-        roomName: req.roomStorageData.roomName,
-        roomOwner: req.roomStorageData.roomOwner,
-        maxSize: req.roomStorageData.maxSize,
-        clientMaxSize: clientMaxSize,
-        creationTime: req.roomStorageData.creationTime,
-        expiresAt: req.roomStorageData.expiresAt,
-        ctime: req.roomStorageData.updateTime,
-        participants: participants
-      });
+      async.map(req.roomStorageData.participants,
+        function(participant, callback) {
+          decryptAccountName(req.token, participant.account, function(account) {
+            participant.account = account;
+            callback(null, participant);
+          });
+        }, function(err, participants) {
+          if (res.serverError(err)) return;
+          res.status(200).json({
+            roomName: req.roomStorageData.roomName,
+            roomOwner: req.roomStorageData.roomOwner,
+            maxSize: req.roomStorageData.maxSize,
+            clientMaxSize: clientMaxSize,
+            creationTime: req.roomStorageData.creationTime,
+            expiresAt: req.roomStorageData.expiresAt,
+            ctime: req.roomStorageData.updateTime,
+            participants: participants
+          });
+        });
     });
 
   /**
@@ -223,10 +247,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       var handlers = {
         handleJoin: function(req, res) {
-          validators.requireParams('displayName', 'clientMaxSize')
-            (req, res, function() {
+          validators.requireParams('displayName', 'clientMaxSize')(
+            req, res, function() {
               var requestMaxSize = parseInt(req.body.clientMaxSize, 10);
-              if (requestMaxSize === NaN) {
+              if (isNaN(requestMaxSize)) {
                 sendError(res, 400, errors.INVALID_PARAMETERS,
                           "clientMaxSize should be a number.");
                 return;
@@ -255,26 +279,28 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                     return;
                   }
 
-                  getUserAccount(storage, req, function(err, account) {
-                    if (res.serverError(err)) return;
-                    storage.addRoomParticipant(req.token, req.hawkIdHmac, {
-                      id: uuid.v4(),
-                      displayName: req.body.displayName,
-                      clientMaxSize: requestMaxSize,
-                      userIdHmac: req.user,
-                      account: account
-                    }, ttl, function(err) {
+                  getUserAccount(storage, req, function(err, acc) {
+                    encryptAccountName(req.token, acc, function(account) {
                       if (res.serverError(err)) return;
-                      emitRoomEvent(req.token,
-                        req.roomStorageData.roomOwnerHmac, function(err) {
-                          if (res.serverError(err)) return;
-                          res.status(200).json({
-                            apiKey: req.roomStorageData.apiKey,
-                            sessionId: req.roomStorageData.sessionId,
-                            sessionToken: sessionToken,
-                            expires: ttl
+                      storage.addRoomParticipant(req.token, req.hawkIdHmac, {
+                        id: uuid.v4(),
+                        displayName: req.body.displayName,
+                        clientMaxSize: requestMaxSize,
+                        userIdHmac: req.user,
+                        account: account
+                      }, ttl, function(err) {
+                        if (res.serverError(err)) return;
+                        emitRoomEvent(req.token,
+                          req.roomStorageData.roomOwnerHmac, function(err) {
+                            if (res.serverError(err)) return;
+                            res.status(200).json({
+                              apiKey: req.roomStorageData.apiKey,
+                              sessionId: req.roomStorageData.sessionId,
+                              sessionToken: sessionToken,
+                              expires: ttl
+                            });
                           });
-                        });
+                      });
                     });
                   });
 
@@ -308,11 +334,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         }
       };
 
-      if (action == "join") {
+      if (action === "join") {
         handlers.handleJoin(req, res);
-      } else if (action == "refresh") {
+      } else if (action === "refresh") {
         handlers.handleRefresh(req, res);
-      } else if (action == "leave") {
+      } else if (action === "leave") {
         handlers.handleLeave(req, res);
       }
     });
@@ -362,4 +388,3 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     });
   });
 };
-/* eslint-enable */

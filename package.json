@@ -25,6 +25,7 @@
     "express": "4.x",
     "express-hawkauth": "0.3.0",
     "hiredis": "0.1.17",
+    "hkdf": "0.0.2",
     "opentok": "2.2.4",
     "phone": "git://github.com/Natim/node-phone.git#83a4f48",
     "node-uuid": "1.4.1",

@@ -449,6 +449,13 @@ var conf = convict({
       format: "url",
       default: "http://localhost:3000/#room/{token}",
       env: "ROOMS_WEB_APP_URL"
+    },
+    HKDFSalt: {
+      doc: "The salt that will be used to cipher profile data " +
+           "(16 bytes key encoded as hex)",
+      format: hexKeyOfSize(16),
+      default: "",
+      env: "ROOMS_HKDF_SECRET"
     }
   }
 });
@@ -468,6 +475,9 @@ conf.validate();
 
 if (conf.get('macSecret') === "")
   throw "Please define macSecret in your configuration file";
+
+if (conf.get('rooms').HKDFSalt === "")
+    throw "Please define rooms.HKDFSalt in your configuration file";
 
 if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
