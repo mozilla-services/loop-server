@@ -9,7 +9,7 @@ INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 
 # Build virtualenv, to ensure we have all the dependencies.
 .env.install:
-	virtualenv --no-site-packages ./venv
+	virtualenv ./venv
 	$(INSTALL) pexpect >> loadtest.log && \
 	$(INSTALL) configparser==3.3.0r2 >> loadtest.log && \
 	$(INSTALL) gevent >> loadtest.log && \
@@ -22,7 +22,7 @@ install: .env.install
 
 # Clean all the things installed by `make build`.
 clean:
-	rm -rf ./venv *.pyc
+	rm -rf ./venv *.pyc .env.install
 
 # Run a single test from the venv machine, for sanity-checking.
 test: install
