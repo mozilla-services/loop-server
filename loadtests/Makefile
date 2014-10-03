@@ -5,10 +5,10 @@ SERVER_URL = https://loop.stage.mozaws.net:443
 ARCHFLAGS = -Wno-error=unused-command-line-argument-hard-error-in-future
 INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 
-.PHONY: build clean test bench megabench
+.PHONY: install clean bench megabench
 
 # Build virtualenv, to ensure we have all the dependencies.
-build:
+.env.install:
 	virtualenv --no-site-packages ./venv
 	$(INSTALL) pexpect >> loadtest.log && \
 	$(INSTALL) configparser==3.3.0r2 >> loadtest.log && \
@@ -16,15 +16,16 @@ build:
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
 	rm loadtest.log || cat loadtest.log
+	touch $@
 
-install: build
+install: .env.install
 
 # Clean all the things installed by `make build`.
 clean:
 	rm -rf ./venv *.pyc
 
 # Run a single test from the venv machine, for sanity-checking.
-test: build
+test: install
 	./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 
 # Run a bench of 20 concurrent users.

@@ -948,6 +948,7 @@ describe("/rooms", function() {
         });
       });
     });
+
     describe("Participants", function() {
       it("should expire automatically.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {

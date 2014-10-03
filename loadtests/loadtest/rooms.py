@@ -1,0 +1,2 @@
+class TestRoomsMixin(object):    
+    pass
