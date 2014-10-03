@@ -33,9 +33,9 @@
    + user leaves
 + Test notification on POST / PATCH / DELETE /rooms
 + Add a test to check participants expiricy (doesn't return items when not needed);
+- Update the load test scripts
 - Handle the account property in the participant obj.
-- update the memory usage script with rooms (+ other stuff that needs to be updated)
-- update the load test scripts
+- Update the memory usage script with rooms (+ other stuff that needs to be updated)
 - Handle the TokBox channel on /rooms (+to say)
 
 
