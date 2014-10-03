@@ -211,8 +211,11 @@ module.exports = function(conf, logError, storage) {
   }
 
   /**
-   * Middleware that validates the given token (should be included into
-   * the "token" parameter).
+   * Validates the given token exists and is valid.
+   *
+   * Once this is done, populates the:
+   * - req.roomStorageData and
+   * - req.token parameters with the appropriate values.
    **/
   function validateRoomToken(req, res, next) {
     req.token = req.param('token');
@@ -227,6 +230,9 @@ module.exports = function(conf, logError, storage) {
     });
   }
 
+  /**
+   * Checks the current connected hawk session is one of the room owner's one.
+   **/
   function isRoomOwner(req, res, next) {
     if (req.user === req.roomStorageData.roomOwnerHmac) {
       next();
@@ -288,4 +294,4 @@ module.exports = function(conf, logError, storage) {
     isRoomOwner: isRoomOwner,
     isRoomParticipant: isRoomParticipant
   };
-}
+};
