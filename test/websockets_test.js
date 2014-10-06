@@ -246,17 +246,19 @@ describe('websockets', function() {
 
     describe('With mocked heka logger', function() {
       var logs = [];
-      var oldMetrics = conf.get("metrics");
+      var oldMetrics = conf.get("hekaMetrics");
 
       beforeEach(function() {
-        conf.set("metrics", true);
+        oldMetrics.activated = true;
+        conf.set("hekaMetrics", oldMetrics);
         sandbox.stub(hekaLogger, 'log', function(type, log) {
           logs.push(log);
         });
       });
 
       afterEach(function() {
-        conf.set("metrics", oldMetrics);
+        oldMetrics.activated = false;
+        conf.set("hekaMetrics", oldMetrics);
       });
 
       it('should log the termination and reason in heka', function(done) {
@@ -264,7 +266,7 @@ describe('websockets', function() {
           throw new Error('Error: ' + data);
         });
 
-        caller.on('message', function(data) {
+        caller.on('message', function() {
           if (calleeMsgCount === 2) {
             // The heka logger should have been called with the reason.
             expect(logs).to.length(1);
