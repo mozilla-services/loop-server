@@ -72,7 +72,7 @@ function runOnPrefix(apiPrefix) {
 
   describe("on " + (apiPrefix || "/"), function() {
 
-    var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3, hawkIdHmac,
+    var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3,
         hawkCredentials, hawkCredentials2, fakeCallInfo, genuineOrigins;
 
     var routes = {
@@ -1211,13 +1211,14 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should accept a valid call identity", function(done) {
-            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
-              if (err) throw err;
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac,
+              {calls: pushURL}, function(err) {
+                if (err) throw err;
 
-              addCallReq
-                .send({calleeId: user, callType: 'audio'})
-                .end(done);
-            });
+                addCallReq
+                  .send({calleeId: user, callType: 'audio'})
+                  .end(done);
+              });
           });
 
           it("should return a 503 if urlsStore is not available", function(done) {
@@ -1242,8 +1243,8 @@ function runOnPrefix(apiPrefix) {
               storage.setHawkSession(anonymousHawkIdHmac, authKey,
                 function(err) {
                   if (err) throw err;
-                  storage.addUserSimplePushURL(hawkIdHmac, {calls: pushURL},
-                    function(err) {
+                  storage.addUserSimplePushURLs(userHmac, hawkIdHmac,
+                    {calls: pushURL}, function(err) {
                       if (err) throw err;
                       supertest(app)
                         .post(apiPrefix + "/calls")
