@@ -73,8 +73,8 @@ function runOnPrefix(apiPrefix) {
 
   describe("on " + (apiPrefix || "/"), function() {
 
-    var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3, hawkCredentials,
-         hawkCredentials2, fakeCallInfo, genuineOrigins;
+    var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3, hawkIdHmac,
+        hawkCredentials, hawkCredentials2, fakeCallInfo, genuineOrigins;
 
     var routes = {
       '/': ['get'],
@@ -125,7 +125,7 @@ function runOnPrefix(apiPrefix) {
           key: authKey,
           algorithm: "sha256"
         };
-        var hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+        hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
         userHmac = hmac(user, conf.get('userMacSecret'));
         storage.setHawkSession(hawkIdHmac, authKey, function(err) {
           if (err) throw err;
@@ -1250,6 +1250,39 @@ function runOnPrefix(apiPrefix) {
               .expect(503)
               .end(done);
           });
+
+          it("should not let anonymous users to place a call.", function(done) {
+            var token = new Token();
+            token.getCredentials(function(tokenId, authKey) {
+              var anonymousHawkCredentials = {
+                id: tokenId,
+                key: authKey,
+                algorithm: "sha256"
+              };
+              var anonymousHawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+              storage.setHawkSession(anonymousHawkIdHmac, authKey,
+                function(err) {
+                  if (err) throw err;
+                  storage.addUserSimplePushURL(hawkIdHmac, {calls: pushURL},
+                    function(err) {
+                      if (err) throw err;
+                      supertest(app)
+                        .post(apiPrefix + "/calls")
+                        .hawk(anonymousHawkCredentials)
+                        .type("json")
+                        .send({calleeId: user, callType: "audio"})
+                        .expect(403)
+                        .end(function(err, res) {
+                          if (err) throw err;
+                          expectFormatedError(res, 403, errors.INVALID_AUTH_TOKEN,
+                            "You should be a registered users to place a direct call.");
+                          done();
+                        });
+                    });
+                });
+            });
+          });
+
 
           it("should return the caller data.", function(done) {
             storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
