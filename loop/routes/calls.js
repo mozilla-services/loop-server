@@ -115,7 +115,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
   /**
    * Add a call from a registered user to another registered user.
    **/
-  app.post('/calls', auth.requireHawkSession,
+  app.post('/calls', auth.requireHawkSession, auth.requireRegisteredUser,
     validators.requireParams('calleeId'), validators.validateCallType,
     function(req, res) {
       getUserAccount(storage, req, function(err, userId) {

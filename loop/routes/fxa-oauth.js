@@ -134,9 +134,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
               });
             });
           });
-          
         });
-
       });
     });
 };

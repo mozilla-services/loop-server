@@ -87,6 +87,18 @@ module.exports = function(conf, logError, storage, statsdClient) {
     sendError: hawkSendError
   });
 
+  var requireRegisteredUser = function(req, res, next) {
+    storage.getHawkUser(req.hawkIdHmac, function(err, user) {
+      if (res.serverError(err)) return;
+      if (user === null) {
+        sendError(res, 403, errors.INVALID_AUTH_TOKEN,
+                 "You should be a registered user to place a direct call.");
+        return;
+      }
+      next();
+    });
+  };
+
   /**
    * Middleware that uses a valid hawk session or create one if none already
    * exist.
@@ -216,6 +228,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     attachOrCreateHawkSession: attachOrCreateHawkSession,
     requireOauthHawkSession: requireOauthHawkSession,
     attachOrCreateOauthHawkSession: attachOrCreateOauthHawkSession,
-    requireFxA: requireFxA
+    requireFxA: requireFxA,
+    requireRegisteredUser: requireRegisteredUser
   };
 };
