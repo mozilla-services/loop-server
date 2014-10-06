@@ -91,6 +91,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * @param {Function} callback which will receive the encrypted account info.
    **/
   function encryptAccountName(roomToken, account, callback) {
+    if (account === undefined) {
+      callback();
+      return;
+    }
     var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomToken);
     hkdf.derive('account-name', 32, function(key) {
       callback(encrypt(key.toString('hex'), account));
@@ -105,6 +109,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * @param {Function} callback which will receive the decrypted account info.
    **/
   function decryptAccountName(roomToken, encryptedAccount, callback) {
+    if (encryptedAccount === undefined) {
+      callback();
+      return;
+    }
     var hkdf = new HKDF('sha256', roomsConf.HKDFSalt, roomToken);
     hkdf.derive('account-name', 32, function(key) {
       callback(decrypt(key.toString('hex'), encryptedAccount));

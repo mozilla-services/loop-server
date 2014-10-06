@@ -28,6 +28,7 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
     def test_all(self):
         params = self.setupCall()
         self._test_websockets(*params)
+        self.setupRoom()
 
     def _get_json(self, resp):
         try:

@@ -169,6 +169,19 @@ FakeTokBox.prototype = {
     return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
   },
 
+  getSession: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = undefined;
+    }
+
+    cb(null, this._fakeSessionId(), {apiKey: this._fakeApiKey()});
+  },
+
+  getSessionToken: function(sessionId) {
+    return this._generateFakeToken();
+  },
+
   getSessionTokens: function(options, cb) {
     if (cb === undefined) {
       cb = options;
