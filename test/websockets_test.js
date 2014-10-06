@@ -265,7 +265,6 @@ describe('websockets', function() {
         });
 
         caller.on('message', function(data) {
-          var message = JSON.parse(data);
           if (calleeMsgCount === 2) {
             // The heka logger should have been called with the reason.
             expect(logs).to.length(1);
