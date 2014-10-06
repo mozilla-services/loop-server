@@ -20,7 +20,6 @@ function encrypt(passphrase, text) {
   if (text === null) {
     throw new Error("Text is empty");
   }
-  console.log(passphrase);
   var box = new sodium.SecretBox(passphrase);
   var encrypted = box.encrypt(text, "utf8");
   var data = {

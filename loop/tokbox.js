@@ -178,7 +178,7 @@ FakeTokBox.prototype = {
     cb(null, this._fakeSessionId(), {apiKey: this._fakeApiKey()});
   },
 
-  getSessionToken: function(sessionId) {
+  getSessionToken: function() {
     return this._generateFakeToken();
   },
 
