@@ -530,8 +530,9 @@ describe("/rooms", function() {
         .expect(201)
         .end(function(err, postRes) {
           if (err) throw err;
+          var roomToken = postRes.body.roomToken;
           supertest(app)
-            .get('/rooms/' + postRes.body.roomToken)
+            .get('/rooms/' + roomToken)
             .type('json')
             .hawk(hawkCredentials)
             .expect(200)
@@ -545,7 +546,11 @@ describe("/rooms", function() {
               delete getRes.body.ctime;
               delete getRes.body.expiresAt;
 
+              var roomUrl = conf.get('rooms').webAppUrl
+                .replace('{token}', roomToken);
+
               expect(getRes.body).to.eql({
+                roomUrl: roomUrl,
                 roomOwner: "Alexis",
                 roomName: "UX discussion",
                 maxSize: 3,
@@ -666,8 +671,10 @@ describe("/rooms", function() {
                 updateTime + 5 * 3600
               );
 
+              var roomToken = postRes.body.roomToken;
+
               supertest(app)
-                .get('/rooms/' + postRes.body.roomToken)
+                .get('/rooms/' + roomToken)
                 .type('json')
                 .hawk(hawkCredentials)
                 .expect(200)
@@ -683,7 +690,11 @@ describe("/rooms", function() {
                   expect(getRes.body.expiresAt).to.be.gte(updateTime + 5 * 3600);
                   delete getRes.body.expiresAt;
 
+                  var roomUrl = conf.get('rooms').webAppUrl
+                    .replace('{token}', roomToken);
+
                   expect(getRes.body).to.eql({
+                    "roomUrl": roomUrl,
                     "clientMaxSize": 2,
                     "maxSize": 2,
                     "participants": [],

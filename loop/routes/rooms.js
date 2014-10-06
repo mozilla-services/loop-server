@@ -223,6 +223,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         }, function(err, participants) {
           if (res.serverError(err)) return;
           res.status(200).json({
+            roomUrl: roomsConf.webAppUrl.replace('{token}', req.token),
             roomName: req.roomStorageData.roomName,
             roomOwner: req.roomStorageData.roomOwner,
             maxSize: req.roomStorageData.maxSize,
