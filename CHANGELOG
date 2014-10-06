@@ -10,6 +10,12 @@ This document describes changes between each past release.
 - [config] 1072293 — webAppUrl for calls is now configured in callUrls;
 - [config] 1072271 — Refactor logging configuration;
 
+0.12.4 (2014-10-06)
+-------------------
+
+- [bugfix] Bug 1071244, 1071248 — Log WS errors + reason
+- [bugfix] Bug 1077328 — Make sure anonymous user cannot place direct calls
+
 
 0.12.3 (2014-10-02)
 -------------------
