@@ -69,6 +69,9 @@ MessageHandler.prototype = {
     }.bind(this));
   },
 
+  /**
+   * Just echoes back a message that's being sent.
+   **/
   handleEcho: function(session, message, callback) {
     callback(
       null, {messageType: constants.MESSAGE_TYPES.ECHO, echo: message.echo}
@@ -76,7 +79,7 @@ MessageHandler.prototype = {
   },
 
   /**
-   * Handles the hello message.
+   * Handles hello messages.
    *
    * Checks authentication and answers with the status of the call.
    *
@@ -157,9 +160,11 @@ MessageHandler.prototype = {
           self.storage.getCallState(session.callId, function(err, state) {
             if (serverError(err, callback)) return;
             if (state === constants.CALL_STATES.HALF_INITIATED) {
+
               self.broadcastState(session.callId,
                                   constants.CALL_STATES.TERMINATED + ":" +
                                   constants.MESSAGE_REASONS.TIMEOUT);
+
               self.storage.setCallState(session.callId,
                                         constants.CALL_STATES.TERMINATED);
             }
@@ -185,10 +190,12 @@ MessageHandler.prototype = {
         // the call changes to the "alerting" state.
         if (currentState === constants.CALL_STATES.INIT ||
             currentState === constants.CALL_STATES.HALF_INITIATED) {
+
           self.broadcastState(
             session.callId,
             constants.CALL_STATES.INIT + "." + session.type
           );
+
           if (session.type === "callee") {
             session.timeouts.push(setTimeout(function() {
               // Ringing timer until the callee picks up the phone
@@ -208,6 +215,7 @@ MessageHandler.prototype = {
               });
             }, self.conf.ringingDuration * 1000));
           }
+
         }
       });
     });
@@ -244,11 +252,11 @@ MessageHandler.prototype = {
       return;
     }
 
-    // If terminate, close the call
+    // If terminate, close the call.
     if (event === constants.MESSAGE_EVENTS.TERMINATE) {
       var state = constants.CALL_STATES.TERMINATED;
 
-      // Check the reason is valid.
+      // Check the reason is a valid one, fail otherwise.
       if (message.reason !== undefined) {
         if (message.reason.match(/^[a-zA-Z0-9\-]+$/) === null) {
           callback(new Error(constants.ERROR_REASONS.BAD_REASON));
@@ -280,13 +288,15 @@ MessageHandler.prototype = {
           ],
           actuator: function() {
             session.timeouts.push(setTimeout(function() {
-              // Connection timer until both sends media-up
+              // Connection timer until both sends media-up.
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
                 if (state !== constants.CALL_STATES.CONNECTED) {
+
                   self.broadcastState(session.callId,
                                       constants.CALL_STATES.TERMINATED + ":" +
                                       constants.MESSAGE_REASONS.TIMEOUT);
+
                   self.storage.setCallState(session.callId,
                                             constants.CALL_STATES.TERMINATED);
                 }
@@ -332,6 +342,8 @@ MessageHandler.prototype = {
           }
         });
       }
+      // If no transition was found to go from the current state to the next
+      // one, send an error.
       if (!handled) {
         callback(
           new Error("No transition from " + currentState + " state with " +
@@ -351,18 +363,20 @@ MessageHandler.prototype = {
     var self = this;
     var parts = stateData.split(":");
     var state = parts[0];
+    var reason = parts[1];
     self.storage.setCallState(callId, state, function(err) {
       if (serverError(err)) return;
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
 
+        var publishedState = redisCurrentState;
         if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
-            parts[1] !== undefined) {
-          redisCurrentState += ":" + parts[1];
+            reason !== undefined) {
+          publishedState += ":" + reason;
         }
 
         if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
-          self.pub.publish(callId, redisCurrentState, function(err) {
+          self.pub.publish(callId, publishedState, function(err) {
             if (serverError(err)) return;
           });
         }
@@ -370,10 +384,12 @@ MessageHandler.prototype = {
         if (conf.get("hekaMetrics").activated &&
             (redisCurrentState === constants.CALL_STATES.CONNECTED ||
              redisCurrentState === constants.CALL_STATES.TERMINATED)) {
+
           hekaLogger.log('info', {
             op: 'websocket.summary',
             callId: callId,
             state: redisCurrentState,
+            reason: reason,
             time: isoDateString(new Date())
           });
         }
