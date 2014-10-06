@@ -172,10 +172,17 @@ FakeTokBox.prototype = {
   getSession: function(options, cb) {
     if (cb === undefined) {
       cb = options;
-      options = undefined;
+      options = {};
     }
 
-    cb(null, this._fakeSessionId(), {apiKey: this._fakeApiKey()});
+    var self = this;
+    // Do a real HTTP call to have a realistic behavior.
+    request.get({
+      url: self.serverURL,
+      timeout: options.timeout
+    }, function(err) {
+      cb(err, self._fakeSessionId(), {apiKey: self._fakeApiKey()});
+    });
   },
 
   getSessionToken: function() {
