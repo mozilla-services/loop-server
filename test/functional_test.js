@@ -10,7 +10,6 @@ var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
 var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
-var querystring = require("querystring");
 
 var constants = require("../loop/constants");
 var loop = require("../loop");
@@ -53,10 +52,10 @@ var callerId = 'natim@mozilla.com';
 var callToken = 'call-token';
 var urlCreationDate = 1404139145;
 var progressURL = getProgressURL(conf.get('publicServerAddress'));
-
+var callUrls = conf.get('callUrls');
 
 function runOnPrefix(apiPrefix) {
-  var userHmac, userHmac2, userHmac3;
+  var userHmac, userHmac2, userHmac3, hawkIdHmac, hawkIdHmac2, hawkIdHmac3;
 
   function register(url, assertion, credentials, cb) {
     supertest(app)
@@ -82,7 +81,9 @@ function runOnPrefix(apiPrefix) {
       '/call-url': ['post', 'del'],
       '/calls': ['get', 'post'],
       '/calls/token': ['get', 'post'],
-      '/calls/id/callId': ['get', 'del']
+      '/calls/id/callId': ['get', 'del'],
+      '/rooms': ['post', 'get'],
+      '/rooms/token': ['patch', 'del', 'get', 'post']
     };
 
     beforeEach(function(done) {
@@ -125,7 +126,7 @@ function runOnPrefix(apiPrefix) {
           key: authKey,
           algorithm: "sha256"
         };
-        var hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+        hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
         userHmac = hmac(user, conf.get('userMacSecret'));
         storage.setHawkSession(hawkIdHmac, authKey, function(err) {
           if (err) throw err;
@@ -139,7 +140,7 @@ function runOnPrefix(apiPrefix) {
                 key: authKey2,
                 algorithm: "sha256"
               };
-              var hawkIdHmac2 = hmac(tokenId2, conf.get('hawkIdSecret'));
+              hawkIdHmac2 = hmac(tokenId2, conf.get('hawkIdSecret'));
               userHmac2 = hmac(user2, conf.get('userMacSecret'));
               storage.setHawkSession(hawkIdHmac2, authKey2, function(err) {
                 if (err) throw err;
@@ -148,7 +149,7 @@ function runOnPrefix(apiPrefix) {
                   // Generate Hawk credentials.
                   var token3 = new Token();
                   token3.getCredentials(function(tokenId3, authKey3) {
-                    var hawkIdHmac3 = hmac(tokenId3, conf.get('hawkIdSecret'));
+                    hawkIdHmac3 = hmac(tokenId3, conf.get('hawkIdSecret'));
                     userHmac3 = hmac(user3, conf.get('userMacSecret'));
                     storage.setHawkSession(hawkIdHmac3, authKey3, function(err) {
                       if (err) throw err;
@@ -199,7 +200,7 @@ function runOnPrefix(apiPrefix) {
     Object.keys(routes).forEach(function(route) {
       routes[route].forEach(function(method) {
         if (route.indexOf('token') !== -1) {
-          var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+          var token = tokenlib.generateToken(callUrls.tokenSize);
           route = route.replace('token', token);
         }
 
@@ -433,21 +434,33 @@ function runOnPrefix(apiPrefix) {
           });
       });
 
-      it("should check the given expiration is not greater than the max",
-        function(done) {
-          var oldMaxTimeout = conf.get('callUrlMaxTimeout');
-          conf.set('callUrlMaxTimeout', 5);
-          jsonReq
-            .send({callerId: callerId, expiresIn: "10"})
-            .expect(400)
-            .end(function(err, res) {
-              if (err) throw err;
-              expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-                                  "expiresIn should be less than 5");
-              conf.set('callUrlMaxTimeout', oldMaxTimeout);
-              done();
-            });
+      describe("with mocked maxTimeout", function() {
+        var oldMaxTimeout;
+
+        beforeEach(function() {
+          oldMaxTimeout = callUrls.maxTimeout;
+          callUrls.maxTimeout = 5;
+          conf.set('callUrls', callUrls);
         });
+
+        afterEach(function() {
+          callUrls.maxTimeout = oldMaxTimeout;
+          conf.set('callUrls', callUrls);
+        });
+
+        it("should check the given expiration is not greater than the max",
+          function(done) {
+            jsonReq
+              .send({callerId: callerId, expiresIn: "10"})
+              .expect(400)
+              .end(function(err, res) {
+                if (err) throw err;
+                expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                                    "expiresIn should be less than 5");
+                done();
+              });
+          });
+      });
 
       it("should accept an expiresIn parameter", function(done) {
         jsonReq
@@ -477,7 +490,8 @@ function runOnPrefix(apiPrefix) {
             var callUrl = res.body.callUrl, token;
 
             expect(callUrl).to.not.equal(null);
-            var urlStart = conf.get('webAppUrl').replace('{token}', '');
+            var urlStart = conf.get('callUrls').webAppUrl
+              .replace('{token}', '');
             expect(callUrl).to.contain(urlStart);
 
             token = callUrl.split("/").pop();
@@ -549,7 +563,7 @@ function runOnPrefix(apiPrefix) {
           .end(function(err, res) {
             if (err) throw err;
             expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
-                                "simplePushURL should be a valid url");
+                                "simplePushURLs.calls should be a valid url");
             done();
           });
       });
@@ -591,7 +605,7 @@ function runOnPrefix(apiPrefix) {
             if (err) throw err;
             storage.getUserSimplePushURLs(userHmac, function(err, records) {
               if (err) throw err;
-              expect(records[0]).eql(pushURL);
+              expect(records.calls).eql([pushURL]);
               done();
             });
           });
@@ -599,49 +613,28 @@ function runOnPrefix(apiPrefix) {
 
       it("should be able to store multiple push urls for one user",
         function(done) {
-          register(url1, expectedAssertion, hawkCredentials, function() {
-            register(url2, expectedAssertion, hawkCredentials, function() {
-              storage.getUserSimplePushURLs(userHmac, function(err, records) {
-                if (err) throw err;
-                expect(records.length).eql(2);
-                done();
+          storage.setHawkUser(userHmac, hawkIdHmac2, function(err) {
+            if (err) throw err;
+            register(url1, expectedAssertion, hawkCredentials, function() {
+              register(url2, expectedAssertion, hawkCredentials2, function() {
+                storage.getUserSimplePushURLs(userHmac, function(err, records) {
+                  if (err) throw err;
+                  expect(records.calls.length).eql(2);
+                  done();
+                });
               });
             });
           });
         });
 
-      it("should not override old SimplePush URLs.", function(done) {
-        register(url1, expectedAssertion, hawkCredentials, function() {
-          register(url2, expectedAssertion, hawkCredentials, function() {
-            storage.getUserSimplePushURLs(userHmac, function(err, records) {
-              if (err) throw err;
-              expect(records.length).eql(2);
-              done();
-            });
-          });
-        });
-      });
-
-      it("should return a 503 if the database isn't available", function(done) {
-        sandbox.stub(storage, "addUserSimplePushURL",
-          function(userMac, simplepushURL, cb) {
+      it("should return a 503 if the database isn't available on update", function(done) {
+        sandbox.stub(storage, "addUserSimplePushURLs",
+          function(userMac, hawkHmacId, simplepushURL, cb) {
             cb("error");
           });
         jsonReq
-          .send({'simple_push_url': pushURL})
+          .send({'simplePushURL': pushURL})
           .expect(503).end(done);
-      });
-
-      it("should return a 503 if the database isn't available on update",
-      function(done) {
-        sandbox.stub(storage, "addUserSimplePushURL",
-          function(userMac, simplepushURL, cb) {
-            cb("error");
-          });
-        jsonReq
-          .send({
-            'simple_push_url': pushURL
-          }).expect(503).end(done);
       });
 
       it("should count new users if the session is created", function(done) {
@@ -650,7 +643,7 @@ function runOnPrefix(apiPrefix) {
           .post(apiPrefix + '/registration')
           .type('json')
           .send({
-            'simple_push_url': pushURL
+            'simplePushURL': pushURL
           }).expect(200).end(function(err) {
             if (err) throw err;
             assert.calledOnce(statsdClient.count);
@@ -694,28 +687,9 @@ function runOnPrefix(apiPrefix) {
             .include(requireHawkSession);
         });
 
-      it("should have the validateSimplePushURL middleware installed",
-        function() {
-          expect(getMiddlewares(apiRouter, 'delete', '/registration'))
-            .include(validateSimplePushURL);
-        });
-
       it("should remove an existing simple push url for an user", function(done) {
         register(url, expectedAssertion, hawkCredentials, function() {
-          jsonReq.send({'simple_push_url': url})
-            .expect(204)
-            .end(done);
-        });
-      });
-
-      it("should remove a simple push url send in the query", function(done) {
-        register(url, expectedAssertion, hawkCredentials, function() {
-          supertest(app)
-            .del(apiPrefix + '/registration?' +
-                 querystring.stringify({simplePushURL: url}))
-            .hawk(hawkCredentials)
-            .type('json')
-            .send({})
+          jsonReq.send({})
             .expect(204)
             .end(done);
         });
@@ -730,13 +704,13 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a the calleeFriendlyName", function(done) {
         var calleeFriendlyName = "Adam Roach";
-        var token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        var token = tokenlib.generateToken(callUrls.tokenSize);
         var timestamp = parseInt(Date.now() / 1000, 10);
         storage.addUserCallUrlData(userHmac, token, {
           userMac: userHmac,
           issuer: calleeFriendlyName,
           timestamp: timestamp,
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }, function(err) {
           if (err) throw err;
 
@@ -760,10 +734,10 @@ function runOnPrefix(apiPrefix) {
     describe("PUT /call-url/:token", function() {
       var token;
       beforeEach(function(done) {
-        token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        token = tokenlib.generateToken(callUrls.tokenSize);
         storage.addUserCallUrlData(userHmac, token, {
           timestamp: parseInt(Date.now() / 1000, 10),
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }, function(err) {
           if (err) throw err;
           done();
@@ -815,11 +789,11 @@ function runOnPrefix(apiPrefix) {
       beforeEach(function(done) {
         clock = sinon.useFakeTimers(fakeNow);
 
-        token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        token = tokenlib.generateToken(callUrls.tokenSize);
         storage.addUserCallUrlData(userHmac, token, {
           userMac: userHmac,
           timestamp: parseInt(Date.now() / 1000, 10),
-          expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+          expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
         }, function(err) {
           if (err) throw err;
           req = supertest(app)
@@ -856,7 +830,7 @@ function runOnPrefix(apiPrefix) {
           storage.addUserCallUrlData(userHmac, token, {
             userMac: "h4x0r",
             timestamp: parseInt(Date.now() / 1000, 10),
-            expires: parseInt(Date.now() / 1000, 10) + conf.get("callUrlTimeout")
+            expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
           }, function(err) {
             if (err) throw err;
             req = supertest(app)
@@ -955,8 +929,9 @@ function runOnPrefix(apiPrefix) {
                 apiKey: tokBoxConfig.credentials.default.apiKey,
                 sessionId: call.sessionId,
                 sessionToken: call.calleeToken,
-                callUrl: conf.get('webAppUrl').replace('{token}', call.callToken),
-                call_url: conf.get('webAppUrl')
+                callUrl: conf.get('callUrls').webAppUrl
+                  .replace('{token}', call.callToken),
+                call_url: conf.get('callUrls').webAppUrl
                   .replace('{token}', call.callToken),
                 callToken: call.callToken,
                 urlCreationDate: call.urlCreationDate,
@@ -982,8 +957,9 @@ function runOnPrefix(apiPrefix) {
             apiKey: tokBoxConfig.credentials.default.apiKey,
             sessionId: calls[1].sessionId,
             sessionToken: calls[1].calleeToken,
-            callUrl: conf.get('webAppUrl').replace('{token}', calls[2].callToken),
-            call_url: conf.get('webAppUrl')
+            callUrl: conf.get('callUrls').webAppUrl
+              .replace('{token}', calls[2].callToken),
+            call_url: conf.get('callUrls').webAppUrl
               .replace('{token}', calls[1].callToken),
             callToken: calls[1].callToken,
             urlCreationDate: calls[1].urlCreationDate,
@@ -1067,7 +1043,7 @@ function runOnPrefix(apiPrefix) {
           requests.push(options);
         });
 
-        token = tokenlib.generateToken(conf.get("callUrlTokenSize"));
+        token = tokenlib.generateToken(callUrls.tokenSize);
 
         var timestamp = parseInt(Date.now() / 1000, 10);
 
@@ -1075,7 +1051,7 @@ function runOnPrefix(apiPrefix) {
           userMac: userHmac,
           callerId: callerId,
           timestamp: timestamp,
-          expires: timestamp + conf.get("callUrlTimeout")
+          expires: timestamp + callUrls.timeout
         }, done);
       });
 
@@ -1196,10 +1172,13 @@ function runOnPrefix(apiPrefix) {
           });
 
         describe("With working tokbox APIs", function() {
-          var _logs = [];
+          var _logs = [], oldMetrics;
 
           beforeEach(function() {
-            conf.set('metrics', true);
+            oldMetrics = conf.get('hekaMetrics');
+            var hekaMetrics = JSON.parse(JSON.stringify(oldMetrics));
+            hekaMetrics.activated = true;
+            conf.set('hekaMetrics', hekaMetrics);
             sandbox.stub(hekaLogger, "log", function(level, log) {
               try {
                 _logs.push(log);
@@ -1219,7 +1198,7 @@ function runOnPrefix(apiPrefix) {
 
           afterEach(function() {
             _logs = [];
-            conf.set('metrics', false);
+            conf.set('hekaMetrics', oldMetrics);
           });
 
           it("should log metrics with the user hash", function(done) {
@@ -1232,7 +1211,7 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should accept a valid call identity", function(done) {
-            storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
               if (err) throw err;
 
               addCallReq
@@ -1252,9 +1231,9 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should return the caller data.", function(done) {
-            storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
               if (err) throw err;
-              storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              storage.addUserSimplePushURLs(userHmac2, hawkIdHmac2, {calls: pushURL2}, function(err) {
                 if (err) throw err;
 
                 addCallReq
@@ -1276,9 +1255,9 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should store call user data.", function(done) {
-            storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
               if (err) throw err;
-              storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              storage.addUserSimplePushURLs(userHmac2, hawkIdHmac2, {calls: pushURL2}, function(err) {
                 if (err) throw err;
 
                 addCallReq
@@ -1303,9 +1282,9 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should let the callee grab call info.", function(done) {
-            storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
               if (err) throw err;
-              storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              storage.addUserSimplePushURLs(userHmac2, hawkIdHmac2, {calls: pushURL2}, function(err) {
                 if (err) throw err;
 
                 addCallReq
@@ -1365,11 +1344,11 @@ function runOnPrefix(apiPrefix) {
             });
 
           it("should ping all the user ids URLs", function(done) {
-            storage.addUserSimplePushURL(userHmac, pushURL, function(err) {
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
               if (err) throw err;
-              storage.addUserSimplePushURL(userHmac2, pushURL2, function(err) {
+              storage.addUserSimplePushURLs(userHmac2, hawkIdHmac2, {calls: pushURL2}, function(err) {
                 if (err) throw err;
-                storage.addUserSimplePushURL(userHmac3, pushURL3, function(err) {
+                storage.addUserSimplePushURLs(userHmac3, hawkIdHmac3, {calls: pushURL3}, function(err) {
                   if (err) throw err;
 
                   addCallReq

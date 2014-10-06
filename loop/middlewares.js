@@ -14,6 +14,7 @@ var sendError = require("./utils").sendError;
 var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
 var hekaLogger = require('./logger').hekaLogger;
+var logging = require("express-logging");
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
@@ -54,7 +55,7 @@ function addHeaders(req, res, next) {
 
 
 function logMetrics(req, res, next) {
-  if (conf.get('metrics') === true) {
+  if (conf.get('hekaMetrics').activated === true) {
     res.on('finish', function() {
       var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
@@ -86,7 +87,11 @@ function logMetrics(req, res, next) {
       hekaLogger.log('info', line);
     });
   }
-  next();
+  if (conf.get('logRequests').activated === true) {
+    logging(conf.get("logRequests").consoleDateFormat)(req, res, next);
+  } else {
+    next();
+  }
 }
 
 

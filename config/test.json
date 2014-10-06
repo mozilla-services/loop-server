@@ -51,5 +51,12 @@
   "fxaOAuth": {
     "client_id": "263ceaa5546dce83",
     "client_secret": "852ae8d050d6805a402272e0c776193cfba263ceaa5546dce837191be98db91e"
+  },
+  "rooms": {
+    "maxRoomNameSize": 15,
+    "maxRoomOwnerSize": 10,
+    "maxTTL": 10,
+    "maxSize": 3,
+    "HKDFSalt": "6b4a7eec5406fcb3d394e7f64b2a72a2"
   }
 }

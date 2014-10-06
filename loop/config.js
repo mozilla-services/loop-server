@@ -140,20 +140,28 @@ var conf = convict({
     default: "sha256",
     env: "USER_MAC_ALGORITHM"
   },
-  callUrlTokenSize: {
-    doc: "The callUrl token size (in bytes).",
-    format: Number,
-    default: 8
-  },
-  callUrlTimeout: {
-    doc: "How much time a token is valid for (in hours)",
-    format: Number,
-    default: 24 * 30 // One month.
-  },
-  callUrlMaxTimeout: {
-    doc: "The maximum number of hours a token can be valid for.",
-    format: Number,
-    default: 24 * 30
+  callUrls: {
+    tokenSize: {
+      doc: "The callUrl token size (in bytes).",
+      format: Number,
+      default: 8
+    },
+    timeout: {
+      doc: "How much time a token is valid for (in hours)",
+      format: Number,
+      default: 24 * 30 // One month.
+    },
+    maxTimeout: {
+      doc: "The maximum number of hours a token can be valid for.",
+      format: Number,
+      default: 24 * 30
+    },
+    webAppUrl: {
+      doc: "Loop Web App Home Page.",
+      format: "url",
+      default: "http://localhost:3000/static/#call/{token}",
+      env: "WEB_APP_URL"
+    }
   },
   displayVersion: {
     doc: "Display the server version on the homepage.",
@@ -214,12 +222,6 @@ var conf = convict({
       default: 2000
     }
   },
-  webAppUrl: {
-    doc: "Loop Web App Home Page.",
-    format: "url",
-    default: "http://localhost:3000/static/#call/{token}",
-    env: "WEB_APP_URL"
-  },
   sentryDSN: {
     doc: "Sentry DSN",
     format: function(val) {
@@ -249,11 +251,6 @@ var conf = convict({
     doc: "Seconds to wait for on 503",
     format: Number,
     default: 30
-  },
-  consoleDateFormat: {
-    doc: "Date format of the logging line in development.",
-    format: String,
-    default: "%y/%b/%d %H:%M:%S"
   },
   fxaAudiences: {
     doc: "List of accepted fxa audiences.",
@@ -319,11 +316,6 @@ var conf = convict({
     format: Number,
     default: 10
   },
-  metrics: {
-    doc: "Defines if metrics should be dumped to the stdout",
-    default: false,
-    format: Boolean
-  },
   progressURLEndpoint: {
     doc: "The endpoint to use for the progressURL.",
     format: String,
@@ -382,7 +374,24 @@ var conf = convict({
       default: "profile"
     }
   },
-  metricsFileParams: {
+  logRequests: {
+    activated: {
+      doc: "Defines if requests should be logged to Stdout",
+      default: false,
+      format: Boolean
+    },
+    consoleDateFormat: {
+      doc: "Date format of the logging line.",
+      format: String,
+      default: "%y/%b/%d %H:%M:%S"
+    }
+  },
+  hekaMetrics: {
+    activated: {
+      doc: "Defines if metrics should be directed to hekad",
+      default: false,
+      format: Boolean
+    },
     filename: {
       doc: "Heka logger file path",
       format: String,
@@ -397,6 +406,56 @@ var conf = convict({
       doc: "Limit the number of files created when logfile size is exeeded.",
       format: Number,
       default: 5
+    }
+  },
+  rooms: {
+    defaultTTL: {
+      doc: "The default TTL for a room (in hours)",
+      format: Number,
+      default: 24 * 30 // One month.
+    },
+    maxTTL: {
+      doc: "The maximum TTL for a room (in hours) allowed by the server",
+      format: Number,
+      default: 24 * 60 // Two months.
+    },
+    participantTTL: {
+      doc: "The TTL (in seconds) for a participant in the room",
+      format: Number,
+      default: 5 * 60  // 5 minutes
+    },
+    maxSize: {
+      doc: "The maximum size of a room",
+      format: Number,
+      default: 5
+    },
+    maxRoomNameSize: {
+      doc: "The maximum number of chars to name a room",
+      format: Number,
+      default: 100
+    },
+    maxRoomOwnerSize: {
+      doc: "The maximum number of chars for the owner of a room",
+      format: Number,
+      default: 100
+    },
+    tokenSize: {
+      doc: "The room token size (in bytes).",
+      format: Number,
+      default: 8
+    },
+    webAppUrl: {
+      doc: "Loop Web App rooms url.",
+      format: "url",
+      default: "http://localhost:3000/#room/{token}",
+      env: "ROOMS_WEB_APP_URL"
+    },
+    HKDFSalt: {
+      doc: "The salt that will be used to cipher profile data " +
+           "(16 bytes key encoded as hex)",
+      format: hexKeyOfSize(16),
+      default: "",
+      env: "ROOMS_HKDF_SECRET"
     }
   }
 });
@@ -417,6 +476,9 @@ conf.validate();
 if (conf.get('macSecret') === "")
   throw "Please define macSecret in your configuration file";
 
+if (conf.get('rooms').HKDFSalt === "")
+    throw "Please define rooms.HKDFSalt in your configuration file";
+
 if (conf.get('encryptionSecret') === "")
   throw "Please define encryptionSecret in your configuration file";
 
@@ -429,8 +491,8 @@ if (conf.get('fxaAudiences').length === 0) {
 }
 
 if (conf.get('hawkSessionDuration') <
-    conf.get('callUrlMaxTimeout') * 60 * 60) {
-  throw "hawkSessionDuration should be longer or equal to callUrlMaxTimeout.";
+    conf.get('callUrls').maxTimeout * 60 * 60) {
+  throw "hawkSessionDuration should be longer or equal to callUrls.maxTimeout";
 }
 
 if (conf.get('fxaOAuth').activated && conf.get('fxaOAuth').client_id === "") {

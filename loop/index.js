@@ -74,6 +74,7 @@ var app = express();
 app.use(corsEnabled);
 app.use(addHeaders);
 app.disable('x-powered-by');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(handle503(logError));
@@ -111,6 +112,9 @@ if (conf.get("fxaOAuth").activated !== false) {
   var fxaOAuth = require("./routes/fxa-oauth");
   fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
 }
+
+var rooms = require("./routes/rooms");
+rooms(apiRouter, conf, logError, storage, auth, validators, tokBox);
 
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);

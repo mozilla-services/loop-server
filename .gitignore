@@ -10,3 +10,4 @@ heka*.log
 *.pyc
 loadtests/venv/
 loadtest.log
+loadtests/.env.install

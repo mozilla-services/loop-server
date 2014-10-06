@@ -32,7 +32,8 @@ function TokBox(settings) {
 }
 
 TokBox.prototype = {
-  getSessionTokens: function(options, cb) {
+
+  getSession: function(options, cb) {
     if (cb === undefined) {
       cb = options;
       options = undefined;
@@ -54,7 +55,7 @@ TokBox.prototype = {
 
     var self = this;
     opentok.createSession({
-      mediaMode: 'relayed'
+      mediaMode: options.mediaMode || "relayed"
     }, function(err, session) {
         if (err !== null) {
           options.retry--;
@@ -62,26 +63,54 @@ TokBox.prototype = {
             cb(err);
             return;
           }
-          self.getSessionTokens(options, cb);
+          self.getSession(options, cb);
           return;
         }
-        var sessionId = session.sessionId;
-        var now = Math.round(Date.now() / 1000.0);
-        var expirationTime = now + self.tokenDuration;
-        cb(null, {
-          apiKey: opentok.apiKey,
-          sessionId: sessionId,
-          callerToken: opentok.generateToken(sessionId, {
-            role: 'publisher',
-            expireTime: expirationTime
-          }),
-          calleeToken: opentok.generateToken(sessionId, {
-            role: 'publisher',
-            expireTime: expirationTime
-          })
-        });
+        cb(null, session, opentok);
+    });
+  },
+  getSessionToken: function(sessionId) {
+    var now = parseInt(Date.now() / 1000, 10);
+    var expirationTime = now + this.tokenDuration;
+
+    return this._opentok["default"].generateToken(
+      sessionId, {
+        role: 'publisher',
+        expireTime: expirationTime
       }
     );
+  },
+  getSessionTokens: function(options, cb) {
+    var self = this;
+
+    if (cb === undefined) {
+      cb = options;
+      options = {};
+    }
+
+    options.mediaMode = options.mediaMode || "relayed";
+
+    this.getSession(options, function(err, session, opentok) {
+      if (err) {
+        cb(err);
+        return;
+      }
+      var sessionId = session.sessionId;
+      var now = parseInt(Date.now() / 1000, 10);
+      var expirationTime = now + self.tokenDuration;
+      cb(null, {
+        apiKey: opentok.apiKey,
+        sessionId: sessionId,
+        callerToken: opentok.generateToken(sessionId, {
+          role: 'publisher',
+          expireTime: expirationTime
+        }),
+        calleeToken: opentok.generateToken(sessionId, {
+          role: 'publisher',
+          expireTime: expirationTime
+        })
+      });
+    });
   },
   ping: function(options, cb) {
     if (cb === undefined) {
@@ -138,6 +167,26 @@ FakeTokBox.prototype = {
   _generateFakeToken: function() {
     this._token += 1;
     return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
+  },
+
+  getSession: function(options, cb) {
+    if (cb === undefined) {
+      cb = options;
+      options = {};
+    }
+
+    var self = this;
+    // Do a real HTTP call to have a realistic behavior.
+    request.get({
+      url: self.serverURL,
+      timeout: options.timeout
+    }, function(err) {
+      cb(err, self._fakeSessionId(), {apiKey: self._fakeApiKey()});
+    });
+  },
+
+  getSessionToken: function() {
+    return this._generateFakeToken();
   },
 
   getSessionTokens: function(options, cb) {

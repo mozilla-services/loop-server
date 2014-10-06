@@ -367,7 +367,7 @@ MessageHandler.prototype = {
           });
         }
 
-        if (conf.get("metrics") &&
+        if (conf.get("hekaMetrics").activated &&
             (redisCurrentState === constants.CALL_STATES.CONNECTED ||
              redisCurrentState === constants.CALL_STATES.TERMINATED)) {
           hekaLogger.log('info', {

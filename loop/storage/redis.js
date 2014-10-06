@@ -7,6 +7,9 @@ var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
 
+var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
+
+
 function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(
@@ -20,43 +23,85 @@ function RedisStorage(options, settings) {
 }
 
 RedisStorage.prototype = {
-  addUserSimplePushURL: function(userMac, simplepushURL, callback) {
-    // delete the SP url if it exists
+  addUserSimplePushURLs: function(userHmac, hawkHmacId, simplePushURLs, callback) {
     var self = this;
-    self._client.lrem('spurl.' + userMac, 0, simplepushURL,
-      function(err) {
-        if (err) {
-          callback(err);
+    // Remove any previous storage spurl.{userHmac} LIST
+    // XXX - Bug 1069208 — Remove this two month after 0.13 release
+    self._client.del('spurl.' + userHmac, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      for (var topic in simplePushURLs) {
+        if (SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
+          callback(new Error(topic + " should be one of " +
+                             SIMPLE_PUSH_TOPICS.join(", ")));
           return;
         }
-        // And add it back.
-        self._client.lpush('spurl.' + userMac, simplepushURL,
-          function(err, size) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            // Keep the X most recent URLs.
-            if (size > self._settings.maxSimplePushUrls) {
-              self._client.ltrim(
-                'spurl.' + userMac,
-                0,
-                self._settings.maxSimplePushUrls - 1,
-                callback);
-            } else {
-              callback(null);
-            }
-          });
+      }
+
+      self._client.set('spurl.' + userHmac + '.' + hawkHmacId,
+        JSON.stringify(simplePushURLs), function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null);
+        });
       });
   },
 
   getUserSimplePushURLs: function(userMac, callback) {
-    this._client.lrange('spurl.' + userMac,
-      0, this._settings.maxSimplePushUrls, callback);
+    var self = this;
+
+    var result = {};
+    for (var i = 0; i < SIMPLE_PUSH_TOPICS.length; i++) {
+      result[SIMPLE_PUSH_TOPICS[i]] = [];
+    }
+
+    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (spurl_keys.length === 0) {
+        callback(null, result);
+        return;
+      }
+
+      self._client.mget(spurl_keys, function(err, simplePushURLsJSONList) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var simplePushURLsList = simplePushURLsJSONList.map(function(json) {
+          if (json) {
+            return JSON.parse(json);
+          }
+          return null;
+        }).filter(function (dict) { return dict !== null; });
+
+        for (var i = 0; i < simplePushURLsList.length; i++) {
+          var item = simplePushURLsList[i];
+
+          for (var j = 0; j < SIMPLE_PUSH_TOPICS.length; j++) {
+            var topic = SIMPLE_PUSH_TOPICS[j];
+            var sp_topic = item[topic];
+            if (sp_topic !== undefined) {
+              if (result[topic].indexOf(sp_topic) === -1)
+                result[topic].push(sp_topic);
+            }
+          }
+        }
+        callback(null, result);
+      });
+    });
   },
 
-  removeSimplePushURL: function(userMac, simplepushURL, callback) {
-    this._client.lrem('spurl.' + userMac, 0, simplepushURL, callback);
+  removeSimplePushURLs: function(userMac, hawkHmacId, callback) {
+    this._client.del('spurl.' + userMac + '.' + hawkHmacId, callback);
   },
 
   /**
@@ -65,7 +110,20 @@ RedisStorage.prototype = {
    * @param String the user mac.
    **/
   deleteUserSimplePushURLs: function(userMac, callback) {
-    this._client.del('spurl.' + userMac, callback);
+    var self = this;
+
+    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (spurl_keys.length > 0) {
+        self._client.del(spurl_keys, callback);
+        return;
+      }
+      callback(null);
+    });
   },
 
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
@@ -639,6 +697,216 @@ RedisStorage.prototype = {
 
   clearHawkOAuthState: function(hawkIdHmac, callback) {
     this._client.del('oauth.state.' + hawkIdHmac, callback);
+  },
+
+  setUserRoomData: function(userMac, roomToken, roomData, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    } else if (roomToken === undefined) {
+      callback(new Error("roomToken should be defined."));
+      return;
+    } else if (roomData.expiresAt === undefined) {
+      callback(new Error("roomData should have an expiresAt property."));
+      return;
+    } else if (roomData.updateTime === undefined) {
+      callback(new Error("roomData should have an updateTime property."));
+      return;
+    }
+    var data = JSON.parse(JSON.stringify(roomData));
+    data.roomToken = roomToken;
+    var self = this;
+    // In that case use setex to add the metadata of the url.
+    this._client.setex(
+      'room.' + roomToken,
+      data.expiresAt - data.updateTime,
+      JSON.stringify(data),
+      function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.sadd(
+          'userRooms.' + userMac,
+          'room.' + roomToken, callback
+        );
+      });
+  },
+
+  getUserRooms: function(userMac, callback) {
+    var self = this;
+    this._client.smembers('userRooms.' + userMac, function(err, members) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      if (members.length === 0) {
+        callback(null, []);
+        return;
+      }
+      self._client.mget(members, function(err, rooms) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        var expired = rooms.map(function(val, index) {
+          return (val === null) ? index : null;
+        }).filter(function(val) {
+          return val !== null;
+        });
+
+        var pendingRooms = rooms.filter(function(val) {
+          return val !== null;
+        }).map(JSON.parse).sort(function(a, b) {
+          return a.updateTime - b.updateTime;
+        });
+
+        async.map(pendingRooms, function(room, cb) {
+          self._client.keys('roomparticipant.' + room.roomToken + '.*',
+            function(err, participantsKeys) {
+              if (err) {
+                cb(err);
+                return;
+              }
+              room.currSize = participantsKeys.length;
+              cb(null, room);
+            });
+        }, function(err, results) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (expired.length > 0) {
+            self._client.srem('userRooms.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null, results);
+            });
+            return;
+          }
+          callback(null, results);
+        });
+      });
+    });
+  },
+
+  getRoomData: function(roomToken, callback) {
+    this._client.get('room.' + roomToken, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback(null, JSON.parse(data));
+    });
+  },
+
+  touchRoomData: function(roomToken, callback) {
+    var self = this;
+    self.getRoomData(roomToken, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      data.updateTime = parseInt(Date.now() / 1000, 10);
+      self._client.setex(
+        'room.' + roomToken,
+        data.expiresAt - data.updateTime,
+        JSON.stringify(data),
+        function(err) {
+          callback(err, data.updateTime);
+        });
+    });
+  },
+
+  deleteRoomData: function(roomToken, callback) {
+    var self = this;
+    self._client.del('room.' + roomToken, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self.deleteRoomParticipants(roomToken, callback);
+    });
+  },
+
+  deleteRoomParticipants: function(roomToken, callback) {
+    var self = this;
+    self._client.keys('roomparticipant.' + roomToken + '.*',
+      function(err, participantsKeys) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (participantsKeys.length === 0) {
+          callback(null);
+          return;
+        }
+        self._client.del(participantsKeys, callback);
+      });
+  },
+
+  addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
+                               callback) {
+    var data = JSON.parse(JSON.stringify(participantData));
+    data.hawkIdHmac = hawkIdHmac;
+
+    this._client.setex('roomparticipant.' + roomToken + '.' + hawkIdHmac, ttl,
+     JSON.stringify(data), callback);
+  },
+
+  touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
+    this._client.pexpire('roomparticipant.' + roomToken + '.' + hawkIdHmac,
+      ttl * 1000, function(err, result) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (result === 0) {
+          callback(null, false);
+          return;
+        }
+        callback(null, true);
+      });
+  },
+
+  deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
+    this._client.del(
+      'roomparticipant.' + roomToken + '.' + hawkIdHmac, callback
+    );
+  },
+
+  getRoomParticipants: function(roomToken, callback) {
+    var self = this;
+    self._client.keys('roomparticipant.' + roomToken + '.*',
+      function(err, participantsKeys) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (participantsKeys.length === 0) {
+          callback(null, []);
+          return;
+        }
+        self._client.mget(participantsKeys, function(err, participants) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (participants === null) {
+            callback(null, []);
+            return;
+          }
+
+          callback(null, participants.filter(function(p) {
+            return p !== null;
+          }).map(function(participant) {
+            return JSON.parse(participant);
+          }));
+        });
+      });
   },
 
   drop: function(callback) {

@@ -7,7 +7,7 @@
 var conf = require("./config").conf;
 var winston = require('winston');
 
-var metricsFileParams = JSON.parse(JSON.stringify(conf.get('metricsFileParams')));
+var metricsFileParams = JSON.parse(JSON.stringify(conf.get('hekaMetrics')));
 metricsFileParams.timestamp = false;
 
 exports.hekaLogger = new winston.Logger({
