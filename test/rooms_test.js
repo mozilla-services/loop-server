@@ -1058,8 +1058,11 @@ describe("/rooms", function() {
                 expect(res.body).to.length(1);
                 expect(res.body[0].ctime).to.be.gte(startTime);
                 delete res.body[0].ctime;
+                var roomWebappUrl = conf.get('rooms').webAppUrl
+                  .replace('{token}', roomToken);
                 expect(res.body[0]).to.eql({
                   roomToken: roomToken,
+                  roomUrl: roomWebappUrl,
                   roomName: 'UX discussion',
                   maxSize: 3,
                   currSize: 1

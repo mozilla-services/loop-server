@@ -369,6 +369,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         }
         return {
           roomToken: room.roomToken,
+          roomUrl: roomsConf.webAppUrl.replace('{token}', room.roomToken),
           roomName: room.roomName,
           maxSize: room.maxSize,
           currSize: room.currSize,
