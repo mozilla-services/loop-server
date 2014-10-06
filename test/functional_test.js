@@ -1251,7 +1251,7 @@ function runOnPrefix(apiPrefix) {
               .end(done);
           });
 
-          it("should not let anonymous users to place a call.", function(done) {
+          it("should not let anonymous users place a call.", function(done) {
             var token = new Token();
             token.getCredentials(function(tokenId, authKey) {
               var anonymousHawkCredentials = {
@@ -1275,7 +1275,7 @@ function runOnPrefix(apiPrefix) {
                         .end(function(err, res) {
                           if (err) throw err;
                           expectFormatedError(res, 403, errors.INVALID_AUTH_TOKEN,
-                            "You should be a registered users to place a direct call.");
+                            "You should be a registered user to place a direct call.");
                           done();
                         });
                     });

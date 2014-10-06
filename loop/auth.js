@@ -92,7 +92,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
       if (res.serverError(err)) return;
       if (user === null) {
         sendError(res, 403, errors.INVALID_AUTH_TOKEN,
-                 "You should be a registered users to place a direct call.");
+                 "You should be a registered user to place a direct call.");
         return;
       }
       next();
