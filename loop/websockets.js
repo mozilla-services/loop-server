@@ -369,13 +369,14 @@ MessageHandler.prototype = {
       self.storage.getCallState(callId, function(err, redisCurrentState) {
         if (serverError(err)) return;
 
+        var publishedState = redisCurrentState;
         if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
             reason !== undefined) {
-          redisCurrentState += ":" + reason;
+          publishedState += ":" + reason;
         }
 
         if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
-          self.pub.publish(callId, redisCurrentState, function(err) {
+          self.pub.publish(callId, publishedState, function(err) {
             if (serverError(err)) return;
           });
         }

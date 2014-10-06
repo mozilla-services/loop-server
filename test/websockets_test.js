@@ -12,6 +12,7 @@ var ws = require('ws');
 var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
 
+var hekaLogger = require('../loop/logger').hekaLogger;
 var constants = require("../loop/constants");
 var loop = require("../loop");
 var server = loop.server;
@@ -242,6 +243,62 @@ describe('websockets', function() {
           callId: callId
         }));
       });
+
+    describe('With mocked heka logger', function() {
+      var logs = [];
+      var oldMetrics = conf.get("metrics");
+
+      beforeEach(function() {
+        conf.set("metrics", true);
+        sandbox.stub(hekaLogger, 'log', function(type, log) {
+          logs.push(log);
+        });
+      });
+
+      afterEach(function() {
+        conf.set("metrics", oldMetrics);
+      });
+
+      it('should log the termination and reason in heka', function(done) {
+        caller.on('error', function(data) {
+          throw new Error('Error: ' + data);
+        });
+
+        caller.on('message', function(data) {
+          var message = JSON.parse(data);
+          if (calleeMsgCount === 2) {
+            // The heka logger should have been called with the reason.
+            expect(logs).to.length(1);
+            expect(logs[0].callId).to.not.eql(undefined);
+            expect(logs[0].op).to.eql('websocket.summary');
+            expect(logs[0].state).to.eql('terminated');
+            expect(logs[0].reason).to.eql('closed');
+            done();
+          }
+          calleeMsgCount++;
+        });
+
+        callee.on('message', function() {
+          // The callee websocket closed unexpectedly
+          callee.isClosed = true;
+          callee.close();
+        });
+
+        // Caller registers to the socket.
+        caller.send(JSON.stringify({
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          auth: "callerToken",
+          callId: callId
+        }));
+
+        // Callee registers to the socket.
+        callee.send(JSON.stringify({
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          auth: "calleeToken",
+          callId: callId
+        }));
+      });
+    });
 
     it('should broadcast progress terminated:closed to other interested parties',
       function(done) {
