@@ -662,7 +662,7 @@ describe("/rooms", function() {
             .expect(200)
             .end(function(err, patchRes) {
               if (err) throw err;
-              expect(patchRes.body.expiresAt).to.equal(
+              expect(patchRes.body.expiresAt).to.gte(
                 updateTime + 5 * 3600
               );
 
