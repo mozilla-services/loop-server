@@ -1169,5 +1169,29 @@ describe('websockets', function() {
         callId: callId
       }));
     });
+
+    it("should return the terminated reason on hello.", function(done) {
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+        expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+        expect(message.reason).eql(constants.MESSAGE_REASONS.BUSY);
+        done();
+      });
+
+      storage.setCallState(callId, constants.CALL_STATES.TERMINATED,
+        conf.get("timers").supervisoryDuration, function(err) {
+          if (err) throw err;
+          storage.setCallTerminationReason(callId, constants.MESSAGE_REASONS.BUSY,
+            function(err) {
+              if (err) throw err;
+              caller.send(JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.HELLO,
+                auth: "callerToken",
+                callId: callId
+              }));
+            });
+        });
+    });
   });
 });

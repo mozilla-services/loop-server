@@ -549,6 +549,31 @@ RedisStorage.prototype = {
   },
 
   /**
+   * Set the call termination reason
+   */
+  setCallTerminationReason: function(callId, reason, callback) {
+    if (reason === undefined) {
+      callback(null);
+      return;
+    }
+    var self = this;
+    self._client.ttl('call.' + callId, function(err, ttl) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.setex('callStateReason.' + callId, ttl, reason, callback);
+    });
+  },
+
+  /**
+   * Set the call termination reason
+   */
+  getCallTerminationReason: function(callId, callback) {
+    this._client.get('callStateReason.' + callId, callback);
+  },
+
+  /**
    * Get a call from its id.
    *
    * By default, returns the state of the call. You can set getState to false
