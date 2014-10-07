@@ -24,9 +24,12 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   app.delete('/registration', auth.requireHawkSession, function(req, res) {
     storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
       if (res.serverError(err)) return;
-      storage.deleteHawkSession(req.hawkIdHmac, function(err) {
+      storage.deleteHawkUserId(req.hawkIdHmac, function(err) {
         if (res.serverError(err)) return;
-        res.status(204).json();
+        storage.deleteHawkSession(req.hawkIdHmac, function(err) {
+          if (res.serverError(err)) return;
+          res.status(204).json();
+        });
       });
     });
   });
