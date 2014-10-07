@@ -33,7 +33,7 @@ function intersection(array1, array2) {
   });
 }
 
-function expectFormatedError(res, code, errno, message) {
+function expectFormattedError(res, code, errno, message) {
   expect(res.body).eql({
     code: code,
     errno: errno,
@@ -44,5 +44,5 @@ function expectFormatedError(res, code, errno, message) {
 module.exports = {
   getMiddlewares: getMiddlewares,
   intersection: intersection,
-  expectFormatedError: expectFormatedError
+  expectFormattedError: expectFormattedError
 };

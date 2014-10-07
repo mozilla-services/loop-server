@@ -17,7 +17,7 @@ var constants = require("../loop/constants");
 var hmac = require("../loop/hmac");
 var loop = require("../loop");
 var request = require("request");
-var expectFormatedError = require("./support").expectFormatedError;
+var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
 
 var apiPrefix = loop.apiPrefix;
@@ -123,7 +123,7 @@ describe("index.js", function() {
         .expect(404)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 404, errors.INVALID_TOKEN,
+          expectFormattedError(res, 404, errors.INVALID_TOKEN,
                               "Token not found.");
           done();
         });
@@ -142,7 +142,7 @@ describe("index.js", function() {
             .expect(404)
             .end(function(err, res) {
               if (err) throw err;
-              expectFormatedError(res, 404, errors.INVALID_TOKEN,
+              expectFormattedError(res, 404, errors.INVALID_TOKEN,
                                   "Token not found.");
               done();
             });
@@ -177,7 +177,7 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                               "simplePushURLs.calls should be a valid url");
           done();
         });
@@ -236,7 +236,7 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+          expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                               "Missing: callType");
           done();
         });
@@ -249,7 +249,7 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                               "callType should be 'audio' or 'audio-video'");
           done();
         });
@@ -301,7 +301,7 @@ describe("index.js", function() {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+            expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                                 "Missing: b");
             done();
           });
@@ -314,7 +314,7 @@ describe("index.js", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+          expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                               "Missing: a, b");
           done();
         });
@@ -568,7 +568,7 @@ describe("index.js", function() {
         .expect(404)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 404, 999,
+          expectFormattedError(res, 404, 999,
                               "Resource not found.");
           done();
         });

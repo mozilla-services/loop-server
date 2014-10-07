@@ -17,7 +17,7 @@ var hmac = require("../loop/hmac");
 var errors = require("../loop/errno.json");
 
 var getMiddlewares = require("./support").getMiddlewares;
-var expectFormatedError = require("./support").expectFormatedError;
+var expectFormattedError = require("./support").expectFormattedError;
 
 var attachOrCreateOauthHawkSession = loop.auth.attachOrCreateOauthHawkSession;
 var statsdClient = loop.statsdClient;
@@ -197,7 +197,7 @@ describe('/fxa-oauth', function () {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(
+            expectFormattedError(
               res, 400, errors.INVALID_OAUTH_STATE, "Invalid OAuth state");
 
             storage.getHawkOAuthState(hawkIdHmac, function(err, state) {

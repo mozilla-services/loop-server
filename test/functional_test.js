@@ -30,7 +30,7 @@ var tokBoxConfig = conf.get("tokBox");
 var hmac = require("../loop/hmac");
 
 var getMiddlewares = require("./support").getMiddlewares;
-var expectFormatedError = require("./support").expectFormatedError;
+var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
 var hekaLogger = require("../loop/middlewares").hekaLogger;
 
@@ -416,7 +416,7 @@ function runOnPrefix(apiPrefix) {
       it("should require a callerId parameter", function(done) {
         jsonReq.send({}).expect(400).end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+          expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                               "Missing: callerId");
           done();
         });
@@ -428,7 +428,7 @@ function runOnPrefix(apiPrefix) {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+            expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                                 "expiresIn should be a valid number");
             done();
           });
@@ -455,7 +455,7 @@ function runOnPrefix(apiPrefix) {
               .expect(400)
               .end(function(err, res) {
                 if (err) throw err;
-                expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                                     "expiresIn should be less than 5");
                 done();
               });
@@ -562,7 +562,7 @@ function runOnPrefix(apiPrefix) {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+            expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                                 "simplePushURLs.calls should be a valid url");
             done();
           });
@@ -575,7 +575,7 @@ function runOnPrefix(apiPrefix) {
           .hawk(hawkCredentials)
           .expect(406).end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(res, 406, errors.BADJSON,
+            expectFormattedError(res, 406, errors.BADJSON,
               "Request body should be defined as application/json");
             done();
           });
@@ -1254,7 +1254,7 @@ function runOnPrefix(apiPrefix) {
                         .expect(403)
                         .end(function(err, res) {
                           if (err) throw err;
-                          expectFormatedError(res, 403, errors.INVALID_AUTH_TOKEN,
+                          expectFormattedError(res, 403, errors.INVALID_AUTH_TOKEN,
                             "You should be a registered user to place a direct call.");
                           done();
                         });
@@ -1358,7 +1358,7 @@ function runOnPrefix(apiPrefix) {
               .expect(400)
               .end(function(err, res) {
                 if (err) throw err;
-                expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                                     "Could not find any existing user to call");
                 done();
               });
@@ -1371,7 +1371,7 @@ function runOnPrefix(apiPrefix) {
                 .send({calleeId: user, callType: "audio"})
                 .expect(400)
                 .end(function(err, res) {
-                  expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+                  expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
                                       "Could not find any existing user to call");
                   done(err);
                 });
