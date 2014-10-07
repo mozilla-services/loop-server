@@ -8,7 +8,7 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
-var expectFormatedError = require("./support").expectFormatedError;
+var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
 var hmac = require("../loop/hmac");
@@ -297,7 +297,7 @@ describe("/rooms", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
             "roomName should be shorter than 15 characters");
           done();
         });
@@ -312,7 +312,7 @@ describe("/rooms", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
             "roomOwner should be shorter than 10 characters");
           done();
         });
@@ -329,7 +329,7 @@ describe("/rooms", function() {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+            expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
               "expiresIn cannot be greater than 10");
             done();
           });
@@ -345,7 +345,7 @@ describe("/rooms", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.INVALID_PARAMETERS,
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
             "maxSize cannot be greater than 3");
           done();
         });
@@ -373,7 +373,7 @@ describe("/rooms", function() {
             .expect(403)
             .end(function(err, res) {
               if (err) throw err;
-              expectFormatedError(res, 403, errors.UNDEFINED,
+              expectFormattedError(res, 403, errors.UNDEFINED,
                                   "Authenticated user is not the owner of this room.");
               done();
             });
@@ -419,7 +419,7 @@ describe("/rooms", function() {
       .expect(400)
       .end(function(err, res) {
         if (err) throw err;
-        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+        expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                             "Missing: roomName");
         done();
       });
@@ -433,7 +433,7 @@ describe("/rooms", function() {
       .expect(400)
       .end(function(err, res) {
         if (err) throw err;
-        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+        expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                             "Missing: roomOwner");
         done();
       });
@@ -447,7 +447,7 @@ describe("/rooms", function() {
       .expect(400)
       .end(function(err, res) {
         if (err) throw err;
-        expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+        expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                             "Missing: maxSize");
         done();
       });
@@ -752,7 +752,7 @@ describe("/rooms", function() {
         .expect(400)
         .end(function(err, res) {
           if (err) throw err;
-          expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+          expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                               "action should be one of join, refresh, leave");
           done();
         });
@@ -767,7 +767,7 @@ describe("/rooms", function() {
           .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expectFormatedError(res, 400, errors.MISSING_PARAMETERS,
+            expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                                 "Missing: displayName, clientMaxSize");
             done();
           });
@@ -810,7 +810,7 @@ describe("/rooms", function() {
                      clientMaxSize: 1
                  }, 400).end(function(err, res) {
                    if (err) throw err;
-                   expectFormatedError(
+                   expectFormattedError(
                      res, 400, errors.CLIENT_REACHED_CAPACITY,
                      "Too many participants in the room for you to handle."
                    );
@@ -843,7 +843,7 @@ describe("/rooms", function() {
                        clientMaxSize: 3
                      }, 400).end(function(err, res) {
                        if (err) throw err;
-                       expectFormatedError(
+                       expectFormattedError(
                          res, 400, errors.ROOM_FULL,
                          "The room is full."
                        );
