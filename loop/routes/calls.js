@@ -252,8 +252,10 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
   app.post('/calls/:token', validators.validateToken,
     validators.validateCallType, function(req, res) {
       storage.getUserSimplePushURLs(req.callUrlData.userMac,
-        function(err, urls) {
+        function(err, simplePushURLsMapping) {
           if (res.serverError(err)) return;
+
+          var urls = simplePushURLsMapping.calls;
 
           if (!urls) {
             sendError(res, 410, errors.EXPIRED, "Gone");
