@@ -1117,6 +1117,24 @@ function runOnPrefix(apiPrefix) {
               });
           });
 
+          it("should call the user SimplePushURL.", function(done) {
+            var startTime = parseInt(Date.now() / 1000, 10);
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac,
+              {calls: pushURL}, function(err) {
+                if (err) throw err;
+                addCallReq
+                  .end(function(err) {
+                    if (err) throw err;
+                    expect(requests).to.length(1);
+                    expect(requests[0]).to.eql({
+                      url: pushURL,
+                      form: { version: startTime }
+                    });
+                    done();
+                  });
+              });
+          });
+
           it("should store call user data.", function(done) {
             addCallReq
               .end(function(err) {
@@ -1269,7 +1287,7 @@ function runOnPrefix(apiPrefix) {
               if (err) throw err;
               storage.addUserSimplePushURLs(userHmac2, hawkIdHmac2, {calls: pushURL2}, function(err) {
                 if (err) throw err;
-
+                var startTime = parseInt(Date.now() / 1000, 10);
                 addCallReq
                   .send({calleeId: [user, user2], callType: "audio"})
                   .expect(200)
@@ -1282,6 +1300,11 @@ function runOnPrefix(apiPrefix) {
                     expect(res.body.apiKey).to.eql(
                       tokBoxConfig.credentials.default.apiKey);
                     expect(res.body.progressURL).to.eql(progressURL);
+                    expect(requests).to.length(2);
+                    expect(requests[0]).to.eql({
+                      url: pushURL,
+                      form: { version: startTime }
+                    });
                     done();
                   });
               });
