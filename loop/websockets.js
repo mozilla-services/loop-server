@@ -121,102 +121,99 @@ MessageHandler.prototype = {
       // Get current call state to answer hello message.
       self.storage.getCallState(session.callId, function(err, currentState) {
         if (serverError(err, callback)) return;
+        self.storage.getCallTerminationReason(session.callId, function(err, reason) {
+          if (serverError(err, callback)) return;
 
-        // Alert clients on call state changes.
-        var listener = function(channel, data) {
-          var parts = data.split(":");
-          var receivedState = parts[0];
-          var reason = parts[1];
-          var terminate;
+          // Alert clients on call state changes.
+          var listener = function(channel, data) {
+            var parts = data.split(":");
+            var receivedState = parts[0];
+            var reason = parts[1];
+            var terminate;
 
-          if (channel === session.callId) {
-            if (receivedState === constants.CALL_STATES.TERMINATED ||
-                receivedState === constants.CALL_STATES.CONNECTED) {
-              terminate = "closeConnection";
-            }
-            if (session.receivedState !== receivedState) {
-              session.receivedState = receivedState;
-
-              var message = {
-                messageType: constants.MESSAGE_TYPES.PROGRESS,
-                state: receivedState
-              };
-              if (reason !== undefined) {
-                message.reason = reason;
+            if (channel === session.callId) {
+              if (receivedState === constants.CALL_STATES.TERMINATED ||
+                  receivedState === constants.CALL_STATES.CONNECTED) {
+                terminate = "closeConnection";
               }
+              if (session.receivedState !== receivedState) {
+                session.receivedState = receivedState;
 
-              callback(null, message, terminate);
-            }
-          }
-        };
-
-        self.sub.on("message", listener);
-        // keep track of the active listeners
-        session.subListeners.push(listener);
-
-        // Wait for the other caller to connect for the time of the call.
-        session.timeouts.push(setTimeout(function() {
-          // Supervisory timer: Until the callee says HELLO
-          self.storage.getCallState(session.callId, function(err, state) {
-            if (serverError(err, callback)) return;
-            if (state === constants.CALL_STATES.HALF_INITIATED) {
-
-              self.broadcastState(session.callId,
-                                  constants.CALL_STATES.TERMINATED + ":" +
-                                  constants.MESSAGE_REASONS.TIMEOUT);
-
-              self.storage.setCallState(session.callId,
-                                        constants.CALL_STATES.TERMINATED);
-            }
-          });
-        }, conf.get("timers").supervisoryDuration * 1000));
-
-        // Subscribe to the channel to setup progress updates.
-        self.sub.subscribe(session.callId);
-
-        // Don't publish the half-initiated state, it's only for internal
-        // use.
-        var helloState = currentState;
-        if (currentState === constants.CALL_STATES.HALF_INITIATED) {
-          helloState = constants.CALL_STATES.INIT;
-        }
-
-        callback(null, {
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          state: helloState
-        });
-
-        // After the hello phase and as soon the callee is connected,
-        // the call changes to the "alerting" state.
-        if (currentState === constants.CALL_STATES.INIT ||
-            currentState === constants.CALL_STATES.HALF_INITIATED) {
-
-          self.broadcastState(
-            session.callId,
-            constants.CALL_STATES.INIT + "." + session.type
-          );
-
-          if (session.type === "callee") {
-            session.timeouts.push(setTimeout(function() {
-              // Ringing timer until the callee picks up the phone
-              self.storage.getCallState(session.callId, function(err, state) {
-                if (serverError(err, callback)) return;
-                if (state === constants.CALL_STATES.ALERTING) {
-                  self.broadcastState(
-                    session.callId,
-                    constants.CALL_STATES.TERMINATED + ":" +
-                    constants.MESSAGE_REASONS.TIMEOUT
-                  );
-                  self.storage.setCallState(
-                    session.callId,
-                    constants.CALL_STATES.TERMINATED
-                  );
+                var message = {
+                  messageType: constants.MESSAGE_TYPES.PROGRESS,
+                  state: receivedState
+                };
+                if (reason !== undefined) {
+                  message.reason = reason;
                 }
-              });
-            }, self.conf.ringingDuration * 1000));
+
+                callback(null, message, terminate);
+              }
+            }
+          };
+
+          self.sub.on("message", listener);
+          // keep track of the active listeners
+          session.subListeners.push(listener);
+
+          // Wait for the other caller to connect for the time of the call.
+          session.timeouts.push(setTimeout(function() {
+            // Supervisory timer: Until the callee says HELLO
+            self.storage.getCallState(session.callId, function(err, state) {
+              if (serverError(err, callback)) return;
+              if (state === constants.CALL_STATES.HALF_INITIATED) {
+
+                self.broadcastState(session.callId,
+                                    constants.CALL_STATES.TERMINATED + ":" +
+                                    constants.MESSAGE_REASONS.TIMEOUT);
+              }
+            });
+          }, conf.get("timers").supervisoryDuration * 1000));
+
+          // Subscribe to the channel to setup progress updates.
+          self.sub.subscribe(session.callId);
+
+          // Don't publish the half-initiated state, it's only for internal
+          // use.
+          var helloState = currentState;
+          if (currentState === constants.CALL_STATES.HALF_INITIATED) {
+            helloState = constants.CALL_STATES.INIT;
           }
 
-        }
+          callback(null, {
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            state: helloState,
+            reason: reason || undefined
+          });
+
+          // After the hello phase and as soon the callee is connected,
+          // the call changes to the "alerting" state.
+          if (currentState === constants.CALL_STATES.INIT ||
+              currentState === constants.CALL_STATES.HALF_INITIATED) {
+
+            self.broadcastState(
+              session.callId,
+              constants.CALL_STATES.INIT + "." + session.type
+            );
+
+            if (session.type === "callee") {
+              session.timeouts.push(setTimeout(function() {
+                // Ringing timer until the callee picks up the phone
+                self.storage.getCallState(session.callId, function(err, state) {
+                  if (serverError(err, callback)) return;
+                  if (state === constants.CALL_STATES.ALERTING) {
+                    self.broadcastState(
+                      session.callId,
+                      constants.CALL_STATES.TERMINATED + ":" +
+                      constants.MESSAGE_REASONS.TIMEOUT
+                    );
+                  }
+                });
+              }, self.conf.ringingDuration * 1000));
+            }
+
+          }
+        });
       });
     });
   },
@@ -296,9 +293,6 @@ MessageHandler.prototype = {
                   self.broadcastState(session.callId,
                                       constants.CALL_STATES.TERMINATED + ":" +
                                       constants.MESSAGE_REASONS.TIMEOUT);
-
-                  self.storage.setCallState(session.callId,
-                                            constants.CALL_STATES.TERMINATED);
                 }
               });
             }, self.conf.connectionDuration * 1000));
@@ -366,33 +360,36 @@ MessageHandler.prototype = {
     var reason = parts[1];
     self.storage.setCallState(callId, state, function(err) {
       if (serverError(err)) return;
-      self.storage.getCallState(callId, function(err, redisCurrentState) {
+      self.storage.setCallTerminationReason(callId, reason, function(err) {
         if (serverError(err)) return;
+        self.storage.getCallState(callId, function(err, redisCurrentState) {
+          if (serverError(err)) return;
 
-        var publishedState = redisCurrentState;
-        if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
-            reason !== undefined) {
-          publishedState += ":" + reason;
-        }
+          var publishedState = redisCurrentState;
+          if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
+              reason !== undefined) {
+            publishedState += ":" + reason;
+          }
 
-        if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
-          self.pub.publish(callId, publishedState, function(err) {
-            if (serverError(err)) return;
-          });
-        }
+          if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
+            self.pub.publish(callId, publishedState, function(err) {
+              if (serverError(err)) return;
+            });
+          }
 
-        if (conf.get("hekaMetrics").activated &&
-            (redisCurrentState === constants.CALL_STATES.CONNECTED ||
-             redisCurrentState === constants.CALL_STATES.TERMINATED)) {
+          if (conf.get("hekaMetrics").activated &&
+              (redisCurrentState === constants.CALL_STATES.CONNECTED ||
+               redisCurrentState === constants.CALL_STATES.TERMINATED)) {
 
-          hekaLogger.log('info', {
-            op: 'websocket.summary',
-            callId: callId,
-            state: redisCurrentState,
-            reason: reason,
-            time: isoDateString(new Date())
-          });
-        }
+            hekaLogger.log('info', {
+              op: 'websocket.summary',
+              callId: callId,
+              state: redisCurrentState,
+              reason: reason,
+              time: isoDateString(new Date())
+            });
+          }
+        });
       });
     });
   },
