@@ -78,6 +78,11 @@ function logMetrics(req, res, next) {
         errno: res.errno || 0
       };
 
+      if (req.hasOwnProperty("callUrlData")) {
+        line.calleeId = req.callUrlData.userIdHmac;
+        line.callerId = req.user;
+      }
+
       if (res.statusCode === 401) {
         line.authorization = req.headers.authorization;
         line.hawk = req.hawk;

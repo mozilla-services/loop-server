@@ -126,15 +126,19 @@ RedisStorage.prototype = {
     });
   },
 
-  addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
-    if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+  addUserCallUrlData: function(userIdHmac, callUrlId, urlData, callback) {
+    if (userIdHmac === undefined) {
+      callback(new Error("userIdHmac should be defined."));
       return;
     } else if (urlData.timestamp === undefined) {
       callback(new Error("urlData should have a timestamp property."));
       return;
     }
     var self = this;
+
+    var data = JSON.parse(JSON.stringify(urlData));
+    data.userIdHmac = userIdHmac;
+
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
@@ -146,7 +150,7 @@ RedisStorage.prototype = {
           return;
         }
         self._client.sadd(
-          'userUrls.' + userMac,
+          'userUrls.' + userIdHmac,
           'callurl.' + callUrlId, callback
         );
       });
