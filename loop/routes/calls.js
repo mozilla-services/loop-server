@@ -38,7 +38,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
         return;
       }
 
-      var currentTimestamp = Date.now();
+      var currentTimestamp = parseInt(Date.now() / 1000, 10);
       var callId = randomBytes(16).toString('hex');
 
       var wsCalleeToken = randomBytes(16).toString('hex');
