@@ -668,6 +668,17 @@ function runOnPrefix(apiPrefix) {
               done();
             });
         });
+
+      it("should not create a session token if the SP url is not provided",
+        function(done) {
+          jsonReq.send({}).expect(400).end(function(err, res) {
+            if (err) throw err;
+            console.log(res.headers);
+            expect(res.headers['server-authorization']).to.eql(undefined);
+            expect(res.headers['Hawk-Session-Token']).to.eql(undefined);
+            done()
+          });
+        });
     });
 
     describe("DELETE /registration", function() {

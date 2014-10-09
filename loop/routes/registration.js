@@ -9,8 +9,8 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Registers the given user with the given simple push url.
    **/
-  app.post('/registration', auth.authenticate,
-    validators.validateSimplePushURL, function(req, res) {
+  app.post('/registration', validators.validateSimplePushURL, auth.authenticate,
+      function(req, res) {
       storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
         function(err) {
           if (res.serverError(err)) return;
