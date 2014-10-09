@@ -862,4 +862,33 @@ describe("Storage", function() {
   testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
   });
+
+  describe("Redis specifics", function() {
+    var sandbox, storage;
+
+    beforeEach(function() {
+      sandbox = sinon.sandbox.create();
+      storage = getStorage({engine: "redis", settings: {"db": 5}}, {
+          tokenDuration: conf.get('tokBox').tokenDuration,
+          hawkSessionDuration: conf.get('hawkSessionDuration'),
+          callDuration: conf.get('callDuration'),
+          maxSimplePushUrls: conf.get('maxSimplePushUrls')
+        });
+    });
+
+    afterEach(function() {
+      sandbox.restore();
+    });
+
+    it("#ping should fails when redis is in read-only mode", function(done) {
+      sandbox.stub(storage._client, "set",
+        function(key, value, cb){
+          cb("Error: Redis is read-only");
+        });
+      storage.ping(function(connected) {
+        expect(connected).to.be.false;
+        done();
+      });
+    });
+  });
 });
