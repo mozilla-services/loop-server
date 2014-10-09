@@ -43,7 +43,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     storage.getHawkSession(hmac(tokenId, conf.get("hawkIdSecret")), callback);
   }
 
-  function getOauthHawkSession(tokenId, callback) {
+  function getOAuthHawkSession(tokenId, callback) {
     var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
     storage.getHawkOAuthState(hawkIdHmac, function(err, state) {
       if (err) {
@@ -112,22 +112,22 @@ module.exports = function(conf, logError, storage, statsdClient) {
   });
 
   /**
-   * Middleware that requires a valid Oauth hawk session.
+   * Middleware that requires a valid OAuth hawk session.
    **/
-  var requireOauthHawkSession = hawk.getMiddleware({
+  var requireOAuthHawkSession = hawk.getMiddleware({
     hawkOptions: hawkOptions,
-    getSession: getOauthHawkSession,
+    getSession: getOAuthHawkSession,
     setUser: setUser,
     sendError: hawkSendError
   });
 
   /**
-   * Middleware that uses a valid Oauth hawk session or create one if none already
+   * Middleware that uses a valid OAuth hawk session or create one if none already
    * exist.
    **/
-  var attachOrCreateOauthHawkSession = hawk.getMiddleware({
+  var attachOrCreateOAuthHawkSession = hawk.getMiddleware({
     hawkOptions: hawkOptions,
-    getSession: getOauthHawkSession,
+    getSession: getOAuthHawkSession,
     createSession: createHawkSession,
     setUser: setUser,
     sendError: hawkSendError
@@ -226,8 +226,8 @@ module.exports = function(conf, logError, storage, statsdClient) {
     authenticate: authenticate,
     requireHawkSession: requireHawkSession,
     attachOrCreateHawkSession: attachOrCreateHawkSession,
-    requireOauthHawkSession: requireOauthHawkSession,
-    attachOrCreateOauthHawkSession: attachOrCreateOauthHawkSession,
+    requireOAuthHawkSession: requireOAuthHawkSession,
+    attachOrCreateOAuthHawkSession: attachOrCreateOAuthHawkSession,
     requireFxA: requireFxA,
     requireRegisteredUser: requireRegisteredUser
   };
