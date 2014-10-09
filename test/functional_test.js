@@ -12,6 +12,7 @@ var randomBytes = require("crypto").randomBytes;
 var assert = sinon.assert;
 
 var constants = require("../loop/constants");
+var encrypt = require("../loop/encrypt").encrypt;
 var loop = require("../loop");
 var apiRouter = loop.apiRouter;
 var app = loop.app;
@@ -132,28 +133,31 @@ function runOnPrefix(apiPrefix) {
           if (err) throw err;
           storage.setHawkUser(userHmac, hawkIdHmac, function(err) {
             if (err) throw err;
-            // Generate Hawk credentials.
-            var token2 = new Token();
-            token2.getCredentials(function(tokenId2, authKey2) {
-              hawkCredentials2 = {
-                id: tokenId2,
-                key: authKey2,
-                algorithm: "sha256"
-              };
-              hawkIdHmac2 = hmac(tokenId2, conf.get('hawkIdSecret'));
-              userHmac2 = hmac(user2, conf.get('userMacSecret'));
-              storage.setHawkSession(hawkIdHmac2, authKey2, function(err) {
-                if (err) throw err;
-                storage.setHawkUser(userHmac2, hawkIdHmac2, function(err) {
+            storage.setHawkUserId(hawkIdHmac, encrypt(tokenId, user), function(err) {
+              if (err) throw err;
+              // Generate Hawk credentials.
+              var token2 = new Token();
+              token2.getCredentials(function(tokenId2, authKey2) {
+                hawkCredentials2 = {
+                  id: tokenId2,
+                  key: authKey2,
+                  algorithm: "sha256"
+                };
+                hawkIdHmac2 = hmac(tokenId2, conf.get('hawkIdSecret'));
+                userHmac2 = hmac(user2, conf.get('userMacSecret'));
+                storage.setHawkSession(hawkIdHmac2, authKey2, function(err) {
                   if (err) throw err;
-                  // Generate Hawk credentials.
-                  var token3 = new Token();
-                  token3.getCredentials(function(tokenId3, authKey3) {
-                    hawkIdHmac3 = hmac(tokenId3, conf.get('hawkIdSecret'));
-                    userHmac3 = hmac(user3, conf.get('userMacSecret'));
-                    storage.setHawkSession(hawkIdHmac3, authKey3, function(err) {
-                      if (err) throw err;
-                      storage.setHawkUser(userHmac3, hawkIdHmac3, done);
+                  storage.setHawkUser(userHmac2, hawkIdHmac2, function(err) {
+                    if (err) throw err;
+                    // Generate Hawk credentials.
+                    var token3 = new Token();
+                    token3.getCredentials(function(tokenId3, authKey3) {
+                      hawkIdHmac3 = hmac(tokenId3, conf.get('hawkIdSecret'));
+                      userHmac3 = hmac(user3, conf.get('userMacSecret'));
+                      storage.setHawkSession(hawkIdHmac3, authKey3, function(err) {
+                        if (err) throw err;
+                        storage.setHawkUser(userHmac3, hawkIdHmac3, done);
+                      });
                     });
                   });
                 });
@@ -1333,6 +1337,7 @@ function runOnPrefix(apiPrefix) {
                       .end(function(err, res) {
                         if (err) throw err;
                         expect(res.body.calls).to.length(1);
+                        expect(res.body.calls[0]).to.have.property('callerId');
                         supertest(app)
                           .get(apiPrefix + "/calls?version=200")
                           .hawk(hawkCredentials2)
