@@ -19,7 +19,7 @@ var errors = require("../loop/errno.json");
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormattedError = require("./support").expectFormattedError;
 
-var attachOrCreateOauthHawkSession = loop.auth.attachOrCreateOauthHawkSession;
+var attachOrCreateOAuthHawkSession = loop.auth.attachOrCreateOAuthHawkSession;
 var statsdClient = loop.statsdClient;
 
 var conf = loop.conf;
@@ -95,10 +95,10 @@ describe('/fxa-oauth', function () {
         .end(done);
     });
 
-    it("should have the attachOrCreateOauthHawkSession middleware installed",
+    it("should have the attachOrCreateOAuthHawkSession middleware installed",
        function() {
          expect(getMiddlewares(apiRouter, 'post', '/fxa-oauth/params'))
-           .include(attachOrCreateOauthHawkSession);
+           .include(attachOrCreateOAuthHawkSession);
        });
 
     it("should return a 503 if the database isn't available",
