@@ -939,9 +939,15 @@ RedisStorage.prototype = {
   },
 
   ping: function(callback) {
-    this._client.ping(function(err, value) {
-      callback((err === null && value === "PONG"));
-    });
+    var self = this;
+    self._client.set('heartbeat', parseInt(Date.now() / 1000, 10),
+      function(err) {
+        if (err) {
+          callback(false);
+          return;
+        }
+        callback(true);
+      });
   }
 };
 
