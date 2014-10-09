@@ -9,6 +9,7 @@ var request = require('request');
 var sendError = require('../utils').sendError;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
+var encrypt = require('../encrypt').encrypt;
 
 module.exports = function (app, conf, logError, storage, auth, validators) {
 
@@ -126,11 +127,15 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
               var userHmac = hmac(data.email, conf.get('userMacSecret'));
               storage.setHawkUser(userHmac, req.hawkIdHmac, function(err) {
                 if (res.serverError(err)) return;
-                res.status(200).json({
-                  token_type: tokenType,
-                  access_token: token,
-                  scope: scope
-                });
+                storage.setHawkUserId(req.hawkIdHmac, encrypt(req.hawk.id, data.email),
+                  function(err) {
+                    if (res.serverError(err)) return;
+                    res.status(200).json({
+                      token_type: tokenType,
+                      access_token: token,
+                      scope: scope
+                    });
+                  });
               });
             });
           });
