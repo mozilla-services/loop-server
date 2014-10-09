@@ -19,17 +19,18 @@ var errors = require("../loop/errno.json");
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormattedError = require("./support").expectFormattedError;
 
-var attachOrCreateOauthHawkSession = loop.auth.attachOrCreateOauthHawkSession;
+var attachOrCreateOAuthHawkSession = loop.auth.attachOrCreateOAuthHawkSession;
 var statsdClient = loop.statsdClient;
 
 var conf = loop.conf;
 var oauthConf = conf.get('fxaOAuth');
 var app = loop.app;
 var storage = loop.storage;
+var decrypt = require("../loop/encrypt").decrypt;
+
 
 describe('/fxa-oauth', function () {
-
-  var hawkCredentials, hawkIdHmac, sandbox;
+  var hawkCredentials, hawkIdHmac, hawkId, sandbox;
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
@@ -42,6 +43,7 @@ describe('/fxa-oauth', function () {
         key: authKey,
         algorithm: "sha256"
       };
+      hawkId = tokenId;
       hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
       storage.setHawkSession(hawkIdHmac, authKey, function(err) {
         if (err) throw err;
@@ -95,10 +97,10 @@ describe('/fxa-oauth', function () {
         .end(done);
     });
 
-    it("should have the attachOrCreateOauthHawkSession middleware installed",
+    it("should have the attachOrCreateOAuthHawkSession middleware installed",
        function() {
          expect(getMiddlewares(apiRouter, 'post', '/fxa-oauth/params'))
-           .include(attachOrCreateOauthHawkSession);
+           .include(attachOrCreateOAuthHawkSession);
        });
 
     it("should return a 503 if the database isn't available",
@@ -335,7 +337,11 @@ describe('/fxa-oauth', function () {
               storage.getHawkUser(hawkIdHmac, function(err, retrievedData) {
                 if (err) throw err;
                 expect(retrievedData).eql(userHmac);
-                done();
+                storage.getHawkUserId(hawkIdHmac, function(err, encryptedUserId) {
+                  if (err) throw err;
+                  expect(decrypt(hawkId, encryptedUserId)).to.eql("alexis@mozilla.com");
+                  done();
+                });
               });
             });
           });

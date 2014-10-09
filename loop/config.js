@@ -334,7 +334,7 @@ var conf = convict({
   },
   fxaOAuth: {
     activated: {
-      doc: "Set to false if you want to deactivate FxA-Oauth on this instance.",
+      doc: "Set to false if you want to deactivate FxA-OAuth on this instance.",
       format: Boolean,
       default: true
     },

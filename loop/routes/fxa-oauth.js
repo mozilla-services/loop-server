@@ -9,6 +9,7 @@ var request = require('request');
 var sendError = require('../utils').sendError;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
+var encrypt = require('../encrypt').encrypt;
 
 module.exports = function (app, conf, logError, storage, auth, validators) {
 
@@ -17,7 +18,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Provide the client with the parameters needed for the OAuth dance.
    **/
-  app.post('/fxa-oauth/params', auth.attachOrCreateOauthHawkSession,
+  app.post('/fxa-oauth/params', auth.attachOrCreateOAuthHawkSession,
     function(req, res) {
       var callback = function(state) {
         res.status(200).json({
@@ -48,7 +49,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * Returns the current status of the hawk session (e.g. if it's authenticated
    * or not.
    **/
-  app.get('/fxa-oauth/token', auth.requireOauthHawkSession, function (req, res) {
+  app.get('/fxa-oauth/token', auth.requireOAuthHawkSession, function (req, res) {
     storage.getHawkOAuthToken(req.hawkIdHmac, function(err, token) {
       if (res.serverError(err)) return;
       res.status(200).json({
@@ -60,7 +61,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Trade an OAuth code with an oauth bearer token.
    **/
-  app.post('/fxa-oauth/token', auth.requireOauthHawkSession,
+  app.post('/fxa-oauth/token', auth.requireOAuthHawkSession,
     validators.requireParams('state', 'code'), function (req, res) {
       var state = req.body.state;
       var code = req.body.code;
@@ -126,11 +127,15 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
               var userHmac = hmac(data.email, conf.get('userMacSecret'));
               storage.setHawkUser(userHmac, req.hawkIdHmac, function(err) {
                 if (res.serverError(err)) return;
-                res.status(200).json({
-                  token_type: tokenType,
-                  access_token: token,
-                  scope: scope
-                });
+                storage.setHawkUserId(req.hawkIdHmac, encrypt(req.hawk.id, data.email),
+                  function(err) {
+                    if (res.serverError(err)) return;
+                    res.status(200).json({
+                      token_type: tokenType,
+                      access_token: token,
+                      scope: scope
+                    });
+                  });
               });
             });
           });
