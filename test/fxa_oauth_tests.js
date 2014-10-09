@@ -26,10 +26,11 @@ var conf = loop.conf;
 var oauthConf = conf.get('fxaOAuth');
 var app = loop.app;
 var storage = loop.storage;
+var decrypt = require("../loop/encrypt").decrypt;
+
 
 describe('/fxa-oauth', function () {
-
-  var hawkCredentials, hawkIdHmac, sandbox;
+  var hawkCredentials, hawkIdHmac, hawkId, sandbox;
 
   beforeEach(function(done) {
     sandbox = sinon.sandbox.create();
@@ -42,6 +43,7 @@ describe('/fxa-oauth', function () {
         key: authKey,
         algorithm: "sha256"
       };
+      hawkId = tokenId;
       hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
       storage.setHawkSession(hawkIdHmac, authKey, function(err) {
         if (err) throw err;
@@ -335,7 +337,11 @@ describe('/fxa-oauth', function () {
               storage.getHawkUser(hawkIdHmac, function(err, retrievedData) {
                 if (err) throw err;
                 expect(retrievedData).eql(userHmac);
-                done();
+                storage.getHawkUserId(hawkIdHmac, function(err, encryptedUserId) {
+                  if (err) throw err;
+                  expect(decrypt(hawkId, encryptedUserId)).to.eql("alexis@mozilla.com");
+                  done();
+                });
               });
             });
           });
