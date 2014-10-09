@@ -1103,20 +1103,28 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should return the caller data.", function(done) {
+            addCallReq
+              .end(function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.have.property("callId");
+                expect(res.body).to.have.property("websocketToken");
+                expect(res.body.sessionId).to.eql(tokBoxSessionId);
+                expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
+                expect(res.body.apiKey).to.eql(
+                  tokBoxConfig.credentials.default.apiKey);
+                expect(res.body.progressURL).to.eql(progressURL);
+                done();
+              });
+          });
+
+          it("should call the user SimplePushURL.", function(done) {
             var startTime = parseInt(Date.now() / 1000, 10);
             storage.addUserSimplePushURLs(userHmac, hawkIdHmac,
               {calls: pushURL}, function(err) {
                 if (err) throw err;
                 addCallReq
-                  .end(function(err, res) {
+                  .end(function(err) {
                     if (err) throw err;
-                    expect(res.body).to.have.property("callId");
-                    expect(res.body).to.have.property("websocketToken");
-                    expect(res.body.sessionId).to.eql(tokBoxSessionId);
-                    expect(res.body.sessionToken).to.eql(tokBoxCallerToken);
-                    expect(res.body.apiKey).to.eql(
-                      tokBoxConfig.credentials.default.apiKey);
-                    expect(res.body.progressURL).to.eql(progressURL);
                     expect(requests).to.length(1);
                     expect(requests[0]).to.eql({
                       url: pushURL,
