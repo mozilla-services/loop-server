@@ -345,19 +345,6 @@ describe("Storage", function() {
             done(err);
           });
         });
-
-        it("should handle storage errors correctly.", function(done) {
-          sandbox.stub(storage._client, "smembers",
-            function(key, cb){
-              cb("error");
-            });
-
-          storage.getUserCallUrls(userMac, function(err, results) {
-            expect(err).to.eql("error");
-            expect(typeof results).to.eql("undefined");
-            done();
-          });
-        });
       });
 
       describe("#getCallUrlData", function() {
@@ -443,16 +430,6 @@ describe("Storage", function() {
       });
 
       describe("#getUserCalls", function() {
-        var sandbox;
-
-        beforeEach(function() {
-          sandbox = sinon.sandbox.create();
-        });
-
-        afterEach(function() {
-          sandbox.restore();
-        });
-
         it("should keep a list of the user calls", function(done) {
           storage.addUserCall(userMac, calls[0], function(err) {
             if (err) throw err;
@@ -482,19 +459,6 @@ describe("Storage", function() {
           storage.getUserCalls(userMac, function(err, results) {
             expect(results).to.eql([]);
             done(err);
-          });
-        });
-
-        it("should handle storage errors correctly.", function(done) {
-          sandbox.stub(storage._client, "smembers",
-            function(key, cb){
-              cb("error");
-            });
-
-          storage.getUserCalls(userMac, function(err, results) {
-            expect(err).to.eql("error");
-            expect(typeof results).to.eql("undefined");
-            done();
           });
         });
       });
@@ -888,5 +852,47 @@ describe("Storage", function() {
   // Test all the storages implementation.
   testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
+  });
+
+  describe("Redis specifics", function() {
+    var sandbox, storage;
+
+    beforeEach(function() {
+      sandbox = sinon.sandbox.create();
+      storage = getStorage({engine: "redis", settings: {"db": 5}}, {
+          tokenDuration: conf.get('tokBox').tokenDuration,
+          hawkSessionDuration: conf.get('hawkSessionDuration'),
+          callDuration: conf.get('callDuration'),
+          maxSimplePushUrls: conf.get('maxSimplePushUrls')
+        });
+    });
+
+    afterEach(function() {
+      sandbox.restore();
+    });
+
+    it("#ping should fails when redis is in read-only mode", function(done) {
+      sandbox.stub(storage._client, "set",
+        function(key, value, cb){
+          cb("Error: Redis is read-only");
+        });
+      storage.ping(function(connected) {
+        expect(connected).to.be.false;
+        done();
+      });
+    });
+
+    it("should handle storage errors correctly.", function(done) {
+      sandbox.stub(storage._client, "smembers",
+        function(key, cb){
+          cb("error");
+        });
+
+      storage.getUserCallUrls(userMac, function(err, results) {
+        expect(err).to.eql("error");
+        expect(typeof results).to.eql("undefined");
+        done();
+      });
+    });
   });
 });
