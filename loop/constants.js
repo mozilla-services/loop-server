@@ -30,7 +30,8 @@ module.exports = {
     BUSY: "busy",
     CANCEL: "cancel",
     TIMEOUT: "timeout",
-    CLOSED: "closed"
+    CLOSED: "closed",
+    ANSWERED_ELSEWHERE: "answered-elsewhere"
   },
   ERROR_REASONS: {
     BAD_AUTHENTICATION: "bad authentication",
