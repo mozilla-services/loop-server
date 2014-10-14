@@ -75,7 +75,8 @@ function runOnPrefix(apiPrefix) {
   describe("on " + (apiPrefix || "/"), function() {
 
     var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3, hawkIdHmac,
-        hawkCredentials, hawkCredentials2, fakeCallInfo, genuineOrigins;
+        hawkCredentials, hawkCredentials2, fakeCallInfo, genuineOrigins,
+        hawkIdHmac2, hawkIdHmac3;
 
     var routes = {
       '/': ['get'],
