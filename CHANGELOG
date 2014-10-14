@@ -3,6 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
+0.12.5 (2014-10-15)
+-------------------
+
+- [bugfix] Bug 1079950 - GET /calls/?version=<version> should include the callerId for both FxA and non-FxA calls
+
 0.12.4 (2014-10-06)
 -------------------
 
