@@ -28,6 +28,7 @@
     "hkdf": "0.0.2",
     "opentok": "2.2.4",
     "phone": "git://github.com/Natim/node-phone.git#83a4f48",
+    "mysql": "2.1.1",
     "node-uuid": "1.4.1",
     "raven": "0.7.0",
     "redis": "0.11.0",

@@ -25,7 +25,7 @@ var callUrls = conf.get('callUrls');
 
 var ttl = 30;
 
-describe("Storage", function() {
+describe.only("Storage", function() {
   function testStorage(name, createStorage) {
     var now = parseInt(Date.now() / 1000, 10);
     var storage,
@@ -111,7 +111,7 @@ describe("Storage", function() {
 
       describe('#revokeURLToken', function() {
         it("should add a revoked url", function(done) {
-          storage.revokeURLToken({uuid: uuid, expires: a_second},
+          storage.revokeURLToken(uuid,
             function(err) {
               if (err) throw err;
               storage.getCallUrlData(uuid, function(err, value){
@@ -290,7 +290,7 @@ describe("Storage", function() {
                 expect(err).to.eql(null);
                 storage.getCallUrlData(callToken, function(err, data) {
                   if (err) throw err;
-                  expect(data).eql({
+                  expect(data).to.eql({
                     callerId: "natim@moz",
                     issuer: "alexis@moz",
                     expires: urlData.expires,
@@ -850,8 +850,16 @@ describe("Storage", function() {
   }
 
   // Test all the storages implementation.
-  testStorage("Redis", function createRedisStorage(options) {
-    return getStorage({engine: "redis", settings: {"db": 5}}, options);
+  // testStorage("Redis", function createRedisStorage(options) {
+  //   return getStorage({engine: "redis", settings: {"db": 5}}, options);
+  // });
+
+  testStorage("MySQL", function createMySQLStorage(options) {
+    return getStorage({engine: "mysql", settings: {
+      "host": "localhost",
+      "user": "looptest",
+      "password": "looptest",
+      "database": "looptest"}}, options);
   });
 
   describe("Redis specifics", function() {
