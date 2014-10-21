@@ -672,14 +672,14 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      var query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
+      var query = connection.query("SET autocommit = 0", function(err) {
         // console.log(query.sql);
         if (err) {
           connection.release();
           callback(err);
           return;
         }
-        query = connection.query("TRUNCATE TABLE `callURLs`", function(err) {
+        query = connection.query("START TRANSACTION", function(err) {
           // console.log(query.sql);
           if (err) {
             connection.release();
@@ -687,36 +687,44 @@ MySQLStorage.prototype = {
             return;
           }
 
-          query = connection.query("TRUNCATE TABLE `sessionSPURLs`", function(err) {
+          query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
             // console.log(query.sql);
             if (err) {
               connection.release();
               callback(err);
               return;
             }
-            query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
+
+            query = connection.query("TRUNCATE TABLE `callURLs`", function(err) {
               // console.log(query.sql);
               if (err) {
                 connection.release();
                 callback(err);
                 return;
               }
-              query = connection.query("TRUNCATE TABLE `room`;", function(err) {
+
+              query = connection.query("TRUNCATE TABLE `sessionSPURLs`", function(err) {
                 // console.log(query.sql);
                 if (err) {
                   connection.release();
                   callback(err);
                   return;
                 }
-                query = connection.query("TRUNCATE TABLE `roomParticipant`",
-                  function(err) {
+                query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
+                  // console.log(query.sql);
+                  if (err) {
+                    connection.release();
+                    callback(err);
+                    return;
+                  }
+                  query = connection.query("TRUNCATE TABLE `room`;", function(err) {
                     // console.log(query.sql);
                     if (err) {
                       connection.release();
                       callback(err);
                       return;
                     }
-                    query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
+                    query = connection.query("TRUNCATE TABLE `roomParticipant`",
                       function(err) {
                         // console.log(query.sql);
                         if (err) {
@@ -724,10 +732,30 @@ MySQLStorage.prototype = {
                           callback(err);
                           return;
                         }
-                        connection.release();
-                        callback();
+                        query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
+                          function(err) {
+                            // console.log(query.sql);
+                            if (err) {
+                              connection.release();
+                              callback(err);
+                              return;
+                            }
+                            query = connection.query("COMMIT",
+                              function(err) {
+                                // console.log(query.sql);
+                                if (err) {
+                                  connection.release();
+                                  callback(err);
+                                  return;
+                                }
+
+                                connection.release();
+                                callback();
+                              });
+                          });
                       });
                   });
+                });
               });
             });
           });
