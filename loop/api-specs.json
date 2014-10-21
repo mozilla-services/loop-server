@@ -1,0 +1,15 @@
+{
+  "service": {
+    "location": "http://127.0.0.1:8282",
+    "version": "1.0",
+    "videur_version": "0.1",
+    "resources": {
+      "/__heartbeat__": {
+        "GET": {}
+      },
+      "/": {
+        "GET": {}
+      },
+    }
+  }
+}
