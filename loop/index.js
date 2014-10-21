@@ -117,7 +117,7 @@ var rooms = require("./routes/rooms");
 rooms(apiRouter, conf, logError, storage, auth, validators, tokBox);
 
 var videur = require("./routes/videur");
-videur(app, conf);
+videur(apiRouter, conf);
 
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);

@@ -28,7 +28,7 @@
         "POST": {}
       },
 
-      "regexp:/calls/[a-zA-Z0-9_-]{8-25}": {
+      "_CALLS_": {
         "POST": {}
       },
 
@@ -54,7 +54,7 @@
         "DELETE": {},
         "GET": {}
       },
-      "regexp:/rooms/[a-zA-Z0-9_-]{8-25}": {
+      "_ROOMS_": {
         "PATCH": {},
         "DELETE": {},
         "GET": {},
