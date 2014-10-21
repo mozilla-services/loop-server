@@ -922,8 +922,8 @@ describe("Storage", function() {
   testStorage("MySQL", function createMySQLStorage(options) {
     return getStorage({engine: "mysql", settings: {
       "host": "localhost",
-      "user": "looptest",
-      "password": "looptest",
+      "user": "travis",
+      "password": "",
       "database": "looptest"}}, options);
   });
 
