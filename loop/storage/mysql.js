@@ -48,15 +48,22 @@ MySQLStorage.prototype = {
         return;
       }
 
-      var query = connection.query("INSERT INTO `simplePushURLs` SET ?", {
-        hawkIdHmac: hawkIdHmac,
-        userMac: userMac,
-        topics: JSON.stringify(simplePushURLs)
-      }, function(err) {
-        console.log(query.sql);
-        connection.release();
-        callback(err);
-      });
+      var now = parseInt(Date.now() / 1000, 10);
+      var expires = now + this._settings.hawkSessionDuration;
+
+      var query = connection.query(
+        "REPLACE INTO `sessionSPURLs` SET ? ",
+        {
+          hawkIdHmac: hawkIdHmac,
+          userMac: userMac,
+          topics: JSON.stringify(simplePushURLs),
+          timestamp: now,
+          expires: expires
+        }, function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
     });
   },
 
@@ -73,7 +80,8 @@ MySQLStorage.prototype = {
       }
 
       var query = connection.query(
-        "SELECT `topics` FROM `simplePushURLs` WHERE `userMac` = ?", userMac,
+        "SELECT `topics` FROM `sessionSPURLs` WHERE `userMac` = ? " +
+        "ORDER BY `timestamp`", userMac,
         function(err, results) {
           console.log(query.sql);
           connection.release();
@@ -103,8 +111,8 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      var query = connection.query("DELETE FROM `simplePushURLs` WHERE `hawkIdHmac` = ?",
-        hawkIdHmac, function(err) {                
+      var query = connection.query("DELETE FROM `sessionSPURLs` WHERE `hawkIdHmac` = ?",
+        hawkIdHmac, function(err) {
           console.log(query.sql);
           connection.release();
           callback(err);
@@ -123,7 +131,7 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      connection.query("DELETE FROM `simplePushURLs` WHERE `userMac` = ?",
+      connection.query("DELETE FROM `sessionSPURLs` WHERE `userMac` = ?",
         userMac, function(err) {
           connection.release();
           callback(err);
@@ -145,12 +153,12 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      var query = connection.query("INSERT INTO `callURLs` SET ?", {
+      var query = connection.query("REPLACE INTO `callURLs` SET ?", {
         urlToken: urlToken,
         userMac: userMac,
         callerId: urlData.callerId,
-        timestamp: urlData.timestamp,
         issuer: urlData.issuer,
+        timestamp: urlData.timestamp,
         expires: urlData.expires
       }, function(err) {
         console.log(query.sql);
@@ -174,8 +182,8 @@ MySQLStorage.prototype = {
       }
 
       var newData = JSON.parse(JSON.stringify({
-        callerId: urlData.callerId,
-        issuer: urlData.issuer,
+        callerId: urlData.callerId || undefined,
+        issuer: urlData.issuer || undefined,
         expires: urlData.expires
       }));
 
@@ -206,27 +214,26 @@ MySQLStorage.prototype = {
 
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
-        "SELECT `callerId`, `issuer`, `expires`, `timestamp` FROM `callURLs` " +
-        "WHERE `expires` > ? AND `urlToken` = ?", [
-          now, urlToken], function(err, result) {
-            console.log(query.sql);
-            connection.release();
-            if (err) {
-              callback(err);
-              return;
-            }
-
-            if (result.length !== 0) {
-              result = result[0];
-              result.callerId = result.callerId || undefined;
-              result.issuer = result.issuer || undefined;
-              result = JSON.parse(JSON.stringify(result));
-            } else {
-              result = null;
-            }
-            callback(null, result);
+        "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
+        "FROM `callURLs` WHERE `expires` > ? AND `urlToken` = ?",
+        [now, urlToken], function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
           }
-      );
+
+          if (result.length !== 0) {
+            result = result[0];
+            result.callerId = result.callerId || undefined;
+            result.issuer = result.issuer || undefined;
+            result = JSON.parse(JSON.stringify(result));
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
     });
   },
 
@@ -236,7 +243,7 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      
+
       var query = connection.query(
         "DELETE FROM `callURLs` WHERE `urlToken` = ?", urlToken,
         function(err) {
@@ -260,7 +267,7 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      
+
       var query = connection.query(
         "DELETE FROM `callURLs` WHERE `userMac` = ?", userMac,
         function(err) {
@@ -277,28 +284,379 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      
+
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
-        "SELECT `callerId`, `timestamp`, `issuer`, expires FROM `callURLs` " +
-        "WHERE `expires` > ? AND `userMac` = ? ORDER BY timestamp", [
-          now, userMac], function(err, results) {
-            results = JSON.parse(JSON.stringify(results.map(function(result) {
-              result.callerId = result.callerId || undefined;
-              result.issuer = result.issuer || undefined;
-              return result;
-            })));
-            console.log(query.sql, results);
-            connection.release();
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, results);
-          });
+        "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
+        "FROM `callURLs` WHERE `expires` > ? AND `userMac` = ? " +
+        "ORDER BY `timestamp`",
+        [now, userMac], function(err, results) {
+          results = JSON.parse(JSON.stringify(results.map(function(result) {
+            result.callerId = result.callerId || undefined;
+            result.issuer = result.issuer || undefined;
+            return result;
+          })));
+          console.log(query.sql, results);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null, results);
+        });
     });
   },
-    
+
+  /**
+   * Add an hawk id to the list of valid hawk ids for an user.
+   **/
+  setHawkUser: function(userMac, hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "UPDATE `hawkSession` SET `userMac` = ? WHERE `hawkIdHmac` = ?",
+        [userMac, hawkIdHmac], function(err, result) {
+          console.log(query.sql);
+          if (result.affectedRows === 0) {
+            var error = new Error("Doesn't exist");
+            error.notFound = true;
+            callback(error);
+            return;
+          }
+          connection.release();
+          callback(err);
+        }
+      );
+    });
+  },
+
+  getHawkUser: function(hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT `userMac` FROM `hawkSession` " +
+        "WHERE `expires` > ? AND `hawkIdHmac` = ?",
+        [now, hawkIdHmac], function(err, result) {
+          console.log(query.sql, result);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (result.length !== 0) {
+            result = result[0].userMac;
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  /**
+   * Associates an hawk.id (hmac-ed) to an user identifier (encrypted).
+   */
+  setHawkUserId: function(hawkIdHmac, encryptedUserId, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "UPDATE `hawkSession` SET `encryptedUserId` = ? WHERE `hawkIdHmac` = ?",
+        [encryptedUserId, hawkIdHmac], function(err, result) {
+          console.log(query.sql);
+          if (result.affectedRows === 0) {
+            var error = new Error("Doesn't exist");
+            error.notFound = true;
+            callback(error);
+            return;
+          }
+          connection.release();
+          callback(err);
+        }
+      );
+    });
+  },
+
+  getHawkUserId: function(hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT `encryptedUserId` FROM `hawkSession` " +
+        "WHERE `expires` > ? AND `hawkIdHmac` = ?",
+        [now, hawkIdHmac], function(err, result) {
+          console.log(query.sql, result);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (result.length !== 0) {
+            result = result[0].encryptedUserId;
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  setHawkSession: function(hawkIdHmac, authKey, callback) {
+    var now = parseInt(Date.now() / 1000, 10);
+    var expires = now + this._settings.hawkSessionDuration;
+    var newData = {
+      hawkIdHmac: hawkIdHmac,
+      authKey: authKey,
+      timestamp: now,
+      expires: expires
+    };
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "REPLACE INTO `hawkSession` SET ? ", newData, function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  touchHawkSession: function(hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var expires = now + this._settings.hawkSessionDuration;
+      var query = connection.query(
+        "UPDATE `hawkSession` SET `expires` = ? WHERE `hawkIdHmac` = ? AND `expires` > ?",
+        [expires, hawkIdHmac, now], function(err, result) {
+          console.log(query.sql);
+          if (result.affectedRows === 0) {
+            var error = new Error("Doesn't exist");
+            error.notFound = true;
+            callback(error);
+            return;
+          }
+          connection.release();
+          callback(err);
+        }
+      );
+    });
+  },
+
+  getHawkSession: function(hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT `authKey` FROM `hawkSession` " +
+        "WHERE `expires` > ? AND `hawkIdHmac` = ?",
+        [now, hawkIdHmac], function(err, result) {
+          console.log(query.sql, result);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          if (result.length !== 0) {
+            result = {
+              key: result[0].authKey,
+              algorithm: "sha256"
+            };
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  deleteHawkSession: function(hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "DELETE FROM `hawkSession` WHERE `hawkIdHmac` = ?", hawkIdHmac,
+        function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  setUserRoomData: function(userMac, roomToken, roomData, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    } else if (roomToken === undefined) {
+      callback(new Error("roomToken should be defined."));
+      return;
+    } else if (roomData.expiresAt === undefined) {
+      callback(new Error("roomData should have an expiresAt property."));
+      return;
+    } else if (roomData.updateTime === undefined) {
+      callback(new Error("roomData should have an updateTime property."));
+      return;
+    }
+    var newData = {
+      roomToken: roomToken,
+      roomName: roomData.roomName,
+      roomOwner: roomData.roomOwner,
+      creationTime: roomData.creationTime,
+      expiresAt: roomData.expiresAt,
+      ownerMac: roomData.ownerMac,
+      sessionId: roomData.sessionId,
+      apiKey: roomData.apiKey,
+      expiresIn: roomData.expiresIn,
+      updateTime: roomData.updateTime,
+      maxSize: roomData.maxSize
+    };
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "REPLACE INTO `room` SET ? ", newData, function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  getUserRooms: function(userMac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT r.*, COUNT(p.*) as currSize FROM `room` as r " +
+        "LEFT JOIN `roomParticipant` as p " +
+        "ON p.roomToken = r.roomToken  AND p.expiresAt > ? " +
+        "WHERE `r`.`expiresAt` > ? AND `r`.`ownerMac` = ? " +
+        "GROUP BY r.roomToken" +
+        "ORDER BY `r`.`creationTime`",
+        [now, now, userMac], function(err, results) {
+          results = JSON.parse(JSON.stringify(results));
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          callback(null, results);
+        });
+    });
+  },
+
+  getRoomData: function(roomToken, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT * FROM `room` WHERE `expires` > ? AND `roomToken` = ?",
+        [now, roomToken], function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          if (result.length !== 0) {
+            result = JSON.parse(JSON.stringify(result));
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  touchRoomData: function(roomToken, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "UPDATE `room` SET `updateTime` = ? " +
+        "WHERE `roomToken` = ? AND `expiresAt` > ?",
+        [now, roomToken, now], function(err, result) {
+          console.log(query.sql);
+          if (result.affectedRows === 0) {
+            var error = new Error("Doesn't exist");
+            error.notFound = true;
+            callback(error);
+            return;
+          }
+          connection.release();
+          callback(err);
+        }
+      );
+    });
+  },
+
+  deleteRoomData: function(roomToken, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "DELETE FROM `room` WHERE `roomToken` = ?", roomToken,
+        function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
 
   drop: function(callback) {
     // callback(null); return;
@@ -307,7 +665,7 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      var query = connection.query("TRUNCATE TABLE `simplePushURLs`", function(err) {
+      var query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
         console.log(query.sql);
         if (err) {
           connection.release();
@@ -322,8 +680,34 @@ MySQLStorage.prototype = {
             return;
           }
 
-          connection.release();
-          callback();
+          query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
+            console.log(query.sql);
+            if (err) {
+              connection.release();
+              callback(err);
+              return;
+            }
+            query = connection.query("TRUNCATE TABLE `room`", function(err) {
+              console.log(query.sql);
+              if (err) {
+                connection.release();
+                callback(err);
+                return;
+              }
+              query = connection.query("TRUNCATE TABLE `roomParticipant`",
+                function(err) {
+                  console.log(query.sql);
+                  if (err) {
+                    connection.release();
+                    callback(err);
+                    return;
+                  }
+
+                  connection.release();
+                  callback();
+                });
+            });
+          });
         });
       });
     });
@@ -346,5 +730,6 @@ MySQLStorage.prototype = {
     });
   }
 };
+
 
 module.exports = MySQLStorage;

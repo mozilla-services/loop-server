@@ -25,11 +25,11 @@ var callUrls = conf.get('callUrls');
 
 var ttl = 30;
 
-describe.only("Storage", function() {
+
+describe("Storage", function() {
   function testStorage(name, createStorage) {
     var now = parseInt(Date.now() / 1000, 10);
     var storage,
-        a_second = 1 / 3600,  // A second in hours.
         calls = [
         {
           callId:       randomBytes(16).toString("hex"),
@@ -364,7 +364,7 @@ describe.only("Storage", function() {
         });
 
         it("should return null if the call-url doesn't exist", function(done) {
-          storage.getCall("does-not-exist", function(err, call) {
+          storage.getCallUrlData("does-not-exist", function(err, call) {
             if (err) throw err;
             expect(call).to.eql(null);
             done();
@@ -603,6 +603,24 @@ describe.only("Storage", function() {
             });
           });
         });
+
+        it("should be cleaned by #deleteHawkSession", function(done) {
+          storage.setHawkUser("userhash", "tokenId", function(err) {
+            if (err) {
+              throw err;
+            }
+            storage.deleteHawkSession("tokenId", function(err) {
+              if (err) throw err;
+              storage.getHawkUser("userhash", function(err, result) {
+                if (err) {
+                  throw err;
+                }
+                expect(result).to.eql(null);
+                done();
+              });
+            });
+          });
+        });
       });
 
       describe("#setHawkUserId, #getHawkUserId", function() {
@@ -620,18 +638,14 @@ describe.only("Storage", function() {
             });
           });
         });
-      });
 
-      describe("#deleteHawkUserId", function() {
-        it("should delete an existing user hawk session", function(done) {
+        it("should be cleaned by #deleteHawkSession", function(done) {
           storage.setHawkUserId("tokenId", "userId", function(err) {
             if (err) {
               throw err;
             }
-            storage.deleteHawkUserId("tokenId", function(err) {
-              if (err) {
-                throw err;
-              }
+            storage.deleteHawkSession("tokenId", function(err) {
+              if (err) throw err;
               storage.getHawkUserId("tokenId", function(err, result) {
                 if (err) {
                   throw err;
@@ -850,17 +864,17 @@ describe.only("Storage", function() {
   }
 
   // Test all the storages implementation.
-  // testStorage("Redis", function createRedisStorage(options) {
-  //   return getStorage({engine: "redis", settings: {"db": 5}}, options);
-  // });
-
-  testStorage("MySQL", function createMySQLStorage(options) {
-    return getStorage({engine: "mysql", settings: {
-      "host": "localhost",
-      "user": "looptest",
-      "password": "looptest",
-      "database": "looptest"}}, options);
+  testStorage("Redis", function createRedisStorage(options) {
+    return getStorage({engine: "redis", settings: {"db": 5}}, options);
   });
+
+  // testStorage("MySQL", function createMySQLStorage(options) {
+  //   return getStorage({engine: "mysql", settings: {
+  //     "host": "localhost",
+  //     "user": "looptest",
+  //     "password": "looptest",
+  //     "database": "looptest"}}, options);
+  // });
 
   describe("Redis specifics", function() {
     var sandbox, storage;

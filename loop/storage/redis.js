@@ -648,10 +648,6 @@ RedisStorage.prototype = {
     this._client.get('userid.' + hawkIdHmac, callback);
   },
 
-  deleteHawkUserId: function(hawkIdHmac, callback) {
-    this._client.del('userid.' + hawkIdHmac, callback);
-  },
-
   setHawkSession: function(hawkIdHmac, authKey, callback) {
     this._client.setex(
       'hawk.' + hawkIdHmac,
@@ -696,7 +692,20 @@ RedisStorage.prototype = {
   },
 
   deleteHawkSession: function(hawkIdHmac, callback) {
-    this._client.del('hawk.' + hawkIdHmac, callback);
+    var self = this;
+    self._client.del('hawk.' + hawkIdHmac, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.del('userid.' + hawkIdHmac, function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.del('hawkuser.' + hawkIdHmac, callback);
+      });
+    });
   },
 
   setHawkOAuthToken: function(hawkIdHmac, token, callback) {
