@@ -29,6 +29,7 @@ var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
 var hmac = require("../loop/hmac");
+var pjson = require("../package.json");
 
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormattedError = require("./support").expectFormattedError;
@@ -1474,6 +1475,25 @@ function runOnPrefix(apiPrefix) {
       });
     });
   });
+
+  describe("GET /api-specs", function() {
+    it("should return the Videur api spec file.", function(done) {
+        supertest(app)
+          .get('/api-specs')
+          .type('json')
+          .expect('Content-Type', /json/)
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            var spec = res.body;
+            expect(spec.service.location).to.match(/http:\/\/127.0.0.1:(\d)+/);
+            expect(spec.service.version, pjson.version);
+            done();
+          });
+      });
+  });
+
+
 }
 
 describe("HTTP API exposed by the server", function() {
