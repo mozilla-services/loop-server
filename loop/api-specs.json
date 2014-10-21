@@ -4,12 +4,62 @@
     "version": "1.0",
     "videur_version": "0.1",
     "resources": {
+
       "/__heartbeat__": {
         "GET": {}
       },
       "/": {
         "GET": {}
       },
+
+      "/account": {
+        "DELETE": {}
+      },
+
+      "/call-url": {
+        "GET": {},
+        "POST": {},
+        "PUT": {},
+        "DELETE": {}
+      },
+
+      "/calls": {
+        "GET": {},
+        "POST": {}
+      },
+
+      "/calls/:token": {
+        "POST": {}
+      },
+
+      "/fxa-oauth/params": {
+        "POST": {}
+      },
+      "/fxa-oauth/token": {
+        "POST": {},
+        "GET": {}
+      },
+
+      "/push-server-config": {
+        "GET": {}
+      },
+
+      "/registration": {
+        "POST": {},
+        "DELETE": {}
+      },
+
+      "/rooms": {
+        "POST": {},
+        "DELETE": {},
+        "GET"" {}
+      },
+      "/rooms/:token": {
+        "PATCH": {},
+        "DELETE": {},
+        "GET": {},
+        "POST": {}
+      }
     }
   }
 }
