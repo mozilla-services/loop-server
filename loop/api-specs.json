@@ -28,7 +28,7 @@
         "POST": {}
       },
 
-      "/calls/:token": {
+      "regexp:/calls/[0-9]{8}": {
         "POST": {}
       },
 
@@ -54,7 +54,7 @@
         "DELETE": {},
         "GET"" {}
       },
-      "/rooms/:token": {
+      "regexp:/rooms/[0-9]{8}": {
         "PATCH": {},
         "DELETE": {},
         "GET": {},
