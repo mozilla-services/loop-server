@@ -15,6 +15,7 @@ function MySQLStorage(options, settings) {
     password : options.password,
     database : options.database
   });
+  this.persistentOnly = true;
 }
 
 MySQLStorage.prototype = {
@@ -34,6 +35,7 @@ MySQLStorage.prototype = {
    * Add the SimplePushURLs for the given user session.
    */
   addUserSimplePushURLs: function(userMac, hawkIdHmac, simplePushURLs, callback) {
+    var self = this;
     for (var topic in simplePushURLs) {
       if (SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
         callback(new Error(topic + " should be one of " +
@@ -42,14 +44,14 @@ MySQLStorage.prototype = {
       }
     }
 
-    this.getConnection(function(err, connection) {
+    self.getConnection(function(err, connection) {
       if (err) {
         callback(err);
         return;
       }
 
       var now = parseInt(Date.now() / 1000, 10);
-      var expires = now + this._settings.hawkSessionDuration;
+      var expires = now + self._settings.hawkSessionDuration;
 
       var query = connection.query(
         "REPLACE INTO `sessionSPURLs` SET ? ",
@@ -100,6 +102,7 @@ MySQLStorage.prototype = {
               }
             }
           });
+          console.log(result);
           callback(null, result);
         });
     });
@@ -596,7 +599,7 @@ MySQLStorage.prototype = {
 
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
-        "SELECT * FROM `room` WHERE `expires` > ? AND `roomToken` = ?",
+        "SELECT * FROM `room` WHERE `expiresAt` > ? AND `roomToken` = ?",
         [now, roomToken], function(err, result) {
           console.log(query.sql);
           connection.release();
@@ -606,7 +609,7 @@ MySQLStorage.prototype = {
           }
 
           if (result.length !== 0) {
-            result = JSON.parse(JSON.stringify(result));
+            result = JSON.parse(JSON.stringify(result[0]));
           } else {
             result = null;
           }
@@ -658,54 +661,74 @@ MySQLStorage.prototype = {
     });
   },
 
+  getRoomParticipants: function(roomToken, callback) {
+    // Mock
+    callback(null, []);
+  },
+
   drop: function(callback) {
-    // callback(null); return;
     this.getConnection(function(err, connection) {
       if (err) {
         callback(err);
         return;
       }
       var query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
-        console.log(query.sql);
+        // console.log(query.sql);
         if (err) {
           connection.release();
           callback(err);
           return;
         }
         query = connection.query("TRUNCATE TABLE `callURLs`", function(err) {
-          console.log(query.sql);
+          // console.log(query.sql);
           if (err) {
             connection.release();
             callback(err);
             return;
           }
 
-          query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
-            console.log(query.sql);
+          query = connection.query("TRUNCATE TABLE `sessionSPURLs`", function(err) {
+            // console.log(query.sql);
             if (err) {
               connection.release();
               callback(err);
               return;
             }
-            query = connection.query("TRUNCATE TABLE `room`", function(err) {
-              console.log(query.sql);
+            query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
+              // console.log(query.sql);
               if (err) {
                 connection.release();
                 callback(err);
                 return;
               }
-              query = connection.query("TRUNCATE TABLE `roomParticipant`",
-                function(err) {
-                  console.log(query.sql);
-                  if (err) {
-                    connection.release();
-                    callback(err);
-                    return;
-                  }
-
+              query = connection.query("TRUNCATE TABLE `room`;", function(err) {
+                // console.log(query.sql);
+                if (err) {
                   connection.release();
-                  callback();
-                });
+                  callback(err);
+                  return;
+                }
+                query = connection.query("TRUNCATE TABLE `roomParticipant`",
+                  function(err) {
+                    // console.log(query.sql);
+                    if (err) {
+                      connection.release();
+                      callback(err);
+                      return;
+                    }
+                    query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
+                      function(err) {
+                        // console.log(query.sql);
+                        if (err) {
+                          connection.release();
+                          callback(err);
+                          return;
+                        }
+                        connection.release();
+                        callback();
+                      });
+                  });
+              });
             });
           });
         });

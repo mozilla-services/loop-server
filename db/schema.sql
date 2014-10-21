@@ -71,5 +71,6 @@ CREATE TABLE IF NOT EXISTS `roomParticipant` (
   `timestamp` bigint(20) NOT NULL,
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `roomToken` (`roomToken`)
+  KEY `roomParticipant_roomToken` (`roomToken`),
+  CONSTRAINT FOREIGN KEY (`roomToken`) REFERENCES `room` (`roomToken`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

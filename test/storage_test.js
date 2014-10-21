@@ -79,9 +79,12 @@ describe("Storage", function() {
     roomToken = generateToken(conf.get("rooms").tokenSize),
     roomData = {
       sessionId: fakeCallInfo.session1,
+      apiKey: fakeCallInfo.apiKey,
       roomName: "UX Discussion",
       roomOwner: "Alexis",
+      ownerMac: user,
       maxSize: 3,
+      expiresIn: 60 * 24,
       expiresAt: now + 60 * 24,
       updateTime: now,
       creationTime: now
@@ -350,13 +353,9 @@ describe("Storage", function() {
       describe("#getCallUrlData", function() {
         it("should be able to list a call-url by its id", function(done) {
           storage.addUserCallUrlData(userMac, callToken, urlData, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getCallUrlData(callToken, function(err, result) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(result).to.eql(urlData);
               done();
             });
@@ -406,14 +405,14 @@ describe("Storage", function() {
 
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getUserCalls(userMac, function(err, results) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(results).to.have.length(1);
               expect(results).to.eql([call]);
               storage.deleteCall(call.callId, function(err) {
@@ -431,6 +430,10 @@ describe("Storage", function() {
 
       describe("#getUserCalls", function() {
         it("should keep a list of the user calls", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, calls[0], function(err) {
             if (err) throw err;
             storage.addUserCall(userMac, calls[1], function(err) {
@@ -456,6 +459,10 @@ describe("Storage", function() {
         });
 
         it("should return an empty list if no calls", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getUserCalls(userMac, function(err, results) {
             expect(results).to.eql([]);
             done(err);
@@ -465,14 +472,14 @@ describe("Storage", function() {
 
       describe("#getCall", function() {
         it("should be able to list a call by its id", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getCall(call.callId, function(err, result) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(result).to.eql(call);
               done();
             });
@@ -480,6 +487,10 @@ describe("Storage", function() {
         });
 
         it("should return null if the call doesn't exist", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getCall("does-not-exist", function(err, call) {
             if (err) throw err;
             expect(call).to.eql(null);
@@ -490,6 +501,10 @@ describe("Storage", function() {
 
       describe("#deleteCall", function() {
         it("should delete an existing call", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
             if (err) throw err;
             storage.deleteCall(call.callId, function(err, result) {
@@ -505,6 +520,10 @@ describe("Storage", function() {
         });
 
         it("should return an error if the call doesn't exist", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.deleteCall("does-not-exist", function(err, result) {
             if (err) throw err;
             expect(result).to.eql(false);
@@ -515,6 +534,10 @@ describe("Storage", function() {
 
       describe("#deleteUserCalls", function() {
         it("should delete all calls of an user", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, calls[0], function(err) {
             if (err) throw err;
             storage.addUserCall(userMac, calls[1], function(err) {
@@ -535,6 +558,10 @@ describe("Storage", function() {
         });
 
         it("should not error when no calls exist", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.deleteUserCalls(userMac, done);
         });
       });
@@ -553,9 +580,7 @@ describe("Storage", function() {
       describe("#setHawkSession", function() {
         it("should return a valid hawk session", function(done) {
           storage.setHawkSession("id", "key", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getHawkSession("id", function(err, result) {
               if (err) throw err;
               expect(result).to.eql({
@@ -571,13 +596,9 @@ describe("Storage", function() {
       describe("#deleteHawkSession", function() {
         it("should delete an existing hawk session", function(done) {
           storage.setHawkSession("id", "key", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.deleteHawkSession("id", function(err) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               storage.getHawkSession("id", function(err, result) {
                 if (err) throw err;
                 expect(result).to.eql(null);
@@ -590,33 +611,31 @@ describe("Storage", function() {
 
       describe("#setHawkUser, #getHawkUser", function() {
         it("should store and retrieve an user hawk session", function(done) {
-          storage.setHawkUser("userhash", "tokenid", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.getHawkUser("tokenid", function(err, result) {
-              if (err) {
-                throw err;
-              }
-              expect(result).to.eql("userhash");
-              done();
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUser("userhash", "tokenid", function(err) {
+              if (err) throw err;
+              storage.getHawkUser("tokenid", function(err, result) {
+                if (err) throw err;
+                expect(result).to.eql("userhash");
+                done();
+              });
             });
           });
         });
 
         it("should be cleaned by #deleteHawkSession", function(done) {
-          storage.setHawkUser("userhash", "tokenId", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.deleteHawkSession("tokenId", function(err) {
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUser("userhash", "tokenId", function(err) {
               if (err) throw err;
-              storage.getHawkUser("userhash", function(err, result) {
-                if (err) {
-                  throw err;
-                }
-                expect(result).to.eql(null);
-                done();
+              storage.deleteHawkSession("tokenId", function(err) {
+                if (err) throw err;
+                storage.getHawkUser("userhash", function(err, result) {
+                  if (err) throw err;
+                  expect(result).to.eql(null);
+                  done();
+                });
               });
             });
           });
@@ -625,33 +644,31 @@ describe("Storage", function() {
 
       describe("#setHawkUserId, #getHawkUserId", function() {
         it("should store and retrieve an user hawk session", function(done) {
-          storage.setHawkUserId("tokenId", "userId", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.getHawkUserId("tokenId", function(err, result) {
-              if (err) {
-                throw err;
-              }
-              expect(result).to.eql("userId");
-              done();
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUserId("tokenId", "userId", function(err) {
+              if (err) throw err;
+              storage.getHawkUserId("tokenId", function(err, result) {
+                if (err) throw err;
+                expect(result).to.eql("userId");
+                done();
+              });
             });
           });
         });
 
         it("should be cleaned by #deleteHawkSession", function(done) {
-          storage.setHawkUserId("tokenId", "userId", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.deleteHawkSession("tokenId", function(err) {
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUserId("tokenId", "userId", function(err) {
               if (err) throw err;
-              storage.getHawkUserId("tokenId", function(err, result) {
-                if (err) {
-                  throw err;
-                }
-                expect(result).to.eql(null);
-                done();
+              storage.deleteHawkSession("tokenId", function(err) {
+                if (err) throw err;
+                storage.getHawkUserId("tokenId", function(err, result) {
+                  if (err) throw err;
+                  expect(result).to.eql(null);
+                  done();
+                });
               });
             });
           });
@@ -660,6 +677,10 @@ describe("Storage", function() {
 
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.setCallState("12345", constants.CALL_STATES.INIT, 10,
             function(err) {
               if (err) throw err;
@@ -673,6 +694,10 @@ describe("Storage", function() {
 
         it("should check the states are valid before storing them",
           function(done) {
+            if (storage.persistentOnly) {
+              done();
+              return;
+            }
             storage.setCallState(
               "12345",
               constants.CALL_STATES.TERMINATED + ":unauthorized",
@@ -686,6 +711,10 @@ describe("Storage", function() {
 
       describe("#getCallState", function() {
         it("should return null when no call state is set", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getCallState("12345", function(err, state) {
             if (err) throw err;
             expect(state).to.eql(null);
@@ -696,6 +725,10 @@ describe("Storage", function() {
 
       describe("#setCallTerminationReason", function() {
         it("should set the call termination reason", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
             if (err) throw err;
             storage.setCallTerminationReason(call.callId,
@@ -713,6 +746,10 @@ describe("Storage", function() {
 
       describe("#getCallTerminationReason", function() {
         it("should return null when no call reason is set", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getCallTerminationReason("12345", function(err, reason) {
             if (err) throw err;
             expect(reason).to.eql(null);
@@ -757,11 +794,6 @@ describe("Storage", function() {
       });
 
       describe("#deleteRoomData", function() {
-        var spy;
-        beforeEach(function() {
-          spy = sandbox.spy(storage, 'deleteRoomParticipants');
-        });
-
         it("should remove the room from the store", function(done) {
           storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
@@ -770,8 +802,11 @@ describe("Storage", function() {
               storage.getRoomData(roomToken, function(err, storedRoomData) {
                 if (err) throw err;
                 expect(storedRoomData).to.eql(null);
-                assert(spy.calledOnce);
-                done();
+                storage.getRoomParticipants(roomToken, function(err, results) {
+                  if (err) throw err;
+                  expect(results).to.eql([]);
+                  done();
+                });
               });
             });
           });
@@ -780,6 +815,10 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipants", function() {
         it("should remove all the room participants", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
@@ -798,6 +837,10 @@ describe("Storage", function() {
 
       describe("#addRoomParticipant", function() {
         it("should add a participant to the room", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
             function(err) {
               if (err) throw err;
@@ -817,6 +860,10 @@ describe("Storage", function() {
 
       describe("#touchRoomParticipant", function() {
         it("should change the expiracy", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
@@ -841,6 +888,10 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipant", function() {
         it("should remove a participant to the room", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
             function(err) {
               if (err) throw err;
@@ -863,18 +914,18 @@ describe("Storage", function() {
     });
   }
 
-  // Test all the storages implementation.
+  /* Test all the storages implementation. */
   testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
   });
 
-  // testStorage("MySQL", function createMySQLStorage(options) {
-  //   return getStorage({engine: "mysql", settings: {
-  //     "host": "localhost",
-  //     "user": "looptest",
-  //     "password": "looptest",
-  //     "database": "looptest"}}, options);
-  // });
+  testStorage("MySQL", function createMySQLStorage(options) {
+    return getStorage({engine: "mysql", settings: {
+      "host": "localhost",
+      "user": "looptest",
+      "password": "looptest",
+      "database": "looptest"}}, options);
+  });
 
   describe("Redis specifics", function() {
     var sandbox, storage;
