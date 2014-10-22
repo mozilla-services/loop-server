@@ -15,7 +15,7 @@ module.exports = function(app, conf) {
   var callTokenSize = Math.ceil(config.get('callUrls').tokenSize / 3 * 4);
 
   app.get("/api-specs", function(req, res) {
-    specs.service.location = conf.get("protocol") + "://" + req.get("host");
+    specs.service.location = conf.get("protocol") + "://" + req.get("publicServerAddress");
     specs.service.version = pjson.version;
 
     var roomsKey = "regexp:/rooms/[a-zA-Z0-9_-]{" + roomTokenSize + "}";
