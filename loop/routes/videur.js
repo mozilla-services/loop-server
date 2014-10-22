@@ -10,22 +10,16 @@ var config = require('../config').conf;
 
 
 module.exports = function(app, conf) {
-  // Videur integration.
   var roomTokenSize = Math.ceil(config.get('rooms').tokenSize / 3 * 4);
   var callTokenSize = Math.ceil(config.get('callUrls').tokenSize / 3 * 4);
+  var location = conf.get("protocol") + "://" + conf.get("publicServerAddress");
 
   app.get("/api-specs", function(req, res) {
-    specs.service.location = conf.get("protocol") + "://" + conf.get("publicServerAddress");
-    specs.service.version = pjson.version;
-
-    var roomsKey = "regexp:/rooms/[a-zA-Z0-9_-]{" + roomTokenSize + "}";
-    specs.service.resources[roomsKey] = specs.service.resources._ROOMS_;
-    delete specs.service.resources._ROOMS_;
-
-    var callsKey = "regexp:/calls/[a-zA-Z0-9_-]{" + callTokenSize + "}";
-    specs.service.resources[callsKey] = specs.service.resources._CALLS_;
-    delete specs.service.resources._CALLS_;
-
-    res.json(200, specs);
+    var strSpec = JSON.stringify(specs);
+    strSpec = strSpec.replace('{roomTokenSize}', roomTokenSize);
+    strSpec = strSpec.replace('{callTokenSize}', callTokenSize);
+    strSpec = strSpec.replace('{location}', location);
+    strSpec = strSpec.replace('{version}', pjson.version);
+    res.json(200, JSON.parse(strSpec));
   });
 };

@@ -1,7 +1,7 @@
 {
   "service": {
-    "location": "http://127.0.0.1:8282",
-    "version": "1.0",
+    "location": "{{location}}",
+    "version": "{{version}}",
     "videur_version": "0.1",
     "resources": {
 
@@ -28,7 +28,7 @@
         "POST": {}
       },
 
-      "_CALLS_": {
+      "regexp:/calls/[a-zA-Z0-9_-]{{callTokenSize}}": {
         "POST": {}
       },
 
@@ -54,7 +54,7 @@
         "DELETE": {},
         "GET": {}
       },
-      "_ROOMS_": {
+      "regexp:/rooms/[a-zA-Z0-9_-]{{roomTokenSize}}": {
         "PATCH": {},
         "DELETE": {},
         "GET": {},
