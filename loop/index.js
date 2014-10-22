@@ -112,6 +112,9 @@ if (conf.get("fxaOAuth").activated !== false) {
   fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
 }
 
+var videur = require("./routes/videur");
+videur(apiRouter, conf);
+
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);
 

@@ -30,6 +30,7 @@ var tokenlib = require("../loop/tokenlib");
 var fxaAuth = require("../loop/fxa");
 var tokBoxConfig = conf.get("tokBox");
 var hmac = require("../loop/hmac");
+var pjson = require("../package.json");
 
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormatedError = require("./support").expectFormatedError;
@@ -1461,6 +1462,37 @@ function runOnPrefix(apiPrefix) {
       });
     });
   });
+
+  describe("GET /api-specs", function() {
+    it("should return the Videur api spec file.", function(done) {
+        supertest(app)
+          .get('/api-specs')
+          .type('json')
+          .expect('Content-Type', /json/)
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            var spec = res.body;
+            var wantedLocation = conf.get("protocol") + "://" + conf.get("publicServerAddress");
+            expect(spec.service.location, wantedLocation);
+            expect(spec.service.version, pjson.version);
+
+            var room_tsize = Math.ceil(conf.get('rooms').tokenSize / 3 * 4);
+            var expr = 'regexp:/rooms/[a-zA-Z0-9_-]{' + room_tsize + '}';
+            expect(!spec.service.resources.hasOwnProperty('__ROOMS__'));
+            expect(spec.service.resources.hasOwnProperty(expr));
+
+            var call_tsize = Math.ceil(conf.get('callUrls').tokenSize / 3 * 4);
+            expr = 'regexp:/rooms/[a-zA-Z0-9_-]{' + call_tsize + '}';
+            expect(!spec.service.resources.hasOwnProperty('__CALLS__'));
+            expect(spec.service.resources.hasOwnProperty(expr));
+
+            done();
+          });
+      });
+  });
+
+
 }
 
 describe("HTTP API exposed by the server", function() {
