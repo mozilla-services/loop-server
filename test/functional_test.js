@@ -1486,7 +1486,8 @@ function runOnPrefix(apiPrefix) {
           .end(function(err, res) {
             if (err) throw err;
             var spec = res.body;
-            expect(spec.service.location).to.match(/http:\/\/127.0.0.1:(\d)+/);
+            var wantedLocation = conf.get("protocol") + "://" + conf.get("publicServerAddress");
+            expect(spec.service.location, wantedLocation);
             expect(spec.service.version, pjson.version);
 
             var room_tsize = Math.ceil(conf.get('rooms').tokenSize / 3 * 4);
