@@ -18,7 +18,16 @@
 
       "/call-url": {
         "GET": {},
-        "POST": {},
+        "POST": {
+            "limits": {
+                "rates": [
+                    {
+                         "seconds": 60,
+                         "hits": 100,
+                         "match": "header:Authorization AND header:User-Agent"
+                    }]
+             }
+         },
         "PUT": {},
         "DELETE": {}
       },
