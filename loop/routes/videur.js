@@ -30,7 +30,6 @@ module.exports = function(app, conf) {
     specs.service.resources[calls_key] = specs.service.resources["_CALLS_"];
     delete specs.service.resources._CALLS_;
 
-
     res.json(200, specs);
   });
 };
