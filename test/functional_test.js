@@ -1488,6 +1488,17 @@ function runOnPrefix(apiPrefix) {
             var spec = res.body;
             expect(spec.service.location).to.match(/http:\/\/127.0.0.1:(\d)+/);
             expect(spec.service.version, pjson.version);
+
+            var room_tsize = Math.ceil(conf.get('rooms').tokenSize / 3 * 4);
+            var expr = 'regexp:/rooms/[a-zA-Z0-9_-]{' + room_tsize + '}';
+            expect(!spec.service.resources.hasOwnProperty('__ROOMS__'));
+            expect(spec.service.resources.hasOwnProperty(expr));
+
+            var call_tsize = Math.ceil(conf.get('callUrls').tokenSize / 3 * 4);
+            expr = 'regexp:/rooms/[a-zA-Z0-9_-]{' + call_tsize + '}';
+            expect(!spec.service.resources.hasOwnProperty('__CALLS__'));
+            expect(spec.service.resources.hasOwnProperty(expr));
+
             done();
           });
       });
