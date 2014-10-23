@@ -5,7 +5,7 @@
 "use strict";
 
 function getStorage(conf, options) {
-  var engine = conf.engine || 'redis';
+  var engine = conf.engine || 'proxy';
   var settings = conf.settings || {};
 
   var Storage = require('./' + engine + '.js');

@@ -942,6 +942,10 @@ describe("Storage", function() {
       "database": "looptest"}}, options);
   });
 
+  testStorage("Proxy", function createProxyStorage(options) {
+    return getStorage(conf.get("storage"), options);
+  });
+
   describe("Redis specifics", function() {
     var sandbox, storage;
 
