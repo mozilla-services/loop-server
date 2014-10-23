@@ -141,7 +141,7 @@ MessageHandler.prototype = {
               // If received state is "connected" but the session is not
               // marked as such, it means that it was answered elsewhere.
               if (receivedState === constants.CALL_STATES.CONNECTED &&
-                session.connected !== true) {
+                !session.connected) {
                 receivedState = constants.CALL_STATES.TERMINATED;
                 reason = constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE;
               }
