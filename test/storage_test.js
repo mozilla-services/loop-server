@@ -82,13 +82,24 @@ describe("Storage", function() {
       apiKey: fakeCallInfo.apiKey,
       roomName: "UX Discussion",
       roomOwner: "Alexis",
-      ownerMac: user,
+      ownerMac: userMac,
       maxSize: 3,
       expiresIn: 60 * 24,
       expiresAt: now + 60 * 24,
       updateTime: now,
       creationTime: now
+    },
+    roomParticipantData = {
+      id: "azert",
+      userIdHmac: userMac,
+      clientMaxSize: 5,
+      displayName: "Alexis",
+      account: "abc"
     };
+
+    var roomParticipantData2 = JSON.parse(JSON.stringify(roomParticipantData));
+    roomParticipantData2.id = "qsdf";
+    roomParticipantData2.displayName = "Alexis mobile";
 
     describe(name, function() {
       var sandbox;
@@ -815,109 +826,113 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipants", function() {
         it("should remove all the room participants", function(done) {
-          if (storage.persistentOnly) {
-            done();
-            return;
-          }
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
-            function(err) {
-              if (err) throw err;
-              storage.deleteRoomParticipants(roomToken, function(err) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, 30,
+              function(err) {
                 if (err) throw err;
-                storage.getRoomParticipants(roomToken,
-                  function(err, participants) {
-                    if (err) throw err;
-                    expect(participants).to.length(0);
-                    done();
-                  });
+                storage.deleteRoomParticipants(roomToken, function(err) {
+                  if (err) throw err;
+                  storage.getRoomParticipants(roomToken,
+                    function(err, participants) {
+                      if (err) throw err;
+                      expect(participants).to.length(0);
+                      done();
+                    });
+                });
               });
-            });
+          });
         });
       });
 
       describe("#addRoomParticipant", function() {
         it("should add a participant to the room", function(done) {
-          if (storage.persistentOnly) {
-            done();
-            return;
-          }
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
-            function(err) {
-              if (err) throw err;
-              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
-                function(err) {
-                  if (err) throw err;
-                  storage.getRoomParticipants(roomToken, function(err, results) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, ttl,
+              function(err) {
+                if (err) throw err;
+                storage.addRoomParticipant(roomToken, "4567", roomParticipantData2, ttl,
+                  function(err) {
                     if (err) throw err;
-                    expect(results).to.contain({"apiKey": "1", "hawkIdHmac": "1234"});
-                    expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
-                    done();
+                    storage.getRoomParticipants(roomToken, function(err, results) {
+                      if (err) throw err;
+                      roomParticipantData.roomToken = roomToken;
+                      roomParticipantData.hawkIdHmac = "1234";
+                      roomParticipantData2.roomToken = roomToken;
+                      roomParticipantData2.hawkIdHmac = "4567";
+                      expect(results[0]).to.eql(roomParticipantData);
+                      expect(results[1]).to.eql(roomParticipantData2);
+                      done();
+                    });
                   });
-                });
-            });
+              });
+          });
         });
       });
 
       describe("#touchRoomParticipant", function() {
         it("should change the expiracy", function(done) {
-          if (storage.persistentOnly) {
-            done();
-            return;
-          }
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
-            function(err) {
-              if (err) throw err;
-              storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, 30,
+              function(err) {
                 if (err) throw err;
-                expect(success).to.eql(true);
-                setTimeout(function() {
-                  storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
-                    if (err) return done(err);
-                    expect(success).to.eql(false);
-                    storage.getRoomParticipants(roomToken, function(err, results) {
-                      if (err) throw err;
-                      expect(results).to.length(0);
-                      done();
+                storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+                  if (err) throw err;
+                  expect(success).to.eql(true);
+                  setTimeout(function() {
+                    storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
+                      if (err) return done(err);
+                      expect(success).to.eql(false);
+                      storage.getRoomParticipants(roomToken, function(err, results) {
+                        if (err) throw err;
+                        expect(results).to.length(0);
+                        done();
+                      });
                     });
-                  });
-                }, 15);
+                  }, 15);
+                });
               });
-            });
+          });
         });
       });
 
       describe("#deleteRoomParticipant", function() {
         it("should remove a participant to the room", function(done) {
-          if (storage.persistentOnly) {
-            done();
-            return;
-          }
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
-            function(err) {
-              if (err) throw err;
-              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
-                function(err) {
-                  if (err) throw err;
-                  storage.deleteRoomParticipant(roomToken, "1234", function(err) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, ttl,
+              function(err) {
+                if (err) throw err;
+                storage.addRoomParticipant(roomToken, "4567", roomParticipantData2, ttl,
+                  function(err) {
                     if (err) throw err;
-                    storage.getRoomParticipants(roomToken, function(err, results) {
+                    storage.deleteRoomParticipant(roomToken, "1234", function(err) {
                       if (err) throw err;
-                      expect(results).to.not.contain({"apiKey": "1", "hawkIdHmac": "1234"});
-                      expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
-                      done();
+                      storage.getRoomParticipants(roomToken, function(err, results) {
+                        if (err) throw err;
+                        roomParticipantData.roomToken = roomToken;
+                        roomParticipantData.hawkIdHmac = "1234";
+                        roomParticipantData2.roomToken = roomToken;
+                        roomParticipantData2.hawkIdHmac = "4567";
+                        expect(results).to.length(1);
+                        expect(results[0]).to.eql(roomParticipantData2);
+                        done();
+                      });
                     });
                   });
-                });
-            });
+              });
+          });
         });
       });
     });
   }
 
   /* Test all the storages implementation. */
-  testStorage("Redis", function createRedisStorage(options) {
-    return getStorage({engine: "redis", settings: {"db": 5}}, options);
-  });
+  // testStorage("Redis", function createRedisStorage(options) {
+  //   return getStorage({engine: "redis", settings: {"db": 5}}, options);
+  // });
 
   testStorage("MySQL", function createMySQLStorage(options) {
     return getStorage({engine: "mysql", settings: {

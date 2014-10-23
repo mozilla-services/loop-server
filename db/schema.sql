@@ -61,16 +61,18 @@ CREATE TABLE IF NOT EXISTS `room` (
 
 
 CREATE TABLE IF NOT EXISTS `roomParticipant` (
-  `id` bigint(20) NOT NULL,
   `roomToken` varchar(30) NOT NULL,
   `hawkIdHmac` varchar(64) NOT NULL,
+  `id` varchar(36) NOT NULL,
   `userMac` varchar(64) NOT NULL,
   `clientMaxSize` int(11) NOT NULL,
   `displayName` varchar(255) NOT NULL,
+  `encryptedUserId` text,
   `expiresIn` int(11) NOT NULL,
   `timestamp` bigint(20) NOT NULL,
   `expires` bigint(20) NOT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`roomToken`, `hawkIdHmac`),
+  UNIQUE KEY `roomParticipant_id` (`id`),
   KEY `roomParticipant_roomToken` (`roomToken`),
   CONSTRAINT FOREIGN KEY (`roomToken`) REFERENCES `room` (`roomToken`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

@@ -81,9 +81,11 @@ MySQLStorage.prototype = {
         return;
       }
 
+      var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
         "SELECT `topics` FROM `sessionSPURLs` WHERE `userMac` = ? " +
-        "ORDER BY `timestamp`", userMac,
+        "AND `expires` > ? " +
+        "ORDER BY `timestamp`", [userMac, now],
         function(err, results) {
           console.log(query.sql);
           connection.release();
@@ -291,7 +293,8 @@ MySQLStorage.prototype = {
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
         "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
-        "FROM `callURLs` WHERE `expires` > ? AND `userMac` = ? " +
+        "FROM `callURLs` " +
+        "WHERE `expires` > ? AND `userMac` = ? " +
         "ORDER BY `timestamp`",
         [now, userMac], function(err, results) {
           results = JSON.parse(JSON.stringify(results.map(function(result) {
@@ -661,9 +664,136 @@ MySQLStorage.prototype = {
     });
   },
 
+  deleteRoomParticipants: function(roomToken, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "DELETE FROM `roomParticipant` WHERE `roomToken` = ?", roomToken,
+        function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
+                               callback) {
+    var now = parseInt(Date.now() / 1000, 10);
+    var expiresIn = parseInt(ttl, 10);
+    var expires = now + expiresIn;
+    var newData = {
+      roomToken: roomToken,
+      hawkIdHmac: hawkIdHmac,
+      id: participantData.id,
+      userMac: participantData.userIdHmac,
+      clientMaxSize: participantData.clientMaxSize,
+      displayName: participantData.displayName,
+      encryptedUserId: participantData.account,
+      expiresIn: expiresIn,
+      timestamp: now,
+      expires: expires
+    };
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "REPLACE INTO `roomParticipant` SET ? ", newData, function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var expires = parseInt((Date.now() + ttl * 1000) / 1000, 10);
+
+      var query = connection.query(
+        "UPDATE `roomParticipant` SET `expires` =  ? " +
+        "WHERE `roomToken` = ? AND `hawkIdHmac` = ? AND `expires` > ?",
+        [expires, roomToken, hawkIdHmac, now], function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          console.log(result.affectedRows);
+          callback(null, result.affectedRows !== 0);
+        });
+    });
+  },
+
+  deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "DELETE FROM `roomParticipant` " +
+        "WHERE `roomToken` = ? AND `hawkIdHmac` = ?",
+        [roomToken, hawkIdHmac], function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
   getRoomParticipants: function(roomToken, callback) {
-    // Mock
-    callback(null, []);
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT * FROM `roomParticipant` " +
+        "WHERE `expires` > ? AND `roomToken` = ?" +
+        "ORDER BY `timestamp`, `id`",
+        [now, roomToken], function(err, results) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+
+
+          results = results.map(function(item) {
+            return {
+              roomToken: item.roomToken,
+              hawkIdHmac: item.hawkIdHmac,
+              id: item.id,
+              userIdHmac: item.userMac,
+              clientMaxSize: item.clientMaxSize,
+              displayName: item.displayName,
+              account: item.encryptedUserId
+            };
+          });
+
+          callback(null, results);
+        });
+    });
   },
 
   drop: function(callback) {
