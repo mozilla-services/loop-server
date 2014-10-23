@@ -23,7 +23,7 @@
                 "rates": [
                     {
                          "seconds": 60,
-                         "hits": 100,
+                         "hits": 60,
                          "match": "header:Authorization AND header:User-Agent"
                     }]
              }
