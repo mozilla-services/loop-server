@@ -31,9 +31,12 @@ MySQLStorage.prototype = {
     this._pool.getConnection(callback);
   },
 
+
   /**
-   * Add the SimplePushURLs for the given user session.
+   * Handle Simple Push URLs
    */
+
+  // Add the SimplePushURLs for the given user session.
   addUserSimplePushURLs: function(userMac, hawkIdHmac, simplePushURLs, callback) {
     var self = this;
     for (var topic in simplePushURLs) {
@@ -143,6 +146,11 @@ MySQLStorage.prototype = {
         });
     });
   },
+
+
+  /**
+   * Handle User Call URL data
+   */
 
   addUserCallUrlData: function(userMac, urlToken, urlData, callback) {
     if (userMac === undefined) {
@@ -312,6 +320,11 @@ MySQLStorage.prototype = {
         });
     });
   },
+
+
+  /**
+   * Handle User Hawk Session
+   */
 
   /**
    * Add an hawk id to the list of valid hawk ids for an user.
@@ -522,6 +535,11 @@ MySQLStorage.prototype = {
     });
   },
 
+
+  /**
+   * Handle User Room data
+   */
+
   setUserRoomData: function(userMac, roomToken, roomData, callback) {
     if (userMac === undefined) {
       callback(new Error("userMac should be defined."));
@@ -664,6 +682,11 @@ MySQLStorage.prototype = {
     });
   },
 
+
+  /**
+   * Handle Room participants
+   */
+
   deleteRoomParticipants: function(roomToken, callback) {
     this.getConnection(function(err, connection) {
       if (err) {
@@ -796,6 +819,11 @@ MySQLStorage.prototype = {
     });
   },
 
+
+  /**
+   * Handle DB cleanup after each test
+   */
+
   drop: function(callback) {
     this.getConnection(function(err, connection) {
       if (err) {
@@ -893,6 +921,11 @@ MySQLStorage.prototype = {
       });
     });
   },
+
+
+  /**
+   * Handle ping for the heartbeat endpoint
+   */
 
   ping: function(callback) {
     this.getConnection(function(err, connection) {
