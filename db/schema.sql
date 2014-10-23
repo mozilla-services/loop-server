@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `sessionSPURLs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
-CREATE TABLE IF NOT EXISTS `callURLs` (
+CREATE TABLE IF NOT EXISTS `callURL` (
   `urlToken` varchar(30) NOT NULL,
   `userMac` varchar(64) NOT NULL,
   `callerId` varchar(255) DEFAULT '',
@@ -34,9 +34,34 @@ CREATE TABLE IF NOT EXISTS `callURLs` (
   `timestamp` bigint(20) NOT NULL,
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`urlToken`),
-  KEY `callURLs_userMac` (`userMac`),
-  KEY `callURLs_timestamp` (`timestamp`),
-  KEY `callURLs_expires` (`expires`)
+  KEY `callURL_userMac` (`userMac`),
+  KEY `callURL_timestamp` (`timestamp`),
+  KEY `callURL_expires` (`expires`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE IF NOT EXISTS `call` (
+  `callId` varchar(36) NOT NULL,
+  `userMac` varchar(64) NOT NULL,
+  `callType` varchar(30) NOT NULL,
+  `callState` varchar(30) NOT NULL,
+  `callTerminationReason` varchar(30),
+  `callerId` varchar(255),
+  `calleeFriendlyName` varchar(255),
+  `sessionId` varchar(255) NOT NULL,
+  `apiKey` varchar(255) NOT NULL,
+  `calleeToken` text NOT NULL,
+  `wsCallerToken` varchar(255) NOT NULL,
+  `wsCalleeToken` varchar(255) NOT NULL,
+  `callToken` varchar(30),
+  `urlCreationDate` bigint(20),
+  `timestamp` bigint(20) NOT NULL,
+  `expires` bigint(20) NOT NULL,
+  PRIMARY KEY (`callId`),
+  KEY `call_userMac` (`userMac`),
+  KEY `call_timestamp` (`timestamp`),
+  KEY `call_expires` (`expires`),
+  CONSTRAINT FOREIGN KEY (`callToken`) REFERENCES `callURL` (`urlToken`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 

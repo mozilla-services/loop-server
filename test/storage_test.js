@@ -33,28 +33,40 @@ describe("Storage", function() {
         calls = [
         {
           callId:       randomBytes(16).toString("hex"),
+          callType:     "audio-video",
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session1,
+          apiKey:       fakeCallInfo.apiKey,
           calleeToken:  fakeCallInfo.token1,
+          wsCallerToken: "caller",
+          wsCalleeToken: "callee",
           callState:    constants.CALL_STATES.INIT,
           timestamp:    now - 3
         },
         {
           callId:       randomBytes(16).toString("hex"),
+          callType:     "audio-video",
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session2,
+          apiKey:       fakeCallInfo.apiKey,
           calleeToken:  fakeCallInfo.token2,
+          wsCallerToken: "caller",
+          wsCalleeToken: "callee",
           callState:    constants.CALL_STATES.INIT,
           timestamp:    now - 2
         },
         {
           callId:       randomBytes(16).toString("hex"),
+          callType:     "audio-video",
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session3,
+          apiKey:       fakeCallInfo.apiKey,
           calleeToken:  fakeCallInfo.token2,
+          wsCallerToken: "caller",
+          wsCalleeToken: "callee",
           callState:    constants.CALL_STATES.TERMINATED,
           timestamp:    now - 1
         }
@@ -425,6 +437,10 @@ describe("Storage", function() {
             storage.getUserCalls(userMac, function(err, results) {
               if (err) throw err;
               expect(results).to.have.length(1);
+              var result = results[0];
+              expect(result.timestamp).to.gte(call.timestamp);
+              delete result.timestamp;
+              delete call.timestamp;
               expect(results).to.eql([call]);
               storage.deleteCall(call.callId, function(err) {
                 if (err) throw err;
@@ -454,13 +470,26 @@ describe("Storage", function() {
                 storage.getUserCalls(userMac, function(err, results) {
                   if (err) throw err;
                   expect(results).to.have.length(3);
-                  expect(results).to.eql(calls.map(function(call, key) {
-                    if (key === 2) {
-                      call.callState = constants.CALL_STATES.TERMINATED;
-                    } else {
-                      call.callState = constants.CALL_STATES.INIT;
-                    }
+                  expect(results.map(function(call) {
+                    console.log(calls, call);
+                    expect(call.timestamp).to.gte(calls[0].timestamp);
+                    delete call.timestamp;
                     return call;
+                  })).to.eql(calls.map(function(call, key) {
+                    var data = JSON.parse(JSON.stringify(call));
+                    delete data.timestamp;
+                    if (key === 2) {
+                      data.callState = constants.CALL_STATES.TERMINATED;
+                    } else {
+                      data.callState = constants.CALL_STATES.INIT;
+                    }
+                    return data;
+                  }).sort(function(a, b) {
+                    if (a.timestamp === b.timestamp) {
+                      return a.callId > b.callId;
+                    } else {
+                      return a.timestamp - b.timestamp;
+                    }
                   }));
                   done();
                 });
@@ -692,13 +721,16 @@ describe("Storage", function() {
             done();
             return;
           }
-          storage.setCallState("12345", constants.CALL_STATES.INIT, 10,
-            function(err) {
-              if (err) throw err;
-              storage.getCallState("12345", function(err, state) {
+          storage.addUserCall(userMac, call, function(err) {
+            if (err) throw err;
+            storage.setCallState(call.callId, constants.CALL_STATES.INIT, 10,
+              function(err) {
                 if (err) throw err;
-                expect(state).to.eql(constants.CALL_STATES.INIT);
-                done();
+                storage.getCallState(call.callId, function(err, state) {
+                  if (err) throw err;
+                  expect(state).to.eql(constants.CALL_STATES.INIT);
+                  done();
+                });
               });
             });
         });
@@ -930,9 +962,9 @@ describe("Storage", function() {
   }
 
   /* Test all the storages implementation. */
-  // testStorage("Redis", function createRedisStorage(options) {
-  //   return getStorage({engine: "redis", settings: {"db": 5}}, options);
-  // });
+  testStorage("Redis", function createRedisStorage(options) {
+    return getStorage({engine: "redis", settings: {"db": 5}}, options);
+  });
 
   testStorage("MySQL", function createMySQLStorage(options) {
     return getStorage({engine: "mysql", settings: {

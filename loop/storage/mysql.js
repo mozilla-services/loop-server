@@ -4,6 +4,7 @@
 
 "use strict";
 var mysql = require("mysql");
+var constants = require("../constants");
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
@@ -15,7 +16,6 @@ function MySQLStorage(options, settings) {
     password : options.password,
     database : options.database
   });
-  this.persistentOnly = true;
 }
 
 MySQLStorage.prototype = {
@@ -166,7 +166,7 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      var query = connection.query("REPLACE INTO `callURLs` SET ?", {
+      var query = connection.query("REPLACE INTO `callURL` SET ?", {
         urlToken: urlToken,
         userMac: userMac,
         callerId: urlData.callerId,
@@ -202,7 +202,7 @@ MySQLStorage.prototype = {
 
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
-        "UPDATE `callURLs` SET ? WHERE `urlToken` = ? AND `userMac` = ? AND expires > ?", [
+        "UPDATE `callURL` SET ? WHERE `urlToken` = ? AND `userMac` = ? AND expires > ?", [
           newData, urlToken, userMac, now], function(err, result) {
             console.log(query.sql);
             if (result.affectedRows === 0) {
@@ -228,7 +228,7 @@ MySQLStorage.prototype = {
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
         "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
-        "FROM `callURLs` WHERE `expires` > ? AND `urlToken` = ?",
+        "FROM `callURL` WHERE `expires` > ? AND `urlToken` = ?",
         [now, urlToken], function(err, result) {
           console.log(query.sql);
           connection.release();
@@ -258,7 +258,7 @@ MySQLStorage.prototype = {
       }
 
       var query = connection.query(
-        "DELETE FROM `callURLs` WHERE `urlToken` = ?", urlToken,
+        "DELETE FROM `callURL` WHERE `urlToken` = ?", urlToken,
         function(err) {
           console.log(query.sql);
           connection.release();
@@ -282,7 +282,7 @@ MySQLStorage.prototype = {
       }
 
       var query = connection.query(
-        "DELETE FROM `callURLs` WHERE `userMac` = ?", userMac,
+        "DELETE FROM `callURL` WHERE `userMac` = ?", userMac,
         function(err) {
           console.log(query.sql);
           connection.release();
@@ -301,7 +301,7 @@ MySQLStorage.prototype = {
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
         "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
-        "FROM `callURLs` " +
+        "FROM `callURL` " +
         "WHERE `expires` > ? AND `userMac` = ? " +
         "ORDER BY `timestamp`",
         [now, userMac], function(err, results) {
@@ -317,6 +317,337 @@ MySQLStorage.prototype = {
             return;
           }
           callback(null, results);
+        });
+    });
+  },
+
+
+  /**
+   * Handle User Call Data
+   */
+
+  addUserCall: function(userMac, call, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
+
+    var now = parseInt(Date.now() / 1000, 10);
+    var expires = now + this._settings.callDuration;
+
+    var newData = {
+      callId: call.callId,
+      userMac: userMac,
+      callType: call.callType,
+      callState: call.callState,
+      callerId: call.callerId,
+      calleeFriendlyName: call.calleeFriendlyName || null,
+      sessionId: call.sessionId,
+      apiKey: call.apiKey,
+      calleeToken: call.calleeToken,
+      wsCallerToken: call.wsCallerToken,
+      wsCalleeToken: call.wsCalleeToken,
+      callToken: call.callToken || null,
+      urlCreationDate: call.urlCreationDate || null,
+      timestamp: now,
+      expires: expires
+    };
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      var query = connection.query("REPLACE INTO `call` SET ?", newData,
+        function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  /**
+   * Deletes all the call data for a given user.
+   *
+   * Deletes the list of calls.
+   *
+   * @param String the user mac.
+   **/
+  deleteUserCalls: function(userMac, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      var query = connection.query("DELETE FROM `call` WHERE `userMac` = ?",
+        userMac, function(err) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  getUserCalls: function(userMac, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
+      return;
+    }
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT `callId`, `callType`, `callState`, `callerId`, `timestamp`," +
+        " `calleeFriendlyName`, `sessionId`, `apiKey`, `calleeToken`, `userMac`," +
+        " `wsCallerToken`, `wsCalleeToken`, `callToken`, `urlCreationDate` " +
+        "FROM `call` " +
+        "WHERE `expires` > ? AND `userMac` = ? " +
+        "ORDER BY `timestamp`, `callId`",
+        [now, userMac], function(err, results) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+          results = results.map(function(result) {
+            result.callerId = result.callerId || undefined;
+            result.calleeFriendlyName = result.calleeFriendlyName || undefined;
+            result.callToken = result.callToken || undefined;
+            result.urlCreationDate = result.urlCreationDate || undefined;
+            return JSON.parse(JSON.stringify(result));
+          });
+          callback(null, results);
+        });
+    });
+  },
+
+  /**
+   * Sets the call state to the given state.
+   *
+   * In case no TTL is given, fetches the one of the call so the expiration
+   * is the same for the call and for its state.
+   **/
+  setCallState: function(callId, state, ttl, callback) {
+    // In case we don't have a TTL, get the one from the call.
+    if (callback === undefined) {
+      callback = ttl;
+      ttl = undefined;
+    }
+
+    var now = parseInt(Date.now() / 1000, 10);
+    var expires;
+    if (ttl !== undefined) {
+      expires = parseInt(now + ttl, 10);
+    }
+
+    var validStates = [
+      constants.CALL_STATES.INIT,
+      constants.CALL_STATES.INIT + ".caller",
+      constants.CALL_STATES.INIT + ".callee",
+      constants.CALL_STATES.CONNECTING,
+      constants.CALL_STATES.CONNECTED + ".caller",
+      constants.CALL_STATES.CONNECTED + ".callee",
+      constants.CALL_STATES.TERMINATED
+    ];
+
+    if (validStates.indexOf(state) === -1) {
+      callback(
+        new Error(state + " should be one of " + validStates.join(", "))
+      );
+      return;
+    }
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "UPDATE `call` SET ? " +
+        "WHERE `expires` > ? AND `callId` = ? " +
+        "ORDER BY `timestamp`, `callId`",
+        [
+          JSON.parse(
+            JSON.stringify({
+              callState: state,
+              expires: expires
+            })
+          ),
+          now, callId
+        ], function(err, results) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  /**
+   * Gets the state of a call.
+   *
+   * Returns one of "init", "half-initiated", "alerting", "connecting",
+   * "half-connected" and "connected".
+   **/
+  getCallState: function(callId, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT callState FROM `call` " +
+        "WHERE `expires` > ? AND `callId` = ? " +
+        "ORDER BY `timestamp`, `callId`",
+        [now, callId], function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          if (result.length !== 0) {
+            result = result[0].callState;
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  /**
+   * Set the call termination reason
+   */
+  setCallTerminationReason: function(callId, reason, callback) {
+    if (reason === undefined) {
+      callback(null);
+      return;
+    }
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      // We don't check expires there on purpose
+      var query = connection.query(
+        "UPDATE `call` SET `callTerminationReason` = ? " +
+        "WHERE `callId` = ? ",
+        [reason, callId], function(err, results) {
+          console.log(query.sql);
+          connection.release();
+          callback(err);
+        });
+    });
+  },
+
+  /**
+   * Set the call termination reason
+   */
+  getCallTerminationReason: function(callId, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      // We don't check expires there on purpose
+      var query = connection.query(
+        "SELECT callTerminationReason FROM `call` " +
+        "WHERE `callId` = ? ",
+        callId, function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          if (result.length !== 0) {
+            result = result[0].callTerminationReason;
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  /**
+   * Get a call from its id.
+   *
+   * By default, returns the state of the call. You can set getState to false
+   * to deactivate this behaviour.
+   **/
+  getCall: function(callId, getState, callback) {
+    if (callback === undefined) {
+      callback = getState;
+      getState = true;
+    }
+
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var now = parseInt(Date.now() / 1000, 10);
+      var query = connection.query(
+        "SELECT `callId`, `callType`, `callState`, `callerId`, `userMac`," +
+        " `calleeFriendlyName`, `sessionId`, `apiKey`, `calleeToken`," +
+        " `wsCallerToken`, `wsCalleeToken`, `callToken`, `urlCreationDate` " +
+        "FROM `call` WHERE `expires` > ? AND `callId` = ?",
+        [now, callId], function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (err) {
+            callback(err);
+            return;
+          }
+
+          if (result.length !== 0) {
+            result = result[0];
+            result.callerId = result.callerId || undefined;
+            result.calleeFriendlyName = result.calleeFriendlyName || undefined;
+            result.callToken = result.callToken || undefined;
+            result.urlCreationDate = result.urlCreationDate || undefined;
+            result = JSON.parse(JSON.stringify(result));
+          } else {
+            result = null;
+          }
+          callback(null, result);
+        });
+    });
+  },
+
+  deleteCall: function(callId, callback) {
+    this.getConnection(function(err, connection) {
+      if (err) {
+        callback(err);
+        return;
+      }
+
+      var query = connection.query(
+        "DELETE FROM `call` WHERE `callId` = ?", callId,
+        function(err, result) {
+          console.log(query.sql);
+          connection.release();
+          if (result.affectedRows === 0) {
+            result = false;
+          } else {
+            result = true;
+          }
+          callback(err, result);
         });
     });
   },
@@ -340,13 +671,13 @@ MySQLStorage.prototype = {
         "UPDATE `hawkSession` SET `userMac` = ? WHERE `hawkIdHmac` = ?",
         [userMac, hawkIdHmac], function(err, result) {
           console.log(query.sql);
+          connection.release();
           if (result.affectedRows === 0) {
             var error = new Error("Doesn't exist");
             error.notFound = true;
             callback(error);
             return;
           }
-          connection.release();
           callback(err);
         }
       );
@@ -745,7 +1076,7 @@ MySQLStorage.prototype = {
       }
 
       var now = parseInt(Date.now() / 1000, 10);
-      var expires = parseInt((Date.now() + ttl * 1000) / 1000, 10);
+      var expires = parseInt(now + ttl, 10);
 
       var query = connection.query(
         "UPDATE `roomParticipant` SET `expires` =  ? " +
@@ -853,7 +1184,7 @@ MySQLStorage.prototype = {
               return;
             }
 
-            query = connection.query("TRUNCATE TABLE `callURLs`", function(err) {
+            query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
               // console.log(query.sql);
               if (err) {
                 connection.release();
@@ -868,50 +1199,58 @@ MySQLStorage.prototype = {
                   callback(err);
                   return;
                 }
-                query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
+                query = connection.query("TRUNCATE TABLE `callURL`", function(err) {
                   // console.log(query.sql);
                   if (err) {
                     connection.release();
                     callback(err);
                     return;
                   }
-                  query = connection.query("TRUNCATE TABLE `room`;", function(err) {
+                  query = connection.query("TRUNCATE TABLE `call`", function(err) {
                     // console.log(query.sql);
                     if (err) {
                       connection.release();
                       callback(err);
                       return;
                     }
-                    query = connection.query("TRUNCATE TABLE `roomParticipant`",
-                      function(err) {
-                        // console.log(query.sql);
-                        if (err) {
-                          connection.release();
-                          callback(err);
-                          return;
-                        }
-                        query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
-                          function(err) {
-                            // console.log(query.sql);
-                            if (err) {
-                              connection.release();
-                              callback(err);
-                              return;
-                            }
-                            query = connection.query("COMMIT",
-                              function(err) {
-                                // console.log(query.sql);
-                                if (err) {
-                                  connection.release();
-                                  callback(err);
-                                  return;
-                                }
-
+                    query = connection.query("TRUNCATE TABLE `room`;", function(err) {
+                      // console.log(query.sql);
+                      if (err) {
+                        connection.release();
+                        callback(err);
+                        return;
+                      }
+                      query = connection.query("TRUNCATE TABLE `roomParticipant`",
+                        function(err) {
+                          // console.log(query.sql);
+                          if (err) {
+                            connection.release();
+                            callback(err);
+                            return;
+                          }
+                          query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
+                            function(err) {
+                              // console.log(query.sql);
+                              if (err) {
                                 connection.release();
-                                callback();
-                              });
-                          });
-                      });
+                                callback(err);
+                                return;
+                              }
+                              query = connection.query("COMMIT",
+                                function(err) {
+                                  // console.log(query.sql);
+                                  if (err) {
+                                    connection.release();
+                                    callback(err);
+                                    return;
+                                  }
+                    
+                                  connection.release();
+                                  callback();
+                                });
+                            });
+                        });
+                    });
                   });
                 });
               });
