@@ -125,18 +125,29 @@ MessageHandler.prototype = {
           if (serverError(err, callback)) return;
 
           // Alert clients on call state changes.
-          var listener = function(channel, data) {
+          var onMessage = function(channel, data) {
             var parts = data.split(":");
             var receivedState = parts[0];
             var reason = parts[1];
             var terminate;
 
+            // Discard all messages which aren't for this session.
             if (channel === session.callId) {
               if (receivedState === constants.CALL_STATES.TERMINATED ||
                   receivedState === constants.CALL_STATES.CONNECTED) {
                 terminate = "closeConnection";
               }
+
+              // If received state is "connected" but the session is not
+              // marked as such, it means that it was answered elsewhere.
+              if (receivedState === constants.CALL_STATES.CONNECTED &&
+                !session.connected) {
+                receivedState = constants.CALL_STATES.TERMINATED;
+                reason = constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE;
+              }
               if (session.receivedState !== receivedState) {
+                // Store the received state we sent to be sure not to send it
+                // twice.
                 session.receivedState = receivedState;
 
                 var message = {
@@ -152,9 +163,9 @@ MessageHandler.prototype = {
             }
           };
 
-          self.sub.on("message", listener);
+          self.sub.on("message", onMessage);
           // keep track of the active listeners
-          session.subListeners.push(listener);
+          session.subListeners.push(onMessage);
 
           // Wait for the other caller to connect for the time of the call.
           session.timeouts.push(setTimeout(function() {
@@ -163,7 +174,7 @@ MessageHandler.prototype = {
               if (serverError(err, callback)) return;
               if (state === constants.CALL_STATES.HALF_INITIATED) {
 
-                self.broadcastState(session.callId,
+                self.broadcastState(session,
                                     constants.CALL_STATES.TERMINATED + ":" +
                                     constants.MESSAGE_REASONS.TIMEOUT);
               }
@@ -192,7 +203,7 @@ MessageHandler.prototype = {
               currentState === constants.CALL_STATES.HALF_INITIATED) {
 
             self.broadcastState(
-              session.callId,
+              session,
               constants.CALL_STATES.INIT + "." + session.type
             );
 
@@ -203,7 +214,7 @@ MessageHandler.prototype = {
                   if (serverError(err, callback)) return;
                   if (state === constants.CALL_STATES.ALERTING) {
                     self.broadcastState(
-                      session.callId,
+                      session,
                       constants.CALL_STATES.TERMINATED + ":" +
                       constants.MESSAGE_REASONS.TIMEOUT
                     );
@@ -261,7 +272,7 @@ MessageHandler.prototype = {
         }
         state += ":" + message.reason;
       }
-      self.broadcastState(session.callId, state);
+      self.broadcastState(session, state);
       return;
     }
 
@@ -290,7 +301,7 @@ MessageHandler.prototype = {
                 if (serverError(err, callback)) return;
                 if (state !== constants.CALL_STATES.CONNECTED) {
 
-                  self.broadcastState(session.callId,
+                  self.broadcastState(session,
                                       constants.CALL_STATES.TERMINATED + ":" +
                                       constants.MESSAGE_REASONS.TIMEOUT);
                 }
@@ -325,7 +336,7 @@ MessageHandler.prototype = {
             }
             if (state !== null) {
               // In case we're connected, close the connection.
-              self.broadcastState(session.callId, state);
+              self.broadcastState(session, state);
 
               // Handle specific actions on transitions.
               if (eventConf.actuator !== undefined) {
@@ -353,11 +364,18 @@ MessageHandler.prototype = {
    * In case there a reason to broadcast, it's specified as
    * "terminated:{reason}".
    **/
-  broadcastState: function(callId, stateData) {
+  broadcastState: function(session, stateData) {
     var self = this;
+    var callId = session.callId;
     var parts = stateData.split(":");
     var state = parts[0];
     var reason = parts[1];
+
+    // Store if the session is connected so we can tell the other .
+    if (state.split('.')[0] === constants.CALL_STATES.CONNECTED) {
+      session.connected = true;
+    }
+
     self.storage.setCallState(callId, state, function(err) {
       if (serverError(err)) return;
       self.storage.setCallTerminationReason(callId, reason, function(err) {
@@ -464,7 +482,8 @@ module.exports = function(storage, logError, conf) {
       // We have a different session for each connection.
       var session = {
         subListeners: [],
-        timeouts: []
+        timeouts: [],
+        connected: false
       };
       ws.on('message', function(data) {
         try {
@@ -520,7 +539,7 @@ module.exports = function(storage, logError, conf) {
       });
       ws.on('close', function() {
         ws.close();
-        messageHandler.broadcastState(session.callId,
+        messageHandler.broadcastState(session,
                                       constants.CALL_STATES.TERMINATED + ":" +
                                       constants.MESSAGE_REASONS.CLOSED);
         messageHandler.clearSession(session);

@@ -1193,5 +1193,142 @@ describe('websockets', function() {
             });
         });
     });
+
+    describe("with three clients", function() {
+      var calleeSecondDevice;
+
+      beforeEach(function(done) {
+
+        // Create the second websocket callee.
+        calleeSecondDevice = new ws("ws://localhost:" +
+          server.address().port +
+          conf.get('progressURLEndpoint'));
+
+        calleeSecondDevice.on('close', function() { caller.isClosed = true; });
+
+        calleeSecondDevice.on('open', function() {
+          // Create a call and initialize its state to "init".
+          createCall(callId, hawkCredentials.id, function(err) {
+            if (err) throw err;
+            storage.setCallState(callId, constants.CALL_STATES.INIT,
+              conf.get("timers").supervisoryDuration, function(err) {
+                if (err) throw err;
+                done();
+              });
+          });
+        });
+      });
+
+      afterEach(function(done) {
+        if (! calleeSecondDevice.isClosed) {
+          calleeSecondDevice.close();
+        }
+        done();
+      });
+
+      it("should send terminated 'answered-elsewhere' if the call had been " +
+         "answered", function(done) {
+          var callerMsgCount = 0;
+          var calleeSecondDeviceTerminated = false;
+
+          callee.on('close', function() {
+            callee.isClosed = true;
+          });
+
+          caller.on('close', function() {
+            caller.isClosed = true;
+          });
+
+          calleeSecondDevice.on('close', function() {
+            expect(calleeSecondDeviceTerminated).to.eql(true);
+            done();
+          });
+
+          calleeSecondDevice.on('message', function(data) {
+            var message = JSON.parse(data);
+            if (message.messageType === "progress"
+                && message.state === "terminated") {
+              expect(message.reason)
+                .to.eql(constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE);
+              calleeSecondDeviceTerminated = true;
+            }
+
+          });
+
+          caller.on('message', function(data) {
+            var message = JSON.parse(data);
+            if (callerMsgCount === 0) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+              expect(message.state).eql(constants.CALL_STATES.INIT);
+            } else if (callerMsgCount === 1) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.ALERTING);
+            } else if (callerMsgCount === 2) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTING);
+              caller.send(JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.ACTION,
+                event: constants.MESSAGE_EVENTS.MEDIA_UP
+              }));
+            } else if (callerMsgCount === 3) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
+            } else {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTED);
+            }
+            callerMsgCount++;
+          });
+
+          callee.on('message', function(data) {
+            var message = JSON.parse(data);
+            if (calleeMsgCount === 0) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+              expect(message.state).eql(constants.CALL_STATES.INIT);
+              callee.send(JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.ACTION,
+                event: constants.MESSAGE_EVENTS.ACCEPT
+              }));
+            } else if (calleeMsgCount === 1) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.ALERTING);
+            } else if (calleeMsgCount === 2) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTING);
+            } else if (calleeMsgCount === 3) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
+              callee.send(JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.ACTION,
+                event: constants.MESSAGE_EVENTS.MEDIA_UP
+              }));
+            } else {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTED);
+            }
+            calleeMsgCount++;
+          });
+
+          // Second device for the callee connects.
+          calleeSecondDevice.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            auth: "calleeToken",
+            callId: callId
+          }));
+
+          caller.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            auth: "callerToken",
+            callId: callId
+          }));
+
+          // The callee connects his first device.
+          callee.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            auth: "calleeToken",
+            callId: callId
+          }));
+        });
+    });
   });
 });
