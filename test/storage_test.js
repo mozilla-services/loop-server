@@ -943,7 +943,25 @@ describe("Storage", function() {
   });
 
   testStorage("Proxy", function createProxyStorage(options) {
-    return getStorage(conf.get("storage"), options);
+    return getStorage({
+      "engine": "proxy",
+      "settings": {
+        "persistentStorage": {
+          "engine": "mysql",
+          "settings": {
+            "host": "localhost",
+            "user": "travis",
+            "password": "",
+            "database": "looptest"
+          }
+        },
+        "volatileStorage": {
+          "engine": "redis",
+          "settings": {
+            "db": 5
+          }
+        }
+      }}, options);
   });
 
   describe("Redis specifics", function() {
