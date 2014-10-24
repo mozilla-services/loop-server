@@ -470,7 +470,7 @@ MessageHandler.prototype = {
     // We want to broadcast the termination only if we were the last device
     // for this type of connection
     self.storage.getConnectedCallDevices(session.type, session.callId,
-      function(err, connectedDevices) {
+      function(_, connectedDevices) {
         self.storage.decrementConnectedCallDevices(
           session.type, session.callId, function() {
             // Don't catch the errors here since we're already closing the

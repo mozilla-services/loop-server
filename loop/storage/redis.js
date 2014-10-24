@@ -557,6 +557,9 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.incr(key, function(err) {
+      if (err) {
+        return callback(err);
+      }
       self._client.expire(key, self._settings.callDuration, callback);
     });
   },
@@ -566,6 +569,9 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.decr(key, function(err) {
+      if (err) {
+        return callback(err);
+      }
       self._client.expire(key, self._settings.callDuration, callback);
     });
   },

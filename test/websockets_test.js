@@ -1304,11 +1304,10 @@ describe('websockets', function() {
             if (calleeMsgCount === 0) {
               expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
               expect(message.state).eql(constants.CALL_STATES.INIT);
-              var message = JSON.stringify({
+              callee.send(JSON.stringify({
                 messageType: constants.MESSAGE_TYPES.ACTION,
                 event: constants.MESSAGE_EVENTS.ACCEPT
-              });
-              callee.send(message);
+              }));
             } else if (calleeMsgCount === 1) {
               expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
               expect(message.state).eql(constants.CALL_STATES.ALERTING);

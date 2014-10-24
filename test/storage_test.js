@@ -855,8 +855,10 @@ describe("Storage", function() {
         it("should increment the number of connected call devices, per type",
           function(done) {
             storage.incrementConnectedCallDevices("callee", roomToken,
-              function() {
+              function(err) {
+                if (err) throw err;
                 storage.getConnectedCallDevices("callee", roomToken, function(err, count) {
+                  if (err) throw err;
                   expect(count).to.eql(1);
                   done();
                 });
@@ -868,9 +870,12 @@ describe("Storage", function() {
         it("should increment the number of connected call devices, per type",
           function(done) {
             storage.incrementConnectedCallDevices("callee", roomToken,
-              function() {
-                storage.decrementConnectedCallDevices("callee", roomToken, function() {
+              function(err) {
+                if (err) throw err;
+                storage.decrementConnectedCallDevices("callee", roomToken, function(err) {
+                  if (err) throw err;
                   storage.getConnectedCallDevices("callee", roomToken, function(err, count) {
+                    if (err) throw err;
                     expect(count).to.eql(0);
                     done();
                   });
