@@ -26,7 +26,7 @@ var callUrls = conf.get('callUrls');
 var ttl = 30;
 
 
-describe.only("Storage", function() {
+describe("Storage", function() {
   function testStorage(name, createStorage) {
     var now = parseInt(Date.now() / 1000, 10);
     var storage,
