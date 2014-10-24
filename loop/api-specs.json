@@ -47,18 +47,6 @@
       "/registration": {
         "POST": {},
         "DELETE": {}
-      },
-
-      "/rooms": {
-        "POST": {},
-        "DELETE": {},
-        "GET": {}
-      },
-      "regexp:/rooms/[a-zA-Z0-9_-]{{roomTokenSize}}": {
-        "PATCH": {},
-        "DELETE": {},
-        "GET": {},
-        "POST": {}
       }
     }
   }

@@ -10,13 +10,11 @@ var config = require('../config').conf;
 
 
 module.exports = function(app, conf) {
-  var roomTokenSize = Math.ceil(config.get('rooms').tokenSize / 3 * 4);
-  var callTokenSize = Math.ceil(config.get('callUrls').tokenSize / 3 * 4);
+  var callTokenSize = Math.ceil(config.get('callUrlTokenSize') / 3 * 4);
   var location = conf.get("protocol") + "://" + conf.get("publicServerAddress");
 
   app.get("/api-specs", function(req, res) {
     var strSpec = JSON.stringify(specs);
-    strSpec = strSpec.replace('{roomTokenSize}', roomTokenSize);
     strSpec = strSpec.replace('{callTokenSize}', callTokenSize);
     strSpec = strSpec.replace('{location}', location);
     strSpec = strSpec.replace('{version}', pjson.version);
