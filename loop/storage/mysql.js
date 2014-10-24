@@ -5,6 +5,7 @@
 "use strict";
 var mysql = require("mysql");
 var constants = require("../constants");
+var sqlLog = require("../logger").sqlLog;
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
@@ -65,7 +66,7 @@ MySQLStorage.prototype = {
           timestamp: now,
           expires: expires
         }, function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -90,7 +91,7 @@ MySQLStorage.prototype = {
         "AND `expires` > ? " +
         "ORDER BY `timestamp`", [userMac, now],
         function(err, results) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -107,7 +108,6 @@ MySQLStorage.prototype = {
               }
             }
           });
-          console.log(result);
           callback(null, result);
         });
     });
@@ -121,7 +121,7 @@ MySQLStorage.prototype = {
       }
       var query = connection.query("DELETE FROM `sessionSPURLs` WHERE `hawkIdHmac` = ?",
         hawkIdHmac, function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -174,7 +174,7 @@ MySQLStorage.prototype = {
         timestamp: urlData.timestamp,
         expires: urlData.expires
       }, function(err) {
-        console.log(query.sql);
+        sqlLog(query.sql);
         connection.release();
         callback(err);
       });
@@ -204,7 +204,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "UPDATE `callURL` SET ? WHERE `urlToken` = ? AND `userMac` = ? AND expires > ?", [
           newData, urlToken, userMac, now], function(err, result) {
-            console.log(query.sql);
+            sqlLog(query.sql);
             if (result.affectedRows === 0) {
               var error = new Error("Doesn't exist");
               error.notFound = true;
@@ -230,7 +230,7 @@ MySQLStorage.prototype = {
         "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
         "FROM `callURL` WHERE `expires` > ? AND `urlToken` = ?",
         [now, urlToken], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -260,7 +260,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "DELETE FROM `callURL` WHERE `urlToken` = ?", urlToken,
         function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -284,7 +284,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "DELETE FROM `callURL` WHERE `userMac` = ?", userMac,
         function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -310,7 +310,7 @@ MySQLStorage.prototype = {
             result.issuer = result.issuer || undefined;
             return result;
           })));
-          console.log(query.sql, results);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -360,7 +360,7 @@ MySQLStorage.prototype = {
       }
       var query = connection.query("REPLACE INTO `call` SET ?", newData,
         function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -382,7 +382,7 @@ MySQLStorage.prototype = {
       }
       var query = connection.query("DELETE FROM `call` WHERE `userMac` = ?",
         userMac, function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -409,7 +409,7 @@ MySQLStorage.prototype = {
         "WHERE `expires` > ? AND `userMac` = ? " +
         "ORDER BY `timestamp`, `callId`",
         [now, userMac], function(err, results) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -481,8 +481,8 @@ MySQLStorage.prototype = {
             })
           ),
           now, callId
-        ], function(err, results) {
-          console.log(query.sql);
+        ], function(err) {
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -508,7 +508,7 @@ MySQLStorage.prototype = {
         "WHERE `expires` > ? AND `callId` = ? " +
         "ORDER BY `timestamp`, `callId`",
         [now, callId], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -544,8 +544,8 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "UPDATE `call` SET `callTerminationReason` = ? " +
         "WHERE `callId` = ? ",
-        [reason, callId], function(err, results) {
-          console.log(query.sql);
+        [reason, callId], function(err) {
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -566,7 +566,7 @@ MySQLStorage.prototype = {
         "SELECT callTerminationReason FROM `call` " +
         "WHERE `callId` = ? ",
         callId, function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -608,7 +608,7 @@ MySQLStorage.prototype = {
         " `wsCallerToken`, `wsCalleeToken`, `callToken`, `urlCreationDate`, `timestamp` " +
         "FROM `call` WHERE `expires` > ? AND `callId` = ?",
         [now, callId], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -640,7 +640,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "DELETE FROM `call` WHERE `callId` = ?", callId,
         function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (result.affectedRows === 0) {
             result = false;
@@ -670,7 +670,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "UPDATE `hawkSession` SET `userMac` = ? WHERE `hawkIdHmac` = ?",
         [userMac, hawkIdHmac], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (result.affectedRows === 0) {
             var error = new Error("Doesn't exist");
@@ -696,7 +696,7 @@ MySQLStorage.prototype = {
         "SELECT `userMac` FROM `hawkSession` " +
         "WHERE `expires` > ? AND `hawkIdHmac` = ?",
         [now, hawkIdHmac], function(err, result) {
-          console.log(query.sql, result);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -725,7 +725,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "UPDATE `hawkSession` SET `encryptedUserId` = ? WHERE `hawkIdHmac` = ?",
         [encryptedUserId, hawkIdHmac], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           if (result.affectedRows === 0) {
             var error = new Error("Doesn't exist");
             error.notFound = true;
@@ -751,7 +751,7 @@ MySQLStorage.prototype = {
         "SELECT `encryptedUserId` FROM `hawkSession` " +
         "WHERE `expires` > ? AND `hawkIdHmac` = ?",
         [now, hawkIdHmac], function(err, result) {
-          console.log(query.sql, result);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -785,7 +785,7 @@ MySQLStorage.prototype = {
 
       var query = connection.query(
         "REPLACE INTO `hawkSession` SET ? ", newData, function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -804,7 +804,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "UPDATE `hawkSession` SET `expires` = ? WHERE `hawkIdHmac` = ? AND `expires` > ?",
         [expires, hawkIdHmac, now], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           if (result.affectedRows === 0) {
             var error = new Error("Doesn't exist");
             error.notFound = true;
@@ -830,7 +830,7 @@ MySQLStorage.prototype = {
         "SELECT `authKey` FROM `hawkSession` " +
         "WHERE `expires` > ? AND `hawkIdHmac` = ?",
         [now, hawkIdHmac], function(err, result) {
-          console.log(query.sql, result);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -859,7 +859,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "DELETE FROM `hawkSession` WHERE `hawkIdHmac` = ?", hawkIdHmac,
         function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -907,7 +907,7 @@ MySQLStorage.prototype = {
 
       var query = connection.query(
         "REPLACE INTO `room` SET ? ", newData, function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -931,7 +931,7 @@ MySQLStorage.prototype = {
         "ORDER BY `r`.`creationTime`",
         [now, now, userMac], function(err, results) {
           results = JSON.parse(JSON.stringify(results));
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -953,7 +953,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "SELECT * FROM `room` WHERE `expiresAt` > ? AND `roomToken` = ?",
         [now, roomToken], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -982,7 +982,7 @@ MySQLStorage.prototype = {
         "UPDATE `room` SET `updateTime` = ? " +
         "WHERE `roomToken` = ? AND `expiresAt` > ?",
         [now, roomToken, now], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           if (result.affectedRows === 0) {
             var error = new Error("Doesn't exist");
             error.notFound = true;
@@ -1006,7 +1006,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "DELETE FROM `room` WHERE `roomToken` = ?", roomToken,
         function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -1028,7 +1028,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "DELETE FROM `roomParticipant` WHERE `roomToken` = ?", roomToken,
         function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -1061,7 +1061,7 @@ MySQLStorage.prototype = {
 
       var query = connection.query(
         "REPLACE INTO `roomParticipant` SET ? ", newData, function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -1082,13 +1082,12 @@ MySQLStorage.prototype = {
         "UPDATE `roomParticipant` SET `expires` =  ? " +
         "WHERE `roomToken` = ? AND `hawkIdHmac` = ? AND `expires` > ?",
         [expires, roomToken, hawkIdHmac, now], function(err, result) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
             return;
           }
-          console.log(result.affectedRows);
           callback(null, result.affectedRows !== 0);
         });
     });
@@ -1105,7 +1104,7 @@ MySQLStorage.prototype = {
         "DELETE FROM `roomParticipant` " +
         "WHERE `roomToken` = ? AND `hawkIdHmac` = ?",
         [roomToken, hawkIdHmac], function(err) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           callback(err);
         });
@@ -1125,7 +1124,7 @@ MySQLStorage.prototype = {
         "WHERE `expires` > ? AND `roomToken` = ?" +
         "ORDER BY `timestamp`, `id`",
         [now, roomToken], function(err, results) {
-          console.log(query.sql);
+          sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
@@ -1161,14 +1160,14 @@ MySQLStorage.prototype = {
         return;
       }
       var query = connection.query("SET autocommit = 0", function(err) {
-        // console.log(query.sql);
+        sqlLog(query.sql);
         if (err) {
           connection.release();
           callback(err);
           return;
         }
         query = connection.query("START TRANSACTION", function(err) {
-          // console.log(query.sql);
+          sqlLog(query.sql);
           if (err) {
             connection.release();
             callback(err);
@@ -1176,7 +1175,7 @@ MySQLStorage.prototype = {
           }
 
           query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
-            // console.log(query.sql);
+            sqlLog(query.sql);
             if (err) {
               connection.release();
               callback(err);
@@ -1184,7 +1183,7 @@ MySQLStorage.prototype = {
             }
 
             query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
-              // console.log(query.sql);
+              sqlLog(query.sql);
               if (err) {
                 connection.release();
                 callback(err);
@@ -1192,28 +1191,28 @@ MySQLStorage.prototype = {
               }
 
               query = connection.query("TRUNCATE TABLE `sessionSPURLs`", function(err) {
-                // console.log(query.sql);
+                sqlLog(query.sql);
                 if (err) {
                   connection.release();
                   callback(err);
                   return;
                 }
                 query = connection.query("TRUNCATE TABLE `callURL`", function(err) {
-                  // console.log(query.sql);
+                  sqlLog(query.sql);
                   if (err) {
                     connection.release();
                     callback(err);
                     return;
                   }
                   query = connection.query("TRUNCATE TABLE `call`", function(err) {
-                    // console.log(query.sql);
+                    sqlLog(query.sql);
                     if (err) {
                       connection.release();
                       callback(err);
                       return;
                     }
                     query = connection.query("TRUNCATE TABLE `room`;", function(err) {
-                      // console.log(query.sql);
+                      sqlLog(query.sql);
                       if (err) {
                         connection.release();
                         callback(err);
@@ -1221,7 +1220,7 @@ MySQLStorage.prototype = {
                       }
                       query = connection.query("TRUNCATE TABLE `roomParticipant`",
                         function(err) {
-                          // console.log(query.sql);
+                          sqlLog(query.sql);
                           if (err) {
                             connection.release();
                             callback(err);
@@ -1229,7 +1228,7 @@ MySQLStorage.prototype = {
                           }
                           query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
                             function(err) {
-                              // console.log(query.sql);
+                              sqlLog(query.sql);
                               if (err) {
                                 connection.release();
                                 callback(err);
@@ -1237,13 +1236,13 @@ MySQLStorage.prototype = {
                               }
                               query = connection.query("COMMIT",
                                 function(err) {
-                                  // console.log(query.sql);
+                                  sqlLog(query.sql);
                                   if (err) {
                                     connection.release();
                                     callback(err);
                                     return;
                                   }
-                    
+
                                   connection.release();
                                   callback();
                                 });

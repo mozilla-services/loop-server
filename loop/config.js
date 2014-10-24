@@ -395,7 +395,29 @@ var conf = convict({
     filename: {
       doc: "Heka logger file path",
       format: String,
-      default: path.join(__dirname, "..", "heka.log")
+      default: path.join(__dirname, "..", "logs/heka.log")
+    },
+    maxsize: {
+      doc: "Max size in bytes of the logfile before creating a new one.",
+      format: Number,
+      default: 2097152  // 2MB === 2097152
+    },
+    maxFiles: {
+      doc: "Limit the number of files created when logfile size is exeeded.",
+      format: Number,
+      default: 5
+    }
+  },
+  sqlMetrics: {
+    activated: {
+      doc: "Defines if metrics should be directed to SQL requests",
+      default: true,
+      format: Boolean
+    },
+    filename: {
+      doc: "SQL logger file path",
+      format: String,
+      default: path.join(__dirname, "..", "logs/sql.log")
     },
     maxsize: {
       doc: "Max size in bytes of the logfile before creating a new one.",
