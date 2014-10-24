@@ -22,7 +22,7 @@ var DEFAULT_METHODS = {
     "clearHawkOAuthState",
     // These below still need to be implemented in MySQL.
     "setHawkOAuthToken",
-    "getHawkOAuthToken",
+    "getHawkOAuthToken"
   ],
 
   persistentStorage: [

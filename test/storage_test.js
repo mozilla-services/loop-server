@@ -379,7 +379,11 @@ describe("Storage", function() {
             if (err) throw err;
             storage.getCallUrlData(callToken, function(err, result) {
               if (err) throw err;
-              expect(result).to.eql(urlData);
+              expect(result.timestamp).to.gte(urlData.timestamp);
+              delete result.timestamp;
+              var data = JSON.parse(JSON.stringify(urlData));
+              delete data.timestamp;
+              expect(result).to.eql(data);
               done();
             });
           });
@@ -432,17 +436,18 @@ describe("Storage", function() {
             done();
             return;
           }
-          storage.addUserCall(userMac, call, function(err) {
+          var callData = JSON.parse(JSON.stringify(call));
+          storage.addUserCall(userMac, callData, function(err) {
             if (err) throw err;
             storage.getUserCalls(userMac, function(err, results) {
               if (err) throw err;
               expect(results).to.have.length(1);
               var result = results[0];
-              expect(result.timestamp).to.gte(call.timestamp);
+              expect(result.timestamp).to.gte(callData.timestamp);
               delete result.timestamp;
-              delete call.timestamp;
-              expect(results).to.eql([call]);
-              storage.deleteCall(call.callId, function(err) {
+              delete callData.timestamp;
+              expect(results).to.eql([callData]);
+              storage.deleteCall(callData.callId, function(err) {
                 if (err) throw err;
                 storage.getUserCalls(userMac, function(err, results) {
                   if (err) throw err;
@@ -471,10 +476,15 @@ describe("Storage", function() {
                   if (err) throw err;
                   expect(results).to.have.length(3);
                   expect(results.map(function(call) {
-                    console.log(calls, call);
                     expect(call.timestamp).to.gte(calls[0].timestamp);
                     delete call.timestamp;
                     return call;
+                  }).sort(function(a, b) {
+                    if (a.timestamp === b.timestamp) {
+                      return a.callId > b.callId;
+                    } else {
+                      return a.timestamp - b.timestamp;
+                    }
                   })).to.eql(calls.map(function(call, key) {
                     var data = JSON.parse(JSON.stringify(call));
                     delete data.timestamp;
@@ -520,7 +530,11 @@ describe("Storage", function() {
             if (err) throw err;
             storage.getCall(call.callId, function(err, result) {
               if (err) throw err;
-              expect(result).to.eql(call);
+              expect(result.timestamp).to.gte(call.timestamp);
+              delete result.timestamp;
+              var data = JSON.parse(JSON.stringify(call));
+              delete data.timestamp;
+              expect(result).to.eql(data);
               done();
             });
           });
@@ -889,12 +903,10 @@ describe("Storage", function() {
                     if (err) throw err;
                     storage.getRoomParticipants(roomToken, function(err, results) {
                       if (err) throw err;
-                      roomParticipantData.roomToken = roomToken;
                       roomParticipantData.hawkIdHmac = "1234";
-                      roomParticipantData2.roomToken = roomToken;
                       roomParticipantData2.hawkIdHmac = "4567";
-                      expect(results[0]).to.eql(roomParticipantData);
-                      expect(results[1]).to.eql(roomParticipantData2);
+                      expect(results).to.deep.include.members([roomParticipantData]);
+                      expect(results).to.deep.include.members([roomParticipantData2]);
                       done();
                     });
                   });
@@ -944,9 +956,7 @@ describe("Storage", function() {
                       if (err) throw err;
                       storage.getRoomParticipants(roomToken, function(err, results) {
                         if (err) throw err;
-                        roomParticipantData.roomToken = roomToken;
                         roomParticipantData.hawkIdHmac = "1234";
-                        roomParticipantData2.roomToken = roomToken;
                         roomParticipantData2.hawkIdHmac = "4567";
                         expect(results).to.length(1);
                         expect(results[0]).to.eql(roomParticipantData2);

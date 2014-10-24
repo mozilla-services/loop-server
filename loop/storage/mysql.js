@@ -605,7 +605,7 @@ MySQLStorage.prototype = {
       var query = connection.query(
         "SELECT `callId`, `callType`, `callState`, `callerId`, `userMac`," +
         " `calleeFriendlyName`, `sessionId`, `apiKey`, `calleeToken`," +
-        " `wsCallerToken`, `wsCalleeToken`, `callToken`, `urlCreationDate` " +
+        " `wsCallerToken`, `wsCalleeToken`, `callToken`, `urlCreationDate`, `timestamp` " +
         "FROM `call` WHERE `expires` > ? AND `callId` = ?",
         [now, callId], function(err, result) {
           console.log(query.sql);
@@ -1135,7 +1135,6 @@ MySQLStorage.prototype = {
 
           results = results.map(function(item) {
             return {
-              roomToken: item.roomToken,
               hawkIdHmac: item.hawkIdHmac,
               id: item.id,
               userIdHmac: item.userMac,
