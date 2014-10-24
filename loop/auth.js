@@ -27,15 +27,16 @@ module.exports = function(conf, logError, storage, statsdClient) {
     storage.getHawkUser(req.hawkIdHmac, function(err, user) {
       if (res.serverError(err)) return;
 
-      storage.touchHawkSession(req.hawkIdHmac);
-      // If an identity is defined for this hawk session, use it.
-      if (user !== null) {
-        req.user = user;
+      storage.touchHawkSession(req.hawkIdHmac, function() {
+        // If an identity is defined for this hawk session, use it.
+        if (user !== null) {
+          req.user = user;
+          done();
+          return;
+        }
+        req.user = req.hawkIdHmac;
         done();
-        return;
-      }
-      req.user = req.hawkIdHmac;
-      done();
+      });
     });
   }
 

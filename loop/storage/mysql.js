@@ -154,7 +154,7 @@ MySQLStorage.prototype = {
 
   addUserCallUrlData: function(userMac, urlToken, urlData, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[MySQL] callUrlData: userMac should be defined."));
       return;
     } else if (urlData.timestamp === undefined) {
       callback(new Error("urlData should have a timestamp property."));
@@ -227,7 +227,7 @@ MySQLStorage.prototype = {
 
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
-        "SELECT `callerId`, `issuer`, `timestamp`, `expires` " +
+        "SELECT `userMac`, `callerId`, `issuer`, `timestamp`, `expires` " +
         "FROM `callURL` WHERE `expires` > ? AND `urlToken` = ?",
         [now, urlToken], function(err, result) {
           sqlLog(query.sql);
@@ -328,7 +328,7 @@ MySQLStorage.prototype = {
 
   addUserCall: function(userMac, call, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[MySQL] addUserCall: userMac should be defined."));
       return;
     }
 
@@ -391,7 +391,7 @@ MySQLStorage.prototype = {
 
   getUserCalls: function(userMac, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[MySQL] getUserCalls: userMac should be defined."));
       return;
     }
     this.getConnection(function(err, connection) {
@@ -793,14 +793,15 @@ MySQLStorage.prototype = {
   },
 
   touchHawkSession: function(hawkIdHmac, callback) {
-    this.getConnection(function(err, connection) {
+    var self = this;
+    self.getConnection(function(err, connection) {
       if (err) {
         callback(err);
         return;
       }
 
       var now = parseInt(Date.now() / 1000, 10);
-      var expires = now + this._settings.hawkSessionDuration;
+      var expires = now + self._settings.hawkSessionDuration;
       var query = connection.query(
         "UPDATE `hawkSession` SET `expires` = ? WHERE `hawkIdHmac` = ? AND `expires` > ?",
         [expires, hawkIdHmac, now], function(err, result) {
@@ -873,7 +874,7 @@ MySQLStorage.prototype = {
 
   setUserRoomData: function(userMac, roomToken, roomData, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[MySQL] setUserRoomData: userMac should be defined."));
       return;
     } else if (roomToken === undefined) {
       callback(new Error("roomToken should be defined."));
@@ -885,13 +886,14 @@ MySQLStorage.prototype = {
       callback(new Error("roomData should have an updateTime property."));
       return;
     }
+
     var newData = {
       roomToken: roomToken,
       roomName: roomData.roomName,
       roomOwner: roomData.roomOwner,
       creationTime: roomData.creationTime,
       expiresAt: roomData.expiresAt,
-      ownerMac: roomData.ownerMac,
+      ownerMac: userMac,
       sessionId: roomData.sessionId,
       apiKey: roomData.apiKey,
       expiresIn: roomData.expiresIn,

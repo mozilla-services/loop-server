@@ -94,7 +94,6 @@ describe("Storage", function() {
       apiKey: fakeCallInfo.apiKey,
       roomName: "UX Discussion",
       roomOwner: "Alexis",
-      ownerMac: userMac,
       maxSize: 3,
       expiresIn: 60 * 24,
       expiresAt: now + 60 * 24,

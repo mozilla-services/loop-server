@@ -128,7 +128,7 @@ RedisStorage.prototype = {
 
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] addUserCallUrlData: userMac should be defined."));
       return;
     } else if (urlData.timestamp === undefined) {
       callback(new Error("urlData should have a timestamp property."));
@@ -278,8 +278,9 @@ RedisStorage.prototype = {
   },
 
   addUserCall: function(userMac, call, callback) {
+    console.log(arguments);
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] addUserCall: userMac should be defined."));
       return;
     }
     var self = this;
@@ -351,7 +352,7 @@ RedisStorage.prototype = {
 
   getUserCalls: function(userMac, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] getUserCalls: userMac should be defined."));
       return;
     }
     var self = this;
@@ -735,7 +736,7 @@ RedisStorage.prototype = {
 
   setUserRoomData: function(userMac, roomToken, roomData, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] setUserRoomData: userMac should be defined."));
       return;
     } else if (roomToken === undefined) {
       callback(new Error("roomToken should be defined."));
