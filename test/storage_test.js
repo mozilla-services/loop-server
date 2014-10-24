@@ -26,7 +26,7 @@ var callUrls = conf.get('callUrls');
 var ttl = 30;
 
 
-describe("Storage", function() {
+describe.only("Storage", function() {
   function testStorage(name, createStorage) {
     var now = parseInt(Date.now() / 1000, 10);
     var storage,
@@ -319,7 +319,8 @@ describe("Storage", function() {
                     callerId: "natim@moz",
                     issuer: "alexis@moz",
                     expires: urlData.expires,
-                    timestamp: urlData.timestamp
+                    timestamp: urlData.timestamp,
+                    userMac: userMac
                   });
                   done();
                 });
@@ -381,6 +382,7 @@ describe("Storage", function() {
               expect(result.timestamp).to.gte(urlData.timestamp);
               delete result.timestamp;
               var data = JSON.parse(JSON.stringify(urlData));
+              data.userMac = userMac;
               delete data.timestamp;
               expect(result).to.eql(data);
               done();
@@ -830,6 +832,7 @@ describe("Storage", function() {
             storage.getRoomData(roomToken, function(err, storedRoomData) {
               if (err) throw err;
               roomData.roomToken = roomToken;
+              roomData.ownerMac = userMac;
               expect(storedRoomData).to.eql(roomData);
               done();
             });
@@ -839,7 +842,7 @@ describe("Storage", function() {
         it("should require an expiresAt property for the roomData",
           function(done) {
             var invalidData = JSON.parse(JSON.stringify(roomData));
-            invalidData.expiresAt = undefined;
+            delete invalidData.expiresAt;
             storage.setUserRoomData(userMac, roomToken, invalidData,
               function(err) {
                 expect(err.message)

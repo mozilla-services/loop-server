@@ -202,15 +202,14 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                     function() {
                       if (res.serverError(err)) return;
 
-                      urls.forEach(function(simplePushUrl) {
+                      async.each(urls, function(simplePushUrl, cb) {
                         request.put({
                           url: simplePushUrl,
                           form: { version: callInfo.timestamp }
-                        }, function() {
-                          // Catch errors.
-                        });
+                        }, cb);
+                      }, function(){
+                        callback();
                       });
-                      callback();
                     });
                 });
             });
@@ -296,22 +295,20 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                         urls = [urls];
                       }
 
-                      urls.forEach(function(simplePushUrl) {
+                      async.each(urls, function(simplePushUrl, cb) {
                         request.put({
                           url: simplePushUrl,
                           form: { version: callInfo.timestamp }
-                        }, function() {
-                          // Catch errors.
+                        }, cb);
+                      }, function() {
+                        res.status(200).json({
+                          callId: callInfo.callId,
+                          websocketToken: callInfo.wsCallerToken,
+                          sessionId: callInfo.sessionId,
+                          sessionToken: callerToken,
+                          apiKey: callInfo.apiKey,
+                          progressURL: progressURL
                         });
-                      });
-
-                      res.status(200).json({
-                        callId: callInfo.callId,
-                        websocketToken: callInfo.wsCallerToken,
-                        sessionId: callInfo.sessionId,
-                        sessionToken: callerToken,
-                        apiKey: callInfo.apiKey,
-                        progressURL: progressURL
                       });
                     });
                 });

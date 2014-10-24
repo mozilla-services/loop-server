@@ -841,8 +841,7 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 403 if the token doesn't belong to the user",
         function(done){
-          storage.addUserCallUrlData(userHmac, token, {
-            userMac: "h4x0r",
+          storage.addUserCallUrlData("h4x0r", token, {
             timestamp: parseInt(Date.now() / 1000, 10),
             expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
           }, function(err) {
@@ -1053,8 +1052,9 @@ function runOnPrefix(apiPrefix) {
         tokBoxCalleeToken = fakeCallInfo.token1;
         tokBoxCallerToken = fakeCallInfo.token2;
 
-        sandbox.stub(request, "put", function(options) {
+        sandbox.stub(request, "put", function(options, cb) {
           requests.push(options);
+          cb();
         });
 
         token = tokenlib.generateToken(callUrls.tokenSize);

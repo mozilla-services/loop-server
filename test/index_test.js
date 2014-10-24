@@ -396,6 +396,11 @@ describe("index.js", function() {
           userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
           storage.setHawkSession(userHmac, authKey, done);
         });
+        sandbox = sinon.sandbox.create();
+      });
+
+      afterEach(function() {
+        sandbox.restore();
       });
 
       it("should accept valid hawk sessions", function(done) {
@@ -414,6 +419,7 @@ describe("index.js", function() {
             .expect(401)
             .end(done);
         });
+
       it("should update session expiration time on auth", function(done) {
         sandbox.spy(storage, "touchHawkSession");
         supertest(app)
@@ -424,7 +430,7 @@ describe("index.js", function() {
             if (err) {
               throw err;
             }
-            assert.calledWithExactly(
+            assert.calledWith(
               storage.touchHawkSession,
               userHmac
             );
@@ -508,7 +514,7 @@ describe("index.js", function() {
 
       it("should return callId, sessionId, apiKey and caller token info",
         function(done) {
-          sandbox.stub(request, "put");
+          sandbox.stub(request, "put", function(url, cb) { cb(); });
           supertest(app)
             .post(apiPrefix + '/storeUserCallTokens')
             .send({

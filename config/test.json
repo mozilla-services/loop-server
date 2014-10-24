@@ -52,5 +52,25 @@
     "maxTTL": 10,
     "maxSize": 3,
     "HKDFSalt": "6b4a7eec5406fcb3d394e7f64b2a72a2"
+  },
+  "storage": {
+    "engine": "proxy",
+    "settings": {
+      "volatileStorage": {
+        "engine": "redis",
+        "settings": {
+          "db": "5"
+        }
+      },
+      "persistentStorage": {
+        "engine": "mysql",
+        "settings": {
+          "host": "localhost",
+          "user": "travis",
+          "password": "",
+          "database": "looptest"
+        }
+      }
+    }
   }
 }

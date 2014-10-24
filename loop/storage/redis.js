@@ -135,6 +135,7 @@ RedisStorage.prototype = {
       return;
     }
     var self = this;
+    urlData.userMac = userMac;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
@@ -749,6 +750,7 @@ RedisStorage.prototype = {
     }
     var data = JSON.parse(JSON.stringify(roomData));
     data.roomToken = roomToken;
+    data.ownerMac = userMac;
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(

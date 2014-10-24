@@ -925,21 +925,21 @@ MySQLStorage.prototype = {
 
       var now = parseInt(Date.now() / 1000, 10);
       var query = connection.query(
-        "SELECT r.*, COUNT(p.*) as currSize FROM `room` as r " +
-        "LEFT JOIN `roomParticipant` as p " +
-        "ON p.roomToken = r.roomToken  AND p.expiresAt > ? " +
+        "SELECT r.*, COUNT(*) as currSize FROM `room` r " +
+        "LEFT JOIN `roomParticipant` p " +
+        "ON `p`.`roomToken` = `r`.`roomToken` AND `p`.`expires` > ? " +
         "WHERE `r`.`expiresAt` > ? AND `r`.`ownerMac` = ? " +
-        "GROUP BY r.roomToken" +
+        "GROUP BY `r`.`roomToken` " +
         "ORDER BY `r`.`creationTime`",
         [now, now, userMac], function(err, results) {
-          results = JSON.parse(JSON.stringify(results));
           sqlLog(query.sql);
           connection.release();
           if (err) {
             callback(err);
             return;
           }
-          callback(null, results);
+          var items = JSON.parse(JSON.stringify(results));
+          callback(null, items);
         });
     });
   },
@@ -992,7 +992,7 @@ MySQLStorage.prototype = {
             return;
           }
           connection.release();
-          callback(err);
+          callback(err, now);
         }
       );
     });
@@ -1161,96 +1161,94 @@ MySQLStorage.prototype = {
         callback(err);
         return;
       }
-      var query = connection.query("SET autocommit = 0", function(err) {
-        sqlLog(query.sql);
+      connection.beginTransaction(function(err) {
         if (err) {
           connection.release();
           callback(err);
           return;
         }
-        query = connection.query("START TRANSACTION", function(err) {
+
+        var query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
           sqlLog(query.sql);
           if (err) {
-            connection.release();
-            callback(err);
+            connection.rollback(function() {
+              connection.release();
+              callback(err);
+            });
             return;
           }
 
-          query = connection.query("TRUNCATE TABLE `hawkSession`", function(err) {
+          query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
             sqlLog(query.sql);
             if (err) {
-              connection.release();
-              callback(err);
-              return;
-            }
-
-            query = connection.query("SET FOREIGN_KEY_CHECKS = 0", function(err) {
-              sqlLog(query.sql);
-              if (err) {
+              connection.rollback(function() {
                 connection.release();
                 callback(err);
-                return;
-              }
-
-              query = connection.query("TRUNCATE TABLE `sessionSPURLs`", function(err) {
-                sqlLog(query.sql);
-                if (err) {
+              });
+              return;
+            }
+            query = connection.query("TRUNCATE TABLE `sessionSPURLs`", function(err) {
+              sqlLog(query.sql);
+              if (err) {
+                connection.rollback(function() {
                   connection.release();
                   callback(err);
-                  return;
-                }
-                query = connection.query("TRUNCATE TABLE `callURL`", function(err) {
-                  sqlLog(query.sql);
-                  if (err) {
+                });
+                return;
+              }
+              query = connection.query("TRUNCATE TABLE `callURL`", function(err) {
+                sqlLog(query.sql);
+                if (err) {
+                  connection.rollback(function() {
                     connection.release();
                     callback(err);
-                    return;
-                  }
-                  query = connection.query("TRUNCATE TABLE `call`", function(err) {
-                    sqlLog(query.sql);
-                    if (err) {
+                  });
+                  return;
+                }
+                query = connection.query("TRUNCATE TABLE `call`", function(err) {
+                  sqlLog(query.sql);
+                  if (err) {
+                    connection.rollback(function() {
                       connection.release();
                       callback(err);
-                      return;
-                    }
-                    query = connection.query("TRUNCATE TABLE `room`;", function(err) {
-                      sqlLog(query.sql);
-                      if (err) {
+                    });
+                    return;
+                  }
+                  query = connection.query("TRUNCATE TABLE `room`;", function(err) {
+                    sqlLog(query.sql);
+                    if (err) {
+                      connection.rollback(function() {
                         connection.release();
                         callback(err);
-                        return;
-                      }
-                      query = connection.query("TRUNCATE TABLE `roomParticipant`",
-                        function(err) {
-                          sqlLog(query.sql);
-                          if (err) {
+                      });
+                      return;
+                    }
+                    query = connection.query("TRUNCATE TABLE `roomParticipant`",
+                      function(err) {
+                        sqlLog(query.sql);
+                        if (err) {
+                          connection.rollback(function() {
                             connection.release();
                             callback(err);
-                            return;
-                          }
-                          query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
-                            function(err) {
-                              sqlLog(query.sql);
-                              if (err) {
+                          });
+                          return;
+                        }
+                        query = connection.query("SET FOREIGN_KEY_CHECKS = 1",
+                          function(err) {
+                            sqlLog(query.sql);
+                            if (err) {
+                              connection.rollback(function() {
                                 connection.release();
                                 callback(err);
-                                return;
-                              }
-                              query = connection.query("COMMIT",
-                                function(err) {
-                                  sqlLog(query.sql);
-                                  if (err) {
-                                    connection.release();
-                                    callback(err);
-                                    return;
-                                  }
-
-                                  connection.release();
-                                  callback();
-                                });
+                              });
+                              return;
+                            }
+                            connection.commit(function(err) {
+                              connection.release();
+                              callback(err);
                             });
-                        });
-                    });
+                          });
+                      });
                   });
                 });
               });

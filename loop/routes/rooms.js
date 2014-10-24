@@ -136,7 +136,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       tokBox.getSession(function(err, session, opentok) {
         if (res.serverError(err)) return;
 
-        roomData.sessionId = session;
+        roomData.sessionId = session.sessionId;
         roomData.apiKey = opentok.apiKey;
 
         storage.setUserRoomData(req.user, token, roomData, function(err) {

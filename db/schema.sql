@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS `hawkSession` (
   `timestamp` bigint(20) NOT NULL,
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`hawkIdHmac`),
-  KEY `hawkSession_timestamp` (`timestamp`),
-  KEY `hawkSession_expires` (`expires`)
+  KEY `hawkSession_hawkIdHmac_expires` (`hawkIdHmac`, `expires`),
+  KEY `callURL_expires` (`expires`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS `sessionSPURLs` (
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`hawkIdHmac`),
   KEY `sessionSPURLs_userMac` (`userMac`),
-  KEY `sessionSPURLs_timestamp` (`timestamp`),
-  KEY `sessionSPURLs_expires` (`expires`)
+  KEY `sessionSPURLs_userMac_expires` (`userMac`, `expires`),
+  KEY `callURL_expires` (`expires`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS `callURL` (
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`urlToken`),
   KEY `callURL_userMac` (`userMac`),
-  KEY `callURL_timestamp` (`timestamp`),
+  KEY `callURL_userMac_expires` (`userMac`, `expires`),
+  KEY `callURL_urlToken_expires` (`urlToken`, `expires`),
   KEY `callURL_expires` (`expires`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `call` (
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`callId`),
   KEY `call_userMac` (`userMac`),
-  KEY `call_timestamp` (`timestamp`),
+  KEY `call_userMac_expires` (`userMac`, `expires`),
   KEY `call_expires` (`expires`),
   CONSTRAINT FOREIGN KEY (`callToken`) REFERENCES `callURL` (`urlToken`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -78,10 +79,9 @@ CREATE TABLE IF NOT EXISTS `room` (
   `updateTime` bigint(20) NOT NULL,
   `expiresAt` bigint(20) NOT NULL,
   PRIMARY KEY (`roomToken`),
-  KEY `room_userMac` (`ownerMac`),
-  KEY `room_timestamp` (`creationTime`),
-  KEY `room_expires` (`expiresAt`),
-  KEY `room_updateTime` (`updateTime`)
+  KEY `room_roomToken_expiresAt` (`roomToken`, `expiresAt`),
+  KEY `room_ownerMac_expiresAt` (`ownerMac`, `expiresAt`),
+  KEY `room_expiresAt` (`expiresAt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
@@ -97,7 +97,10 @@ CREATE TABLE IF NOT EXISTS `roomParticipant` (
   `timestamp` bigint(20) NOT NULL,
   `expires` bigint(20) NOT NULL,
   PRIMARY KEY (`roomToken`, `hawkIdHmac`),
-  UNIQUE KEY `roomParticipant_id` (`id`),
   KEY `roomParticipant_roomToken` (`roomToken`),
+  KEY `roomParticipant_roomToken_expires` (`roomToken`, `expires`),
+  KEY `roomParticipant_hawkIdHmac_roomToken_expires` (`hawkIdHmac`, `roomToken`, `expires`),
+  KEY `roomParticipant_hawkIdHmac_roomToken` (`hawkIdHmac`, `roomToken`),
+  KEY `roomParticipant_expires` (`expires`),
   CONSTRAINT FOREIGN KEY (`roomToken`) REFERENCES `room` (`roomToken`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
