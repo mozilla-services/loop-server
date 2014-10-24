@@ -16,16 +16,16 @@ describe("#headers", function(){
 
   // Create routes to test the middleware
   apiRouter.get('/return200/', function(req, res) {
-    res.status(200).json();
+    res.status(200).json({});
   });
   apiRouter.get('/return400/', function(req, res) {
-    res.status(400).json();
+    res.status(400).json({});
   });
   apiRouter.get('/return401/', function(req, res) {
-    res.status(401).json();
+    res.status(401).json({});
   });
   apiRouter.get('/return503/', function(req, res) {
-    res.status(503).json();
+    res.status(503).json({});
   });
 
   it("should set a Timestamp header when returning a 200 ok.", function(done) {

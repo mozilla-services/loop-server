@@ -191,7 +191,7 @@ describe("/rooms", function() {
       hawkCredentials = credentials;
       userHmac = userMac;
 
-      register(hawkCredentials, spurl).end(function(err, res) {
+      register(hawkCredentials, spurl).end(function(err) {
         if (err) throw err;
 
         generateHawkCredentials(storage, user,

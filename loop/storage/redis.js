@@ -13,7 +13,7 @@ var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(
-    options.port,
+    options.port || 6379,
     options.host,
     options.options
   );

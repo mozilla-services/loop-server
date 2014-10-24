@@ -103,7 +103,7 @@ describe("index.js", function() {
 
     // Create a route with the validateToken middleware installed.
     apiRouter.get('/validateToken/:token', validateToken, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     afterEach(function(done) {
@@ -167,7 +167,7 @@ describe("index.js", function() {
   describe("#validateSimplePushURL", function() {
     // Create a route with the validateSimplePushURL middleware installed.
     apiRouter.post('/validateSP/', validateSimplePushURL, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     it("should validate the simple push url", function(done) {
@@ -226,7 +226,7 @@ describe("index.js", function() {
   describe("#validateCallType", function() {
     // Create a route with the validateSimplePushURL middleware installed.
     apiRouter.post('/validateCallType/', validateCallType, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     it("should error on empty callType", function(done) {
@@ -277,12 +277,12 @@ describe("index.js", function() {
     // Create a route with the requireParams middleware installed.
     apiRouter.post('/requireParams/', requireParams('a', 'b'),
       function(req, res) {
-        res.status(200).json();
+        res.status(200).json({});
       });
 
     apiRouter.post('/requireParams/simplePushURL',
       requireParams('simplePushURL'), function(req, res) {
-        res.status(200).json();
+        res.status(200).json({});
       });
 
     it("should return a 406 if the body is not in JSON.", function(done) {
@@ -334,7 +334,7 @@ describe("index.js", function() {
     user = "alexis";
 
     apiRouter.post("/with-authenticate", authenticate, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     describe("BrowserID", function() {

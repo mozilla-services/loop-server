@@ -355,6 +355,7 @@ function runOnPrefix(apiPrefix) {
           .get(apiPrefix + '/call-url')
           .hawk(hawkCredentials)
           .type('json')
+          .set('Accept', 'application/json')
           .expect('Content-Type', /json/);
       });
 
@@ -545,6 +546,7 @@ function runOnPrefix(apiPrefix) {
           .post(apiPrefix + '/registration')
           .hawk(hawkCredentials)
           .type('json')
+          .set('Accept', 'application/json')
           .expect('Content-Type', /json/);
       });
 
@@ -597,8 +599,11 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 200 if everything went fine", function(done) {
         jsonReq
-          .send({'simple_push_url': pushURL})
-          .expect(200).end(done);
+          .send({simple_push_url: pushURL})
+          .expect(200).end(function(err) {
+            if (err) throw err;
+            done();
+          });
       });
 
       it("should store push url", function(done) {

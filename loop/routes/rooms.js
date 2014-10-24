@@ -340,7 +340,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               emitRoomEvent(req.token, req.roomStorageData.ownerMac,
                 function(err) {
                   if (res.serverError(err)) return;
-                  res.status(204).json();
+                  res.status(204).json({});
                 });
             });
         }

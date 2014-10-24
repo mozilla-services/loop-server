@@ -76,7 +76,7 @@ module.exports = function (app, conf, logError, storage, auth, validators,
         }
         storage.revokeURLToken(req.token, function(err) {
           if (res.serverError(err)) return;
-          res.status(204).json();
+          res.status(204).json({});
         });
       });
   };
