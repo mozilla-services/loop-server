@@ -234,7 +234,7 @@ module.exports = function(conf, logError, storage) {
    * Checks the current connected hawk session is one of the room owner's one.
    **/
   function isRoomOwner(req, res, next) {
-    if (req.user === req.roomStorageData.roomOwnerHmac) {
+    if (req.user === req.roomStorageData.ownerMac) {
       next();
       return;
     }
@@ -264,7 +264,7 @@ module.exports = function(conf, logError, storage) {
         return p.hawkIdHmac === req.hawkIdHmac;
       });
 
-      var isOwner = (req.user === req.roomStorageData.roomOwnerHmac);
+      var isOwner = (req.user === req.roomStorageData.ownerMac);
 
       if (!isParticipant && !isOwner) {
         sendError(

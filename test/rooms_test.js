@@ -492,7 +492,7 @@ describe("/rooms", function() {
             maxSize: 3,
             roomOwner: "Alexis",
             expiresIn: 10,
-            roomOwnerHmac: userHmac
+            ownerMac: userHmac
           });
 
           expect(requests).to.length(1);

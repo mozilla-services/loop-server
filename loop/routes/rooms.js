@@ -132,15 +132,12 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       roomData.creationTime = now;
       roomData.updateTime = now;
       roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
-      roomData.roomOwnerHmac = req.user;
 
       tokBox.getSession(function(err, session, opentok) {
         if (res.serverError(err)) return;
 
         roomData.sessionId = session;
         roomData.apiKey = opentok.apiKey;
-
-        console.log(roomData);
 
         storage.setUserRoomData(req.user, token, roomData, function(err) {
           if (res.serverError(err)) return;
@@ -306,7 +303,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                       }, ttl, function(err) {
                         if (res.serverError(err)) return;
                         emitRoomEvent(req.token,
-                          req.roomStorageData.roomOwnerHmac, function(err) {
+                          req.roomStorageData.ownerMac, function(err) {
                             if (res.serverError(err)) return;
                             res.status(200).json({
                               apiKey: req.roomStorageData.apiKey,
@@ -340,7 +337,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           storage.deleteRoomParticipant(req.token, req.hawkIdHmac,
             function(err) {
               if (res.serverError(err)) return;
-              emitRoomEvent(req.token, req.roomStorageData.roomOwnerHmac,
+              emitRoomEvent(req.token, req.roomStorageData.ownerMac,
                 function(err) {
                   if (res.serverError(err)) return;
                   res.status(204).json();

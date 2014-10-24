@@ -395,7 +395,7 @@ var conf = convict({
     filename: {
       doc: "Heka logger file path",
       format: String,
-      default: path.join(__dirname, "..", "logs/heka.log")
+      default: path.join(__dirname, "..", "logs", "heka.log")
     },
     maxsize: {
       doc: "Max size in bytes of the logfile before creating a new one.",
@@ -417,7 +417,7 @@ var conf = convict({
     filename: {
       doc: "SQL logger file path",
       format: String,
-      default: path.join(__dirname, "..", "logs/sql.log")
+      default: path.join(__dirname, "..", "logs", "sql.log")
     },
     maxsize: {
       doc: "Max size in bytes of the logfile before creating a new one.",
@@ -428,6 +428,11 @@ var conf = convict({
       doc: "Limit the number of files created when logfile size is exeeded.",
       format: Number,
       default: 5
+    },
+    json: {
+      doc: "Defines if the output should be in JSON",
+      default: false,
+      format: Boolean
     }
   },
   rooms: {

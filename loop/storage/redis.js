@@ -278,7 +278,6 @@ RedisStorage.prototype = {
   },
 
   addUserCall: function(userMac, call, callback) {
-    console.log(arguments);
     if (userMac === undefined) {
       callback(new Error("[Redis] addUserCall: userMac should be defined."));
       return;

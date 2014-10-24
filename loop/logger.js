@@ -24,7 +24,7 @@ var sqlLogger = new winston.Logger({
 });
 
 exports.sqlLog = function(query) {
-  if (sqlLoggerFileParams.activated) {
-    sqlLogger.log(query);
+  if (sqlLoggerFileParams.activated === true) {
+    sqlLogger.log('info', query);
   }
 };
