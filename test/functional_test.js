@@ -356,6 +356,7 @@ function runOnPrefix(apiPrefix) {
           .get(apiPrefix + '/call-url')
           .hawk(hawkCredentials)
           .type('json')
+          .set('Accept', 'application/json')
           .expect('Content-Type', /json/);
       });
 
@@ -612,6 +613,7 @@ function runOnPrefix(apiPrefix) {
           .post(apiPrefix + '/registration')
           .hawk(hawkCredentials)
           .type('json')
+          .set('Accept', 'application/json')
           .expect('Content-Type', /json/);
       });
 
@@ -664,8 +666,11 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 200 if everything went fine", function(done) {
         jsonReq
-          .send({'simple_push_url': pushURL})
-          .expect(200).end(done);
+          .send({simple_push_url: pushURL})
+          .expect(200).end(function(err) {
+            if (err) throw err;
+            done();
+          });
       });
 
       it("should store push url", function(done) {
@@ -744,7 +749,6 @@ function runOnPrefix(apiPrefix) {
         function(done) {
           jsonReq.send({}).expect(400).end(function(err, res) {
             if (err) throw err;
-            console.log(res.headers);
             expect(res.headers['server-authorization']).to.eql(undefined);
             expect(res.headers['Hawk-Session-Token']).to.eql(undefined);
             done()
@@ -909,8 +913,7 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 403 if the token doesn't belong to the user",
         function(done){
-          storage.addUserCallUrlData(userHmac, token, {
-            userMac: "h4x0r",
+          storage.addUserCallUrlData("h4x0r", token, {
             timestamp: parseInt(Date.now() / 1000, 10),
             expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
           }, function(err) {
@@ -1121,8 +1124,9 @@ function runOnPrefix(apiPrefix) {
         tokBoxCalleeToken = fakeCallInfo.token1;
         tokBoxCallerToken = fakeCallInfo.token2;
 
-        sandbox.stub(request, "put", function(options) {
+        sandbox.stub(request, "put", function(options, cb) {
           requests.push(options);
+          cb();
         });
 
         token = tokenlib.generateToken(callUrls.tokenSize);

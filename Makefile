@@ -11,7 +11,7 @@ test: lint cover-mocha spaceleft
 travis: lint separate-tests loadtests-check
 
 separate-tests:
-	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket
+	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -ig websocket -t 5000
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec -g websocket -t 5000
 
 install:

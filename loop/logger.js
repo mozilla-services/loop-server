@@ -15,3 +15,16 @@ exports.hekaLogger = new winston.Logger({
     new winston.transports.File(metricsFileParams)
   ]
 });
+
+var sqlLoggerFileParams = JSON.parse(JSON.stringify(conf.get('sqlMetrics')));
+var sqlLogger = new winston.Logger({
+  transports: [
+    new winston.transports.File(sqlLoggerFileParams)
+  ]
+});
+
+exports.sqlLog = function(query) {
+  if (sqlLoggerFileParams.activated === true) {
+    sqlLogger.log('info', query);
+  }
+};

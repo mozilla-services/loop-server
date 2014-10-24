@@ -6,7 +6,8 @@ config/dev.json
 config/stage.json
 config/prod.json
 circus/*.log
-heka*.log
+logs/heka*.log
+logs/sql*.log
 *.pyc
 loadtests/venv/
 loadtest.log

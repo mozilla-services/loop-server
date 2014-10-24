@@ -13,7 +13,7 @@ var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 function RedisStorage(options, settings) {
   this._settings = settings;
   this._client = redis.createClient(
-    options.port,
+    options.port || 6379,
     options.host,
     options.options
   );
@@ -128,13 +128,14 @@ RedisStorage.prototype = {
 
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] addUserCallUrlData: userMac should be defined."));
       return;
     } else if (urlData.timestamp === undefined) {
       callback(new Error("urlData should have a timestamp property."));
       return;
     }
     var self = this;
+    urlData.userMac = userMac;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
@@ -279,7 +280,7 @@ RedisStorage.prototype = {
 
   addUserCall: function(userMac, call, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] addUserCall: userMac should be defined."));
       return;
     }
     var self = this;
@@ -351,7 +352,7 @@ RedisStorage.prototype = {
 
   getUserCalls: function(userMac, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] getUserCalls: userMac should be defined."));
       return;
     }
     var self = this;
@@ -648,10 +649,6 @@ RedisStorage.prototype = {
     this._client.get('userid.' + hawkIdHmac, callback);
   },
 
-  deleteHawkUserId: function(hawkIdHmac, callback) {
-    this._client.del('userid.' + hawkIdHmac, callback);
-  },
-
   setHawkSession: function(hawkIdHmac, authKey, callback) {
     this._client.setex(
       'hawk.' + hawkIdHmac,
@@ -696,7 +693,20 @@ RedisStorage.prototype = {
   },
 
   deleteHawkSession: function(hawkIdHmac, callback) {
-    this._client.del('hawk.' + hawkIdHmac, callback);
+    var self = this;
+    self._client.del('hawk.' + hawkIdHmac, function(err) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      self._client.del('userid.' + hawkIdHmac, function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self._client.del('hawkuser.' + hawkIdHmac, callback);
+      });
+    });
   },
 
   setHawkOAuthToken: function(hawkIdHmac, token, callback) {
@@ -726,7 +736,7 @@ RedisStorage.prototype = {
 
   setUserRoomData: function(userMac, roomToken, roomData, callback) {
     if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
+      callback(new Error("[Redis] setUserRoomData: userMac should be defined."));
       return;
     } else if (roomToken === undefined) {
       callback(new Error("roomToken should be defined."));
@@ -740,6 +750,7 @@ RedisStorage.prototype = {
     }
     var data = JSON.parse(JSON.stringify(roomData));
     data.roomToken = roomToken;
+    data.ownerMac = userMac;
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(

@@ -181,7 +181,7 @@ FakeTokBox.prototype = {
       url: self.serverURL,
       timeout: options.timeout
     }, function(err) {
-      cb(err, self._fakeSessionId(), {apiKey: self._fakeApiKey()});
+      cb(err, {sessionId: self._fakeSessionId()}, {apiKey: self._fakeApiKey()});
     });
   },
 

@@ -31,14 +31,14 @@ describe("metrics middleware", function() {
     req.user = 'uuid';
     req.callId = '1234';
     req.callUrlData = 'data';
-    res.status(200).json();
+    res.status(200).json({});
   });
 
   apiRouter.get("/with-401-on-metrics-middleware", logMetrics, function(req, res) {
     req.headers.authorization = "Hawk abcd";
     req.hawk = {hawk: "hawk"};
     res.set("WWW-Authenticate", 'Hawk error="boom"');
-    res.status(401).json();
+    res.status(401).json({});
   });
 
   beforeEach(function() {

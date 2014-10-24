@@ -172,8 +172,9 @@ describe("/rooms", function() {
     requests = [];
     sandbox = sinon.sandbox.create();
 
-    sandbox.stub(request, "put", function(options) {
+    sandbox.stub(request, "put", function(options, cb) {
       requests.push(options);
+      cb();
     });
 
     sandbox.stub(tokBox._opentok.default, "createSession",
@@ -190,7 +191,7 @@ describe("/rooms", function() {
       hawkCredentials = credentials;
       userHmac = userMac;
 
-      register(hawkCredentials, spurl).end(function(err, res) {
+      register(hawkCredentials, spurl).end(function(err) {
         if (err) throw err;
 
         generateHawkCredentials(storage, user,
@@ -354,7 +355,7 @@ describe("/rooms", function() {
 
     describe("#isRoomOwner", function() {
       apiRouter.get('/should-be-room-owner', function(req, res, next) {
-        req.roomStorageData = {roomOwnerHmac: userHmac};
+        req.roomStorageData = {ownerMac: userHmac};
         next();
       }, requireHawkSession, validators.isRoomOwner, function(req, res) {
         res.status(200).json("ok");
@@ -492,7 +493,7 @@ describe("/rooms", function() {
             maxSize: 3,
             roomOwner: "Alexis",
             expiresIn: 10,
-            roomOwnerHmac: userHmac
+            ownerMac: userHmac
           });
 
           expect(requests).to.length(1);
@@ -965,6 +966,7 @@ describe("/rooms", function() {
         createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
           var roomToken = res.body.roomToken;
+          var clock = sinon.useFakeTimers(Date.now());
           generateHawkCredentials(storage, 'Julie',
             function(julieCredentials, julieHawkIdHmac) {
               joinRoom(julieCredentials, roomToken).end(function(err) {
@@ -974,10 +976,12 @@ describe("/rooms", function() {
                   function(err, success) {
                     if (err) throw err;
                     expect(success).to.eql(true);
+                    clock.tick(-1000);
                     getRoomInfo(hawkCredentials, roomToken).end(
                       function(err, res) {
                         if (err) throw err;
                         expect(res.body.participants).to.length(1);
+                        clock.restore();
                         setTimeout(function() {
                           getRoomInfo(hawkCredentials, roomToken).end(
                             function(err, res) {

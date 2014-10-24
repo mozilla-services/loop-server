@@ -16,12 +16,9 @@ module.exports = function (app, storage, auth) {
         if (res.serverError(err)) return;
         storage.deleteUserCalls(req.user, function(err) {
           if (res.serverError(err)) return;
-          storage.deleteHawkUserId(req.hawkIdHmac, function(err) {
+          storage.deleteHawkSession(req.hawkIdHmac, function(err) {
             if (res.serverError(err)) return;
-            storage.deleteHawkSession(req.hawkIdHmac, function(err) {
-              if (res.serverError(err)) return;
-              res.status(204).json();
-            });
+            res.status(204).json({});
           });
         });
       });

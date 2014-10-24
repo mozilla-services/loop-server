@@ -25,36 +25,48 @@ var callUrls = conf.get('callUrls');
 
 var ttl = 30;
 
+
 describe("Storage", function() {
   function testStorage(name, createStorage) {
     var now = parseInt(Date.now() / 1000, 10);
     var storage,
-        a_second = 1 / 3600,  // A second in hours.
         calls = [
         {
           callId:       randomBytes(16).toString("hex"),
+          callType:     "audio-video",
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session1,
+          apiKey:       fakeCallInfo.apiKey,
           calleeToken:  fakeCallInfo.token1,
+          wsCallerToken: "caller",
+          wsCalleeToken: "callee",
           callState:    constants.CALL_STATES.INIT,
           timestamp:    now - 3
         },
         {
           callId:       randomBytes(16).toString("hex"),
+          callType:     "audio-video",
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session2,
+          apiKey:       fakeCallInfo.apiKey,
           calleeToken:  fakeCallInfo.token2,
+          wsCallerToken: "caller",
+          wsCalleeToken: "callee",
           callState:    constants.CALL_STATES.INIT,
           timestamp:    now - 2
         },
         {
           callId:       randomBytes(16).toString("hex"),
+          callType:     "audio-video",
           callerId:     callerId,
           userMac:      userMac,
           sessionId:    fakeCallInfo.session3,
+          apiKey:       fakeCallInfo.apiKey,
           calleeToken:  fakeCallInfo.token2,
+          wsCallerToken: "caller",
+          wsCalleeToken: "callee",
           callState:    constants.CALL_STATES.TERMINATED,
           timestamp:    now - 1
         }
@@ -79,13 +91,26 @@ describe("Storage", function() {
     roomToken = generateToken(conf.get("rooms").tokenSize),
     roomData = {
       sessionId: fakeCallInfo.session1,
+      apiKey: fakeCallInfo.apiKey,
       roomName: "UX Discussion",
       roomOwner: "Alexis",
       maxSize: 3,
+      expiresIn: 60 * 24,
       expiresAt: now + 60 * 24,
       updateTime: now,
       creationTime: now
+    },
+    roomParticipantData = {
+      id: "azert",
+      userIdHmac: userMac,
+      clientMaxSize: 5,
+      displayName: "Alexis",
+      account: "abc"
     };
+
+    var roomParticipantData2 = JSON.parse(JSON.stringify(roomParticipantData));
+    roomParticipantData2.id = "qsdf";
+    roomParticipantData2.displayName = "Alexis mobile";
 
     describe(name, function() {
       var sandbox;
@@ -111,7 +136,7 @@ describe("Storage", function() {
 
       describe('#revokeURLToken', function() {
         it("should add a revoked url", function(done) {
-          storage.revokeURLToken({uuid: uuid, expires: a_second},
+          storage.revokeURLToken(uuid,
             function(err) {
               if (err) throw err;
               storage.getCallUrlData(uuid, function(err, value){
@@ -290,11 +315,12 @@ describe("Storage", function() {
                 expect(err).to.eql(null);
                 storage.getCallUrlData(callToken, function(err, data) {
                   if (err) throw err;
-                  expect(data).eql({
+                  expect(data).to.eql({
                     callerId: "natim@moz",
                     issuer: "alexis@moz",
                     expires: urlData.expires,
-                    timestamp: urlData.timestamp
+                    timestamp: urlData.timestamp,
+                    userMac: userMac
                   });
                   done();
                 });
@@ -350,21 +376,22 @@ describe("Storage", function() {
       describe("#getCallUrlData", function() {
         it("should be able to list a call-url by its id", function(done) {
           storage.addUserCallUrlData(userMac, callToken, urlData, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getCallUrlData(callToken, function(err, result) {
-              if (err) {
-                throw err;
-              }
-              expect(result).to.eql(urlData);
+              if (err) throw err;
+              expect(result.timestamp).to.gte(urlData.timestamp);
+              delete result.timestamp;
+              var data = JSON.parse(JSON.stringify(urlData));
+              data.userMac = userMac;
+              delete data.timestamp;
+              expect(result).to.eql(data);
               done();
             });
           });
         });
 
         it("should return null if the call-url doesn't exist", function(done) {
-          storage.getCall("does-not-exist", function(err, call) {
+          storage.getCallUrlData("does-not-exist", function(err, call) {
             if (err) throw err;
             expect(call).to.eql(null);
             done();
@@ -406,17 +433,22 @@ describe("Storage", function() {
 
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
-          storage.addUserCall(userMac, call, function(err) {
-            if (err) {
-              throw err;
-            }
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
+          var callData = JSON.parse(JSON.stringify(call));
+          storage.addUserCall(userMac, callData, function(err) {
+            if (err) throw err;
             storage.getUserCalls(userMac, function(err, results) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(results).to.have.length(1);
-              expect(results).to.eql([call]);
-              storage.deleteCall(call.callId, function(err) {
+              var result = results[0];
+              expect(result.timestamp).to.gte(callData.timestamp);
+              delete result.timestamp;
+              delete callData.timestamp;
+              expect(results).to.eql([callData]);
+              storage.deleteCall(callData.callId, function(err) {
                 if (err) throw err;
                 storage.getUserCalls(userMac, function(err, results) {
                   if (err) throw err;
@@ -431,6 +463,10 @@ describe("Storage", function() {
 
       describe("#getUserCalls", function() {
         it("should keep a list of the user calls", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, calls[0], function(err) {
             if (err) throw err;
             storage.addUserCall(userMac, calls[1], function(err) {
@@ -440,13 +476,31 @@ describe("Storage", function() {
                 storage.getUserCalls(userMac, function(err, results) {
                   if (err) throw err;
                   expect(results).to.have.length(3);
-                  expect(results).to.eql(calls.map(function(call, key) {
-                    if (key === 2) {
-                      call.callState = constants.CALL_STATES.TERMINATED;
-                    } else {
-                      call.callState = constants.CALL_STATES.INIT;
-                    }
+                  expect(results.map(function(call) {
+                    expect(call.timestamp).to.gte(calls[0].timestamp);
+                    delete call.timestamp;
                     return call;
+                  }).sort(function(a, b) {
+                    if (a.timestamp === b.timestamp) {
+                      return a.callId > b.callId;
+                    } else {
+                      return a.timestamp - b.timestamp;
+                    }
+                  })).to.eql(calls.map(function(call, key) {
+                    var data = JSON.parse(JSON.stringify(call));
+                    delete data.timestamp;
+                    if (key === 2) {
+                      data.callState = constants.CALL_STATES.TERMINATED;
+                    } else {
+                      data.callState = constants.CALL_STATES.INIT;
+                    }
+                    return data;
+                  }).sort(function(a, b) {
+                    if (a.timestamp === b.timestamp) {
+                      return a.callId > b.callId;
+                    } else {
+                      return a.timestamp - b.timestamp;
+                    }
                   }));
                   done();
                 });
@@ -456,6 +510,10 @@ describe("Storage", function() {
         });
 
         it("should return an empty list if no calls", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getUserCalls(userMac, function(err, results) {
             expect(results).to.eql([]);
             done(err);
@@ -465,21 +523,29 @@ describe("Storage", function() {
 
       describe("#getCall", function() {
         it("should be able to list a call by its id", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getCall(call.callId, function(err, result) {
-              if (err) {
-                throw err;
-              }
-              expect(result).to.eql(call);
+              if (err) throw err;
+              expect(result.timestamp).to.gte(call.timestamp);
+              delete result.timestamp;
+              var data = JSON.parse(JSON.stringify(call));
+              delete data.timestamp;
+              expect(result).to.eql(data);
               done();
             });
           });
         });
 
         it("should return null if the call doesn't exist", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getCall("does-not-exist", function(err, call) {
             if (err) throw err;
             expect(call).to.eql(null);
@@ -490,6 +556,10 @@ describe("Storage", function() {
 
       describe("#deleteCall", function() {
         it("should delete an existing call", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
             if (err) throw err;
             storage.deleteCall(call.callId, function(err, result) {
@@ -505,6 +575,10 @@ describe("Storage", function() {
         });
 
         it("should return an error if the call doesn't exist", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.deleteCall("does-not-exist", function(err, result) {
             if (err) throw err;
             expect(result).to.eql(false);
@@ -515,6 +589,10 @@ describe("Storage", function() {
 
       describe("#deleteUserCalls", function() {
         it("should delete all calls of an user", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, calls[0], function(err) {
             if (err) throw err;
             storage.addUserCall(userMac, calls[1], function(err) {
@@ -535,6 +613,10 @@ describe("Storage", function() {
         });
 
         it("should not error when no calls exist", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.deleteUserCalls(userMac, done);
         });
       });
@@ -553,9 +635,7 @@ describe("Storage", function() {
       describe("#setHawkSession", function() {
         it("should return a valid hawk session", function(done) {
           storage.setHawkSession("id", "key", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getHawkSession("id", function(err, result) {
               if (err) throw err;
               expect(result).to.eql({
@@ -571,13 +651,9 @@ describe("Storage", function() {
       describe("#deleteHawkSession", function() {
         it("should delete an existing hawk session", function(done) {
           storage.setHawkSession("id", "key", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.deleteHawkSession("id", function(err) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               storage.getHawkSession("id", function(err, result) {
                 if (err) throw err;
                 expect(result).to.eql(null);
@@ -590,16 +666,32 @@ describe("Storage", function() {
 
       describe("#setHawkUser, #getHawkUser", function() {
         it("should store and retrieve an user hawk session", function(done) {
-          storage.setHawkUser("userhash", "tokenid", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.getHawkUser("tokenid", function(err, result) {
-              if (err) {
-                throw err;
-              }
-              expect(result).to.eql("userhash");
-              done();
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUser("userhash", "tokenid", function(err) {
+              if (err) throw err;
+              storage.getHawkUser("tokenid", function(err, result) {
+                if (err) throw err;
+                expect(result).to.eql("userhash");
+                done();
+              });
+            });
+          });
+        });
+
+        it("should be cleaned by #deleteHawkSession", function(done) {
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUser("userhash", "tokenId", function(err) {
+              if (err) throw err;
+              storage.deleteHawkSession("tokenId", function(err) {
+                if (err) throw err;
+                storage.getHawkUser("userhash", function(err, result) {
+                  if (err) throw err;
+                  expect(result).to.eql(null);
+                  done();
+                });
+              });
             });
           });
         });
@@ -607,37 +699,31 @@ describe("Storage", function() {
 
       describe("#setHawkUserId, #getHawkUserId", function() {
         it("should store and retrieve an user hawk session", function(done) {
-          storage.setHawkUserId("tokenId", "userId", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.getHawkUserId("tokenId", function(err, result) {
-              if (err) {
-                throw err;
-              }
-              expect(result).to.eql("userId");
-              done();
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUserId("tokenId", "userId", function(err) {
+              if (err) throw err;
+              storage.getHawkUserId("tokenId", function(err, result) {
+                if (err) throw err;
+                expect(result).to.eql("userId");
+                done();
+              });
             });
           });
         });
-      });
 
-      describe("#deleteHawkUserId", function() {
-        it("should delete an existing user hawk session", function(done) {
-          storage.setHawkUserId("tokenId", "userId", function(err) {
-            if (err) {
-              throw err;
-            }
-            storage.deleteHawkUserId("tokenId", function(err) {
-              if (err) {
-                throw err;
-              }
-              storage.getHawkUserId("tokenId", function(err, result) {
-                if (err) {
-                  throw err;
-                }
-                expect(result).to.eql(null);
-                done();
+        it("should be cleaned by #deleteHawkSession", function(done) {
+          storage.setHawkSession("tokenid", "authKey", function(err) {
+            if (err) throw err;
+            storage.setHawkUserId("tokenId", "userId", function(err) {
+              if (err) throw err;
+              storage.deleteHawkSession("tokenId", function(err) {
+                if (err) throw err;
+                storage.getHawkUserId("tokenId", function(err, result) {
+                  if (err) throw err;
+                  expect(result).to.eql(null);
+                  done();
+                });
               });
             });
           });
@@ -646,19 +732,30 @@ describe("Storage", function() {
 
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
-          storage.setCallState("12345", constants.CALL_STATES.INIT, 10,
-            function(err) {
-              if (err) throw err;
-              storage.getCallState("12345", function(err, state) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
+          storage.addUserCall(userMac, call, function(err) {
+            if (err) throw err;
+            storage.setCallState(call.callId, constants.CALL_STATES.INIT, 10,
+              function(err) {
                 if (err) throw err;
-                expect(state).to.eql(constants.CALL_STATES.INIT);
-                done();
+                storage.getCallState(call.callId, function(err, state) {
+                  if (err) throw err;
+                  expect(state).to.eql(constants.CALL_STATES.INIT);
+                  done();
+                });
               });
             });
         });
 
         it("should check the states are valid before storing them",
           function(done) {
+            if (storage.persistentOnly) {
+              done();
+              return;
+            }
             storage.setCallState(
               "12345",
               constants.CALL_STATES.TERMINATED + ":unauthorized",
@@ -672,6 +769,10 @@ describe("Storage", function() {
 
       describe("#getCallState", function() {
         it("should return null when no call state is set", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getCallState("12345", function(err, state) {
             if (err) throw err;
             expect(state).to.eql(null);
@@ -682,6 +783,10 @@ describe("Storage", function() {
 
       describe("#setCallTerminationReason", function() {
         it("should set the call termination reason", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.addUserCall(userMac, call, function(err) {
             if (err) throw err;
             storage.setCallTerminationReason(call.callId,
@@ -699,6 +804,10 @@ describe("Storage", function() {
 
       describe("#getCallTerminationReason", function() {
         it("should return null when no call reason is set", function(done) {
+          if (storage.persistentOnly) {
+            done();
+            return;
+          }
           storage.getCallTerminationReason("12345", function(err, reason) {
             if (err) throw err;
             expect(reason).to.eql(null);
@@ -723,6 +832,7 @@ describe("Storage", function() {
             storage.getRoomData(roomToken, function(err, storedRoomData) {
               if (err) throw err;
               roomData.roomToken = roomToken;
+              roomData.ownerMac = userMac;
               expect(storedRoomData).to.eql(roomData);
               done();
             });
@@ -732,7 +842,7 @@ describe("Storage", function() {
         it("should require an expiresAt property for the roomData",
           function(done) {
             var invalidData = JSON.parse(JSON.stringify(roomData));
-            invalidData.expiresAt = undefined;
+            delete invalidData.expiresAt;
             storage.setUserRoomData(userMac, roomToken, invalidData,
               function(err) {
                 expect(err.message)
@@ -743,11 +853,6 @@ describe("Storage", function() {
       });
 
       describe("#deleteRoomData", function() {
-        var spy;
-        beforeEach(function() {
-          spy = sandbox.spy(storage, 'deleteRoomParticipants');
-        });
-
         it("should remove the room from the store", function(done) {
           storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
@@ -756,8 +861,11 @@ describe("Storage", function() {
               storage.getRoomData(roomToken, function(err, storedRoomData) {
                 if (err) throw err;
                 expect(storedRoomData).to.eql(null);
-                assert(spy.calledOnce);
-                done();
+                storage.getRoomParticipants(roomToken, function(err, results) {
+                  if (err) throw err;
+                  expect(results).to.eql([]);
+                  done();
+                });
               });
             });
           });
@@ -766,92 +874,138 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipants", function() {
         it("should remove all the room participants", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
-            function(err) {
-              if (err) throw err;
-              storage.deleteRoomParticipants(roomToken, function(err) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, 30,
+              function(err) {
                 if (err) throw err;
-                storage.getRoomParticipants(roomToken,
-                  function(err, participants) {
-                    if (err) throw err;
-                    expect(participants).to.length(0);
-                    done();
-                  });
+                storage.deleteRoomParticipants(roomToken, function(err) {
+                  if (err) throw err;
+                  storage.getRoomParticipants(roomToken,
+                    function(err, participants) {
+                      if (err) throw err;
+                      expect(participants).to.length(0);
+                      done();
+                    });
+                });
               });
-            });
+          });
         });
       });
 
       describe("#addRoomParticipant", function() {
         it("should add a participant to the room", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
-            function(err) {
-              if (err) throw err;
-              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
-                function(err) {
-                  if (err) throw err;
-                  storage.getRoomParticipants(roomToken, function(err, results) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, ttl,
+              function(err) {
+                if (err) throw err;
+                storage.addRoomParticipant(roomToken, "4567", roomParticipantData2, ttl,
+                  function(err) {
                     if (err) throw err;
-                    expect(results).to.contain({"apiKey": "1", "hawkIdHmac": "1234"});
-                    expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
-                    done();
+                    storage.getRoomParticipants(roomToken, function(err, results) {
+                      if (err) throw err;
+                      roomParticipantData.hawkIdHmac = "1234";
+                      roomParticipantData2.hawkIdHmac = "4567";
+                      expect(results).to.deep.include.members([roomParticipantData]);
+                      expect(results).to.deep.include.members([roomParticipantData2]);
+                      done();
+                    });
                   });
-                });
-            });
+              });
+          });
         });
       });
 
       describe("#touchRoomParticipant", function() {
         it("should change the expiracy", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
-            function(err) {
-              if (err) throw err;
-              storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, 30,
+              function(err) {
                 if (err) throw err;
-                expect(success).to.eql(true);
-                setTimeout(function() {
-                  storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
-                    if (err) return done(err);
-                    expect(success).to.eql(false);
-                    storage.getRoomParticipants(roomToken, function(err, results) {
-                      if (err) throw err;
-                      expect(results).to.length(0);
-                      done();
+                storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+                  if (err) throw err;
+                  expect(success).to.eql(true);
+                  setTimeout(function() {
+                    storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
+                      if (err) return done(err);
+                      expect(success).to.eql(false);
+                      storage.getRoomParticipants(roomToken, function(err, results) {
+                        if (err) throw err;
+                        expect(results).to.length(0);
+                        done();
+                      });
                     });
-                  });
-                }, 15);
+                  }, 15);
+                });
               });
-            });
+          });
         });
       });
 
       describe("#deleteRoomParticipant", function() {
         it("should remove a participant to the room", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
-            function(err) {
-              if (err) throw err;
-              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
-                function(err) {
-                  if (err) throw err;
-                  storage.deleteRoomParticipant(roomToken, "1234", function(err) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.addRoomParticipant(roomToken, "1234", roomParticipantData, ttl,
+              function(err) {
+                if (err) throw err;
+                storage.addRoomParticipant(roomToken, "4567", roomParticipantData2, ttl,
+                  function(err) {
                     if (err) throw err;
-                    storage.getRoomParticipants(roomToken, function(err, results) {
+                    storage.deleteRoomParticipant(roomToken, "1234", function(err) {
                       if (err) throw err;
-                      expect(results).to.not.contain({"apiKey": "1", "hawkIdHmac": "1234"});
-                      expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
-                      done();
+                      storage.getRoomParticipants(roomToken, function(err, results) {
+                        if (err) throw err;
+                        roomParticipantData.hawkIdHmac = "1234";
+                        roomParticipantData2.hawkIdHmac = "4567";
+                        expect(results).to.length(1);
+                        expect(results[0]).to.eql(roomParticipantData2);
+                        done();
+                      });
                     });
                   });
-                });
-            });
+              });
+          });
         });
       });
     });
   }
 
-  // Test all the storages implementation.
+  /* Test all the storages implementation. */
   testStorage("Redis", function createRedisStorage(options) {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
+  });
+
+  testStorage("MySQL", function createMySQLStorage(options) {
+    return getStorage({engine: "mysql", settings: {
+      "host": "localhost",
+      "user": "travis",
+      "password": "",
+      "database": "looptest"}}, options);
+  });
+
+  testStorage("Proxy", function createProxyStorage(options) {
+    return getStorage({
+      "engine": "proxy",
+      "settings": {
+        "persistentStorage": {
+          "engine": "mysql",
+          "settings": {
+            "host": "localhost",
+            "user": "travis",
+            "password": "",
+            "database": "looptest"
+          }
+        },
+        "volatileStorage": {
+          "engine": "redis",
+          "settings": {
+            "db": 5
+          }
+        }
+      }}, options);
   });
 
   describe("Redis specifics", function() {

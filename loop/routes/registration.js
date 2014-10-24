@@ -14,7 +14,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
       storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
         function(err) {
           if (res.serverError(err)) return;
-          res.status(200).json();
+          res.status(200).json({});
         });
     });
 
@@ -25,7 +25,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   app.delete('/registration', auth.requireHawkSession, function(req, res) {
     storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
       if (res.serverError(err)) return;
-      res.status(204).json();
+      res.status(204).json({});
     });
   });
 };

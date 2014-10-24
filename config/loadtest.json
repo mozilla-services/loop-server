@@ -29,5 +29,22 @@
   "rooms": {
     "HKDFSalt": "6b4a7eec5406fcb3d394e7f64b2a72a2",
     "maxSize": 10
+  },
+  "storage": {
+    "engine": "proxy",
+    "settings": {
+      "volatileStorage": {
+        "engine": "redis"
+      },
+      "persistentStorage": {
+        "engine": "mysql",
+        "settings": {
+          "host": "localhost",
+          "user": "travis",
+          "password": "",
+          "database": "looptest"
+        }
+      }
+    }
   }
 }

@@ -103,7 +103,7 @@ describe("index.js", function() {
 
     // Create a route with the validateToken middleware installed.
     apiRouter.get('/validateToken/:token', validateToken, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     afterEach(function(done) {
@@ -167,7 +167,7 @@ describe("index.js", function() {
   describe("#validateSimplePushURL", function() {
     // Create a route with the validateSimplePushURL middleware installed.
     apiRouter.post('/validateSP/', validateSimplePushURL, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     it("should validate the simple push url", function(done) {
@@ -226,7 +226,7 @@ describe("index.js", function() {
   describe("#validateCallType", function() {
     // Create a route with the validateSimplePushURL middleware installed.
     apiRouter.post('/validateCallType/', validateCallType, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     it("should error on empty callType", function(done) {
@@ -277,12 +277,12 @@ describe("index.js", function() {
     // Create a route with the requireParams middleware installed.
     apiRouter.post('/requireParams/', requireParams('a', 'b'),
       function(req, res) {
-        res.status(200).json();
+        res.status(200).json({});
       });
 
     apiRouter.post('/requireParams/simplePushURL',
       requireParams('simplePushURL'), function(req, res) {
-        res.status(200).json();
+        res.status(200).json({});
       });
 
     it("should return a 406 if the body is not in JSON.", function(done) {
@@ -334,7 +334,7 @@ describe("index.js", function() {
     user = "alexis";
 
     apiRouter.post("/with-authenticate", authenticate, function(req, res) {
-      res.status(200).json();
+      res.status(200).json({});
     });
 
     describe("BrowserID", function() {
@@ -396,6 +396,11 @@ describe("index.js", function() {
           userHmac = hmac(tokenId, conf.get('hawkIdSecret'));
           storage.setHawkSession(userHmac, authKey, done);
         });
+        sandbox = sinon.sandbox.create();
+      });
+
+      afterEach(function() {
+        sandbox.restore();
       });
 
       it("should accept valid hawk sessions", function(done) {
@@ -414,6 +419,7 @@ describe("index.js", function() {
             .expect(401)
             .end(done);
         });
+
       it("should update session expiration time on auth", function(done) {
         sandbox.spy(storage, "touchHawkSession");
         supertest(app)
@@ -424,7 +430,7 @@ describe("index.js", function() {
             if (err) {
               throw err;
             }
-            assert.calledWithExactly(
+            assert.calledWith(
               storage.touchHawkSession,
               userHmac
             );
@@ -508,7 +514,7 @@ describe("index.js", function() {
 
       it("should return callId, sessionId, apiKey and caller token info",
         function(done) {
-          sandbox.stub(request, "put");
+          sandbox.stub(request, "put", function(url, cb) { cb(); });
           supertest(app)
             .post(apiPrefix + '/storeUserCallTokens')
             .send({
