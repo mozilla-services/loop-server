@@ -52,7 +52,7 @@ RedisStorage.prototype = {
       });
   },
 
-  getUserSimplePushURLs: function(userIdHmac, callback) {
+  getUserSimplePushURLs: function(userMac, callback) {
     var self = this;
 
     var result = {};
@@ -60,7 +60,7 @@ RedisStorage.prototype = {
       result[SIMPLE_PUSH_TOPICS[i]] = [];
     }
 
-    this._client.keys('spurl.' + userIdHmac + '.*', function(err, spurl_keys) {
+    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
       if (err) {
         callback(err);
         return;
@@ -100,8 +100,8 @@ RedisStorage.prototype = {
     });
   },
 
-  removeSimplePushURLs: function(userIdHmac, hawkHmacId, callback) {
-    this._client.del('spurl.' + userIdHmac + '.' + hawkHmacId, callback);
+  removeSimplePushURLs: function(userMac, hawkHmacId, callback) {
+    this._client.del('spurl.' + userMac + '.' + hawkHmacId, callback);
   },
 
   /**
@@ -109,10 +109,10 @@ RedisStorage.prototype = {
    *
    * @param String the user mac.
    **/
-  deleteUserSimplePushURLs: function(userIdHmac, callback) {
+  deleteUserSimplePushURLs: function(userMac, callback) {
     var self = this;
 
-    this._client.keys('spurl.' + userIdHmac + '.*', function(err, spurl_keys) {
+    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
       if (err) {
         callback(err);
         return;
@@ -126,9 +126,9 @@ RedisStorage.prototype = {
     });
   },
 
-  addUserCallUrlData: function(userIdHmac, callUrlId, urlData, callback) {
-    if (userIdHmac === undefined) {
-      callback(new Error("userIdHmac should be defined."));
+  addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
       return;
     } else if (urlData.timestamp === undefined) {
       callback(new Error("urlData should have a timestamp property."));
@@ -137,20 +137,20 @@ RedisStorage.prototype = {
     var self = this;
 
     var data = JSON.parse(JSON.stringify(urlData));
-    data.userIdHmac = userIdHmac;
+    data.userMac = userMac;
 
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
       urlData.expires - parseInt(Date.now() / 1000, 10),
-      JSON.stringify(urlData),
+      JSON.stringify(data),
       function(err) {
         if (err) {
           callback(err);
           return;
         }
         self._client.sadd(
-          'userUrls.' + userIdHmac,
+          'userUrls.' + userMac,
           'callurl.' + callUrlId, callback
         );
       });
@@ -162,10 +162,10 @@ RedisStorage.prototype = {
    * If the call-url doesn't belong to the given user, returns an
    * authentication error.
    **/
-  updateUserCallUrlData: function(userIdHmac, callUrlId, newData, callback) {
+  updateUserCallUrlData: function(userMac, callUrlId, newData, callback) {
     var self = this;
     self._client.sismember(
-      'userUrls.' + userIdHmac,
+      'userUrls.' + userMac,
       'callurl.' + callUrlId,
       function(err, res) {
         if (err){
@@ -216,9 +216,9 @@ RedisStorage.prototype = {
    *
    * @param String the user mac.
    **/
-  deleteUserCallUrls: function(userIdHmac, callback) {
+  deleteUserCallUrls: function(userMac, callback) {
     var self = this;
-    self._client.smembers('userUrls.' + userIdHmac, function(err, calls) {
+    self._client.smembers('userUrls.' + userMac, function(err, calls) {
       if (err) {
         callback(err);
         return;
@@ -228,7 +228,7 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        self._client.del('userUrls.' + userIdHmac, callback);
+        self._client.del('userUrls.' + userMac, callback);
       });
     });
   },
@@ -237,9 +237,9 @@ RedisStorage.prototype = {
     this._client.del('callurl.' + callUrlId, callback);
   },
 
-  getUserCallUrls: function(userIdHmac, callback) {
+  getUserCallUrls: function(userMac, callback) {
     var self = this;
-    this._client.smembers('userUrls.' + userIdHmac, function(err, members) {
+    this._client.smembers('userUrls.' + userMac, function(err, members) {
       if (err) {
         callback(err);
         return;
@@ -267,7 +267,7 @@ RedisStorage.prototype = {
         });
 
         if (expired.length > 0) {
-          self._client.srem('userUrls.' + userIdHmac, expired, function(err) {
+          self._client.srem('userUrls.' + userMac, expired, function(err) {
             if (err) {
               callback(err);
               return;
@@ -281,9 +281,9 @@ RedisStorage.prototype = {
     });
   },
 
-  addUserCall: function(userIdHmac, call, callback) {
-    if (userIdHmac === undefined) {
-      callback(new Error("userIdHmac should be defined."));
+  addUserCall: function(userMac, call, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
       return;
     }
     var self = this;
@@ -305,7 +305,7 @@ RedisStorage.prototype = {
             callback(err);
             return;
           }
-          self._client.sadd('userCalls.' + userIdHmac,
+          self._client.sadd('userCalls.' + userMac,
                             'call.' + call.callId, callback);
         });
       });
@@ -318,9 +318,9 @@ RedisStorage.prototype = {
    *
    * @param String the user mac.
    **/
-  deleteUserCalls: function(userIdHmac, callback) {
+  deleteUserCalls: function(userMac, callback) {
     var self = this;
-    this._client.smembers('userCalls.' + userIdHmac, function(err, members) {
+    this._client.smembers('userCalls.' + userMac, function(err, members) {
       if (err) {
         callback(err);
         return;
@@ -346,20 +346,20 @@ RedisStorage.prototype = {
               callback(err);
               return;
             }
-            self._client.del('userCalls.' + userIdHmac, callback);
+            self._client.del('userCalls.' + userMac, callback);
           });
         });
       });
     });
   },
 
-  getUserCalls: function(userIdHmac, callback) {
-    if (userIdHmac === undefined) {
-      callback(new Error("userIdHmac should be defined."));
+  getUserCalls: function(userMac, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
       return;
     }
     var self = this;
-    this._client.smembers('userCalls.' + userIdHmac, function(err, members) {
+    this._client.smembers('userCalls.' + userMac, function(err, members) {
       if (err) {
         callback(err);
         return;
@@ -406,7 +406,7 @@ RedisStorage.prototype = {
         }
 
         if (expired.length > 0) {
-          self._client.srem('userCalls.' + userIdHmac, expired, function(err) {
+          self._client.srem('userCalls.' + userMac, expired, function(err) {
             if (err) {
               callback(err);
               return;
@@ -703,9 +703,9 @@ RedisStorage.prototype = {
     this._client.del('oauth.state.' + hawkIdHmac, callback);
   },
 
-  setUserRoomData: function(userIdHmac, roomToken, roomData, callback) {
-    if (userIdHmac === undefined) {
-      callback(new Error("userIdHmac should be defined."));
+  setUserRoomData: function(userMac, roomToken, roomData, callback) {
+    if (userMac === undefined) {
+      callback(new Error("userMac should be defined."));
       return;
     } else if (roomToken === undefined) {
       callback(new Error("roomToken should be defined."));
@@ -731,15 +731,15 @@ RedisStorage.prototype = {
           return;
         }
         self._client.sadd(
-          'userRooms.' + userIdHmac,
+          'userRooms.' + userMac,
           'room.' + roomToken, callback
         );
       });
   },
 
-  getUserRooms: function(userIdHmac, callback) {
+  getUserRooms: function(userMac, callback) {
     var self = this;
-    this._client.smembers('userRooms.' + userIdHmac, function(err, members) {
+    this._client.smembers('userRooms.' + userMac, function(err, members) {
       if (err) {
         callback(err);
         return;
@@ -782,7 +782,7 @@ RedisStorage.prototype = {
             return;
           }
           if (expired.length > 0) {
-            self._client.srem('userRooms.' + userIdHmac, expired, function(err) {
+            self._client.srem('userRooms.' + userMac, expired, function(err) {
               if (err) {
                 callback(err);
                 return;
