@@ -909,8 +909,10 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 403 if the token doesn't belong to the user",
         function(done){
-          storage.addUserCallUrlData(userHmac, token, {
-            userMac: "h4x0r",
+          var userMac = "h4x0r";
+
+          storage.addUserCallUrlData(userMac, token, {
+            userMac: userMac,
             timestamp: parseInt(Date.now() / 1000, 10),
             expires: parseInt(Date.now() / 1000, 10) + callUrls.timeout
           }, function(err) {

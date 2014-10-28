@@ -30,7 +30,7 @@ describe("metrics middleware", function() {
   apiRouter.get("/with-metrics-middleware", logMetrics, function(req, res) {
     req.user = 'uuid';
     req.callId = '1234';
-    req.callUrlData = 'data';
+    req.callUrlData = {userMac: 'userMacHere'};
     res.status(200).json();
   });
 
@@ -89,7 +89,8 @@ describe("metrics middleware", function() {
         expect(logged.errno).to.eql(0);
         expect(logged.time).to.eql('2014-02-28T13:52:34Z');
         expect(logged.method).to.eql('get');
-
+        expect(logged.calleeId).to.eql('userMacHere');
+        expect(logged.callerId).to.eql('uuid');
         done();
       });
   });

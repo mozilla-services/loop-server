@@ -135,11 +135,15 @@ RedisStorage.prototype = {
       return;
     }
     var self = this;
+
+    var data = JSON.parse(JSON.stringify(urlData));
+    data.userMac = userMac;
+
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
       urlData.expires - parseInt(Date.now() / 1000, 10),
-      JSON.stringify(urlData),
+      JSON.stringify(data),
       function(err) {
         if (err) {
           callback(err);
