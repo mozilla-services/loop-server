@@ -79,7 +79,7 @@ function logMetrics(req, res, next) {
       };
 
       if (req.hasOwnProperty("callUrlData")) {
-        line.calleeId = req.callUrlData.userIdHmac;
+        line.calleeId = req.callUrlData.userMac;
         line.callerId = req.user;
       }
 
