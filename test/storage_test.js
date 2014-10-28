@@ -63,15 +63,18 @@ describe("Storage", function() {
       urls = [
         {
           timestamp:  now,
-          expires: now + callUrls.timeout
+          expires: now + callUrls.timeout,
+          userMac: userMac
         },
         {
           timestamp:  now + 1,
-          expires: now + callUrls.timeout
+          expires: now + callUrls.timeout,
+          userMac: userMac
         },
         {
           timestamp:  now + 2,
-          expires: now + callUrls.timeout
+          expires: now + callUrls.timeout,
+          userMac: userMac
         }
       ],
     urlData = urls[0],
@@ -294,7 +297,8 @@ describe("Storage", function() {
                     callerId: "natim@moz",
                     issuer: "alexis@moz",
                     expires: urlData.expires,
-                    timestamp: urlData.timestamp
+                    timestamp: urlData.timestamp,
+                    userMac: urlData.userMac
                   });
                   done();
                 });
