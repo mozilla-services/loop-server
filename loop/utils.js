@@ -5,6 +5,7 @@
 "use strict";
 
 var conf = require('./config').conf;
+var decrypt = require('./encrypt').decrypt;
 
 function sendError(res, code, errno, error, message, info) {
   var errmap = {};
@@ -51,8 +52,23 @@ function isoDateString(d){
     pad(d.getUTCSeconds()) + 'Z';
 }
 
+function getUserAccount(storage, req, callback) {
+  storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
+    if (err) {
+      callback(err);
+      return;
+    }
+    var userId;
+    if (encryptedUserId !== null) {
+      userId = decrypt(req.hawk.id, encryptedUserId);
+    }
+    callback(err, userId);
+  });
+}
+
 module.exports = {
   getProgressURL: getProgressURL,
   sendError: sendError,
-  isoDateString: isoDateString
+  isoDateString: isoDateString,
+  getUserAccount: getUserAccount
 };

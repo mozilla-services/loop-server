@@ -6,7 +6,7 @@
 
 var errors = require('../errno.json');
 var sendError = require('../utils').sendError;
-
+var getUserAccount = require('../utils').getUserAccount;
 
 module.exports = function (app, conf, logError, storage, auth, validators,
   statsdClient) {
@@ -30,21 +30,41 @@ module.exports = function (app, conf, logError, storage, auth, validators,
     app.post('/call-url', auth.requireHawkSession,
       validators.requireParams('callerId'), validators.validateCallUrlParams,
       function(req, res) {
+
+        function _addUserCallUrlData() {
+          storage.addUserCallUrlData(req.user, req.token, req.urlData,
+            function(err) {
+              if (res.serverError(err)) return;
+              // XXX Bug 1032966 - call_url is deprecated
+              var webAppUrl = conf.get("webAppUrl").replace("{token}", req.token);
+              res.status(200).json({
+                callUrl: webAppUrl,
+                callToken: req.token,
+                call_url: webAppUrl,
+                expiresAt: req.urlData.expires
+              });
+            });
+        }
+
         if (statsdClient !== undefined) {
           statsdClient.count('loop-call-urls', 1);
         }
 
-        storage.addUserCallUrlData(req.user, req.token, req.urlData,
-          function(err) {
-            if (res.serverError(err)) return;
-            // XXX Bug 1032966 - call_url is deprecated
-            res.status(200).json({
-              callUrl: conf.get("webAppUrl").replace("{token}", req.token),
-              callToken: req.token,
-              call_url: conf.get("webAppUrl").replace("{token}", req.token),
-              expiresAt: req.urlData.expires
-            });
-          });
+        if (req.urlData.issuer && req.urlData.issuer.length) {
+          _addUserCallUrlData();
+          return;
+        }
+
+        // If the user didn't specify a friendly name we use the user's
+        // identity in case that it isn't an anonymously generated URL.
+        getUserAccount(storage, req, function(err, userId) {
+          if (res.serverError(err)) {
+            return;
+          }
+
+          req.urlData.issuer = userId;
+          _addUserCallUrlData();
+        });
       });
 
     app.put('/call-url/:token', auth.requireHawkSession,

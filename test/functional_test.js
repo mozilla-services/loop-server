@@ -496,6 +496,72 @@ function runOnPrefix(apiPrefix) {
           });
       });
 
+      it("should store provided issuer", function(done) {
+        var issuer = "aIssuer";
+        jsonReq
+          .expect(200)
+          .send({ callerId: callerId, issuer: issuer})
+          .end(function(err, res) {
+            if (err) throw err;
+            var callUrl = res.body.callUrl;
+            var token = callUrl.split("/").pop();
+
+            storage.getCallUrlData(token, function(err, urlData) {
+              if (err) throw err;
+              expect(urlData.issuer).eql(issuer);
+              done();
+            });
+          });
+      });
+
+      it("should not store issuer if an anonymous identity is " +
+         "provided", function(done) {
+        var token = new Token();
+        token.getCredentials(function(tokenId, authKey) {
+          var anonymousHawkCredentials = {
+            id: tokenId,
+            key: authKey,
+            algorithm: "sha256"
+          };
+          var anonymousHawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+          storage.setHawkSession(anonymousHawkIdHmac, authKey, function(err) {
+            if (err) throw err;
+            supertest(app)
+              .post(apiPrefix + "/call-url")
+              .hawk(anonymousHawkCredentials)
+              .send({ callerId: callerId })
+              .expect(200)
+              .end(function(err, res) {
+                if (err) throw err;
+                var callUrl = res.body.callUrl;
+                var token = callUrl.split("/").pop();
+                storage.getCallUrlData(token, function(err, urlData) {
+                  if (err) throw err;
+                  expect(urlData.issuer).eql(undefined);
+                  done();
+                });
+              });
+          });
+        });
+      });
+
+      it("should store user identity if no issuer is provided", function(done) {
+        jsonReq
+          .expect(200)
+          .send({ callerId: callerId })
+          .end(function(err, res) {
+            if (err) throw err;
+            var callUrl = res.body.callUrl;
+            var token = callUrl.split("/").pop();
+
+            storage.getCallUrlData(token, function(err, urlData) {
+              if (err) throw err;
+              expect(urlData.issuer).eql(user);
+              done();
+            });
+          });
+      });
+
       it("should return the expiration date of the call-url", function(done) {
         jsonReq
           .expect(200)
