@@ -552,6 +552,42 @@ RedisStorage.prototype = {
     });
   },
 
+  incrementConnectedCallDevices: function(type, callId, callback) {
+    var self = this;
+    var key = 'call.devices.' + callId + '.' + type;
+
+    self._client.incr(key, function(err) {
+      if (err) {
+        return callback(err);
+      }
+      self._client.expire(key, self._settings.callDuration, callback);
+    });
+  },
+
+  decrementConnectedCallDevices: function(type, callId, callback) {
+    var self = this;
+    var key = 'call.devices.' + callId + '.' + type;
+
+    self._client.decr(key, function(err) {
+      if (err) {
+        return callback(err);
+      }
+      self._client.expire(key, self._settings.callDuration, callback);
+    });
+  },
+
+  getConnectedCallDevices: function(type, callId, callback) {
+    var self = this;
+    var key = 'call.devices.' + callId + '.' + type;
+
+    self._client.get(key, function(err, number) {
+      if (err){
+        return callback(err);
+      }
+      return callback(err, parseInt(number));
+    });
+  },
+
   /**
    * Set the call termination reason
    */

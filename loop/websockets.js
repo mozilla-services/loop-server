@@ -117,113 +117,117 @@ MessageHandler.prototype = {
         callback(new Error(constants.ERROR_REASONS.BAD_AUTHENTICATION));
         return;
       }
-
-      // Get current call state to answer hello message.
-      self.storage.getCallState(session.callId, function(err, currentState) {
-        if (serverError(err, callback)) return;
-        self.storage.getCallTerminationReason(session.callId, function(err, reason) {
+      self.storage.incrementConnectedCallDevices(session.type, session.callId,
+        function(){
+        // Get current call state to answer hello message.
+        self.storage.getCallState(session.callId, function(err, currentState) {
           if (serverError(err, callback)) return;
+          self.storage.getCallTerminationReason(session.callId, function(err, reason) {
+            if (serverError(err, callback)) return;
 
-          // Alert clients on call state changes.
-          var onMessage = function(channel, data) {
-            var parts = data.split(":");
-            var receivedState = parts[0];
-            var reason = parts[1];
-            var terminate;
+            // Alert clients on call state changes.
+            var onMessage = function(channel, data) {
+              var parts = data.split(":");
+              var receivedState = parts[0];
+              var reason = parts[1];
+              var terminate;
 
-            // Discard all messages which aren't for this session.
-            if (channel === session.callId) {
-              if (receivedState === constants.CALL_STATES.TERMINATED ||
-                  receivedState === constants.CALL_STATES.CONNECTED) {
-                terminate = "closeConnection";
-              }
+              // Discard all messages which aren't for this session.
+              if (channel === session.callId) {
 
-              // If received state is "connected" but the session is not
-              // marked as such, it means that it was answered elsewhere.
-              if (receivedState === constants.CALL_STATES.CONNECTED &&
-                !session.connected) {
-                receivedState = constants.CALL_STATES.TERMINATED;
-                reason = constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE;
-              }
-              if (session.receivedState !== receivedState) {
-                // Store the received state we sent to be sure not to send it
-                // twice.
-                session.receivedState = receivedState;
-
-                var message = {
-                  messageType: constants.MESSAGE_TYPES.PROGRESS,
-                  state: receivedState
-                };
-                if (reason !== undefined) {
-                  message.reason = reason;
+                if (receivedState === constants.CALL_STATES.TERMINATED ||
+                    receivedState === constants.CALL_STATES.CONNECTED) {
+                  terminate = "closeConnection";
                 }
 
-                callback(null, message, terminate);
-              }
-            }
-          };
+                // If received state is "connecting" but the session is not
+                // marked as such, it means that it was answered elsewhere.
+                if (receivedState === constants.CALL_STATES.CONNECTING &&
+                    session.type === "callee" && !session.accepted) {
+                  receivedState = constants.CALL_STATES.TERMINATED;
+                  reason = constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE;
+                  terminate = "closeConnection";
+                }
+                if (session.receivedState !== receivedState) {
+                  // Store the received state we sent to be sure not to send it
+                  // twice.
+                  session.receivedState = receivedState;
 
-          self.sub.on("message", onMessage);
-          // keep track of the active listeners
-          session.subListeners.push(onMessage);
-
-          // Wait for the other caller to connect for the time of the call.
-          session.timeouts.push(setTimeout(function() {
-            // Supervisory timer: Until the callee says HELLO
-            self.storage.getCallState(session.callId, function(err, state) {
-              if (serverError(err, callback)) return;
-              if (state === constants.CALL_STATES.HALF_INITIATED) {
-
-                self.broadcastState(session,
-                                    constants.CALL_STATES.TERMINATED + ":" +
-                                    constants.MESSAGE_REASONS.TIMEOUT);
-              }
-            });
-          }, conf.get("timers").supervisoryDuration * 1000));
-
-          // Subscribe to the channel to setup progress updates.
-          self.sub.subscribe(session.callId);
-
-          // Don't publish the half-initiated state, it's only for internal
-          // use.
-          var helloState = currentState;
-          if (currentState === constants.CALL_STATES.HALF_INITIATED) {
-            helloState = constants.CALL_STATES.INIT;
-          }
-
-          callback(null, {
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            state: helloState,
-            reason: reason || undefined
-          });
-
-          // After the hello phase and as soon the callee is connected,
-          // the call changes to the "alerting" state.
-          if (currentState === constants.CALL_STATES.INIT ||
-              currentState === constants.CALL_STATES.HALF_INITIATED) {
-
-            self.broadcastState(
-              session,
-              constants.CALL_STATES.INIT + "." + session.type
-            );
-
-            if (session.type === "callee") {
-              session.timeouts.push(setTimeout(function() {
-                // Ringing timer until the callee picks up the phone
-                self.storage.getCallState(session.callId, function(err, state) {
-                  if (serverError(err, callback)) return;
-                  if (state === constants.CALL_STATES.ALERTING) {
-                    self.broadcastState(
-                      session,
-                      constants.CALL_STATES.TERMINATED + ":" +
-                      constants.MESSAGE_REASONS.TIMEOUT
-                    );
+                  var message = {
+                    messageType: constants.MESSAGE_TYPES.PROGRESS,
+                    state: receivedState
+                  };
+                  if (reason !== undefined) {
+                    message.reason = reason;
                   }
-                });
-              }, self.conf.ringingDuration * 1000));
+
+                  callback(null, message, terminate);
+                }
+              }
+            };
+
+            self.sub.on("message", onMessage);
+            // keep track of the active listeners
+            session.subListeners.push(onMessage);
+
+            // Wait for the other caller to connect for the time of the call.
+            session.timeouts.push(setTimeout(function() {
+              // Supervisory timer: Until the callee says HELLO
+              self.storage.getCallState(session.callId, function(err, state) {
+                if (serverError(err, callback)) return;
+                if (state === constants.CALL_STATES.HALF_INITIATED) {
+
+                  self.broadcastState(session,
+                                      constants.CALL_STATES.TERMINATED + ":" +
+                                      constants.MESSAGE_REASONS.TIMEOUT);
+                }
+              });
+            }, conf.get("timers").supervisoryDuration * 1000));
+
+            // Subscribe to the channel to setup progress updates.
+            self.sub.subscribe(session.callId);
+
+            // Don't publish the half-initiated state, it's only for internal
+            // use.
+            var helloState = currentState;
+            if (currentState === constants.CALL_STATES.HALF_INITIATED) {
+              helloState = constants.CALL_STATES.INIT;
             }
 
-          }
+            callback(null, {
+              messageType: constants.MESSAGE_TYPES.HELLO,
+              state: helloState,
+              reason: reason || undefined
+            });
+
+            // After the hello phase and as soon the callee is connected,
+            // the call changes to the "alerting" state.
+            if (currentState === constants.CALL_STATES.INIT ||
+                currentState === constants.CALL_STATES.HALF_INITIATED) {
+
+              self.broadcastState(
+                session,
+                constants.CALL_STATES.INIT + "." + session.type
+              );
+
+              if (session.type === "callee") {
+                session.timeouts.push(setTimeout(function() {
+                  // Ringing timer until the callee picks up the phone
+                  self.storage.getCallState(session.callId, function(err, state) {
+                    if (serverError(err, callback)) return;
+                    if (state === constants.CALL_STATES.ALERTING) {
+                      self.broadcastState(
+                        session,
+                        constants.CALL_STATES.TERMINATED + ":" +
+                        constants.MESSAGE_REASONS.TIMEOUT
+                      );
+                    }
+                  });
+                }, self.conf.ringingDuration * 1000));
+              }
+
+            }
+          });
         });
       });
     });
@@ -371,9 +375,9 @@ MessageHandler.prototype = {
     var state = parts[0];
     var reason = parts[1];
 
-    // Store if the session is connected so we can tell the other .
-    if (state.split('.')[0] === constants.CALL_STATES.CONNECTED) {
-      session.connected = true;
+    // Store if the session is accepted so we can tell the other .
+    if (state.split('.')[0] === constants.CALL_STATES.CONNECTING) {
+      session.accepted = true;
     }
 
     self.storage.setCallState(callId, state, function(err) {
@@ -457,6 +461,29 @@ MessageHandler.prototype = {
     session.timeouts.forEach(function(timeout) {
       clearTimeout(timeout);
     });
+  },
+
+  socketClosed: function(session) {
+    this.clearSession(session);
+    var self = this;
+
+    // We want to broadcast the termination only if we were the last device
+    // for this type of connection
+    self.storage.getConnectedCallDevices(session.type, session.callId,
+      function(_, connectedDevices) {
+        self.storage.decrementConnectedCallDevices(
+          session.type, session.callId, function() {
+            // Don't catch the errors here since we're already closing the
+            // socket.
+            if (connectedDevices === 1) {
+              self.broadcastState(
+                session,
+                constants.CALL_STATES.TERMINATED + ":" +
+                constants.MESSAGE_REASONS.CLOSED
+              );
+            }
+          });
+        });
   }
 };
 
@@ -483,7 +510,7 @@ module.exports = function(storage, logError, conf) {
       var session = {
         subListeners: [],
         timeouts: [],
-        connected: false
+        accepted: false
       };
       ws.on('message', function(data) {
         try {
@@ -520,7 +547,6 @@ module.exports = function(storage, logError, conf) {
 
               if (terminate === "closeConnection") {
                 ws.close();
-                messageHandler.clearSession(session);
               }
             });
         } catch(e) {
@@ -534,15 +560,12 @@ module.exports = function(storage, logError, conf) {
             // connected.
           }
           ws.close();
-          messageHandler.clearSession(session);
+          messageHandler.socketClosed(session);
         }
       });
       ws.on('close', function() {
         ws.close();
-        messageHandler.broadcastState(session,
-                                      constants.CALL_STATES.TERMINATED + ":" +
-                                      constants.MESSAGE_REASONS.CLOSED);
-        messageHandler.clearSession(session);
+        messageHandler.socketClosed(session);
       });
       ws.on('error', console.error);
     });
