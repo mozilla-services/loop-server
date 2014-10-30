@@ -9,13 +9,19 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Registers the given user with the given simple push url.
    **/
-  app.post('/registration', validators.validateSimplePushURL, auth.authenticate,
+  app.post('/registration', auth.authenticate,
     function(req, res) {
-      storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
-        function(err) {
-          if (res.serverError(err)) return;
-          res.status(200).json();
+      // If the POST body is empty, it just refresh the session.
+      if (req.body.simplePushURLs !== {}) {
+        validators.validateSimplePushURL(req, res, function() {
+          // If we get one, it overrides any existing one.
+          storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
+            function(err) {
+              if (res.serverError(err)) return;
+              res.status(200).json();
+            });
         });
+      }
     });
 
   /**
