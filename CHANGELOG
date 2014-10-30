@@ -3,10 +3,19 @@ Changelog
 
 This document describes changes between each past release.
 
+0.12.6 (2014-10-30)
+-------------------
+
+- [security] Bug 1072136 — Add videur profile in /api-specs
+- [bugfix] Bug 1080491 — Return answered-elsewhere message on other callee devices.
+- [bugfix] Bug 1086698 — Store the user ID if no "issuer" is provided for POST /call-url
+
+
 0.12.5 (2014-10-15)
 -------------------
 
 - [bugfix] Bug 1079950 - GET /calls/?version=<version> should include the callerId for both FxA and non-FxA calls
+
 
 0.12.4 (2014-10-06)
 -------------------
@@ -14,11 +23,13 @@ This document describes changes between each past release.
 - [bugfix] Bug 1071244, 1071248 — Log WS errors + reason
 - [bugfix] Bug 1077328 — Make sure anonymous user cannot place direct calls
 
+
 0.12.3 (2014-10-02)
 -------------------
 
 - [bugfix] 1071247 — Fix OAuth implementation;
 - [tooling] Add a command to calculate the hawkIdHmac from the hawkId+hawkIdSecret
+
 
 0.12.2 (2014-09-18)
 -------------------
@@ -27,6 +38,7 @@ This document describes changes between each past release.
 - [bugfix] Check the headers using .get, not .headers;
 - [bugfix] Be sure to handle tokbox failures on time;
 - [config] Rename "host" into "ip".
+
 
 0.12.0 (2014-09-15)
 -------------------

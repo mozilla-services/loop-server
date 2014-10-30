@@ -1,7 +1,7 @@
 {
   "name": "mozilla-loop-server",
   "description": "The Mozilla Loop (WebRTC App) server",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "author": "Mozilla (https://mozilla.org/)",
   "homepage": "https://github.com/mozilla-services/loop-server/",
   "bugs": "https://bugzilla.mozilla.org/enter_bug.cgi?product=Loop&component=Server",
