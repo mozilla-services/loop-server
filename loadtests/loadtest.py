@@ -208,7 +208,8 @@ class TestLoop(TestCase):
 
     def _test_websockets(self, token, call_data, calls):
         progress_url = call_data['progressURL']
-        websocket_token = call_data['websocketToken']
+        caller_websocket_token = call_data['websocketToken']
+        callee_websocket_token = calls[0]['websocketToken']
         call_id = call_data['callId']
         caller_alerts = []
         callee_alerts = []
@@ -221,12 +222,19 @@ class TestLoop(TestCase):
             state = message.get('state')
             messageType = message.get('messageType')
 
-            if messageType == "progress" and state == "connecting":
+            if messageType == "progress" and state == "alerting":
+                self._send_ws_message(
+                    callee_ws,
+                    messageType="action",
+                    event="accept")
+                caller_ws.receive()
+
+            elif messageType == "progress" and state == "half-connected":
                 self._send_ws_message(
                     callee_ws,
                     messageType="action",
                     event="media-up")
-                caller_ws.receive()
+                callee_ws.receive()
 
             elif messageType == "progress" and state == "connected":
                 self.connected = True
@@ -242,15 +250,8 @@ class TestLoop(TestCase):
                 self._send_ws_message(
                     callee_ws,
                     messageType='hello',
-                    auth=calls[0]['websocketToken'],
+                    auth=callee_websocket_token,
                     callId=call_id)
-                callee_ws.receive()
-
-            elif messageType == "progress" and state == "alerting":
-                self._send_ws_message(
-                    caller_ws,
-                    messageType="action",
-                    event="accept")
                 callee_ws.receive()
 
             elif messageType == "progress" and state == "connecting":
@@ -273,7 +274,7 @@ class TestLoop(TestCase):
         self._send_ws_message(
             caller_ws,
             messageType='hello',
-            auth=websocket_token,
+            auth=caller_websocket_token,
             callId=call_id)
 
         while not self.connected:
@@ -289,7 +290,7 @@ class TestLoop(TestCase):
     def register(self):
         resp = self.session.post(
             self.base_url + '/registration',
-            data={'simple_push_url': 'http://httpbin.org/deny'})
+            data={'simplePushURL': 'http://httpbin.org/deny'})
         self.assertEquals(200, resp.status_code,
                           "Registration failed: %s" % resp.content)
 

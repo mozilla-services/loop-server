@@ -18,6 +18,6 @@ module.exports = function(app, conf) {
     strSpec = strSpec.replace('{callTokenSize}', callTokenSize);
     strSpec = strSpec.replace('{location}', location);
     strSpec = strSpec.replace('{version}', pjson.version);
-    res.json(200, JSON.parse(strSpec));
+    res.status(200).json(JSON.parse(strSpec));
   });
 };

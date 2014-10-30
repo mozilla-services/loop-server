@@ -117,106 +117,117 @@ MessageHandler.prototype = {
         callback(new Error(constants.ERROR_REASONS.BAD_AUTHENTICATION));
         return;
       }
-
-      // Get current call state to answer hello message.
-      self.storage.getCallState(session.callId, function(err, currentState) {
-        if (serverError(err, callback)) return;
-
-        // Alert clients on call state changes.
-        var listener = function(channel, data) {
-          var parts = data.split(":");
-          var receivedState = parts[0];
-          var reason = parts[1];
-          var terminate;
-
-          if (channel === session.callId) {
-            if (receivedState === constants.CALL_STATES.TERMINATED ||
-                receivedState === constants.CALL_STATES.CONNECTED) {
-              terminate = "closeConnection";
-            }
-            if (session.receivedState !== receivedState) {
-              session.receivedState = receivedState;
-
-              var message = {
-                messageType: constants.MESSAGE_TYPES.PROGRESS,
-                state: receivedState
-              };
-              if (reason !== undefined) {
-                message.reason = reason;
-              }
-
-              callback(null, message, terminate);
-            }
-          }
-        };
-
-        self.sub.on("message", listener);
-        // keep track of the active listeners
-        session.subListeners.push(listener);
-
-        // Wait for the other caller to connect for the time of the call.
-        session.timeouts.push(setTimeout(function() {
-          // Supervisory timer: Until the callee says HELLO
-          self.storage.getCallState(session.callId, function(err, state) {
+      self.storage.incrementConnectedCallDevices(session.type, session.callId,
+        function(){
+        // Get current call state to answer hello message.
+        self.storage.getCallState(session.callId, function(err, currentState) {
+          if (serverError(err, callback)) return;
+          self.storage.getCallTerminationReason(session.callId, function(err, reason) {
             if (serverError(err, callback)) return;
-            if (state === constants.CALL_STATES.HALF_INITIATED) {
 
-              self.broadcastState(session.callId,
-                                  constants.CALL_STATES.TERMINATED + ":" +
-                                  constants.MESSAGE_REASONS.TIMEOUT);
+            // Alert clients on call state changes.
+            var onMessage = function(channel, data) {
+              var parts = data.split(":");
+              var receivedState = parts[0];
+              var reason = parts[1];
+              var terminate;
 
-              self.storage.setCallState(session.callId,
-                                        constants.CALL_STATES.TERMINATED);
-            }
-          });
-        }, conf.get("timers").supervisoryDuration * 1000));
+              // Discard all messages which aren't for this session.
+              if (channel === session.callId) {
 
-        // Subscribe to the channel to setup progress updates.
-        self.sub.subscribe(session.callId);
+                if (receivedState === constants.CALL_STATES.TERMINATED ||
+                    receivedState === constants.CALL_STATES.CONNECTED) {
+                  terminate = "closeConnection";
+                }
 
-        // Don't publish the half-initiated state, it's only for internal
-        // use.
-        var helloState = currentState;
-        if (currentState === constants.CALL_STATES.HALF_INITIATED) {
-          helloState = constants.CALL_STATES.INIT;
-        }
+                // If received state is "connecting" but the session is not
+                // marked as such, it means that it was answered elsewhere.
+                if (receivedState === constants.CALL_STATES.CONNECTING &&
+                    session.type === "callee" && !session.accepted) {
+                  receivedState = constants.CALL_STATES.TERMINATED;
+                  reason = constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE;
+                  terminate = "closeConnection";
+                }
+                if (session.receivedState !== receivedState) {
+                  // Store the received state we sent to be sure not to send it
+                  // twice.
+                  session.receivedState = receivedState;
 
-        callback(null, {
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          state: helloState
-        });
+                  var message = {
+                    messageType: constants.MESSAGE_TYPES.PROGRESS,
+                    state: receivedState
+                  };
+                  if (reason !== undefined) {
+                    message.reason = reason;
+                  }
 
-        // After the hello phase and as soon the callee is connected,
-        // the call changes to the "alerting" state.
-        if (currentState === constants.CALL_STATES.INIT ||
-            currentState === constants.CALL_STATES.HALF_INITIATED) {
+                  callback(null, message, terminate);
+                }
+              }
+            };
 
-          self.broadcastState(
-            session.callId,
-            constants.CALL_STATES.INIT + "." + session.type
-          );
+            self.sub.on("message", onMessage);
+            // keep track of the active listeners
+            session.subListeners.push(onMessage);
 
-          if (session.type === "callee") {
+            // Wait for the other caller to connect for the time of the call.
             session.timeouts.push(setTimeout(function() {
-              // Ringing timer until the callee picks up the phone
+              // Supervisory timer: Until the callee says HELLO
               self.storage.getCallState(session.callId, function(err, state) {
                 if (serverError(err, callback)) return;
-                if (state === constants.CALL_STATES.ALERTING) {
-                  self.broadcastState(
-                    session.callId,
-                    constants.CALL_STATES.TERMINATED + ":" +
-                    constants.MESSAGE_REASONS.TIMEOUT
-                  );
-                  self.storage.setCallState(
-                    session.callId,
-                    constants.CALL_STATES.TERMINATED
-                  );
+                if (state === constants.CALL_STATES.HALF_INITIATED) {
+
+                  self.broadcastState(session,
+                                      constants.CALL_STATES.TERMINATED + ":" +
+                                      constants.MESSAGE_REASONS.TIMEOUT);
                 }
               });
-            }, self.conf.ringingDuration * 1000));
-          }
+            }, conf.get("timers").supervisoryDuration * 1000));
 
-        }
+            // Subscribe to the channel to setup progress updates.
+            self.sub.subscribe(session.callId);
+
+            // Don't publish the half-initiated state, it's only for internal
+            // use.
+            var helloState = currentState;
+            if (currentState === constants.CALL_STATES.HALF_INITIATED) {
+              helloState = constants.CALL_STATES.INIT;
+            }
+
+            callback(null, {
+              messageType: constants.MESSAGE_TYPES.HELLO,
+              state: helloState,
+              reason: reason || undefined
+            });
+
+            // After the hello phase and as soon the callee is connected,
+            // the call changes to the "alerting" state.
+            if (currentState === constants.CALL_STATES.INIT ||
+                currentState === constants.CALL_STATES.HALF_INITIATED) {
+
+              self.broadcastState(
+                session,
+                constants.CALL_STATES.INIT + "." + session.type
+              );
+
+              if (session.type === "callee") {
+                session.timeouts.push(setTimeout(function() {
+                  // Ringing timer until the callee picks up the phone
+                  self.storage.getCallState(session.callId, function(err, state) {
+                    if (serverError(err, callback)) return;
+                    if (state === constants.CALL_STATES.ALERTING) {
+                      self.broadcastState(
+                        session,
+                        constants.CALL_STATES.TERMINATED + ":" +
+                        constants.MESSAGE_REASONS.TIMEOUT
+                      );
+                    }
+                  });
+                }, self.conf.ringingDuration * 1000));
+              }
+            }
+          });
+        });
       });
     });
   },
@@ -264,7 +275,7 @@ MessageHandler.prototype = {
         }
         state += ":" + message.reason;
       }
-      self.broadcastState(session.callId, state);
+      self.broadcastState(session, state);
       return;
     }
 
@@ -293,12 +304,9 @@ MessageHandler.prototype = {
                 if (serverError(err, callback)) return;
                 if (state !== constants.CALL_STATES.CONNECTED) {
 
-                  self.broadcastState(session.callId,
+                  self.broadcastState(session,
                                       constants.CALL_STATES.TERMINATED + ":" +
                                       constants.MESSAGE_REASONS.TIMEOUT);
-
-                  self.storage.setCallState(session.callId,
-                                            constants.CALL_STATES.TERMINATED);
                 }
               });
             }, self.conf.connectionDuration * 1000));
@@ -331,7 +339,7 @@ MessageHandler.prototype = {
             }
             if (state !== null) {
               // In case we're connected, close the connection.
-              self.broadcastState(session.callId, state);
+              self.broadcastState(session, state);
 
               // Handle specific actions on transitions.
               if (eventConf.actuator !== undefined) {
@@ -359,40 +367,50 @@ MessageHandler.prototype = {
    * In case there a reason to broadcast, it's specified as
    * "terminated:{reason}".
    **/
-  broadcastState: function(callId, stateData) {
+  broadcastState: function(session, stateData) {
     var self = this;
+    var callId = session.callId;
     var parts = stateData.split(":");
     var state = parts[0];
     var reason = parts[1];
+
+    // Store if the session is accepted so we can tell the other .
+    if (state.split('.')[0] === constants.CALL_STATES.CONNECTING) {
+      session.accepted = true;
+    }
+
     self.storage.setCallState(callId, state, function(err) {
       if (serverError(err)) return;
-      self.storage.getCallState(callId, function(err, redisCurrentState) {
+      self.storage.setCallTerminationReason(callId, reason, function(err) {
         if (serverError(err)) return;
+        self.storage.getCallState(callId, function(err, redisCurrentState) {
+          if (serverError(err)) return;
 
-        var publishedState = redisCurrentState;
-        if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
-            reason !== undefined) {
-          publishedState += ":" + reason;
-        }
+          var publishedState = redisCurrentState;
+          if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
+              reason !== undefined) {
+            publishedState += ":" + reason;
+          }
 
-        if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
-          self.pub.publish(callId, publishedState, function(err) {
-            if (serverError(err)) return;
-          });
-        }
+          if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
+            self.pub.publish(callId, publishedState, function(err) {
+              if (serverError(err)) return;
+            });
+          }
 
-        if (conf.get("metrics") &&
-            (redisCurrentState === constants.CALL_STATES.CONNECTED ||
-             redisCurrentState === constants.CALL_STATES.TERMINATED)) {
+          if (conf.get("metrics") &&
+              (redisCurrentState === constants.CALL_STATES.CONNECTED ||
+               redisCurrentState === constants.CALL_STATES.TERMINATED)) {
 
-          hekaLogger.log('info', {
-            op: 'websocket.summary',
-            callId: callId,
-            state: redisCurrentState,
-            reason: reason,
-            time: isoDateString(new Date())
-          });
-        }
+            hekaLogger.log('info', {
+              op: 'websocket.summary',
+              callId: callId,
+              state: redisCurrentState,
+              reason: reason,
+              time: isoDateString(new Date())
+            });
+          }
+        });
       });
     });
   },
@@ -442,6 +460,29 @@ MessageHandler.prototype = {
     session.timeouts.forEach(function(timeout) {
       clearTimeout(timeout);
     });
+  },
+
+  socketClosed: function(session) {
+    this.clearSession(session);
+    var self = this;
+
+    // We want to broadcast the termination only if we were the last device
+    // for this type of connection
+    self.storage.getConnectedCallDevices(session.type, session.callId,
+      function(_, connectedDevices) {
+        self.storage.decrementConnectedCallDevices(
+          session.type, session.callId, function() {
+            // Don't catch the errors here since we're already closing the
+            // socket.
+            if (connectedDevices === 1) {
+              self.broadcastState(
+                session,
+                constants.CALL_STATES.TERMINATED + ":" +
+                constants.MESSAGE_REASONS.CLOSED
+              );
+            }
+          });
+        });
   }
 };
 
@@ -467,7 +508,8 @@ module.exports = function(storage, logError, conf) {
       // We have a different session for each connection.
       var session = {
         subListeners: [],
-        timeouts: []
+        timeouts: [],
+        accepted: false
       };
       ws.on('message', function(data) {
         try {
@@ -504,7 +546,6 @@ module.exports = function(storage, logError, conf) {
 
               if (terminate === "closeConnection") {
                 ws.close();
-                messageHandler.clearSession(session);
               }
             });
         } catch(e) {
@@ -518,15 +559,12 @@ module.exports = function(storage, logError, conf) {
             // connected.
           }
           ws.close();
-          messageHandler.clearSession(session);
+          messageHandler.socketClosed(session);
         }
       });
       ws.on('close', function() {
         ws.close();
-        messageHandler.broadcastState(session.callId,
-                                      constants.CALL_STATES.TERMINATED + ":" +
-                                      constants.MESSAGE_REASONS.CLOSED);
-        messageHandler.clearSession(session);
+        messageHandler.socketClosed(session);
       });
       ws.on('error', console.error);
     });

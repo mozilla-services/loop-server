@@ -312,7 +312,7 @@ describe('websockets', function() {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (calleeMsgCount === 2) {
-            // Third should be "progress/alerting".
+            // Third should be "progress/terminated/closed".
             expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
             expect(message.state).eql(constants.CALL_STATES.TERMINATED);
             expect(message.reason).eql(constants.MESSAGE_REASONS.CLOSED);
@@ -991,7 +991,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should close the connection if media-up send by only one party",
+    it("should close the connection if media-up sent by only one party",
       function(done) {
         var callerMsgCount = 0;
 
@@ -1044,7 +1044,7 @@ describe('websockets', function() {
           if (calleeMsgCount === 0) {
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
-            caller.send(JSON.stringify({
+            callee.send(JSON.stringify({
               messageType: constants.MESSAGE_TYPES.ACTION,
               event: constants.MESSAGE_EVENTS.ACCEPT
             }));
@@ -1166,6 +1166,187 @@ describe('websockets', function() {
         auth: "calleeToken",
         callId: callId
       }));
+    });
+
+    it("should return the terminated reason on hello.", function(done) {
+      caller.on('message', function(data) {
+        var message = JSON.parse(data);
+        expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+        expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+        expect(message.reason).eql(constants.MESSAGE_REASONS.BUSY);
+        done();
+      });
+
+      storage.setCallState(callId, constants.CALL_STATES.TERMINATED,
+        conf.get("timers").supervisoryDuration, function(err) {
+          if (err) throw err;
+          storage.setCallTerminationReason(callId, constants.MESSAGE_REASONS.BUSY,
+            function(err) {
+              if (err) throw err;
+              caller.send(JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.HELLO,
+                auth: "callerToken",
+                callId: callId
+              }));
+            });
+        });
+    });
+
+    describe("with three clients", function() {
+      var calleeSecondDevice;
+
+      beforeEach(function(done) {
+
+        // Create the second websocket callee.
+        calleeSecondDevice = new ws("ws://localhost:" +
+          server.address().port +
+          conf.get('progressURLEndpoint'));
+
+        calleeSecondDevice.on('close', function() { caller.isClosed = true; });
+
+        calleeSecondDevice.on('open', function() {
+          // Create a call and initialize its state to "init".
+          createCall(callId, hawkCredentials.id, function(err) {
+            if (err) throw err;
+            storage.setCallState(callId, constants.CALL_STATES.INIT,
+              conf.get("timers").supervisoryDuration, function(err) {
+                if (err) throw err;
+                done();
+              });
+          });
+        });
+      });
+
+      afterEach(function(done) {
+        if (! calleeSecondDevice.isClosed) {
+          calleeSecondDevice.close();
+        }
+        done();
+      });
+
+      it("should send terminated 'answered-elsewhere' if the call had been " +
+         "accepted by another device", function(done) {
+          var callerMsgCount = 0;
+          var calleeSecondDeviceCount = 0;
+
+          function checkCountsAndExit() {
+            if (callee.isClosed &&
+                caller.isClosed &&
+                calleeSecondDevice.isClosed) {
+              expect(calleeSecondDeviceCount).to.eql(3);
+              expect(calleeMsgCount).to.eql(5);
+              expect(callerMsgCount).to.eql(5);
+              done();
+            }
+          }
+
+          callee.on('close', function() {
+            callee.isClosed = true;
+            checkCountsAndExit();
+          });
+
+          caller.on('close', function() {
+            caller.isClosed = true;
+            checkCountsAndExit();
+          });
+
+          calleeSecondDevice.on('close', function() {
+            calleeSecondDevice.isClosed = true;
+          });
+
+          calleeSecondDevice.on('message', function(data) {
+            var message = JSON.parse(data);
+            if (calleeSecondDeviceCount === 0) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+              expect(message.state).eql(constants.CALL_STATES.INIT);
+            } else if (calleeSecondDeviceCount === 1) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.ALERTING);
+            } else if (calleeSecondDeviceCount === 2) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.TERMINATED);
+              expect(message.reason)
+                .eql(constants.MESSAGE_REASONS.ANSWERED_ELSEWHERE);
+            }
+            calleeSecondDeviceCount++;
+          });
+
+          caller.on('message', function(data) {
+            var message = JSON.parse(data);
+            if (callerMsgCount === 0) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+              expect(message.state).eql(constants.CALL_STATES.INIT);
+            } else if (callerMsgCount === 1) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.ALERTING);
+            } else if (callerMsgCount === 2) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTING);
+              message = JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.ACTION,
+                event: constants.MESSAGE_EVENTS.MEDIA_UP
+              });
+              caller.send(message);
+            } else if (callerMsgCount === 3) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
+            } else {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTED);
+            }
+            callerMsgCount++;
+          });
+
+          callee.on('message', function(data) {
+            var message = JSON.parse(data);
+            if (calleeMsgCount === 0) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
+              expect(message.state).eql(constants.CALL_STATES.INIT);
+              callee.send(JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.ACTION,
+                event: constants.MESSAGE_EVENTS.ACCEPT
+              }));
+            } else if (calleeMsgCount === 1) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.ALERTING);
+            } else if (calleeMsgCount === 2) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTING);
+            } else if (calleeMsgCount === 3) {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.HALF_CONNECTED);
+              message = JSON.stringify({
+                messageType: constants.MESSAGE_TYPES.ACTION,
+                event: constants.MESSAGE_EVENTS.MEDIA_UP
+              });
+              callee.send(message);
+            } else {
+              expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
+              expect(message.state).eql(constants.CALL_STATES.CONNECTED);
+            }
+            calleeMsgCount++;
+          });
+
+          // Second device for the callee connects.
+          calleeSecondDevice.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            auth: "calleeToken",
+            callId: callId
+          }));
+
+          caller.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            auth: "callerToken",
+            callId: callId
+          }));
+
+          // The callee connects his first device.
+          callee.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.HELLO,
+            auth: "calleeToken",
+            callId: callId
+          }));
+        });
     });
   });
 });

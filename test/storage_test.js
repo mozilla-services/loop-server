@@ -705,6 +705,34 @@ describe("Storage", function() {
         });
       });
 
+
+      describe("#setCallTerminationReason", function() {
+        it("should set the call termination reason", function(done) {
+          storage.addUserCall(userMac, call, function(err) {
+            if (err) throw err;
+            storage.setCallTerminationReason(call.callId,
+              constants.MESSAGE_REASONS.BUSY, function(err) {
+                if (err) throw err;
+                storage.getCallTerminationReason(call.callId, function(err, reason) {
+                  if (err) throw err;
+                  expect(reason).to.eql(constants.MESSAGE_REASONS.BUSY);
+                  done();
+                });
+              });
+          });
+        });
+      });
+
+      describe("#getCallTerminationReason", function() {
+        it("should return null when no call reason is set", function(done) {
+          storage.getCallTerminationReason("12345", function(err, reason) {
+            if (err) throw err;
+            expect(reason).to.eql(null);
+            done();
+          });
+        });
+      });
+
       describe("#ping", function() {
         it("should return true if we are connected", function(done) {
           storage.ping(function(connected) {
