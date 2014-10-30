@@ -10,6 +10,19 @@ This document describes changes between each past release.
 - [config] 1072293 — webAppUrl for calls is now configured in callUrls;
 - [config] 1072271 — Refactor logging configuration;
 
+
+0.12.6 (2014-10-30)
+-------------------
+- [security] Bug 1072136 — Add videur profile in /api-specs
+- [bugfix] Bug 1080491 — Return answered-elsewhere message on other callee devices.
+- [bugfix] Bug 1086698 — Store the user ID if no &quot;issuer&quot; is provided for POST /call-url
+
+
+0.12.5 (2014-10-15)
+-------------------
+- [bugfix] Bug 1079950 - GET /calls/?version=&lt;version&gt; should include the callerId for both FxA and non-FxA calls
+
+
 0.12.4 (2014-10-06)
 -------------------
 
