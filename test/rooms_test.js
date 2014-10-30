@@ -27,6 +27,7 @@ var storage = loop.storage;
 var tokBox = loop.tokBox;
 
 var requireHawkSession = auth.requireHawkSession;
+var authenticateWithHawkOrToken = auth.authenticateWithHawkOrToken;
 
 var sessionId = conf.get("fakeCallInfo").session1;
 var sessionToken = conf.get("fakeCallInfo").token1;
@@ -741,9 +742,9 @@ describe("/rooms", function() {
         .include(validators.validateRoomToken);
     });
 
-    it("should have the requireHawkSession middleware.", function() {
+    it("should have the authenticateWithHawkOrToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'post', '/rooms/:token'))
-        .include(requireHawkSession);
+        .include(authenticateWithHawkOrToken);
     });
 
     it("should fails if action is missing", function(done) {

@@ -241,11 +241,20 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *
    * Actions are "join", "leave", "refresh".
    **/
-  apiRouter.post('/rooms/:token', auth.requireHawkSession,
+  apiRouter.post('/rooms/:token', auth.authenticateWithHawkOrToken,
     validators.validateRoomToken, function(req, res) {
+      var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var ROOM_ACTIONS = ["join", "refresh", "leave"];
       var action = req.body.action;
       var code;
+
+      // If the action is not join, they should be authenticated.
+      if (participantHmac === "undefined" && action !== "join") {
+        var header = 'Token, Hawk';
+        res.set('WWW-Authenticate', header);
+        sendError(res, 401, errors.INVALID_AUTH_TOKEN, "Unauthorized");
+        return;
+      }
 
       if (ROOM_ACTIONS.indexOf(action) === -1) {
         if (req.body.hasOwnProperty('action')) {

@@ -180,6 +180,51 @@ module.exports = function(conf, logError, storage, statsdClient) {
     }
   );
 
+
+  function requireRoomSessionToken(req, res, next) {
+    var authorization, policy, splitted, token;
+
+    function _unauthorized(message){
+      var header = "Token";
+      if (message) header += ' error="' + message.replace(/"/g, '\"') + '"';
+      res.set('WWW-Authenticate', header);
+      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
+    }
+
+    authorization = req.headers.authorization;
+
+    if (authorization === undefined) {
+      _unauthorized();
+      return;
+    }
+
+    splitted = authorization.split(" ");
+    if (splitted.length !== 2) {
+      _unauthorized();
+      return;
+    }
+
+    policy = splitted[0];
+    token = splitted[1];
+
+    if (policy.toLowerCase() !== 'token') {
+      _unauthorized("Unsupported");
+      return;
+    }
+
+    var tokenHmac = hmac(token, conf.get('userMacSecret'));
+
+    storage.isValidRoomToken(req.token, tokenHmac, function(err, isValid) {
+      if (res.serverError(err)) return;
+      if (!isValid) {
+        _unauthorized("Invalid token - Either expired or doesn't exits.");
+        return;
+      }
+      req.participantTokenHmac = tokenHmac;
+      next();
+    });
+  }
+
   /**
    * Middleware that requires either BrowserID, Hawk, or nothing.
    *
@@ -222,8 +267,44 @@ module.exports = function(conf, logError, storage, statsdClient) {
     }
   }
 
+  function authenticateWithHawkOrToken(req, res, next) {
+    var supported = ["Token", "Hawk"];
+
+    // First thing: check that the headers are valid. Otherwise 401.
+    var authorization = req.headers.authorization;
+
+    function _unauthorized(message, supported) {
+      res.set('WWW-Authenticate', supported.join());
+      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
+    }
+
+    if (authorization !== undefined) {
+      var splitted = authorization.split(" ");
+      var policy = splitted[0];
+
+      // Next, let's check which one the user wants to use.
+      if (supported.map(function(s) { return s.toLowerCase(); })
+          .indexOf(policy.toLowerCase()) === -1) {
+        _unauthorized("Unsupported", supported);
+        return;
+      }
+
+      if (policy.toLowerCase() === "token") {
+        // If that's Token, then check if the token is right
+        requireRoomSessionToken(req, res, next);
+      } else if (policy.toLowerCase() === "hawk") {
+        // If that's Hawk, let's check they're valid.
+        requireHawkSession(req, res, next);
+      }
+    } else {
+      // Let the user access the view anonymously
+      next();
+    }
+  }
+
   return {
     authenticate: authenticate,
+    authenticateWithHawkOrToken: authenticateWithHawkOrToken,
     requireHawkSession: requireHawkSession,
     attachOrCreateHawkSession: attachOrCreateHawkSession,
     requireOAuthHawkSession: requireOAuthHawkSession,
