@@ -120,6 +120,54 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   }
 
   /**
+   * Returns room information given a specific token.
+   *
+   * @param {String} roomToken, the room token;
+   * @param {Object} roomStorageData, containing information from the store;
+   * @param {Function} callback which will receive the room information.
+   **/
+  function getRoomInfo(token, roomStorageData, callback) {
+    var clientMaxSize = getClientMaxSize(
+      roomStorageData.participants,
+      roomStorageData.maxSize
+    );
+
+    // Since the participant information is stored encrypted,
+    // there is a need to decrypt it using async.map as it is an async
+    // operation.
+    async.map(roomStorageData.participants,
+      function(participant, callback) {
+        decryptAccountName(token, participant.account, function(account) {
+          participant.account = account;
+          callback(null, participant);
+        });
+      }, function(err, participants) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        participants = participants.map(function(participant) {
+          delete participant.hawkIdHmac;
+          delete participant.userIdHmac;
+          delete participant.clientMaxSize;
+          return participant;
+        });
+        return callback(null, {
+          roomUrl: roomsConf.webAppUrl.replace('{token}', token),
+          roomName: roomStorageData.roomName,
+          roomOwner: roomStorageData.roomOwner,
+          maxSize: roomStorageData.maxSize,
+          clientMaxSize: clientMaxSize,
+          creationTime: roomStorageData.creationTime,
+          expiresAt: roomStorageData.expiresAt,
+          ctime: roomStorageData.updateTime,
+          participants: participants,
+          roomToken: token
+        });
+      });
+  }
+
+  /**
    * Create a new room with the given information
    **/
   apiRouter.post('/rooms', auth.requireHawkSession,
@@ -206,34 +254,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.get('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.isRoomParticipant,
     function(req, res) {
-      var clientMaxSize = getClientMaxSize(
-        req.roomStorageData.participants,
-        req.roomStorageData.maxSize
-      );
-
-      // Since the participant information is stored encrypted,
-      // there is a need to decrypt it using async.map as it is an async
-      // operation.
-      async.map(req.roomStorageData.participants,
-        function(participant, callback) {
-          decryptAccountName(req.token, participant.account, function(account) {
-            participant.account = account;
-            callback(null, participant);
-          });
-        }, function(err, participants) {
-          if (res.serverError(err)) return;
-          res.status(200).json({
-            roomUrl: roomsConf.webAppUrl.replace('{token}', req.token),
-            roomName: req.roomStorageData.roomName,
-            roomOwner: req.roomStorageData.roomOwner,
-            maxSize: req.roomStorageData.maxSize,
-            clientMaxSize: clientMaxSize,
-            creationTime: req.roomStorageData.creationTime,
-            expiresAt: req.roomStorageData.expiresAt,
-            ctime: req.roomStorageData.updateTime,
-            participants: participants
-          });
-        });
+      getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
+        delete roomData.roomToken;
+        if (res.serverError(err)) return;
+        res.status(200).json(roomData);
+      });
     });
 
   /**
@@ -361,25 +386,30 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    **/
 
   apiRouter.get('/rooms', auth.requireHawkSession, function(req, res) {
-    var version = req.query.version;
-    storage.getUserRooms(req.user, function(err, rooms) {
+    var version = parseInt(req.query.version);
+    storage.getUserRooms(req.user, function(err, userRooms) {
       if (res.serverError(err)) return;
-      var roomsData = rooms.map(function(room) {
-        if (version && room.updateTime < version) {
-          return null;
-        }
-        return {
-          roomToken: room.roomToken,
-          roomUrl: roomsConf.webAppUrl.replace('{token}', room.roomToken),
-          roomName: room.roomName,
-          maxSize: room.maxSize,
-          currSize: room.currSize,
-          ctime: room.updateTime
-        };
-      }).filter(function(room) {
-        return room !== null;
+      // filter the rooms we don't want.
+      var rooms = userRooms.filter(function(room) {
+        return !(version && room.updateTime < version);
       });
-      res.status(200).json(roomsData);
+
+      async.map(rooms,
+        function(room, callback) {
+          storage.getRoomParticipants(room.roomToken, function(err, participants) {
+            if (err){
+              callback(err);
+              return;
+            }
+            room.participants = participants;
+            getRoomInfo(room.roomToken, room, callback);
+          });
+        },
+        function(err, rooms) {
+          if (res.serverError(err)) return;
+          res.status(200).json(rooms);
+        }
+      );
     });
   });
 };

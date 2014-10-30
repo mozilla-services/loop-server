@@ -1068,15 +1068,31 @@ describe("/rooms", function() {
                 if (err) throw err;
                 expect(res.body).to.length(1);
                 expect(res.body[0].ctime).to.be.gte(startTime);
+                expect(res.body[0].creationTime).to.be.gte(startTime)
+                expect(res.body[0].expiresAt).to.be.gt(startTime);
+
+                var participants = res.body[0].participants;
+                var participant = participants[0];
+                expect(participants).to.length(1);
+                expect(participant.account).to.eql('alexis@notmyidea.org');
+                expect(participant.displayName).to.eql('Alexis');
+                expect(participant.id).to.not.eql(undefined);
+                expect(participant.userIdHmac).to.eql(undefined);
+                expect(participant.hawkIdHmac).to.eql(undefined);
+
+                delete res.body[0].participants;
+                delete res.body[0].creationTime;
+                delete res.body[0].expiresAt;
                 delete res.body[0].ctime;
                 var roomWebappUrl = conf.get('rooms').webAppUrl
                   .replace('{token}', roomToken);
                 expect(res.body[0]).to.eql({
+                  roomOwner: "Alexis",
                   roomToken: roomToken,
                   roomUrl: roomWebappUrl,
                   roomName: 'UX discussion',
                   maxSize: 3,
-                  currSize: 1
+                  clientMaxSize: 2
                 });
                 done();
               });
@@ -1095,7 +1111,7 @@ describe("/rooms", function() {
       });
     });
 
-    it("should only return the rooms with a timestamp greather than version.",
+    it("should only return the rooms with a timestamp greater than version.",
      function(done) {
         createRoom(hawkCredentials).end(function(err) {
           if (err) throw err;
