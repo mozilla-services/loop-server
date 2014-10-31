@@ -132,7 +132,7 @@ var refreshRoom = function(credentials, roomToken, status) {
     .expect(status || 200);
 
   if (credentials.token !== undefined) {
-    req = req.set("Authorization", "Token " + credentials);
+    req = req.set("Authorization", "Token " + credentials.token);
   } else {
     req = req.hawk(credentials.hawkCredentials || credentials);
   }
@@ -148,7 +148,7 @@ var leaveRoom = function(credentials, roomToken, status) {
     .expect(status || 204);
 
   if (credentials.token !== undefined) {
-    req = req.set("Authorization", "Token " + credentials);
+    req = req.set("Authorization", "Token " + credentials.token);
   } else {
     req = req.hawk(credentials.hawkCredentials || credentials);
   }
@@ -193,7 +193,7 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
     .expect(status || 204);
 };
 
-describe("/rooms", function() {
+describe.only("/rooms", function() {
   var sandbox, hawkCredentials, userHmac, hawkCredentials2, requests;
 
   beforeEach(function(done) {
@@ -909,6 +909,88 @@ describe("/rooms", function() {
             });
         });
       });
+
+      describe("Handle 'refresh'", function() {
+        var clock;
+
+        // Should touch the participant expiracy
+        beforeEach(function() {
+          clock = sinon.useFakeTimers(Date.now());
+        });
+
+        afterEach(function() {
+          clock.restore();
+        });
+
+        it("should touch the participant and return the next expiration.",
+          function(done) {
+            var startTime = parseInt(Date.now() / 1000, 10);
+            createRoom(hawkCredentials).end(function(err, res) {
+              if (err) throw err;
+              var roomToken = res.body.roomToken;
+              joinRoom(hawkCredentials, roomToken).end(function(err) {
+                if (err) throw err;
+                clock.tick(1000);
+                refreshRoom(hawkCredentials, roomToken).end(function(err) {
+                  if (err) throw err;
+                  getRoomInfo(hawkCredentials, roomToken).end(function(err, res) {
+                    if (err) throw err;
+                    expect(res.body.creationTime).to.be.gte(startTime);
+                    done();
+                  });
+                });
+              });
+            });
+          });
+      });
+
+      describe("Handle 'leave'", function() {
+        it("should remove the participant from the room.", function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              leaveRoom(hawkCredentials, roomToken).end(function(err) {
+                if (err) throw err;
+                getRoomInfo(hawkCredentials, roomToken).end(
+                  function(err, getRes) {
+                    if (err) throw err;
+                    expect(getRes.body.participants).to.length(0);
+                    done();
+                  });
+              });
+            });
+          });
+        });
+
+        it("should notify all the room owner devices.", function(done) {
+          register(hawkCredentials, "http://notmyidea.org").end(function(err) {
+            if (err) throw err;
+            register(hawkCredentials2, "http://notmyidea2.org").end(function(err) {
+              if (err) throw err;
+              createRoom(hawkCredentials).end(function(err, res) {
+                if (err) throw err;
+                var roomToken = res.body.roomToken;
+                generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+                  joinRoom(julieCredentials, roomToken).end(function(err) {
+                    if (err) throw err;
+                    requests = [];
+                    var leaveTime = parseInt(Date.now() / 1000, 10);
+                    leaveRoom(julieCredentials, roomToken).end(function(err) {
+                      if (err) throw err;
+                      expect(requests).to.length(2);
+                      expect(requests[0].url).to.match(/http:\/\/notmyidea/);
+                      expect(requests[0].form.version).to.gte(leaveTime);
+                      done()
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
     });
 
     describe("Using Token", function() {
@@ -1060,81 +1142,87 @@ describe("/rooms", function() {
             });
         });
       });
-    });
 
-    describe("Handle 'refresh'", function() {
-      var clock;
+      describe("Handle 'refresh'", function() {
+        var clock;
 
-      // Should touch the participant expiracy
-      beforeEach(function() {
-        clock = sinon.useFakeTimers(Date.now());
-      });
+        // Should touch the participant expiracy
+        beforeEach(function() {
+          clock = sinon.useFakeTimers(Date.now());
+        });
 
-      afterEach(function() {
-        clock.restore();
-      });
+        afterEach(function() {
+          clock.restore();
+        });
 
-      it("should touch the participant and return the next expiration.",
-        function(done) {
-          var startTime = parseInt(Date.now() / 1000, 10);
-          createRoom(hawkCredentials).end(function(err, res) {
-            if (err) throw err;
-            var roomToken = res.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err) {
+        it("should touch the participant and return the next expiration.",
+          function(done) {
+            var startTime = parseInt(Date.now() / 1000, 10);
+            createRoom(hawkCredentials).end(function(err, res) {
               if (err) throw err;
-              clock.tick(1000);
-              refreshRoom(hawkCredentials, roomToken).end(function(err) {
+              var roomToken = res.body.roomToken;
+              joinRoom(null, roomToken).end(function(err, res) {
                 if (err) throw err;
-                getRoomInfo(hawkCredentials, roomToken).end(function(err, res) {
+                var credentials = {
+                  token: res.body.sessionToken
+                };
+                clock.tick(1000);
+                refreshRoom(credentials, roomToken).end(function(err) {
                   if (err) throw err;
-                  expect(res.body.creationTime).to.be.gte(startTime);
-                  done();
+                  getRoomInfo(hawkCredentials, roomToken).end(function(err, res) {
+                    if (err) throw err;
+                    expect(res.body.creationTime).to.be.gte(startTime);
+                    done();
+                  });
                 });
               });
             });
           });
-        });
-    });
+      });
 
-    describe("Handle 'leave'", function() {
-      it("should remove the participant from the room.", function(done) {
-        createRoom(hawkCredentials).end(function(err, res) {
-          if (err) throw err;
-          var roomToken = res.body.roomToken;
-          joinRoom(hawkCredentials, roomToken).end(function(err) {
+      describe("Handle 'leave'", function() {
+        it("should remove the participant from the room.", function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
             if (err) throw err;
-            leaveRoom(hawkCredentials, roomToken).end(function(err) {
+            var roomToken = res.body.roomToken;
+            joinRoom(null, roomToken).end(function(err, res) {
               if (err) throw err;
-              getRoomInfo(hawkCredentials, roomToken).end(
-                function(err, getRes) {
-                  if (err) throw err;
-                  expect(getRes.body.participants).to.length(0);
-                  done();
-                });
+              var credentials = {
+                token: res.body.sessionToken
+              };
+              leaveRoom(credentials, roomToken).end(function(err) {
+                if (err) throw err;
+                getRoomInfo(hawkCredentials, roomToken).end(
+                  function(err, getRes) {
+                    if (err) throw err;
+                    expect(getRes.body.participants).to.length(0);
+                    done();
+                  });
+              });
             });
           });
         });
-      });
 
-      it("should notify all the room owner devices.", function(done) {
-        register(hawkCredentials, "http://notmyidea.org").end(function(err) {
-          if (err) throw err;
-          register(hawkCredentials2, "http://notmyidea2.org").end(function(err) {
+        it("should notify all the room owner devices.", function(done) {
+          register(hawkCredentials, "http://notmyidea.org").end(function(err) {
             if (err) throw err;
-            createRoom(hawkCredentials).end(function(err, res) {
+            register(hawkCredentials2, "http://notmyidea2.org").end(function(err) {
               if (err) throw err;
-              var roomToken = res.body.roomToken;
-              generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
-                joinRoom(julieCredentials, roomToken).end(function(err) {
-                  if (err) throw err;
-                  requests = [];
-                  var leaveTime = parseInt(Date.now() / 1000, 10);
-                  leaveRoom(julieCredentials, roomToken).end(function(err) {
+              createRoom(hawkCredentials).end(function(err, res) {
+                if (err) throw err;
+                var roomToken = res.body.roomToken;
+                generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+                  joinRoom(julieCredentials, roomToken).end(function(err) {
                     if (err) throw err;
-                    expect(requests).to.length(2);
-                    expect(requests[0].url).to.match(/http:\/\/notmyidea/);
-                    expect(requests[0].form.version).to.gte(leaveTime);
-                    done()
+                    requests = [];
+                    var leaveTime = parseInt(Date.now() / 1000, 10);
+                    leaveRoom(julieCredentials, roomToken).end(function(err) {
+                      if (err) throw err;
+                      expect(requests).to.length(2);
+                      expect(requests[0].url).to.match(/http:\/\/notmyidea/);
+                      expect(requests[0].form.version).to.gte(leaveTime);
+                      done()
+                    });
                   });
                 });
               });
