@@ -16,6 +16,8 @@ var getUserAccount = require('../utils').getUserAccount;
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
 
+var hmac = require('../hmac');
+
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
@@ -248,14 +250,6 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       var action = req.body.action;
       var code;
 
-      // If the action is not join, they should be authenticated.
-      if (participantHmac === "undefined" && action !== "join") {
-        var header = 'Token, Hawk';
-        res.set('WWW-Authenticate', header);
-        sendError(res, 401, errors.INVALID_AUTH_TOKEN, "Unauthorized");
-        return;
-      }
-
       if (ROOM_ACTIONS.indexOf(action) === -1) {
         if (req.body.hasOwnProperty('action')) {
           code = errors.INVALID_PARAMETERS;
@@ -264,6 +258,14 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         }
         sendError(res, 400, code,
                   "action should be one of " + ROOM_ACTIONS.join(", "));
+        return;
+      }
+
+      // If the action is not join, they should be authenticated.
+      if (participantHmac === "undefined" && action !== "join") {
+        var header = 'Token, Hawk';
+        res.set('WWW-Authenticate', header);
+        sendError(res, 401, errors.INVALID_AUTH_TOKEN, "Unauthorized");
         return;
       }
 
@@ -281,6 +283,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               var sessionToken = tokBox.getSessionToken(
                 req.roomStorageData.sessionId
               );
+              if (participantHmac === undefined) {
+                participantHmac = hmac(sessionToken, conf.get('userMacSecret'));
+              }
               storage.getRoomParticipants(req.token, function(err,
                 participants) {
                   if (res.serverError(err)) return;
@@ -304,7 +309,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                   getUserAccount(storage, req, function(err, acc) {
                     encryptAccountName(req.token, acc, function(account) {
                       if (res.serverError(err)) return;
-                      storage.addRoomParticipant(req.token, req.hawkIdHmac, {
+                      storage.addRoomParticipant(req.token, participantHmac, {
                         id: uuid.v4(),
                         displayName: req.body.displayName,
                         clientMaxSize: requestMaxSize,
@@ -331,7 +336,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         },
         handleRefresh: function(req, res) {
           var ttl = roomsConf.participantTTL;
-          storage.touchRoomParticipant(req.token, req.hawkIdHmac, ttl,
+          storage.touchRoomParticipant(req.token, participantHmac, ttl,
             function(err, success) {
               if (res.serverError(err)) return;
               if (success !== true) {
@@ -344,7 +349,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             });
         },
         handleLeave: function(req, res) {
-          storage.deleteRoomParticipant(req.token, req.hawkIdHmac,
+          storage.deleteRoomParticipant(req.token, participantHmac,
             function(err) {
               if (res.serverError(err)) return;
               emitRoomEvent(req.token, req.roomStorageData.roomOwnerHmac,

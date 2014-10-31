@@ -67,7 +67,8 @@ function generateHawkCredentials(storage, user, callback) {
   });
 }
 
-function register(hawkCredentials, url, status) {
+function register(credentials, url, status) {
+  var hawkCredentials = credentials.hawkCredentials || credentials;
   if (status === undefined) {
     status = 200;
   }
@@ -86,7 +87,8 @@ function register(hawkCredentials, url, status) {
 }
 
 
-var getRoomInfo = function(hawkCredentials, roomToken, status) {
+var getRoomInfo = function(credentials, roomToken, status) {
+  var hawkCredentials = credentials.hawkCredentials || credentials;
   return supertest(app)
     .get('/rooms/' + roomToken)
     .type('json')
@@ -94,7 +96,7 @@ var getRoomInfo = function(hawkCredentials, roomToken, status) {
     .expect(status || 200);
 };
 
-var joinRoom = function(hawkCredentials, roomToken, data, status) {
+var joinRoom = function(credentials, roomToken, data, status) {
   if (data === undefined) {
     data = {
       displayName: "Alexis",
@@ -103,33 +105,58 @@ var joinRoom = function(hawkCredentials, roomToken, data, status) {
   }
   data.action = "join";
 
-  return supertest(app)
+  var hawkCredentials;
+
+  if (credentials) {
+      hawkCredentials = credentials.hawkCredentials || credentials;
+  }
+
+  var req = supertest(app)
     .post('/rooms/' + roomToken)
-    .hawk(hawkCredentials)
     .send(data)
     .type("json")
     .expect(status || 200);
+
+  if (hawkCredentials && hawkCredentials.hasOwnProperty("id")) {
+    req = req.hawk(hawkCredentials);
+  }
+
+  return req;
 };
 
-var refreshRoom = function(hawkCredentials, roomToken, status) {
-  return supertest(app)
+var refreshRoom = function(credentials, roomToken, status) {
+  var req = supertest(app)
     .post('/rooms/' + roomToken)
-    .hawk(hawkCredentials)
     .send({action: "refresh"})
     .type("json")
     .expect(status || 200);
+
+  if (credentials.token !== undefined) {
+    req = req.set("Authorization", "Token " + credentials);
+  } else {
+    req = req.hawk(credentials.hawkCredentials || credentials);
+  }
+
+  return req;
 };
 
-var leaveRoom = function(hawkCredentials, roomToken, status) {
-  return supertest(app)
+var leaveRoom = function(credentials, roomToken, status) {
+  var req = supertest(app)
     .post('/rooms/' + roomToken)
-    .hawk(hawkCredentials)
     .send({action: "leave"})
     .type("json")
     .expect(status || 204);
+
+  if (credentials.token !== undefined) {
+    req = req.set("Authorization", "Token " + credentials);
+  } else {
+    req = req.hawk(credentials.hawkCredentials || credentials);
+  }
+
+  return req;
 };
 
-var createRoom = function(hawkCredentials, data, status) {
+var createRoom = function(credentials, data, status) {
   if (data === undefined) {
     data = {
       roomOwner: "Alexis",
@@ -141,12 +168,12 @@ var createRoom = function(hawkCredentials, data, status) {
   return supertest(app)
     .post('/rooms')
     .type('json')
-    .hawk(hawkCredentials)
+    .hawk(credentials || credentials.hawkCredentials)
     .send(data)
     .expect(status || 201);
 };
 
-var getUserRoomsInfo = function(hawkCredentials, version, status) {
+var getUserRoomsInfo = function(credentials, version, status) {
   var url = '/rooms';
   if (version !== undefined) {
     url += '?version=' + version;
@@ -155,7 +182,7 @@ var getUserRoomsInfo = function(hawkCredentials, version, status) {
   return supertest(app)
     .get(url)
     .type('json')
-    .hawk(hawkCredentials)
+    .hawk(credentials || credentials.hawkCredentials)
     .expect(status || 200);
 };
 
@@ -182,10 +209,11 @@ describe("/rooms", function() {
         cb(null, {sessionId: sessionId});
       });
 
-    sandbox.stub(tokBox._opentok.default, "generateToken",
-      function() {
-        return sessionToken;
-      });
+    sessionToken = conf.get("fakeCallInfo").token1;
+     sandbox.stub(tokBox._opentok.default, "generateToken",
+       function() {
+         return sessionToken;
+       });
 
     generateHawkCredentials(storage, user, function(credentials, id, userMac) {
       hawkCredentials = credentials;
@@ -250,6 +278,7 @@ describe("/rooms", function() {
         getRoomInfo(hawkCredentials, roomToken, 200).end(done);
       });
     });
+
     describe("#validateRoomUrlParams", function() {
       apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
         res.status(200).json(req.roomRequestData);
@@ -714,29 +743,6 @@ describe("/rooms", function() {
   describe("POST /rooms/:token", function() {
     var token, postReq;
 
-    beforeEach(function(done) {
-      supertest(app)
-        .post('/rooms')
-        .type('json')
-        .hawk(hawkCredentials)
-        .send({
-          roomOwner: "Alexis",
-          roomName: "UX discussion",
-          maxSize: "3",
-          expiresIn: "10"
-        })
-        .expect(201)
-        .end(function(err, postRes) {
-          if (err) throw err;
-          token = postRes.body.roomToken;
-          postReq = supertest(app)
-            .post('/rooms/' + token)
-            .type('json')
-            .hawk(hawkCredentials);
-          done();
-        });
-    });
-
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'post', '/rooms/:token'))
         .include(validators.validateRoomToken);
@@ -747,68 +753,249 @@ describe("/rooms", function() {
         .include(authenticateWithHawkOrToken);
     });
 
-    it("should fails if action is missing", function(done) {
-     postReq
-        .send({})
-        .expect(400)
-        .end(function(err, res) {
-          if (err) throw err;
-          expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                              "action should be one of join, refresh, leave");
-          done();
-        });
-    });
 
-    describe("Handle 'join'", function() {
-      it("should fail if params are missing.", function(done) {
-        postReq
+    describe("Using Hawk", function() {
+      beforeEach(function(done) {
+        supertest(app)
+          .post('/rooms')
+          .type('json')
+          .hawk(hawkCredentials)
           .send({
-            action: "join"
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "3",
+            expiresIn: "10"
           })
-          .expect(400)
-          .end(function(err, res) {
+          .expect(201)
+          .end(function(err, postRes) {
             if (err) throw err;
-            expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                "Missing: displayName, clientMaxSize");
+            token = postRes.body.roomToken;
+            postReq = supertest(app)
+              .post('/rooms/' + token)
+              .type('json')
+              .hawk(hawkCredentials);
             done();
           });
       });
 
-      it("should return new participant information.", function(done) {
-        postReq
-          .send({
-            action: "join",
-            clientMaxSize: 10,
-            displayName: "Natim"
-          })
-          .expect(200)
+      it("should fails if action is missing", function(done) {
+       postReq
+          .send({})
+          .expect(400)
           .end(function(err, res) {
             if (err) throw err;
-            expect(res.body).to.eql({
-              "apiKey": tokBox._opentok.default.apiKey,
-              "expires": conf.get("rooms").participantTTL,
-              "sessionId": sessionId,
-              "sessionToken": sessionToken
-            });
-            storage.getRoomParticipants(token, function(err, participants) {
-              if (err) throw err;
-              expect(participants).to.length(1);
-              done();
-            });
+            expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
+                                "action should be one of join, refresh, leave");
+            done();
           });
       });
 
-      it("should reject new participant if new participant clientMaxSize is " +
-         "lower or equal to the current number of participants.", function(done) {
-           createRoom(hawkCredentials).end(function(err, res) {
-             if (err) throw err;
-             var roomToken = res.body.roomToken;
-             joinRoom(hawkCredentials, roomToken).end(function(err) {
+      describe("Handle 'join'", function() {
+        it("should fail if params are missing.", function(done) {
+          postReq
+            .send({
+              action: "join"
+            })
+            .expect(400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
+                                  "Missing: displayName, clientMaxSize");
+              done();
+            });
+        });
+
+        it("should return new participant information.", function(done) {
+          postReq
+            .send({
+              action: "join",
+              clientMaxSize: 10,
+              displayName: "Natim"
+            })
+            .expect(200)
+            .end(function(err, res) {
+              if (err) throw err;
+              expect(res.body).to.eql({
+                "apiKey": tokBox._opentok.default.apiKey,
+                "expires": conf.get("rooms").participantTTL,
+                "sessionId": sessionId,
+                "sessionToken": sessionToken
+              });
+              storage.getRoomParticipants(token, function(err, participants) {
+                if (err) throw err;
+                expect(participants).to.length(1);
+                done();
+              });
+            });
+        });
+
+        it("should reject new participant if new participant clientMaxSize is " +
+           "lower or equal to the current number of participants.", function(done) {
+             createRoom(hawkCredentials).end(function(err, res) {
                if (err) throw err;
-               generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
-                 joinRoom(natimCredentials, roomToken, {
-                     displayName: "Natim",
-                     clientMaxSize: 1
+               var roomToken = res.body.roomToken;
+               joinRoom(hawkCredentials, roomToken).end(function(err) {
+                 if (err) throw err;
+                 generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
+                   joinRoom(natimCredentials, roomToken, {
+                       displayName: "Natim",
+                       clientMaxSize: 1
+                   }, 400).end(function(err, res) {
+                     if (err) throw err;
+                     expectFormattedError(
+                       res, 400, errors.CLIENT_REACHED_CAPACITY,
+                       "Too many participants in the room for you to handle."
+                     );
+                     done();
+                   });
+                 });
+               });
+             });
+           });
+
+        it("should reject new participant if the room clientMaxSize is already reached.",
+          function(done) {
+            createRoom(hawkCredentials).end(function(err, res) {
+               if (err) throw err;
+               var roomToken = res.body.roomToken;
+               // Alexis joins
+               joinRoom(hawkCredentials, roomToken).end(function(err) {
+                 if (err) throw err;
+                 generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
+                   // Natim joins
+                   joinRoom(natimCredentials, roomToken, {
+                       displayName: "Natim",
+                       clientMaxSize: 2
+                   }, 200).end(function(err) {
+                     if (err) throw err;
+                     generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+                       // Julie tries to joins
+                       joinRoom(julieCredentials, roomToken, {
+                         displayName: "Julie",
+                         clientMaxSize: 3
+                       }, 400).end(function(err, res) {
+                         if (err) throw err;
+                         expectFormattedError(
+                           res, 400, errors.ROOM_FULL,
+                           "The room is full."
+                         );
+                         done();
+                       });
+                     });
+                   });
+                 });
+               });
+             });
+          });
+
+        it("should notify all the room owner devices.", function(done) {
+            register(hawkCredentials2, spurl + "2").end(function(err) {
+              if (err) throw err;
+              createRoom(hawkCredentials).end(function(err, res) {
+                if (err) throw err;
+                var roomToken = res.body.roomToken;
+                generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+                  var joinTime = parseInt(Date.now() / 1000, 10);
+                  requests = [];
+                  joinRoom(julieCredentials, roomToken).end(function(err) {
+                    if (err) throw err;
+                    expect(requests).to.length(2);
+                    expect(requests[0].url).to.match(/http:\/\/notmyidea/);
+                    expect(requests[0].form.version).to.gte(joinTime);
+                    done()
+                  });
+                });
+              });
+            });
+        });
+      });
+    });
+
+    describe("Using Token", function() {
+      beforeEach(function(done) {
+        supertest(app)
+          .post('/rooms')
+          .type('json')
+          .hawk(hawkCredentials)
+          .send({
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "3",
+            expiresIn: "10"
+          })
+          .expect(201)
+          .end(function(err, postRes) {
+            if (err) throw err;
+            token = postRes.body.roomToken;
+            postReq = supertest(app)
+              .post('/rooms/' + token)
+              .type('json');
+            done();
+          });
+      });
+
+      it("should fails if action is missing", function(done) {
+       postReq
+          .send({})
+          .expect(400)
+          .end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
+                                "action should be one of join, refresh, leave");
+            done();
+          });
+      });
+
+      describe("Handle 'join'", function() {
+
+        it("should fail if params are missing.", function(done) {
+          postReq
+            .send({
+              action: "join"
+            })
+            .expect(400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
+                                  "Missing: displayName, clientMaxSize");
+              done();
+            });
+        });
+
+        it("should return new participant information.", function(done) {
+          postReq
+            .send({
+              action: "join",
+              clientMaxSize: 10,
+              displayName: "Natim"
+            })
+            .expect(200)
+            .end(function(err, res) {
+              if (err) throw err;
+              expect(res.body).to.eql({
+                "apiKey": tokBox._opentok.default.apiKey,
+                "expires": conf.get("rooms").participantTTL,
+                "sessionId": sessionId,
+                "sessionToken": sessionToken
+              });
+              storage.getRoomParticipants(token, function(err, participants) {
+                if (err) throw err;
+                expect(participants).to.length(1);
+                done();
+              });
+            });
+        });
+
+        it("should reject new participant if new participant clientMaxSize is " +
+           "lower or equal to the current number of participants.", function(done) {
+             createRoom(hawkCredentials).end(function(err, res) {
+               if (err) throw err;
+               var roomToken = res.body.roomToken;
+               joinRoom(null, roomToken).end(function(err) {
+                 if (err) throw err;
+                 joinRoom(null, roomToken, {
+                   displayName: "Natim",
+                   clientMaxSize: 1
                  }, 400).end(function(err, res) {
                    if (err) throw err;
                    expectFormattedError(
@@ -820,53 +1007,49 @@ describe("/rooms", function() {
                });
              });
            });
-         });
 
-      it("should reject new participant if the room clientMaxSize is already reached.",
-        function(done) {
-          createRoom(hawkCredentials).end(function(err, res) {
-             if (err) throw err;
-             var roomToken = res.body.roomToken;
-             // Alexis joins
-             joinRoom(hawkCredentials, roomToken).end(function(err) {
+        it("should reject new participant if the room clientMaxSize is already reached.",
+          function(done) {
+            createRoom(hawkCredentials).end(function(err, res) {
                if (err) throw err;
-               generateHawkCredentials(storage, 'Natim', function(natimCredentials) {
+               var roomToken = res.body.roomToken;
+               // Alexis joins
+               joinRoom(null, roomToken).end(function(err) {
+                 if (err) throw err;
+                 sessionToken = conf.get("fakeCallInfo").token2;
                  // Natim joins
-                 joinRoom(natimCredentials, roomToken, {
-                     displayName: "Natim",
-                     clientMaxSize: 2
+                 joinRoom(null, roomToken, {
+                   displayName: "Natim",
+                   clientMaxSize: 2
                  }, 200).end(function(err) {
                    if (err) throw err;
-                   generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
-                     // Julie tries to joins
-                     joinRoom(julieCredentials, roomToken, {
-                       displayName: "Julie",
-                       clientMaxSize: 3
-                     }, 400).end(function(err, res) {
-                       if (err) throw err;
-                       expectFormattedError(
-                         res, 400, errors.ROOM_FULL,
-                         "The room is full."
-                       );
-                       done();
-                     });
+                   sessionToken = conf.get("fakeCallInfo").token3;
+                   // Julie tries to joins
+                   joinRoom(null, roomToken, {
+                     displayName: "Julie",
+                     clientMaxSize: 3
+                   }, 400).end(function(err, res) {
+                     if (err) throw err;
+                     expectFormattedError(
+                       res, 400, errors.ROOM_FULL,
+                       "The room is full."
+                     );
+                     done();
                    });
                  });
                });
              });
-           });
-        });
+          });
 
-      it("should notify all the room owner devices.", function(done) {
-          register(hawkCredentials2, spurl + "2").end(function(err) {
-            if (err) throw err;
-            createRoom(hawkCredentials).end(function(err, res) {
+        it("should notify all the room owner devices.", function(done) {
+            register(hawkCredentials2, spurl + "2").end(function(err) {
               if (err) throw err;
-              var roomToken = res.body.roomToken;
-              generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
-                var joinTime = parseInt(Date.now() / 1000, 10);
+              createRoom(hawkCredentials).end(function(err, res) {
+                if (err) throw err;
+                var roomToken = res.body.roomToken;
                 requests = [];
-                joinRoom(julieCredentials, roomToken).end(function(err) {
+                var joinTime = parseInt(Date.now() / 1000, 10);
+                joinRoom(null, roomToken).end(function(err) {
                   if (err) throw err;
                   expect(requests).to.length(2);
                   expect(requests[0].url).to.match(/http:\/\/notmyidea/);
@@ -875,7 +1058,7 @@ describe("/rooms", function() {
                 });
               });
             });
-          });
+        });
       });
     });
 
