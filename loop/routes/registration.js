@@ -9,7 +9,7 @@ var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 
 
-module.exports = function (app, conf, logError, storage, auth) {
+module.exports = function (app, conf, logError, storage, auth, validators) {
   /**
    * Registers the given user with the given simple push url.
    **/
