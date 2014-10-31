@@ -214,10 +214,11 @@ module.exports = function(conf, logError, storage, statsdClient) {
 
     var tokenHmac = hmac(token, conf.get('userMacSecret'));
 
+    // req.token is the roomToken, tokenHmac is the user authentication token
     storage.isValidRoomToken(req.token, tokenHmac, function(err, isValid) {
       if (res.serverError(err)) return;
       if (!isValid) {
-        _unauthorized("Invalid token - Either expired or doesn't exits.");
+        _unauthorized("Invalid token; it as probably expired.");
         return;
       }
       req.participantTokenHmac = tokenHmac;
@@ -310,6 +311,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     requireOAuthHawkSession: requireOAuthHawkSession,
     attachOrCreateOAuthHawkSession: attachOrCreateOAuthHawkSession,
     requireFxA: requireFxA,
-    requireRegisteredUser: requireRegisteredUser
+    requireRegisteredUser: requireRegisteredUser,
+    requireRoomSessionToken: requireRoomSessionToken
   };
 };
