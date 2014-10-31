@@ -437,7 +437,7 @@ var conf = convict({
     maxRoomOwnerSize: {
       doc: "The maximum number of chars for the owner of a room",
       format: Number,
-      default: 100
+      default: 255
     },
     tokenSize: {
       doc: "The room token size (in bytes).",
