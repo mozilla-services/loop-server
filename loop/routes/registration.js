@@ -12,16 +12,19 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
   app.post('/registration', auth.authenticate,
     function(req, res) {
       // If the POST body is empty, it just refresh the session.
-      if (req.body.simplePushURLs !== {}) {
+
+      var spURL = req.body.simplePushURLs || req.body.simplePushURL || req.query.simplePushURL || req.body.simple_push_url;
+
+      if (spURL) {
         validators.validateSimplePushURL(req, res, function() {
           // If we get one, it overrides any existing one.
           storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
             function(err) {
               if (res.serverError(err)) return;
-              res.status(200).json();
             });
         });
       }
+      res.status(200).json();
     });
 
   /**

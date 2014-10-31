@@ -621,12 +621,6 @@ function runOnPrefix(apiPrefix) {
             .include(authenticate);
         });
 
-      it("should have the validateSimplePushURL middleware installed",
-        function() {
-          expect(getMiddlewares(apiRouter, 'post', '/registration'))
-            .include(validateSimplePushURL);
-        });
-
       it("should validate the simple push url", function(done) {
         jsonReq
           .send({'simple_push_url': 'not-an-url'})
@@ -639,9 +633,20 @@ function runOnPrefix(apiPrefix) {
           });
       });
 
-      it("should reject non-JSON requests", function(done) {
+      it("should work with no data passed", function(done) {
+        jsonReq
+          .send({})
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            done();
+          });
+      });
+
+      it("should reject non-JSON requests when a SimplePush URL is provided", function(done) {
         supertest(app)
           .post(apiPrefix + '/registration')
+          .send({simple_push_url: 'yeah'})
           .set('Accept', 'text/html')
           .hawk(hawkCredentials)
           .expect(406).end(function(err, res) {
@@ -740,12 +745,12 @@ function runOnPrefix(apiPrefix) {
             });
         });
 
-      it("should not create a session token if the SP url is not provided",
+      it("should create a session token even if the SP url is not provided",
         function(done) {
-          jsonReq.send({}).expect(400).end(function(err, res) {
+          jsonReq.send({}).expect(200).end(function(err, res) {
             if (err) throw err;
             expect(res.headers['server-authorization']).to.eql(undefined);
-            expect(res.headers['Hawk-Session-Token']).to.eql(undefined);
+            expect(res.headers['server-authorization']).not.eql(undefined);
             done()
           });
         });
