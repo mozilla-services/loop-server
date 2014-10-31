@@ -67,9 +67,35 @@ function getUserAccount(storage, req, callback) {
   });
 }
 
+
+function getSimplePushURLS(req, callback) {
+  var simplePushURLs = req.body.simplePushURLs || {};
+
+  var simplePushURL = req.body.simplePushURL ||
+      req.query.simplePushURL ||
+      req.body.simple_push_url;  // Bug 1032966 - Handle old simple_push_url format
+
+  if (simplePushURL !== undefined) {
+      simplePushURLs.calls = simplePushURL;
+  }
+
+  if (Object.keys(simplePushURLs).length !== 0) {
+      for (var topic in simplePushURLs) {
+        if (simplePushURLs[topic].indexOf('http') !== 0) {
+          callback(topic);
+          return;
+        }
+      }
+  }
+
+  callback(undefined, simplePushURLs);
+}
+
+
 module.exports = {
   getProgressURL: getProgressURL,
   sendError: sendError,
   isoDateString: isoDateString,
-  getUserAccount: getUserAccount
+  getUserAccount: getUserAccount,
+  getSimplePushURLS: getSimplePushURLS
 };

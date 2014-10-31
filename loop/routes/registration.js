@@ -4,26 +4,37 @@
 
 "use strict";
 
+var errors = require("../errno.json");
+var sendError = require('../utils').sendError;
+var getSimplePushURLS = require('../utils').getSimplePushURLS;
 
-module.exports = function (app, conf, logError, storage, auth, validators) {
+
+module.exports = function (app, conf, logError, storage, auth) {
   /**
    * Registers the given user with the given simple push url.
    **/
   app.post('/registration', auth.authenticate,
     function(req, res) {
-      // If the POST body is empty, it just refresh the session.
+      if (!req.accepts("json")) {
+        sendError(res, 406, errors.BADJSON,
+                  "Request body should be defined as application/json");
+        return;
+      }
 
-      var spURL = req.body.simplePushURLs || req.body.simplePushURL || req.query.simplePushURL || req.body.simple_push_url;
-
-      if (spURL) {
-        validators.validateSimplePushURL(req, res, function() {
-          // If we get one, it overrides any existing one.
-          storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
+      getSimplePushURLS(req, function(err, simplePushURLs) {
+        if (err) {
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "simplePushURLs." + err + " should be a valid url");
+          return;
+        }
+        if (Object.keys(simplePushURLs).length !== 0) {
+          storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, simplePushURLs,
             function(err) {
               if (res.serverError(err)) return;
-            });
-        });
-      }
+          });
+        }
+      });
+
       res.status(200).json();
     });
 
@@ -31,7 +42,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * Deletes the given simple push URL (you need to have registered it
    * to be able to unregister).
    **/
-  app.delete('/registration', auth.authenticate, function(req, res) {
+  app.delete('/registration', auth.requireHawkSession, function(req, res) {
     storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
       if (res.serverError(err)) return;
       res.status(204).json();

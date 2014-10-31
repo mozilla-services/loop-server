@@ -43,8 +43,6 @@ var requireHawkSession = auth.requireHawkSession;
 var validators = loop.validators;
 var validateToken = validators.validateToken;
 var validateCallType = validators.validateCallType;
-var validateSimplePushURL = validators.validateSimplePushURL;
-
 
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
@@ -637,7 +635,7 @@ function runOnPrefix(apiPrefix) {
         jsonReq
           .send({})
           .expect(200)
-          .end(function(err, res) {
+          .end(function(err) {
             if (err) throw err;
             done();
           });
@@ -767,10 +765,10 @@ function runOnPrefix(apiPrefix) {
           .type('json');
       });
 
-      it("should have the authenticate middleware installed",
+      it("should have the requireHawkSession middleware installed",
         function() {
           expect(getMiddlewares(apiRouter, 'delete', '/registration'))
-            .include(authenticate);
+            .include(requireHawkSession);
         });
 
       it("should remove an existing simple push url for an user", function(done) {
