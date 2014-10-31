@@ -598,6 +598,30 @@ function runOnPrefix(apiPrefix) {
           });
       });
     });
+ 
+    describe("DELETE /session", function() {
+      var jsonReq;
+
+      beforeEach(function() {
+        jsonReq = supertest(app)
+          .delete(apiPrefix + '/session')
+          .hawk(hawkCredentials);
+      });
+
+      it("should have the requireHawkSession middleware installed",
+        function() {
+          expect(getMiddlewares(apiRouter, 'delete', '/session'))
+            .include(requireHawkSession);
+        });
+
+      it("should throw a 401 on an unauthenticated user",
+        function(done) {
+          supertest(app).
+            delete(apiPrefix + '/session')
+            .expect(401).end(done);
+        });
+
+    });
 
     describe("POST /registration", function() {
       var jsonReq;
