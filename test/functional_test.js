@@ -767,10 +767,10 @@ function runOnPrefix(apiPrefix) {
           .type('json');
       });
 
-      it("should have the requireHawkSession middleware installed",
+      it("should have the authenticate middleware installed",
         function() {
           expect(getMiddlewares(apiRouter, 'delete', '/registration'))
-            .include(requireHawkSession);
+            .include(authenticate);
         });
 
       it("should remove an existing simple push url for an user", function(done) {

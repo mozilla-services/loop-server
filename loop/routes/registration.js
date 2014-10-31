@@ -31,7 +31,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    * Deletes the given simple push URL (you need to have registered it
    * to be able to unregister).
    **/
-  app.delete('/registration', auth.requireHawkSession, function(req, res) {
+  app.delete('/registration', auth.authenticate, function(req, res) {
     storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
       if (res.serverError(err)) return;
       res.status(204).json();
