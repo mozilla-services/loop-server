@@ -186,7 +186,9 @@ module.exports = function(conf, logError, storage, statsdClient) {
 
     function _unauthorized(message){
       var header = "Token";
-      if (message) header += ' error="' + message.replace(/"/g, '\"') + '"';
+      if (message) {
+        header += ' error="' + message.replace(/"/g, '\"') + '"';
+      }
       res.set('WWW-Authenticate', header);
       sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
     }
@@ -214,11 +216,11 @@ module.exports = function(conf, logError, storage, statsdClient) {
 
     var tokenHmac = hmac(token, conf.get('userMacSecret'));
 
-    // req.token is the roomToken, tokenHmac is the user authentication token
+    // req.token is the roomToken, tokenHmac is the user authentication token.
     storage.isValidRoomToken(req.token, tokenHmac, function(err, isValid) {
       if (res.serverError(err)) return;
       if (!isValid) {
-        _unauthorized("Invalid token; it as probably expired.");
+        _unauthorized("Invalid token; it may have expired.");
         return;
       }
       req.participantTokenHmac = tokenHmac;

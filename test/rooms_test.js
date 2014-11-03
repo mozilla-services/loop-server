@@ -193,7 +193,7 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
     .expect(status || 204);
 };
 
-describe.only("/rooms", function() {
+describe("/rooms", function() {
   var sandbox, hawkCredentials, userHmac, hawkCredentials2, requests;
 
   beforeEach(function(done) {

@@ -76,7 +76,7 @@ describe("auth.js", function() {
         .end(function(err, res) {
           if (err) throw err;
           expect(res.headers['www-authenticate'])
-            .to.eql('Token error="Invalid token; it as probably expired."');
+            .to.eql('Token error="Invalid token; it may have expired."');
           done();
         });
     });
@@ -104,7 +104,7 @@ describe("auth.js", function() {
       });
   });
 
-  describe("authenticationWithHawkOrToken middleware", function() {
+  describe("authenticateWithHawkOrToken middleware", function() {
     var expectedToken, expectedTokenHmac;
 
     apiRouter.post("/authenticateWithHawkOrToken", authenticateWithHawkOrToken,
@@ -112,7 +112,7 @@ describe("auth.js", function() {
         res.status(200).json(req.participantTokenHmac || req.hawkIdHmac);
       });
 
-    describe("Token", function() {
+    describe("using a token", function() {
       beforeEach(function() {
         expectedToken = "valid-token";
         expectedTokenHmac = hmac(expectedToken, conf.get('userMacSecret'));
@@ -150,7 +150,7 @@ describe("auth.js", function() {
         });
     });
 
-    describe("Hawk", function() {
+    describe("using an Hawk session", function() {
       var hawkCredentials, userHmac;
 
       beforeEach(function(done) {
