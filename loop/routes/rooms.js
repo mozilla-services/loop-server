@@ -285,6 +285,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               );
 
               function next(err) {
+                if (res.serverError(err)) return;
                 storage.getRoomParticipants(req.token, function(err,
                   participants) {
                     if (res.serverError(err)) return;
@@ -306,8 +307,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                     }
 
                     getUserAccount(storage, req, function(err, acc) {
+                      if (res.serverError(err)) return;
                       encryptAccountName(req.token, acc, function(account) {
-                        if (res.serverError(err)) return;
                         storage.addRoomParticipant(req.token, participantHmac, {
                           id: uuid.v4(),
                           displayName: req.body.displayName,
