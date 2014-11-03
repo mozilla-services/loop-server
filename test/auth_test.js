@@ -16,7 +16,7 @@ var app = loop.app;
 var apiRouter = loop.apiRouter;
 var apiPrefix = loop.apiPrefix;
 var storage = loop.storage;
-var requireRoomSessionToken = loop.auth.requireRoomSessionToken;
+var requireBasicAuthToken = loop.auth.requireBasicAuthToken;
 var authenticateWithHawkOrToken = loop.auth.authenticateWithHawkOrToken;
 var Token = require("express-hawkauth").Token;
 
@@ -32,18 +32,18 @@ describe("auth.js", function() {
     sandbox.restore();
   });
 
-  describe('#requireRoomSessionToken', function() {
+  describe('#requireBasicAuthToken', function() {
     var jsonReq, expectedToken, expectedTokenHmac;
 
     // Create a route with the auth middleware installed.
-    apiRouter.post('/with-requireRoomSessionToken',
-      requireRoomSessionToken, function(req, res) {
+    apiRouter.post('/with-requireBasicAuthToken',
+      requireBasicAuthToken, function(req, res) {
       res.status(200).json(req.participantTokenHmac);
     });
 
     beforeEach(function() {
       jsonReq = supertest(app)
-        .post(apiPrefix + '/with-requireRoomSessionToken');
+        .post(apiPrefix + '/with-requireBasicAuthToken');
 
       expectedToken = "valid-token";
       expectedTokenHmac = hmac(expectedToken, conf.get('userMacSecret'));
@@ -63,7 +63,7 @@ describe("auth.js", function() {
         .expect(401)
         .end(function(err, res) {
           if (err) throw err;
-          expect(res.headers['www-authenticate']).to.eql('Token');
+          expect(res.headers['www-authenticate']).to.eql('Basic');
           done();
         });
     });
@@ -71,19 +71,19 @@ describe("auth.js", function() {
     it("should reject invalid tokens", function(done) {
       // Mock the calls to the external BrowserID verifier.
       jsonReq
-        .set('Authorization', 'Token ' + "invalid-token")
+        .auth('invalid-token', '')
         .expect(401)
         .end(function(err, res) {
           if (err) throw err;
           expect(res.headers['www-authenticate'])
-            .to.eql('Token error="Invalid token; it may have expired."');
+            .to.eql('Basic error="Invalid token; it may have expired."');
           done();
         });
     });
 
     it("should accept valid token", function(done) {
       jsonReq
-        .set('Authorization', 'Token ' + expectedToken)
+        .auth(expectedToken, '')
         .expect(200)
         .end(function(err) {
           if (err) throw err;
@@ -94,7 +94,7 @@ describe("auth.js", function() {
     it("should set an 'participantTokenHmac' property on the request object",
       function(done) {
         jsonReq
-          .set('Authorization', 'Token ' + expectedToken)
+          .auth(expectedToken, '')
           .expect(200)
           .end(function(err, res) {
             if (err) throw err;
@@ -130,7 +130,7 @@ describe("auth.js", function() {
       it("should accept token", function(done) {
         supertest(app)
           .post(apiPrefix + "/authenticateWithHawkOrToken")
-          .set('Authorization', 'Token ' + expectedToken)
+          .auth(expectedToken, '')
           .expect(200)
           .end(function(err, res) {
             if (err) {
@@ -144,7 +144,7 @@ describe("auth.js", function() {
       it("shouldn't accept invalid token", function(done) {
           supertest(app)
             .post(apiPrefix + "/authenticateWithHawkOrToken")
-            .set('Authorization', 'Token wrongAssertion')
+            .auth('wrongToken', '')
             .expect(401)
             .end(done);
         });

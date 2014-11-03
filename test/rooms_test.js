@@ -132,7 +132,7 @@ var refreshRoom = function(credentials, roomToken, status) {
     .expect(status || 200);
 
   if (credentials.token !== undefined) {
-    req = req.set("Authorization", "Token " + credentials.token);
+    req = req.auth(credentials.token, "");
   } else {
     req = req.hawk(credentials.hawkCredentials || credentials);
   }
@@ -148,7 +148,7 @@ var leaveRoom = function(credentials, roomToken, status) {
     .expect(status || 204);
 
   if (credentials.token !== undefined) {
-    req = req.set("Authorization", "Token " + credentials.token);
+    req = req.auth(credentials.token, "");
   } else {
     req = req.hawk(credentials.hawkCredentials || credentials);
   }

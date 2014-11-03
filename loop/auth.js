@@ -192,27 +192,27 @@ module.exports = function(conf, logError, storage, statsdClient) {
   );
 
 
-  function requireRoomSessionToken(req, res, next) {
+  function requireBasicAuthToken(req, res, next) {
     var authorization, policy, splitted, token;
 
     authorization = req.headers.authorization;
 
     if (authorization === undefined) {
-      unauthorized(res, ["Token"]);
+      unauthorized(res, ["Basic"]);
       return;
     }
 
     splitted = authorization.split(" ");
     if (splitted.length !== 2) {
-      unauthorized(res, ["Token"]);
+      unauthorized(res, ["Basic"]);
       return;
     }
 
     policy = splitted[0];
-    token = splitted[1];
+    token = new Buffer(splitted[1], 'base64').toString().replace(/:$/g, '');
 
-    if (policy.toLowerCase() !== 'token') {
-      unauthorized(res, ["Token"], "Unsupported");
+    if (policy.toLowerCase() !== 'basic') {
+      unauthorized(res, ["Basic"], "Unsupported");
       return;
     }
 
@@ -222,7 +222,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     storage.isValidRoomToken(req.token, tokenHmac, function(err, isValid) {
       if (res.serverError(err)) return;
       if (!isValid) {
-        unauthorized(res, ["Token"], "Invalid token; it may have expired.");
+        unauthorized(res, ["Basic"], "Invalid token; it may have expired.");
         return;
       }
       req.participantTokenHmac = tokenHmac;
@@ -268,7 +268,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
   }
 
   function authenticateWithHawkOrToken(req, res, next) {
-    var supported = ["Token", "Hawk"];
+    var supported = ["Basic", "Hawk"];
 
     // First thing: check that the headers are valid. Otherwise 401.
     var authorization = req.headers.authorization;
@@ -284,9 +284,9 @@ module.exports = function(conf, logError, storage, statsdClient) {
         return;
       }
 
-      if (policy.toLowerCase() === "token") {
-        // If that's Token, then check if the token is right
-        requireRoomSessionToken(req, res, next);
+      if (policy.toLowerCase() === "basic") {
+        // If that's Basic, then check if the token is right
+        requireBasicAuthToken(req, res, next);
       } else if (policy.toLowerCase() === "hawk") {
         // If that's Hawk, let's check they're valid.
         requireHawkSession(req, res, next);
@@ -306,7 +306,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     attachOrCreateOAuthHawkSession: attachOrCreateOAuthHawkSession,
     requireFxA: requireFxA,
     requireRegisteredUser: requireRegisteredUser,
-    requireRoomSessionToken: requireRoomSessionToken,
+    requireBasicAuthToken: requireBasicAuthToken,
     unauthorized: unauthorized
   };
 };
