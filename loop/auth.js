@@ -18,6 +18,17 @@ module.exports = function(conf, logError, storage, statsdClient) {
     port: conf.get("protocol") === "https" ? 443 : undefined
   };
 
+
+  function unauthorized(res, supported, message) {
+    var header = supported.join();
+    if (message) {
+      header += ' error="' + message.replace(/"/g, '\"') + '"';
+    }
+    res.set('WWW-Authenticate', header);
+    sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
+  }
+
+
   /**
    * Attach the identity of the user to the request if she is registered in the
    * database.
@@ -184,25 +195,16 @@ module.exports = function(conf, logError, storage, statsdClient) {
   function requireRoomSessionToken(req, res, next) {
     var authorization, policy, splitted, token;
 
-    function _unauthorized(message){
-      var header = "Token";
-      if (message) {
-        header += ' error="' + message.replace(/"/g, '\"') + '"';
-      }
-      res.set('WWW-Authenticate', header);
-      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
-    }
-
     authorization = req.headers.authorization;
 
     if (authorization === undefined) {
-      _unauthorized();
+      unauthorized(res, ["Token"]);
       return;
     }
 
     splitted = authorization.split(" ");
     if (splitted.length !== 2) {
-      _unauthorized();
+      unauthorized(res, ["Token"]);
       return;
     }
 
@@ -210,7 +212,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     token = splitted[1];
 
     if (policy.toLowerCase() !== 'token') {
-      _unauthorized("Unsupported");
+      unauthorized(res, ["Token"], "Unsupported");
       return;
     }
 
@@ -220,7 +222,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     storage.isValidRoomToken(req.token, tokenHmac, function(err, isValid) {
       if (res.serverError(err)) return;
       if (!isValid) {
-        _unauthorized("Invalid token; it may have expired.");
+        unauthorized(res, ["Token"], "Invalid token; it may have expired.");
         return;
       }
       req.participantTokenHmac = tokenHmac;
@@ -240,11 +242,6 @@ module.exports = function(conf, logError, storage, statsdClient) {
     // First thing: check that the headers are valid. Otherwise 401.
     var authorization = req.headers.authorization;
 
-    function _unauthorized(message, supported) {
-      res.set('WWW-Authenticate', supported.join());
-      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
-    }
-
     if (authorization !== undefined) {
       var splitted = authorization.split(" ");
       var policy = splitted[0];
@@ -252,7 +249,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
       // Next, let's check which one the user wants to use.
       if (supported.map(function(s) { return s.toLowerCase(); })
           .indexOf(policy.toLowerCase()) === -1) {
-        _unauthorized("Unsupported", supported);
+        unauthorized(res, supported, "Unsupported");
         return;
       }
 
@@ -276,11 +273,6 @@ module.exports = function(conf, logError, storage, statsdClient) {
     // First thing: check that the headers are valid. Otherwise 401.
     var authorization = req.headers.authorization;
 
-    function _unauthorized(message, supported) {
-      res.set('WWW-Authenticate', supported.join());
-      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
-    }
-
     if (authorization !== undefined) {
       var splitted = authorization.split(" ");
       var policy = splitted[0];
@@ -288,7 +280,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
       // Next, let's check which one the user wants to use.
       if (supported.map(function(s) { return s.toLowerCase(); })
           .indexOf(policy.toLowerCase()) === -1) {
-        _unauthorized("Unsupported", supported);
+        unauthorized(res, supported, "Unsupported");
         return;
       }
 
@@ -314,6 +306,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     attachOrCreateOAuthHawkSession: attachOrCreateOAuthHawkSession,
     requireFxA: requireFxA,
     requireRegisteredUser: requireRegisteredUser,
-    requireRoomSessionToken: requireRoomSessionToken
+    requireRoomSessionToken: requireRoomSessionToken,
+    unauthorized: unauthorized
   };
 };

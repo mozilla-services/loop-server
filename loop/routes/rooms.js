@@ -263,9 +263,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       // If the action is not join, they should be authenticated.
       if (participantHmac === "undefined" && action !== "join") {
-        var header = 'Token, Hawk';
-        res.set('WWW-Authenticate', header);
-        sendError(res, 401, errors.INVALID_AUTH_TOKEN, "Unauthorized");
+        auth.unauthorized(res, ["Token", "Hawk"]);
         return;
       }
 
