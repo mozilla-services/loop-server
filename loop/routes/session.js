@@ -10,7 +10,7 @@ module.exports = function (app, conf, storage, auth) {
    * Removes the connected user session and drop its simplePushUrls and
    * Hawk session.
    **/
-  app.delete('/session', auth.requireHawkSession,
+  app.delete('/session', auth.requireRegisteredUser,
     function(req, res) {
       storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
         if (res.serverError(err)) return;

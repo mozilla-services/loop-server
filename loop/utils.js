@@ -82,13 +82,13 @@ function getSimplePushURLS(req, callback) {
   if (Object.keys(simplePushURLs).length !== 0) {
       for (var topic in simplePushURLs) {
         if (simplePushURLs[topic].indexOf('http') !== 0) {
-          callback(topic);
+          callback(new Error("simplePushURLs." + topic + " should be a valid url"));
           return;
         }
       }
   }
 
-  callback(undefined, simplePushURLs);
+  callback(null, simplePushURLs);
 }
 
 

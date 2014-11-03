@@ -67,8 +67,7 @@ module.exports = function(conf, logError, storage) {
 
     getSimplePushURLS(req, function(err, simplePushURLs) {
       if (err) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "simplePushURLs." + err + " should be a valid url");
+        sendError(res, 400, errors.INVALID_PARAMETERS, err.message);
         return;
       }
       req.simplePushURLs = simplePushURLs;

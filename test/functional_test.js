@@ -39,6 +39,7 @@ var hekaLogger = require("../loop/middlewares").hekaLogger;
 var auth = loop.auth;
 var authenticate = auth.authenticate;
 var requireHawkSession = auth.requireHawkSession;
+var requireRegisteredUser = auth.requireRegisteredUser;
 
 var validators = loop.validators;
 var validateToken = validators.validateToken;
@@ -597,30 +598,6 @@ function runOnPrefix(apiPrefix) {
             done();
           });
       });
-    });
- 
-    describe("DELETE /session", function() {
-      var jsonReq;
-
-      beforeEach(function() {
-        jsonReq = supertest(app)
-          .delete(apiPrefix + '/session')
-          .hawk(hawkCredentials);
-      });
-
-      it("should have the requireHawkSession middleware installed",
-        function() {
-          expect(getMiddlewares(apiRouter, 'delete', '/session'))
-            .include(requireHawkSession);
-        });
-
-      it("should throw a 401 on an unauthenticated user",
-        function(done) {
-          supertest(app).
-            delete(apiPrefix + '/session')
-            .expect(401).end(done);
-        });
-
     });
 
     describe("POST /registration", function() {
@@ -1566,6 +1543,37 @@ function runOnPrefix(apiPrefix) {
                 done();
               });
           });
+      });
+    });
+
+    describe("DELETE /session", function() {
+      it("should have the requireRegisteredUser middleware installed", function(done) {
+        expect(getMiddlewares(apiRouter, 'delete', '/session'))
+          .include(requireRegisteredUser);
+        done();
+      });
+
+      it("should remove the connected user session and drop its simplePushUrls", function(done) {
+        register('http://url', expectedAssertion, hawkCredentials, function() {
+          supertest(app)
+            .del(apiPrefix + '/session')
+            .hawk(hawkCredentials)
+            .expect(204)
+            .end(function(err) {
+              if (err) {
+                throw err;
+              }
+              storage.getUserSimplePushURLs(userHmac, function(err, urls) {
+                if (err) throw err;
+                expect(urls).to.length(0);
+                storage.getHawkSession(hawkIdHmac, function(err, hawkSession) {
+                  if (err) throw err;
+                  expect(hawkSession).to.be(undefined);
+                  done();
+                });
+              });
+            });
+        });
       });
     });
   });

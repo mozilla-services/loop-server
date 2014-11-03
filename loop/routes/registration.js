@@ -15,7 +15,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
    **/
   app.post('/registration', auth.authenticate,
     function(req, res) {
-      if (!req.accepts("json")) {
+      if (req.body !== undefined && !req.accepts("json")) {
         sendError(res, 406, errors.BADJSON,
                   "Request body should be defined as application/json");
         return;
@@ -23,8 +23,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
 
       getSimplePushURLS(req, function(err, simplePushURLs) {
         if (err) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "simplePushURLs." + err + " should be a valid url");
+          sendError(res, 400, errors.INVALID_PARAMETERS, err.message);
           return;
         }
         if (Object.keys(simplePushURLs).length !== 0) {
