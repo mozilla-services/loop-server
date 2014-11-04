@@ -18,6 +18,17 @@ module.exports = function(conf, logError, storage, statsdClient) {
     port: conf.get("protocol") === "https" ? 443 : undefined
   };
 
+
+  function unauthorized(res, supported, message) {
+    var header = supported.join();
+    if (message) {
+      header += ' error="' + message.replace(/"/g, '\"') + '"';
+    }
+    res.set('WWW-Authenticate', header);
+    sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
+  }
+
+
   /**
    * Attach the identity of the user to the request if she is registered in the
    * database.
@@ -180,34 +191,83 @@ module.exports = function(conf, logError, storage, statsdClient) {
     }
   );
 
+
+  function requireBasicAuthToken(req, res, next) {
+    var authorization, policy, splitted, token;
+
+    authorization = req.headers.authorization;
+
+    if (authorization === undefined) {
+      unauthorized(res, ["Basic"]);
+      return;
+    }
+
+    splitted = authorization.split(" ");
+    if (splitted.length !== 2) {
+      unauthorized(res, ["Basic"]);
+      return;
+    }
+
+    policy = splitted[0];
+    token = new Buffer(splitted[1], 'base64').toString().replace(/:$/g, '');
+
+    if (policy.toLowerCase() !== 'basic') {
+      unauthorized(res, ["Basic"], "Unsupported");
+      return;
+    }
+
+    var tokenHmac = hmac(token, conf.get('userMacSecret'));
+
+    // req.token is the roomToken, tokenHmac is the user authentication token.
+    storage.isValidRoomToken(req.token, tokenHmac, function(err, isValid) {
+      if (res.serverError(err)) return;
+      if (!isValid) {
+        unauthorized(res, ["Basic"], "Invalid token; it may have expired.");
+        return;
+      }
+      req.participantTokenHmac = tokenHmac;
+      next();
+    });
+  }
+
   /**
    * Middleware that requires either BrowserID, Hawk, or nothing.
    *
    * In case no authenticate scheme is provided, creates and return a new hawk
    * session.
    **/
-  function authenticate(req, res, next) {
-    var supported = ["BrowserID", "Hawk"];
 
-    // First thing: check that the headers are valid. Otherwise 401.
-    var authorization = req.headers.authorization;
+  function getAuthenticate(supported, resolve, reject) {
+    return function authenticate(req, res, next) {
+      // First thing: check that the headers are valid. Otherwise 401.
+      var authorization = req.headers.authorization;
 
-    function _unauthorized(message, supported) {
-      res.set('WWW-Authenticate', supported.join());
-      sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
-    }
+      if (authorization !== undefined) {
+        var splitted = authorization.split(" ");
+        var policy = splitted[0];
 
-    if (authorization !== undefined) {
-      var splitted = authorization.split(" ");
-      var policy = splitted[0];
+        // Next, let's check which one the user wants to use.
+        if (supported.map(function(s) { return s.toLowerCase(); })
+            .indexOf(policy.toLowerCase()) === -1) {
+          unauthorized(res, supported, "Unsupported");
+          return;
+        }
 
-      // Next, let's check which one the user wants to use.
-      if (supported.map(function(s) { return s.toLowerCase(); })
-          .indexOf(policy.toLowerCase()) === -1) {
-        _unauthorized("Unsupported", supported);
-        return;
+        resolve(policy, req, res, next);
+      } else {
+        if (reject !== undefined) {
+          // Handle unauthenticated.
+          reject(req, res, next);
+        } else {
+          // Accept unauthenticated
+          next();
+        }
       }
+    };
+  }
 
+  var authenticate = getAuthenticate(["BrowserID", "Hawk"],
+    function(policy, req, res, next) {
       if (policy.toLowerCase() === "browserid") {
         // If that's BrowserID, then check and create hawk credentials, plus
         // return them.
@@ -216,19 +276,32 @@ module.exports = function(conf, logError, storage, statsdClient) {
         // If that's Hawk, let's check they're valid.
         requireHawkSession(req, res, next);
       }
-    } else {
-      // unauthenticated.
+    }, function(req, res, next) {
+      // If unauthenticated create a new Hawk Session
       attachOrCreateHawkSession(req, res, next);
-    }
-  }
+    });
+
+  var authenticateWithHawkOrToken = getAuthenticate(["Basic", "Hawk"],
+    function(policy, req, res, next) {
+      if (policy.toLowerCase() === "basic") {
+        // If that's Basic, then check if the token is right
+        requireBasicAuthToken(req, res, next);
+      } else if (policy.toLowerCase() === "hawk") {
+        // If that's Hawk, let's check they're valid.
+        requireHawkSession(req, res, next);
+      }
+    });
 
   return {
     authenticate: authenticate,
+    authenticateWithHawkOrToken: authenticateWithHawkOrToken,
     requireHawkSession: requireHawkSession,
     attachOrCreateHawkSession: attachOrCreateHawkSession,
     requireOAuthHawkSession: requireOAuthHawkSession,
     attachOrCreateOAuthHawkSession: attachOrCreateOAuthHawkSession,
     requireFxA: requireFxA,
-    requireRegisteredUser: requireRegisteredUser
+    requireRegisteredUser: requireRegisteredUser,
+    requireBasicAuthToken: requireBasicAuthToken,
+    unauthorized: unauthorized
   };
 };

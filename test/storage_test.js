@@ -711,6 +711,46 @@ describe("Storage", function() {
         });
       });
 
+      describe("#setRoomToken", function() {
+        it("should set the user roomToken", function(done) {
+          storage.setRoomToken("1234", "4567", 1, function(err) {
+            if (err) throw err;
+            storage.isValidRoomToken("1234", "4567", function(err, isValid) {
+              if (err) throw err;
+              expect(isValid).to.eql(true);
+              done();
+            });
+          });
+        });
+      });
+
+      describe("#isValidRoomToken", function() {
+        it("should return false if the Room Token doesn't exists", function(done) {
+          storage.isValidRoomToken("12345", "wrong-token", function(err, isValid) {
+            if (err) throw err;
+            expect(isValid).to.eql(false);
+            done();
+          });
+        });
+
+        it("should return false if the Room Token has expired", function(done) {
+          storage.setRoomToken("1234", "4567", 0.01, function(err) {
+            if (err) throw err;
+            storage.isValidRoomToken("1234", "4567", function(err, isValid) {
+              if (err) throw err;
+              expect(isValid).to.eql(true);
+              setTimeout(function() {
+                storage.isValidRoomToken("12345", "4567", function(err, isValid) {
+                  if (err) throw err;
+                  expect(isValid).to.eql(false);
+                  done();
+                });
+              }, 15);
+            });
+          });
+        });
+      });
+
       describe("#ping", function() {
         it("should return true if we are connected", function(done) {
           storage.ping(function(connected) {

@@ -16,6 +16,8 @@ var getUserAccount = require('../utils').getUserAccount;
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
 
+var hmac = require('../hmac');
+
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
                            validators, tokBox) {
@@ -266,8 +268,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *
    * Actions are "join", "leave", "refresh".
    **/
-  apiRouter.post('/rooms/:token', auth.requireHawkSession,
-    validators.validateRoomToken, function(req, res) {
+  apiRouter.post('/rooms/:token', validators.validateRoomToken, auth.authenticateWithHawkOrToken,
+    function(req, res) {
+      var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var ROOM_ACTIONS = ["join", "refresh", "leave"];
       var action = req.body.action;
       var code;
@@ -280,6 +283,12 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         }
         sendError(res, 400, code,
                   "action should be one of " + ROOM_ACTIONS.join(", "));
+        return;
+      }
+
+      // If the action is not join, they should be authenticated.
+      if (participantHmac === "undefined" && action !== "join") {
+        auth.unauthorized(res, ["Token", "Hawk"]);
         return;
       }
 
@@ -297,57 +306,66 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               var sessionToken = tokBox.getSessionToken(
                 req.roomStorageData.sessionId
               );
-              storage.getRoomParticipants(req.token, function(err,
-                participants) {
-                  if (res.serverError(err)) return;
-                  var clientMaxSize = getClientMaxSize(
-                    participants,
-                    req.roomStorageData.maxSize
-                  );
 
-                  if (clientMaxSize <= participants.length) {
-                    // The room is already full.
-                    sendError(res, 400, errors.ROOM_FULL,
-                              "The room is full.");
-                    return;
-                  } else if (requestMaxSize <= participants.length) {
-                    // You cannot handle the number of actual participants.
-                    sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
-                      "Too many participants in the room for you to handle.");
-                    return;
-                  }
+              function next(err) {
+                if (res.serverError(err)) return;
+                storage.getRoomParticipants(req.token, function(err,
+                  participants) {
+                    if (res.serverError(err)) return;
+                    var clientMaxSize = getClientMaxSize(
+                      participants,
+                      req.roomStorageData.maxSize
+                    );
 
-                  getUserAccount(storage, req, function(err, acc) {
-                    encryptAccountName(req.token, acc, function(account) {
+                    if (clientMaxSize <= participants.length) {
+                      // The room is already full.
+                      sendError(res, 400, errors.ROOM_FULL,
+                                "The room is full.");
+                      return;
+                    } else if (requestMaxSize <= participants.length) {
+                      // You cannot handle the number of actual participants.
+                      sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
+                        "Too many participants in the room for you to handle.");
+                      return;
+                    }
+
+                    getUserAccount(storage, req, function(err, acc) {
                       if (res.serverError(err)) return;
-                      storage.addRoomParticipant(req.token, req.hawkIdHmac, {
-                        id: uuid.v4(),
-                        displayName: req.body.displayName,
-                        clientMaxSize: requestMaxSize,
-                        userIdHmac: req.user,
-                        account: account
-                      }, ttl, function(err) {
-                        if (res.serverError(err)) return;
-                        emitRoomEvent(req.token,
-                          req.roomStorageData.roomOwnerHmac, function(err) {
-                            if (res.serverError(err)) return;
-                            res.status(200).json({
-                              apiKey: req.roomStorageData.apiKey,
-                              sessionId: req.roomStorageData.sessionId,
-                              sessionToken: sessionToken,
-                              expires: ttl
+                      encryptAccountName(req.token, acc, function(account) {
+                        storage.addRoomParticipant(req.token, participantHmac, {
+                          id: uuid.v4(),
+                          displayName: req.body.displayName,
+                          clientMaxSize: requestMaxSize,
+                          userIdHmac: req.user,
+                          account: account
+                        }, ttl, function(err) {
+                          if (res.serverError(err)) return;
+                          emitRoomEvent(req.token,
+                            req.roomStorageData.roomOwnerHmac, function(err) {
+                              if (res.serverError(err)) return;
+                              res.status(200).json({
+                                apiKey: req.roomStorageData.apiKey,
+                                sessionId: req.roomStorageData.sessionId,
+                                sessionToken: sessionToken,
+                                expires: ttl
+                              });
                             });
-                          });
+                        });
                       });
                     });
-                  });
-
-              });
-          });
+                });
+              }
+              if (participantHmac === undefined) {
+                participantHmac = hmac(sessionToken, conf.get('userMacSecret'));
+                storage.setRoomToken(req.token, participantHmac, ttl, next);
+                return;
+              }
+              next();
+            });
         },
         handleRefresh: function(req, res) {
           var ttl = roomsConf.participantTTL;
-          storage.touchRoomParticipant(req.token, req.hawkIdHmac, ttl,
+          storage.touchRoomParticipant(req.token, participantHmac, ttl,
             function(err, success) {
               if (res.serverError(err)) return;
               if (success !== true) {
@@ -360,7 +378,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             });
         },
         handleLeave: function(req, res) {
-          storage.deleteRoomParticipant(req.token, req.hawkIdHmac,
+          storage.deleteRoomParticipant(req.token, participantHmac,
             function(err) {
               if (res.serverError(err)) return;
               emitRoomEvent(req.token, req.roomStorageData.roomOwnerHmac,
