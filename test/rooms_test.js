@@ -902,7 +902,7 @@ describe("/rooms", function() {
                     expect(requests).to.length(2);
                     expect(requests[0].url).to.match(/http:\/\/notmyidea/);
                     expect(requests[0].form.version).to.gte(joinTime);
-                    done()
+                    done();
                   });
                 });
               });
@@ -982,7 +982,7 @@ describe("/rooms", function() {
                       expect(requests).to.length(2);
                       expect(requests[0].url).to.match(/http:\/\/notmyidea/);
                       expect(requests[0].form.version).to.gte(leaveTime);
-                      done()
+                      done();
                     });
                   });
                 });
@@ -1136,7 +1136,7 @@ describe("/rooms", function() {
                   expect(requests).to.length(2);
                   expect(requests[0].url).to.match(/http:\/\/notmyidea/);
                   expect(requests[0].form.version).to.gte(joinTime);
-                  done()
+                  done();
                 });
               });
             });
@@ -1221,7 +1221,7 @@ describe("/rooms", function() {
                       expect(requests).to.length(2);
                       expect(requests[0].url).to.match(/http:\/\/notmyidea/);
                       expect(requests[0].form.version).to.gte(leaveTime);
-                      done()
+                      done();
                     });
                   });
                 });

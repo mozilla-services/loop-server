@@ -749,7 +749,7 @@ function runOnPrefix(apiPrefix) {
           jsonReq.send({}).expect(200).end(function(err, res) {
             if (err) throw err;
             expect(res.headers['server-authorization']).not.eql(undefined);
-            done()
+            done();
           });
         });
     });
