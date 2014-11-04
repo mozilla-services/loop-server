@@ -236,23 +236,38 @@ module.exports = function(conf, logError, storage, statsdClient) {
    * In case no authenticate scheme is provided, creates and return a new hawk
    * session.
    **/
-  function authenticate(req, res, next) {
-    var supported = ["BrowserID", "Hawk"];
 
-    // First thing: check that the headers are valid. Otherwise 401.
-    var authorization = req.headers.authorization;
+  function getAuthenticate(supported, resolve, reject) {
+    return function authenticate(req, res, next) {
+      // First thing: check that the headers are valid. Otherwise 401.
+      var authorization = req.headers.authorization;
 
-    if (authorization !== undefined) {
-      var splitted = authorization.split(" ");
-      var policy = splitted[0];
+      if (authorization !== undefined) {
+        var splitted = authorization.split(" ");
+        var policy = splitted[0];
 
-      // Next, let's check which one the user wants to use.
-      if (supported.map(function(s) { return s.toLowerCase(); })
-          .indexOf(policy.toLowerCase()) === -1) {
-        unauthorized(res, supported, "Unsupported");
-        return;
+        // Next, let's check which one the user wants to use.
+        if (supported.map(function(s) { return s.toLowerCase(); })
+            .indexOf(policy.toLowerCase()) === -1) {
+          unauthorized(res, supported, "Unsupported");
+          return;
+        }
+
+        resolve(policy, req, res, next);
+      } else {
+        if (reject !== undefined) {
+          // Handle unauthenticated.
+          reject(req, res, next);
+        } else {
+          // Accept unauthenticated
+          next();
+        }
       }
+    };
+  }
 
+  var authenticate = getAuthenticate(["BrowserID", "Hawk"],
+    function(policy, req, res, next) {
       if (policy.toLowerCase() === "browserid") {
         // If that's BrowserID, then check and create hawk credentials, plus
         // return them.
@@ -261,29 +276,13 @@ module.exports = function(conf, logError, storage, statsdClient) {
         // If that's Hawk, let's check they're valid.
         requireHawkSession(req, res, next);
       }
-    } else {
-      // unauthenticated.
+    }, function(req, res, next) {
+      // If unauthenticated create a new Hawk Session
       attachOrCreateHawkSession(req, res, next);
-    }
-  }
+    });
 
-  function authenticateWithHawkOrToken(req, res, next) {
-    var supported = ["Basic", "Hawk"];
-
-    // First thing: check that the headers are valid. Otherwise 401.
-    var authorization = req.headers.authorization;
-
-    if (authorization !== undefined) {
-      var splitted = authorization.split(" ");
-      var policy = splitted[0];
-
-      // Next, let's check which one the user wants to use.
-      if (supported.map(function(s) { return s.toLowerCase(); })
-          .indexOf(policy.toLowerCase()) === -1) {
-        unauthorized(res, supported, "Unsupported");
-        return;
-      }
-
+  var authenticateWithHawkOrToken = getAuthenticate(["Basic", "Hawk"],
+    function(policy, req, res, next) {
       if (policy.toLowerCase() === "basic") {
         // If that's Basic, then check if the token is right
         requireBasicAuthToken(req, res, next);
@@ -291,11 +290,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
         // If that's Hawk, let's check they're valid.
         requireHawkSession(req, res, next);
       }
-    } else {
-      // Let the user access the view anonymously
-      next();
-    }
-  }
+    });
 
   return {
     authenticate: authenticate,
