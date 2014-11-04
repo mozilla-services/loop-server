@@ -6,6 +6,7 @@
 
 var errors = require("../errno.json");
 var sendError = require('../utils').sendError;
+var getSimplePushURLS = require('../utils').getSimplePushURLS;
 var tokenlib = require('../tokenlib');
 
 
@@ -64,31 +65,20 @@ module.exports = function(conf, logError, storage) {
         return;
       }
 
-    req.simplePushURLs = req.body.simplePushURLs || {};
-
-    var simplePushURL = req.body.simplePushURL ||
-      req.query.simplePushURL ||
-      req.body.simple_push_url;  // Bug 1032966 - Handle old simple_push_url format
-
-    if (simplePushURL !== undefined) {
-      req.simplePushURLs.calls = simplePushURL;
-    }
-
-    if (Object.keys(req.simplePushURLs).length !== 0) {
-
-      for (var topic in req.simplePushURLs) {
-        if (req.simplePushURLs[topic].indexOf('http') !== 0) {
-          sendError(res, 400, errors.INVALID_PARAMETERS,
-                    "simplePushURLs." + topic + " should be a valid url");
-          return;
-        }
+    getSimplePushURLS(req, function(err, simplePushURLs) {
+      if (err) {
+        sendError(res, 400, errors.INVALID_PARAMETERS, err.message);
+        return;
       }
+      req.simplePushURLs = simplePushURLs;
+      if (Object.keys(req.simplePushURLs).length === 0) {
+        sendError(res, 400, errors.MISSING_PARAMETERS,
+                  "Missing: simplePushURLs.calls, simplePushURLs.rooms");
+        return;
+      }
+
       next();
-    } else {
-      sendError(res, 400, errors.MISSING_PARAMETERS,
-                "Missing: simplePushURLs.calls, simplePushURLs.rooms");
-      return;
-    }
+    });
   }
 
   /**

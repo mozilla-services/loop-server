@@ -4,18 +4,36 @@
 
 "use strict";
 
+var errors = require("../errno.json");
+var sendError = require('../utils').sendError;
+var getSimplePushURLS = require('../utils').getSimplePushURLS;
 
-module.exports = function (app, conf, logError, storage, auth, validators) {
+
+module.exports = function (app, conf, logError, storage, auth) {
   /**
    * Registers the given user with the given simple push url.
    **/
-  app.post('/registration', validators.validateSimplePushURL, auth.authenticate,
+  app.post('/registration', auth.authenticate,
     function(req, res) {
-      storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, req.simplePushURLs,
-        function(err) {
-          if (res.serverError(err)) return;
-          res.status(200).json();
-        });
+      if (req.body !== undefined && !req.accepts("json")) {
+        sendError(res, 406, errors.BADJSON,
+                  "Request body should be defined as application/json");
+        return;
+      }
+      getSimplePushURLS(req, function(err, simplePushURLs) {
+        if (err) {
+          sendError(res, 400, errors.INVALID_PARAMETERS, err.message);
+          return;
+        }
+        if (Object.keys(simplePushURLs).length !== 0) {
+          storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, simplePushURLs,
+            function(err) {
+              if (res.serverError(err)) return;
+          });
+        }
+      });
+
+      res.status(200).json();
     });
 
   /**
