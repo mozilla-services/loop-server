@@ -9,7 +9,7 @@ var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 
 
-module.exports = function (app, conf, logError, storage, auth, validators) {
+module.exports = function (app, conf, logError, storage, auth) {
   /**
    * Registers the given user with the given simple push url.
    **/
@@ -20,7 +20,6 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
                   "Request body should be defined as application/json");
         return;
       }
-
       getSimplePushURLS(req, function(err, simplePushURLs) {
         if (err) {
           sendError(res, 400, errors.INVALID_PARAMETERS, err.message);

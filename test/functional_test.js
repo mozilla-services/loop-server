@@ -748,7 +748,6 @@ function runOnPrefix(apiPrefix) {
         function(done) {
           jsonReq.send({}).expect(200).end(function(err, res) {
             if (err) throw err;
-            expect(res.headers['server-authorization']).to.eql(undefined);
             expect(res.headers['server-authorization']).not.eql(undefined);
             done()
           });
@@ -1360,7 +1359,7 @@ function runOnPrefix(apiPrefix) {
                         .end(function(err, res) {
                           if (err) throw err;
                           expectFormattedError(res, 403, errors.INVALID_AUTH_TOKEN,
-                            "You should be a registered user to place a direct call.");
+                            "You should be a registered user to perform this action.");
                           done();
                         });
                     });
@@ -1554,26 +1553,43 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should remove the connected user session and drop its simplePushUrls", function(done) {
-        register('http://url', expectedAssertion, hawkCredentials, function() {
-          supertest(app)
-            .del(apiPrefix + '/session')
-            .hawk(hawkCredentials)
-            .expect(204)
-            .end(function(err) {
-              if (err) {
-                throw err;
-              }
-              storage.getUserSimplePushURLs(userHmac, function(err, urls) {
-                if (err) throw err;
-                expect(urls).to.length(0);
-                storage.getHawkSession(hawkIdHmac, function(err, hawkSession) {
-                  if (err) throw err;
-                  expect(hawkSession).to.be(undefined);
-                  done();
+        supertest(app)
+          .post(apiPrefix + '/registration')
+          .type('json')
+          .send({'simple_push_url': 'http://url'})
+          .set("Authorization", "BrowserID " + expectedAssertion)
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            var token = new Token(res.header['hawk-session-token']);
+            token.getCredentials(function(tokenId, authKey) {
+              hawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
+              supertest(app)
+                .del(apiPrefix + '/session')
+                .hawk({
+                  id: tokenId,
+                  key: authKey,
+                  algorithm: "sha256"
+                })
+                .expect(204)
+                .end(function(err, res) {
+                  if (err) {
+                    console.log(res.body);
+                    throw err;
+                  }
+                  storage.getUserSimplePushURLs(userHmac, function(err, urls) {
+                    if (err) throw err;
+                    expect(urls.calls).to.length(0);
+                    expect(urls.rooms).to.length(0);
+                    storage.getHawkSession(hawkIdHmac, function(err, hawkSession) {
+                      if (err) throw err;
+                      expect(hawkSession).to.eql(null);
+                      done();
+                    });
+                  });
                 });
-              });
             });
-        });
+          });
       });
     });
   });

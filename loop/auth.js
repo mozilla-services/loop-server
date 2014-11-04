@@ -103,7 +103,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
       if (res.serverError(err)) return;
       if (user === null) {
         sendError(res, 403, errors.INVALID_AUTH_TOKEN,
-                 "You should be a registered user to place a direct call.");
+                 "You should be a registered user to perform this action.");
         return;
       }
       next();
@@ -182,6 +182,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
 
                 // return hawk credentials.
                 hawk.setHawkHeaders(res, sessionToken);
+                req.hawkIdHmac = hawkIdHmac;
                 req.user = userHmac;
                 next();
               });
