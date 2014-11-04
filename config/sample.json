@@ -15,7 +15,9 @@
     },
     "tokenDuration": 86400
   },
-  "webAppUrl": "http://localhost:3000/content/#call/{token}",
+  "callUrls": {
+    "webAppUrl": "http://localhost:3000/content/#call/{token}"
+  },
   "sentryDSN": false,
   "allowedOrigins": [
     "http://localhost:3000"
