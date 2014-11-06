@@ -27,6 +27,7 @@ RedisStorage.prototype = {
     var self = this;
     // Remove any previous storage spurl.{userHmac} LIST
     // XXX - Bug 1069208 — Remove this two month after 0.13 release
+    // (January 2015)
     self._client.del('spurl.' + userHmac, function(err) {
       if (err) {
         callback(err);
@@ -56,48 +57,60 @@ RedisStorage.prototype = {
     var self = this;
 
     var result = {};
-    for (var i = 0; i < SIMPLE_PUSH_TOPICS.length; i++) {
-      result[SIMPLE_PUSH_TOPICS[i]] = [];
-    }
+    SIMPLE_PUSH_TOPICS.forEach(function(topic) {
+      result[topic] = [];
+    });
 
-    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
-      if (err) {
-        callback(err);
-        return;
-      }
-
-      if (spurl_keys.length === 0) {
-        callback(null, result);
-        return;
-      }
-
-      self._client.mget(spurl_keys, function(err, simplePushURLsJSONList) {
+    // XXX - Bug 1069208 — Remove this two month after 0.13 release
+    // (January 2015)
+    this._client.lrange(
+      'spurl.' + userMac, 0, this._settings.maxSimplePushUrls,
+      function(err, results) {
         if (err) {
           callback(err);
           return;
         }
-        var simplePushURLsList = simplePushURLsJSONList.map(function(json) {
-          if (json) {
-            return JSON.parse(json);
+
+        results.forEach(function(item) {
+          if (result.calls.indexOf(item) === -1)
+            result.calls.push(item);
+        });
+
+        this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
+          if (err) {
+            callback(err);
+            return;
           }
-          return null;
-        }).filter(function (dict) { return dict !== null; });
 
-        for (var i = 0; i < simplePushURLsList.length; i++) {
-          var item = simplePushURLsList[i];
+          if (spurl_keys.length === 0) {
+            callback(null, result);
+            return;
+          }
 
-          for (var j = 0; j < SIMPLE_PUSH_TOPICS.length; j++) {
-            var topic = SIMPLE_PUSH_TOPICS[j];
-            var sp_topic = item[topic];
-            if (sp_topic !== undefined) {
-              if (result[topic].indexOf(sp_topic) === -1)
-                result[topic].push(sp_topic);
+          self._client.mget(spurl_keys, function(err, simplePushURLsJSONList) {
+            if (err) {
+              callback(err);
+              return;
             }
-          }
-        }
-        callback(null, result);
-      });
-    });
+            var simplePushURLsList = simplePushURLsJSONList.map(function(json) {
+              if (json) {
+                return JSON.parse(json);
+              }
+              return null;
+            }).filter(function (dict) { return dict !== null; });
+
+            simplePushURLsList.forEach(function(item) {
+              SIMPLE_PUSH_TOPICS.forEach(function(topic) {
+                var sp_topic = item[topic];
+                if (result[topic].indexOf(sp_topic) === -1)
+                  result[topic].push(sp_topic);
+              });
+            });
+
+            callback(null, result);
+          });
+        });
+      }.bind(this));
   },
 
   removeSimplePushURLs: function(userMac, hawkHmacId, callback) {
