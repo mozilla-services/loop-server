@@ -952,7 +952,14 @@ RedisStorage.prototype = {
 
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
     this._client.del(
-      'roomparticipant.' + roomToken + '.' + hawkIdHmac, callback
+      'roomparticipant.' + roomToken + '.' + hawkIdHmac, function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        this._client.del(
+          'roomparticipant_token.' + roomToken + '.' + hawkIdHmac, callback);
+      }.bind(this)
     );
   },
 

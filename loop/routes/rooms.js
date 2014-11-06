@@ -253,8 +253,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   /**
    * Retrieves information about a specific room.
    **/
-  apiRouter.get('/rooms/:token', auth.requireHawkSession,
-    validators.validateRoomToken, validators.isRoomParticipant,
+  apiRouter.get('/rooms/:token', validators.validateRoomToken,
+    auth.authenticateWithHawkOrToken, validators.isRoomParticipant,
     function(req, res) {
       getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
         delete roomData.roomToken;
@@ -287,7 +287,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       }
 
       // If the action is not join, they should be authenticated.
-      if (participantHmac === "undefined" && action !== "join") {
+      if (participantHmac === undefined && action !== "join") {
         auth.unauthorized(res, ["Token", "Hawk"]);
         return;
       }

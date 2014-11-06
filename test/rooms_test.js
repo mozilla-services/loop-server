@@ -89,11 +89,17 @@ function register(credentials, url, status) {
 
 var getRoomInfo = function(credentials, roomToken, status) {
   var hawkCredentials = credentials.hawkCredentials || credentials;
-  return supertest(app)
+  var req = supertest(app)
     .get('/rooms/' + roomToken)
     .type('json')
-    .hawk(hawkCredentials)
     .expect(status || 200);
+
+  if (credentials.token !== undefined) {
+    req = req.auth(credentials.token, "");
+  } else {
+    req = req.hawk(credentials.hawkCredentials || credentials);
+  }
+  return req;
 };
 
 var joinRoom = function(credentials, roomToken, data, status) {
@@ -542,7 +548,7 @@ describe("/rooms", function() {
 
     it("should have the requireHawkSession middleware.", function() {
       expect(getMiddlewares(apiRouter, 'get', '/rooms/:token'))
-        .include(requireHawkSession);
+        .include(authenticateWithHawkOrToken);
     });
 
     it("should return 200 with room info", function(done) {
@@ -1169,7 +1175,7 @@ describe("/rooms", function() {
                 clock.tick(1000);
                 refreshRoom(credentials, roomToken).end(function(err) {
                   if (err) throw err;
-                  getRoomInfo(hawkCredentials, roomToken).end(function(err, res) {
+                  getRoomInfo(credentials, roomToken).end(function(err, res) {
                     if (err) throw err;
                     expect(res.body.creationTime).to.be.gte(startTime);
                     done();
@@ -1192,12 +1198,7 @@ describe("/rooms", function() {
               };
               leaveRoom(credentials, roomToken).end(function(err) {
                 if (err) throw err;
-                getRoomInfo(hawkCredentials, roomToken).end(
-                  function(err, getRes) {
-                    if (err) throw err;
-                    expect(getRes.body.participants).to.length(0);
-                    done();
-                  });
+                getRoomInfo(credentials, roomToken).expect(401).end(done);
               });
             });
           });
