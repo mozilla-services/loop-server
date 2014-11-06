@@ -250,8 +250,10 @@ module.exports = function(conf, logError, storage) {
     storage.getRoomParticipants(req.token, function(err, participants) {
       if (res.serverError(err)) return;
 
+      var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
+
       var isParticipant = participants.some(function(p) {
-        return p.hawkIdHmac === req.hawkIdHmac;
+        return p.hawkIdHmac === participantHmac;
       });
 
       var isOwner = (req.user === req.roomStorageData.roomOwnerHmac);

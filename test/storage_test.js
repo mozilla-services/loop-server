@@ -889,6 +889,20 @@ describe("Storage", function() {
                 });
             });
         });
+
+        it("should remove a participant token", function(done) {
+          storage.setRoomToken(roomToken, "1234", ttl, function(err) {
+            if (err) throw err;
+            storage.deleteRoomParticipant(roomToken, "1234", function(err) {
+              if (err) throw err;
+              storage.isValidRoomToken(roomToken, "1234", function(err, isValid) {
+                if (err) throw err;
+                expect(isValid).to.eql(false);
+                done();
+              });
+            });
+          });
+        });
       });
 
       describe("#incrementConnectedCallDevices", function() {
