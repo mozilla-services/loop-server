@@ -942,12 +942,19 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        if (result === 0) {
-          callback(null, false);
-          return;
-        }
-        callback(null, true);
-      });
+        this._client.pexpire('roomparticipant_token.' + roomToken + '.' + hawkIdHmac,
+          ttl * 1000, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            if (result === 0) {
+              callback(null, false);
+              return;
+            }
+            callback(null, true);
+          });
+      }.bind(this));
   },
 
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {

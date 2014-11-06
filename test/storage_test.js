@@ -846,7 +846,7 @@ describe("Storage", function() {
       });
 
       describe("#touchRoomParticipant", function() {
-        it("should change the expiracy", function(done) {
+        it("should change the roomparticipant expiracy", function(done) {
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
@@ -864,6 +864,27 @@ describe("Storage", function() {
                     });
                   });
                 }, 15);
+              });
+            });
+        });
+
+        it("should change the roomparticipant token", function(done) {
+          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
+            function(err) {
+              if (err) throw err;
+              storage.setRoomToken(roomToken, "1234", 30, function(err) {
+                if (err) throw err;
+                storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+                  if (err) throw err;
+                  expect(success).to.eql(true);
+                  setTimeout(function() {
+                    storage.isValidRoomToken(roomToken, "1234", function(err, success) {
+                      if (err) throw err;
+                      expect(success).to.eql(false);
+                      done();
+                    });
+                  }, 15);
+                });
               });
             });
         });
