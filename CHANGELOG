@@ -3,16 +3,28 @@ Changelog
 
 This document describes changes between each past release.
 
-0.13.0 (Unreleased)
+0.13.0 (2014-11-06)
 -------------------
 
-- [config] 1072293 — Consolidated call url configuration;
-- [config] 1072293 — webAppUrl for calls is now configured in callUrls;
-- [config] 1072271 — Refactor logging configuration;
+This release introduces support for rooms.
+
+- [security]    Add rate limiting rules for calls (1070000)
+- [api-change]  POST /registration accepts both simple push URLs or nothing (1072184, 1094662)
+- [feature]     Implement the rooms feature (1067971, 1087041, 1080640)
+- [feature]     Handle DELETE on /accounts /session and /registration (1072184)
+- [bugfix]      Websockets: add the a reason when, on hello the call state is set to terminate (1075138)
+- [bugfix]      Make sure redis is writable on heartbeat (1070889)
+- [bugfix]      Make sure GET /calls returns the callerId if present (1079950)
+- [config]      Consolidate the call url configuration (1072293)
+- [config]      Refactor logging configuration (1072271)
+- [config]      Change the default webapp URLs (1088187)
+- [logs]        Add calleeId to logs on POST /calls/:token (1074468)
+- [tooling]     Add redis_usage.sh and callurls_per_user tools.
 
 
-0.12.6 (2014-10-30)
--------------------
+0.12.7 / 0.12.6 (2014-10-30)
+----------------------------
+
 - [security] Bug 1072136 — Add videur profile in /api-specs
 - [bugfix] Bug 1080491 — Return answered-elsewhere message on other callee devices.
 - [bugfix] Bug 1086698 — Store the user ID if no &quot;issuer&quot; is provided for POST /call-url
@@ -20,6 +32,7 @@ This document describes changes between each past release.
 
 0.12.5 (2014-10-15)
 -------------------
+
 - [bugfix] Bug 1079950 - GET /calls/?version=&lt;version&gt; should include the callerId for both FxA and non-FxA calls
 
 
