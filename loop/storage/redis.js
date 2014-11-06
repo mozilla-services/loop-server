@@ -57,9 +57,9 @@ RedisStorage.prototype = {
     var self = this;
 
     var result = {};
-    for (var i = 0; i < SIMPLE_PUSH_TOPICS.length; i++) {
-      result[SIMPLE_PUSH_TOPICS[i]] = [];
-    }
+    SIMPLE_PUSH_TOPICS.forEach(function(topic) {
+      result[topic] = [];
+    });
 
     // XXX - Bug 1069208 — Remove this two month after 0.13 release
     // (January 2015)
@@ -71,10 +71,10 @@ RedisStorage.prototype = {
           return;
         }
 
-        for (var i = 0; i < results.length; i++) {
-          if (result.calls.indexOf(results[i]) === -1)
-            result.calls.push(results[i]);
-        }
+        results.forEach(function(item) {
+          if (result.calls.indexOf(item) === -1)
+            result.calls.push(item);
+        });
 
         this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
           if (err) {
@@ -99,18 +99,13 @@ RedisStorage.prototype = {
               return null;
             }).filter(function (dict) { return dict !== null; });
 
-            for (var i = 0; i < simplePushURLsList.length; i++) {
-              var item = simplePushURLsList[i];
-
-              for (var j = 0; j < SIMPLE_PUSH_TOPICS.length; j++) {
-                var topic = SIMPLE_PUSH_TOPICS[j];
+            simplePushURLsList.forEach(function(item) {
+              SIMPLE_PUSH_TOPICS.forEach(function(topic) {
                 var sp_topic = item[topic];
-                if (sp_topic !== undefined) {
-                  if (result[topic].indexOf(sp_topic) === -1)
-                    result[topic].push(sp_topic);
-                }
-              }
-            }
+                if (result[topic].indexOf(sp_topic) === -1)
+                  result[topic].push(sp_topic);
+              });
+            });
 
             callback(null, result);
           });
