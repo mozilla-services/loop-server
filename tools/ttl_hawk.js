@@ -14,7 +14,7 @@ if (argv._.length > 0) {
   console.log("redis-cli TTL hawk." + hawkIdHmac);
 
   if (storage.engine === "redis") {
-    var options = storage.settings;
+d   var options = storage.settings;
     var client = redis.createClient(
       options.port,
       options.host,

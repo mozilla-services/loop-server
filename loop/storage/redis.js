@@ -6,6 +6,7 @@
 var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
+var migrationClient = require("./redis_migration");
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
@@ -20,13 +21,17 @@ var isUndefined = function(field, fieldName, callback) {
 
 function RedisStorage(options, settings) {
   this._settings = settings;
-  this._client = redis.createClient(
-    options.port,
-    options.host,
-    options.options
-  );
-  if (options.db) {
-    this._client.select(options.db);
+  if (options.migration === true) {
+    this._client = migrationClient(options);
+  } else {
+    this._client = redis.createClient(
+      options.port,
+      options.host,
+      options.options
+    );
+    if (options.db) {
+      this._client.select(options.db);
+    }
   }
 }
 
