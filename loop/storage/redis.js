@@ -942,7 +942,7 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        this._client.pexpire('roomparticipant_token.' + roomToken + '.' + hawkIdHmac,
+        this._client.pexpire('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
           ttl * 1000, function(err) {
             if (err) {
               callback(err);
@@ -961,7 +961,7 @@ RedisStorage.prototype = {
           return;
         }
         this._client.del(
-          'roomparticipant_token.' + roomToken + '.' + hawkIdHmac, callback);
+          'roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac, callback);
       }.bind(this)
     );
   },
@@ -1000,18 +1000,18 @@ RedisStorage.prototype = {
   /**
    * Set the anonymous participant token.
    */
-  setRoomToken: function(roomToken, sessionTokenHmac, ttl, callback) {
+  setRoomAccessToken: function(roomToken, sessionTokenHmac, ttl, callback) {
     this._client.psetex(
-      'roomparticipant_token.' + roomToken + '.' + sessionTokenHmac,
+      'roomparticipant_access_token.' + roomToken + '.' + sessionTokenHmac,
       parseInt(ttl * 1000, 10), "", callback);
   },
 
   /**
    * Get the anonymous participant token.
    */
-  isValidRoomToken: function(roomToken, sessionTokenHmac, callback) {
+  isValidRoomAccessToken: function(roomToken, sessionTokenHmac, callback) {
     this._client.get(
-      'roomparticipant_token.' + roomToken + '.' + sessionTokenHmac,
+      'roomparticipant_access_token.' + roomToken + '.' + sessionTokenHmac,
       function(err, data) {
         if (err) {
           callback(err);

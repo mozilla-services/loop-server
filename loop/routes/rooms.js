@@ -357,7 +357,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               }
               if (participantHmac === undefined) {
                 participantHmac = hmac(sessionToken, conf.get('userMacSecret'));
-                storage.setRoomToken(req.token, participantHmac, ttl, next);
+                storage.setRoomAccessToken(req.token, participantHmac, ttl, next);
                 return;
               }
               next();

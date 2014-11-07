@@ -711,11 +711,11 @@ describe("Storage", function() {
         });
       });
 
-      describe("#setRoomToken", function() {
+      describe("#setRoomAccessToken", function() {
         it("should set the user roomToken", function(done) {
-          storage.setRoomToken("1234", "4567", 1, function(err) {
+          storage.setRoomAccessToken("1234", "4567", 1, function(err) {
             if (err) throw err;
-            storage.isValidRoomToken("1234", "4567", function(err, isValid) {
+            storage.isValidRoomAccessToken("1234", "4567", function(err, isValid) {
               if (err) throw err;
               expect(isValid).to.eql(true);
               done();
@@ -724,9 +724,9 @@ describe("Storage", function() {
         });
       });
 
-      describe("#isValidRoomToken", function() {
+      describe("#isValidRoomAccessToken", function() {
         it("should return false if the Room Token doesn't exists", function(done) {
-          storage.isValidRoomToken("12345", "wrong-token", function(err, isValid) {
+          storage.isValidRoomAccessToken("12345", "wrong-token", function(err, isValid) {
             if (err) throw err;
             expect(isValid).to.eql(false);
             done();
@@ -734,13 +734,13 @@ describe("Storage", function() {
         });
 
         it("should return false if the Room Token has expired", function(done) {
-          storage.setRoomToken("1234", "4567", 0.01, function(err) {
+          storage.setRoomAccessToken("1234", "4567", 0.01, function(err) {
             if (err) throw err;
-            storage.isValidRoomToken("1234", "4567", function(err, isValid) {
+            storage.isValidRoomAccessToken("1234", "4567", function(err, isValid) {
               if (err) throw err;
               expect(isValid).to.eql(true);
               setTimeout(function() {
-                storage.isValidRoomToken("12345", "4567", function(err, isValid) {
+                storage.isValidRoomAccessToken("12345", "4567", function(err, isValid) {
                   if (err) throw err;
                   expect(isValid).to.eql(false);
                   done();
@@ -872,13 +872,13 @@ describe("Storage", function() {
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
-              storage.setRoomToken(roomToken, "1234", 30, function(err) {
+              storage.setRoomAccessToken(roomToken, "1234", 30, function(err) {
                 if (err) throw err;
                 storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
                   if (err) throw err;
                   expect(success).to.eql(true);
                   setTimeout(function() {
-                    storage.isValidRoomToken(roomToken, "1234", function(err, success) {
+                    storage.isValidRoomAccessToken(roomToken, "1234", function(err, success) {
                       if (err) throw err;
                       expect(success).to.eql(false);
                       done();
@@ -912,11 +912,11 @@ describe("Storage", function() {
         });
 
         it("should remove a participant token", function(done) {
-          storage.setRoomToken(roomToken, "1234", ttl, function(err) {
+          storage.setRoomAccessToken(roomToken, "1234", ttl, function(err) {
             if (err) throw err;
             storage.deleteRoomParticipant(roomToken, "1234", function(err) {
               if (err) throw err;
-              storage.isValidRoomToken(roomToken, "1234", function(err, isValid) {
+              storage.isValidRoomAccessToken(roomToken, "1234", function(err, isValid) {
                 if (err) throw err;
                 expect(isValid).to.eql(false);
                 done();

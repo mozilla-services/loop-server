@@ -48,7 +48,7 @@ describe("auth.js", function() {
       expectedToken = "valid-token";
       expectedTokenHmac = hmac(expectedToken, conf.get('userMacSecret'));
 
-      sandbox.stub(storage, "isValidRoomToken",
+      sandbox.stub(storage, "isValidRoomAccessToken",
         function(roomToken, tokenHmac, cb) {
           if (tokenHmac === expectedTokenHmac) {
             cb(null, true);
@@ -117,7 +117,7 @@ describe("auth.js", function() {
         expectedToken = "valid-token";
         expectedTokenHmac = hmac(expectedToken, conf.get('userMacSecret'));
 
-        sandbox.stub(storage, "isValidRoomToken",
+        sandbox.stub(storage, "isValidRoomAccessToken",
           function(roomToken, tokenHmac, cb) {
             if (tokenHmac === expectedTokenHmac) {
               cb(null, true);
