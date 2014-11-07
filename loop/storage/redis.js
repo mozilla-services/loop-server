@@ -998,7 +998,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Set the anonymous participant token.
+   * Set the anonymous participant access token.
    */
   setRoomAccessToken: function(roomToken, sessionTokenHmac, ttl, callback) {
     this._client.psetex(
@@ -1007,7 +1007,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Get the anonymous participant token.
+   * Get the anonymous participant access token.
    */
   isValidRoomAccessToken: function(roomToken, sessionTokenHmac, callback) {
     this._client.get(

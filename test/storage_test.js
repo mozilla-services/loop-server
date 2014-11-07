@@ -10,6 +10,7 @@ var sinon = require("sinon");
 
 var getStorage = require("../loop/storage");
 var conf = require("../loop").conf;
+var crypto = require("crypto");
 var hmac = require("../loop/hmac");
 var constants = require("../loop/constants");
 var generateToken = require("../loop/tokenlib").generateToken;
@@ -17,6 +18,8 @@ var generateToken = require("../loop/tokenlib").generateToken;
 var uuid = "1234";
 var user = "alexis@notmyidea.com";
 var userMac = hmac(user, conf.get("userMacSecret"));
+var idHmac = crypto.randomBytes(16).toString('hex');
+var idHmac2 = crypto.randomBytes(16).toString('hex');
 var callerId = 'natim@mozilla.com';
 var simplePushURL = "https://push.mozilla.com/test";
 var simplePushURL2 = "https://push.mozilla.com/test2";
@@ -127,7 +130,7 @@ describe("Storage", function() {
 
       describe("#addUserSimplePushURLs", function() {
         it("should be able to add a user simple push URL", function(done) {
-          storage.addUserSimplePushURLs(userMac, "1234", {
+          storage.addUserSimplePushURLs(userMac, idHmac, {
             calls: simplePushURL,
             rooms: simplePushURL2
           }, function(err) {
@@ -143,7 +146,7 @@ describe("Storage", function() {
         });
 
         it("should not overwrite existing simple push URLs", function(done) {
-          storage.addUserSimplePushURLs(userMac, "1234", {
+          storage.addUserSimplePushURLs(userMac, idHmac, {
             calls: simplePushURL,
             rooms: simplePushURL
           }, function(err) {
@@ -168,12 +171,12 @@ describe("Storage", function() {
         });
 
         it("should dedupe URLs", function(done) {
-          storage.addUserSimplePushURLs(userMac, "1234", {
+          storage.addUserSimplePushURLs(userMac, idHmac, {
             calls: simplePushURL,
             rooms: simplePushURL2
           }, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURLs(userMac, "4567", {
+            storage.addUserSimplePushURLs(userMac, idHmac2, {
               calls: simplePushURL,
               rooms: simplePushURL2
             }, function(err) {
@@ -205,12 +208,12 @@ describe("Storage", function() {
 
       describe("#removeSimplePushURLs", function() {
         it("should delete an existing simple push URL", function(done) {
-          storage.addUserSimplePushURLs(userMac, "1234", {calls: simplePushURL}, function(err) {
+          storage.addUserSimplePushURLs(userMac, idHmac, {calls: simplePushURL}, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURLs(userMac, "4567", {calls: simplePushURL2},
+            storage.addUserSimplePushURLs(userMac, idHmac2, {calls: simplePushURL2},
               function(err) {
                 if (err) throw err;
-                storage.removeSimplePushURLs(userMac, "4567",
+                storage.removeSimplePushURLs(userMac, idHmac2,
                   function(err) {
                     if (err) throw err;
                     storage.getUserSimplePushURLs(userMac,
@@ -228,9 +231,9 @@ describe("Storage", function() {
 
       describe("#deleteUserSimplePushURLs", function() {
         it("should delete all existing simple push URLs", function(done) {
-          storage.addUserSimplePushURLs(userMac, "1234", {calls: simplePushURL}, function(err) {
+          storage.addUserSimplePushURLs(userMac, idHmac, {calls: simplePushURL}, function(err) {
             if (err) throw err;
-            storage.addUserSimplePushURLs(userMac, "4567", {calls: simplePushURL2},
+            storage.addUserSimplePushURLs(userMac, idHmac2, {calls: simplePushURL2},
               function(err) {
                 if (err) throw err;
                 storage.deleteUserSimplePushURLs(userMac, function(err) {
@@ -713,9 +716,9 @@ describe("Storage", function() {
 
       describe("#setRoomAccessToken", function() {
         it("should set the user roomToken", function(done) {
-          storage.setRoomAccessToken("1234", "4567", 1, function(err) {
+          storage.setRoomAccessToken(idHmac, idHmac2, 1, function(err) {
             if (err) throw err;
-            storage.isValidRoomAccessToken("1234", "4567", function(err, isValid) {
+            storage.isValidRoomAccessToken(idHmac, idHmac2, function(err, isValid) {
               if (err) throw err;
               expect(isValid).to.eql(true);
               done();
@@ -734,13 +737,13 @@ describe("Storage", function() {
         });
 
         it("should return false if the Room Token has expired", function(done) {
-          storage.setRoomAccessToken("1234", "4567", 0.01, function(err) {
+          storage.setRoomAccessToken(idHmac, idHmac2, 0.01, function(err) {
             if (err) throw err;
-            storage.isValidRoomAccessToken("1234", "4567", function(err, isValid) {
+            storage.isValidRoomAccessToken(idHmac, idHmac2, function(err, isValid) {
               if (err) throw err;
               expect(isValid).to.eql(true);
               setTimeout(function() {
-                storage.isValidRoomAccessToken("12345", "4567", function(err, isValid) {
+                storage.isValidRoomAccessToken("12345", idHmac2, function(err, isValid) {
                   if (err) throw err;
                   expect(isValid).to.eql(false);
                   done();
@@ -810,7 +813,7 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipants", function() {
         it("should remove all the room participants", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
+          storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
               storage.deleteRoomParticipants(roomToken, function(err) {
@@ -828,16 +831,16 @@ describe("Storage", function() {
 
       describe("#addRoomParticipant", function() {
         it("should add a participant to the room", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
+          storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, ttl,
             function(err) {
               if (err) throw err;
-              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
+              storage.addRoomParticipant(roomToken, idHmac2, {"apiKey": "2"}, ttl,
                 function(err) {
                   if (err) throw err;
                   storage.getRoomParticipants(roomToken, function(err, results) {
                     if (err) throw err;
-                    expect(results).to.contain({"apiKey": "1", "hawkIdHmac": "1234"});
-                    expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
+                    expect(results).to.contain({"apiKey": "1", "hawkIdHmac": idHmac});
+                    expect(results).to.contain({"apiKey": "2", "hawkIdHmac": idHmac2});
                     done();
                   });
                 });
@@ -847,14 +850,14 @@ describe("Storage", function() {
 
       describe("#touchRoomParticipant", function() {
         it("should change the room participant expiricy", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
+          storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
-              storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+              storage.touchRoomParticipant(roomToken, idHmac, 0.01, function(err, success) {
                 if (err) throw err;
                 expect(success).to.eql(true);
                 setTimeout(function() {
-                  storage.touchRoomParticipant(roomToken, "1234", 1, function(err, success) {
+                  storage.touchRoomParticipant(roomToken, idHmac, 1, function(err, success) {
                     if (err) return done(err);
                     expect(success).to.eql(false);
                     storage.getRoomParticipants(roomToken, function(err, results) {
@@ -868,17 +871,17 @@ describe("Storage", function() {
             });
         });
 
-        it("should change the room participant token", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
+        it("should change the room participant access token", function(done) {
+          storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
-              storage.setRoomAccessToken(roomToken, "1234", 30, function(err) {
+              storage.setRoomAccessToken(roomToken, idHmac, 30, function(err) {
                 if (err) throw err;
-                storage.touchRoomParticipant(roomToken, "1234", 0.01, function(err, success) {
+                storage.touchRoomParticipant(roomToken, idHmac, 0.01, function(err, success) {
                   if (err) throw err;
                   expect(success).to.eql(true);
                   setTimeout(function() {
-                    storage.isValidRoomAccessToken(roomToken, "1234", function(err, success) {
+                    storage.isValidRoomAccessToken(roomToken, idHmac, function(err, success) {
                       if (err) throw err;
                       expect(success).to.eql(false);
                       done();
@@ -892,18 +895,18 @@ describe("Storage", function() {
 
       describe("#deleteRoomParticipant", function() {
         it("should remove a participant to the room", function(done) {
-          storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, ttl,
+          storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, ttl,
             function(err) {
               if (err) throw err;
-              storage.addRoomParticipant(roomToken, "4567", {"apiKey": "2"}, ttl,
+              storage.addRoomParticipant(roomToken, idHmac2, {"apiKey": "2"}, ttl,
                 function(err) {
                   if (err) throw err;
-                  storage.deleteRoomParticipant(roomToken, "1234", function(err) {
+                  storage.deleteRoomParticipant(roomToken, idHmac, function(err) {
                     if (err) throw err;
                     storage.getRoomParticipants(roomToken, function(err, results) {
                       if (err) throw err;
-                      expect(results).to.not.contain({"apiKey": "1", "hawkIdHmac": "1234"});
-                      expect(results).to.contain({"apiKey": "2", "hawkIdHmac": "4567"});
+                      expect(results).to.not.contain({"apiKey": "1", "hawkIdHmac": idHmac});
+                      expect(results).to.contain({"apiKey": "2", "hawkIdHmac": idHmac2});
                       done();
                     });
                   });
@@ -911,12 +914,12 @@ describe("Storage", function() {
             });
         });
 
-        it("should remove a participant token", function(done) {
-          storage.setRoomAccessToken(roomToken, "1234", ttl, function(err) {
+        it("should remove a participant access token", function(done) {
+          storage.setRoomAccessToken(roomToken, idHmac, ttl, function(err) {
             if (err) throw err;
-            storage.deleteRoomParticipant(roomToken, "1234", function(err) {
+            storage.deleteRoomParticipant(roomToken, idHmac, function(err) {
               if (err) throw err;
-              storage.isValidRoomAccessToken(roomToken, "1234", function(err, isValid) {
+              storage.isValidRoomAccessToken(roomToken, idHmac, function(err, isValid) {
                 if (err) throw err;
                 expect(isValid).to.eql(false);
                 done();
