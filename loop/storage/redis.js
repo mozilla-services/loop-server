@@ -948,11 +948,7 @@ RedisStorage.prototype = {
               callback(err);
               return;
             }
-            if (result === 0) {
-              callback(null, false);
-              return;
-            }
-            callback(null, true);
+            callback(null, result !== 0);
           });
       }.bind(this));
   },

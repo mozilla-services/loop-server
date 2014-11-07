@@ -846,7 +846,7 @@ describe("Storage", function() {
       });
 
       describe("#touchRoomParticipant", function() {
-        it("should change the roomparticipant expiracy", function(done) {
+        it("should change the room participant expiricy", function(done) {
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
@@ -868,7 +868,7 @@ describe("Storage", function() {
             });
         });
 
-        it("should change the roomparticipant token", function(done) {
+        it("should change the room participant token", function(done) {
           storage.addRoomParticipant(roomToken, "1234", {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
