@@ -718,7 +718,7 @@ describe("Storage", function() {
         it("should set the user roomToken", function(done) {
           storage.setRoomAccessToken(idHmac, idHmac2, 1, function(err) {
             if (err) throw err;
-            storage.isValidRoomAccessToken(idHmac, idHmac2, function(err, isValid) {
+            storage.isRoomAccessTokenValid(idHmac, idHmac2, function(err, isValid) {
               if (err) throw err;
               expect(isValid).to.eql(true);
               done();
@@ -727,9 +727,9 @@ describe("Storage", function() {
         });
       });
 
-      describe("#isValidRoomAccessToken", function() {
+      describe("#isRoomAccessTokenValid", function() {
         it("should return false if the Room Token doesn't exists", function(done) {
-          storage.isValidRoomAccessToken("12345", "wrong-token", function(err, isValid) {
+          storage.isRoomAccessTokenValid("12345", "wrong-token", function(err, isValid) {
             if (err) throw err;
             expect(isValid).to.eql(false);
             done();
@@ -739,11 +739,11 @@ describe("Storage", function() {
         it("should return false if the Room Token has expired", function(done) {
           storage.setRoomAccessToken(idHmac, idHmac2, 0.01, function(err) {
             if (err) throw err;
-            storage.isValidRoomAccessToken(idHmac, idHmac2, function(err, isValid) {
+            storage.isRoomAccessTokenValid(idHmac, idHmac2, function(err, isValid) {
               if (err) throw err;
               expect(isValid).to.eql(true);
               setTimeout(function() {
-                storage.isValidRoomAccessToken("12345", idHmac2, function(err, isValid) {
+                storage.isRoomAccessTokenValid("12345", idHmac2, function(err, isValid) {
                   if (err) throw err;
                   expect(isValid).to.eql(false);
                   done();
@@ -881,7 +881,7 @@ describe("Storage", function() {
                   if (err) throw err;
                   expect(success).to.eql(true);
                   setTimeout(function() {
-                    storage.isValidRoomAccessToken(roomToken, idHmac, function(err, success) {
+                    storage.isRoomAccessTokenValid(roomToken, idHmac, function(err, success) {
                       if (err) throw err;
                       expect(success).to.eql(false);
                       done();
@@ -919,7 +919,7 @@ describe("Storage", function() {
             if (err) throw err;
             storage.deleteRoomParticipant(roomToken, idHmac, function(err) {
               if (err) throw err;
-              storage.isValidRoomAccessToken(roomToken, idHmac, function(err, isValid) {
+              storage.isRoomAccessTokenValid(roomToken, idHmac, function(err, isValid) {
                 if (err) throw err;
                 expect(isValid).to.eql(false);
                 done();

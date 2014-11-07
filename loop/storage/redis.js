@@ -1009,7 +1009,7 @@ RedisStorage.prototype = {
   /**
    * Get the anonymous participant access token.
    */
-  isValidRoomAccessToken: function(roomToken, sessionTokenHmac, callback) {
+  isRoomAccessTokenValid: function(roomToken, sessionTokenHmac, callback) {
     this._client.get(
       'roomparticipant_access_token.' + roomToken + '.' + sessionTokenHmac,
       function(err, data) {

@@ -220,7 +220,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     var tokenHmac = hmac(token, conf.get('userMacSecret'));
 
     // req.token is the roomToken, tokenHmac is the user authentication token.
-    storage.isValidRoomAccessToken(req.token, tokenHmac, function(err, isValid) {
+    storage.isRoomAccessTokenValid(req.token, tokenHmac, function(err, isValid) {
       if (res.serverError(err)) return;
       if (!isValid) {
         unauthorized(res, ["Basic"], "Invalid token; it may have expired.");
