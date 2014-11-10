@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+var counter = 0;
 "use strict";
 
 var PubSub = require('./pubsub');
@@ -150,6 +151,7 @@ MessageHandler.prototype = {
 
             // Alert clients on call state changes.
             var onMessage = function(channel, data) {
+              console.log("DAMN. WE HAVE A MESSAGE. ", data);
               var parts = data.split(":");
               var receivedState = parts[0];
               var reason = parts[1];
@@ -392,11 +394,15 @@ MessageHandler.prototype = {
    * "terminated:{reason}".
    **/
   broadcastState: function(session, stateData) {
+    var count = counter;
+    counter++;
     var self = this;
     var callId = session.callId;
     var parts = stateData.split(":");
     var state = parts[0];
     var reason = parts[1];
+    console.log("WE HAVE BEEN ASKED TO BROADCAST. GO.", stateData, count)
+    console.log("REASON IS", reason, count);
 
     // Store if the session is accepted so we can tell the other .
     if (state.split('.')[0] === constants.CALL_STATES.CONNECTING) {
@@ -409,14 +415,17 @@ MessageHandler.prototype = {
         if (serverError(err)) return;
         self.storage.getCallState(callId, function(err, redisCurrentState) {
           if (serverError(err)) return;
+          console.log("THE CALL STATE IS", redisCurrentState, count);
 
           var publishedState = redisCurrentState;
           if (redisCurrentState === constants.CALL_STATES.TERMINATED &&
               reason !== undefined) {
+            console.log("SU FIX", redisCurrentState, reason, count);
             publishedState += ":" + reason;
           }
 
           if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
+            console.log("HEY. LET'S SEND A MESSAGE.", publishedState, count);
             self.pub.publish(callId, publishedState, function(err) {
               if (serverError(err)) return;
             });

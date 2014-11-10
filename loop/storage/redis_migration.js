@@ -6,14 +6,14 @@
 
 var redis = require("redis");
 var async = require("async");
+var conf = require('../config').conf;
 
 // Operations supported by the migration backend.
 var SUPPORTED_OPERATIONS = [
   'keys', 'lrange', 'mget', 'sismember', 'smembers', 'get', 'pttl', 'ttl',
-  'scard', 'del', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
+  'scard', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
   'expire', 'incr', 'decr'
 ];
-var NOOP = function(c){ c(); };
 
 /**
  * Creates a redis proxy clients, which mimics the same APIs as the ones
@@ -37,8 +37,6 @@ function createClient(options) {
     this.old_db = old_db;
     this.new_db = new_db;
   };
-  // Do not relay flush operations when using the migration backend.
-  Proxy.prototype.flushdb = NOOP;
 
   /**
    * Copy a key from one database to the other.
@@ -55,19 +53,18 @@ function createClient(options) {
         callback(null);
         return;
       } else if(ttl === -1){
+        // Set the ttl to 0 if there is no TTL for the current key.
         ttl = 0;
       }
-      // Redis_client will return buffers if it has buffers as arguments.
-      // We want to have a buffer here to dump/restore it properly.
+      // Redis client will return buffers if it has buffers as arguments.
+      // We want to have a buffer here to dump/restore keys using the right
+      // encoding (otherwise a "DUMP payload version or checksum are wrong"
+      // error is raised)..
       old_db.dump(new Buffer(key), function(err, dump){
-        console.log('dump', new Buffer(key), dump);
         if (err) return callback(err);
         new_db.restore(key, ttl, dump, function(err){
-          console.log(err);
           if (err) return callback(err);
-          console.log('restore key', key, dump);
           old_db.del(key, function(err){
-            console.log('del', key);
             if (err) return callback(err);
             callback(null);
           });
@@ -88,7 +85,7 @@ function createClient(options) {
    **/
   var migrateAndExecute = function(operation) {
     return function() {
-      console.log('migrate and execute', operation);
+      console.log("OPERATION", operation, arguments);
       var originalArguments = arguments;
       var key = arguments[0];
       var callback = arguments[arguments.length - 1];
@@ -103,10 +100,8 @@ function createClient(options) {
       // involved, copy all of them before running the original command on the
       // new database.
       if (operation === 'keys') {
-        console.log('keys detected', key);
         old_db.keys(key, function(err, keys){
           if (err) return callback(err);
-          console.log('got keys', keys);
           async.each(keys, copyKey, callOriginalCommand);
         });
       } else if (operation === 'mget') {
@@ -119,10 +114,37 @@ function createClient(options) {
 
   // For each of the supported operations, proxy the call the the migration
   // logic.
-
   SUPPORTED_OPERATIONS.forEach(function(operation) {
     Proxy.prototype[operation] = migrateAndExecute(operation);
   });
+
+  // Do not relay flush operations if we aren't using the TEST environment.
+  Proxy.prototype.flushdb = function(callback) {
+    if (conf.get('env') !== 'test') {
+      callback();
+      return
+    }
+    old_db.flushdb(function(err) {
+      if (err) return callback(err);
+      new_db.flushdb(function(err) {
+        callback(err);
+      });
+    });
+  };
+
+  // For deletion, we just remove from both databases and return the total
+  // count of deleted values.
+  Proxy.prototype.del = function(key, callback) {
+    var deleted = 0;
+    old_db.del(key, function(err, number) {
+      deleted += number;
+      if (err) return callback(err);
+      new_db.del(key, function(err, deleted) {
+        deleted += number
+        callback(err, deleted);
+      });
+    });
+  };
 
   return new Proxy();
 }
@@ -136,6 +158,7 @@ function getClient(options) {
   var client = redis.createClient(
     options.port,
     options.host,
+    // This is to return buffers when buffers are sent as params.
     {detect_buffers: true}
   );
   if (options.db) {

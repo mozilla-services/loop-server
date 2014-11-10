@@ -643,7 +643,7 @@ describe('websockets', function() {
         }));
       });
 
-    it("should proxy the reason on action/terminate", function(done) {
+    it.only("should proxy the reason on action/terminate", function(done) {
       caller.on('close', function() {
         caller.isClosed = true;
         done();

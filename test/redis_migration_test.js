@@ -14,7 +14,7 @@ describe("redis migration", function() {
   beforeEach(function() {
     var options = {
       oldDB: conf.get('storage').settings,
-      newDB: { port: 7777 }
+      newDB: { db: 4 }
     };
     client = getClient(options)
   });
@@ -74,9 +74,29 @@ describe("redis migration", function() {
       });
   });
 
-  it("should be able to proxy all operations", function(done) {
-  });
+  describe("with env set to prod", function() {
+    var env;
+    beforeEach(function(){
+      env = conf.get('env')
+      conf.set('env', 'prod');
+    });
 
-  it("should not flush the db even if asked for", function(done) {
+    afterEach(function() {
+      conf.set('env', env);
+    });
+
+    it("should not flush the db even if asked for", function(done) {
+      client.set("key", "value", function(err) {
+        if (err) throw err;
+        client.flushdb(function(err) {
+          if (err) throw err;
+          client.get("key", function(err, result) {
+            if (err) throw err;
+            expect(result).to.eql("value");
+            done();
+          });
+        });
+      });
+    });
   });
 });

@@ -21,8 +21,15 @@ var isUndefined = function(field, fieldName, callback) {
 
 function RedisStorage(options, settings) {
   this._settings = settings;
-  if (options.migration === true) {
-    this._client = migrationClient(options);
+
+  // In case migration is enabled, use the passed database as the new database
+  // and the old database is provided as part of the migration object.
+  console.log("migration", options);
+  if (options.migrateFrom !== undefined) {
+    this._client = migrationClient({
+      oldDB: options.migrateFrom,
+      newDB: options
+    });
   } else {
     this._client = redis.createClient(
       options.port,
@@ -751,6 +758,7 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
+      console.log("TEST TEST", ttl, reason);
       self._client.setex('callStateReason.' + callId, ttl, reason, callback);
     });
   },
