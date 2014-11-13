@@ -493,8 +493,8 @@ module.exports = function(storage, logError, conf) {
    * Allow a server to register itself as a websocket provider.
    **/
   var register = function(server) {
-    var pub = new PubSub(conf.get('pubsub'));
-    var sub = new PubSub(conf.get('pubsub'));
+    var pub = new PubSub(conf.get('pubsub'), logError);
+    var sub = new PubSub(conf.get('pubsub'), logError);
 
     // We need to max-out the number of listeners on the pub/sub.
     sub.setMaxListeners(0);

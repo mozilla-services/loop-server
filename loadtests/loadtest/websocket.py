@@ -13,7 +13,8 @@ class TestWebsocketMixin(object):
         self.wss.append(ws)
         return ws
 
-    def _test_websockets(self, token, call_data, calls):
+    def _test_websockets_basic_scenario(self):
+        token, call_data, calls = self.setupCall()
         progress_url = call_data['progressURL']
         caller_websocket_token = call_data['websocketToken']
         callee_websocket_token = calls[0]['websocketToken']
@@ -24,6 +25,7 @@ class TestWebsocketMixin(object):
         self.connected = False
 
         def _handle_callee(message_data):
+            self.incr_counter("websocket-basic-callee-messages")
             message = json.loads(message_data.data)
             callee_alerts.append(message)
             state = message.get('state')
@@ -47,6 +49,7 @@ class TestWebsocketMixin(object):
                 self.connected = True
 
         def _handle_caller(message_data):
+            self.incr_counter("websocket-basic-caller-messages")
             message = json.loads(message_data.data)
             caller_alerts.append(message)
             state = message.get('state')
@@ -87,21 +90,25 @@ class TestWebsocketMixin(object):
         while not self.connected:
             gevent.sleep(.5)
 
-    def test_supervisory_timeout(self):
+    def _test_websockets_supervisory_timeout(self):
         """
-        Should wait until the supervisory timeout terminate
-        the call setup.
+        The client waits until the supervisory timeout is triggered.
+        Supervisory timeout means no-one connected the websocket on the other
+        side.
 
         """
-        params = self.setupCall()
-        progress_url = params[1]['progressURL']
-        websocket_token = params[1]['websocketToken']
-        call_id = params[1]['callId']
+        token, call_data, calls = self.setupCall()
+        progress_url = call_data['progressURL']
+        caller_websocket_token = call_data['websocketToken']
+        callee_websocket_token = calls[0]['websocketToken']
+        call_id = call_data['callId']
         caller_alerts = []
+        callee_alerts = []
 
         self.terminated = False
 
         def _handle_caller(message_data):
+            self.incr_counter("websocket-supervisory-caller-messages")
             message = json.loads(message_data.data)
             caller_alerts.append(message)
             state = message.get('state')
@@ -123,31 +130,33 @@ class TestWebsocketMixin(object):
         self._send_ws_message(
             caller_ws,
             messageType='hello',
-            auth=websocket_token,
+            auth=caller_websocket_token,
             callId=call_id)
 
         while not self.terminated:
             gevent.sleep(.5)
 
-    def test_ringing_timeout(self):
+    def _test_websockets_ringing_timeout(self):
         """
-        Should wait until the ringing timeout terminate
-        the call setup.
+        When the server connected with both caller and callee, the callee
+        devices should stop ringing after some time.
 
         """
-        params = self.setupCall()
-        progress_url = params[1]['progressURL']
-        websocket_token = params[1]['websocketToken']
-        call_id = params[1]['callId']
-        calls = params[2]
+        token, call_data, calls = self.setupCall()
+        progress_url = call_data['progressURL']
+        caller_websocket_token = call_data['websocketToken']
+        callee_websocket_token = calls[0]['websocketToken']
+        call_id = call_data['callId']
         caller_alerts = []
+        callee_alerts = []
 
         self.terminated = False
 
         def _handle_callee(message_data):
-            pass
+            self.incr_counter("websocket-ringing-callee-messages")
 
         def _handle_caller(message_data):
+            self.incr_counter("websocket-ringing-caller-messages")
             message = json.loads(message_data.data)
             caller_alerts.append(message)
             state = message.get('state')
@@ -159,7 +168,7 @@ class TestWebsocketMixin(object):
                 self._send_ws_message(
                     callee_ws,
                     messageType='hello',
-                    auth=calls[0]['websocketToken'],
+                    auth=callee_websocket_token,
                     callId=call_id)
 
             elif messageType == "progress" and state == "terminated":
@@ -174,24 +183,25 @@ class TestWebsocketMixin(object):
         self._send_ws_message(
             caller_ws,
             messageType='hello',
-            auth=websocket_token,
+            auth=caller_websocket_token,
             callId=call_id)
 
         while not self.terminated:
             gevent.sleep(.5)
 
-    def test_connection_timeout(self):
+    def _test_websockets_connection_timeout(self):
         """
-        Should wait until the ringing timeout terminate
-        the call setup.
+        When the callee answered but media-up isn't sent by both parties, the
+        server should close the connection after some time.
 
         """
-        params = self.setupCall()
-        progress_url = params[1]['progressURL']
-        websocket_token = params[1]['websocketToken']
-        call_id = params[1]['callId']
-        calls = params[2]
+        token, call_data, calls = self.setupCall()
+        progress_url = call_data['progressURL']
+        caller_websocket_token = call_data['websocketToken']
+        callee_websocket_token = calls[0]['websocketToken']
+        call_id = call_data['callId']
         caller_alerts = []
+        callee_alerts = []
 
         self.terminated = False
 
@@ -202,46 +212,47 @@ class TestWebsocketMixin(object):
             messageType = message.get('messageType')
             reason = message.get("reason")
 
-            if messageType == "progress" and state == "connecting":
+            if messageType == "progress" and state == "alerting":
                 self._send_ws_message(
                     callee_ws,
-                    messageType="action",
-                    event="media-up")
-                caller_ws.receive()
-            elif messageType == "progress" and state == "terminated":
-                if reason == "timeout":
-                    self.terminated = True
-                else:
-                    self.fail("Reason is not timeout: %s" % reason)
-
-        def _handle_caller(message_data):
-            message = json.loads(message_data.data)
-            caller_alerts.append(message)
-            state = message.get('state')
-            messageType = message.get('messageType')
-
-            if messageType == "hello" and state == "init":
-                # This is the first message, Ask the second party to connect.
-                self._send_ws_message(
-                    callee_ws,
-                    messageType='hello',
-                    auth=calls[0]['websocketToken'],
-                    callId=call_id)
-
-            elif messageType == "progress" and state == "alerting":
-                self._send_ws_message(
-                    caller_ws,
                     messageType="action",
                     event="accept")
                 callee_ws.receive()
 
+            elif messageType == "progress" and state == "connecting":
+                self._send_ws_message(
+                    callee_ws,
+                    messageType="action",
+                    event="media-up")
+                callee_ws.receive()
+
+            elif messageType == "progress" and state == "terminated":
+                if reason == "timeout":
+                    self.terminated = True
+                else:
+                    self.fail("Reason is not timeout: %s" % reason)
+
+        def _handle_caller(message_data):
+            message = json.loads(message_data.data)
+            caller_alerts.append(message)
+            state = message.get('state')
+            messageType = message.get('messageType')
+
+            if messageType == "hello" and state == "init":
+                # This is the first message, Ask the second party to connect.
+                self._send_ws_message(
+                    callee_ws,
+                    messageType='hello',
+                    auth=callee_websocket_token,
+                    callId=call_id)
+
         callee_ws = self.create_ws(progress_url, callback=_handle_callee)
         caller_ws = self.create_ws(progress_url, callback=_handle_caller)
 
         self._send_ws_message(
             caller_ws,
             messageType='hello',
-            auth=websocket_token,
+            auth=caller_websocket_token,
             callId=call_id)
 
         while not self.terminated:
