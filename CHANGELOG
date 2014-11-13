@@ -3,6 +3,15 @@ Changelog
 
 This document describes changes between each past release.
 
+0.13.1 (2014-11-13)
+-------------------
+
+- [bugfix]     Configure the new loads cluster broker endpoint.
+- [bugfix]     Touch the RoomToken when touching the participant (1095006)
+- [bugfix]     Let the participant access GET /rooms/:token with Basic Auth (1094817)
+- [bugfix]     Handle pub/sub errors properly.
+
+
 0.13.0 (2014-11-06)
 -------------------
 
