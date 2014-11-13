@@ -26,9 +26,18 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
                 ws.sock.close()
 
     def test_all(self):
-        params = self.setupCall()
-        self._test_websockets(*params)
+        self.test_http_calls()
+        self._test_websockets_basic_scenario()
+
+    def test_http_calls(self):
+        self.setupCall()
         self.setupRoom()
+
+    def test_websockets(self):
+        self._test_websockets_basic_scenario()
+        self._test_websockets_supervisory_timeout()
+        self._test_websockets_connection_timeout()
+        self._test_websockets_ringing_timeout()
 
     def _get_json(self, resp):
         try:

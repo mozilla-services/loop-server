@@ -8,16 +8,19 @@ var redis = require("redis");
 /**
  * Pub/Sub implementation using Redis as a backend.
  **/
-function RedisPubSub(options) {
-  var _client = redis.createClient(
+function RedisPubSub(options, logError) {
+  var client = redis.createClient(
     options.port,
     options.host,
     options.options
   );
   if (options.db) {
-    _client.select(options.db);
+    client.select(options.db);
   }
-  return _client;
+
+  // Let's report errors when they occur.
+  client.on('error', logError);
+  return client;
 }
 
 module.exports = RedisPubSub;
