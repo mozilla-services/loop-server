@@ -12,8 +12,8 @@ class TestRoomsMixin(object):
     def setupRoom(self):
         self.register({
             "simplePushURLs": {
-                "calls": "http://httpbin.org/deny",
-                "rooms": "http://httpbin.org/deny"
+                "calls": "https://call.stage.mozaws.net/",
+                "rooms": "https://call.stage.mozaws.net/"
             }
         })
         room_token = self.create_room()
