@@ -1350,7 +1350,7 @@ describe("/rooms", function() {
                 expect(participant.account).to.eql('alexis@notmyidea.org');
                 expect(participant.displayName).to.eql('Alexis');
                 expect(participant.id).to.not.eql(undefined);
-                expect(participant.userIdHmac).to.eql(undefined);
+                expect(participant.userMac).to.eql(undefined);
                 expect(participant.hawkIdHmac).to.eql(undefined);
 
                 delete res.body[0].participants;
