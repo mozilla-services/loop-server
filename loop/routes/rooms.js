@@ -216,7 +216,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       roomData.updateTime = now;
 
       // Update the roomData object with new data from the request.
-      Object.keys(req.roomRequestData).map(function(key) {
+      Object.keys(req.roomRequestData).forEach(function(key) {
         roomData[key] = req.roomRequestData[key];
       });
 

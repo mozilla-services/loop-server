@@ -674,6 +674,65 @@ describe("/rooms", function() {
         .include(validators.isRoomOwner);
     });
 
+    it.only("should not overwrite roomData if no values are provided", function() {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          requests = [];
+          var updateTime = parseInt(Date.now() / 1000, 10);
+          var roomToken = postRes.body.roomToken;
+          supertest(app)
+            .patch('/rooms/' + roomToken)
+            .hawk(hawkCredentials)
+            .send({
+              roomName: "New name",
+            })
+            .expect(200)
+            .end(function(err, patchRes) {
+              if (err) throw err;
+
+              supertest(app)
+                .get('/rooms/' + roomToken)
+                .type('json')
+                .hawk(hawkCredentials)
+                .expect(200)
+                .end(function(err, getRes) {
+                  if (err) throw err;
+
+                  delete getRes.body.creationTime;
+                  delete getRes.body.ctime;
+                  delete getRes.body.expiresAt;
+
+                  var roomUrl = conf.get('rooms').webAppUrl
+                    .replace('{token}', roomToken);
+
+                  expect(getRes.body).to.eql({
+                    "roomUrl": roomUrl,
+                    "clientMaxSize": 2,
+                    "maxSize": 3,
+                    "participants": [],
+                    "roomName": "New name",
+                    "roomOwner": "Natim"
+                  });
+
+                  expect(requests).to.length(1);
+                  done();
+                });
+            });
+        });
+    });
+
     it("should update the roomData.", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
