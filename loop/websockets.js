@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-var counter = 0;
 "use strict";
 
 var PubSub = require('./pubsub');
@@ -393,8 +392,6 @@ MessageHandler.prototype = {
    * "terminated:{reason}".
    **/
   broadcastState: function(session, stateData) {
-    var count = counter;
-    counter++;
     var self = this;
     var callId = session.callId;
     var parts = stateData.split(":");

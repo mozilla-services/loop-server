@@ -138,8 +138,8 @@ function createClient(options) {
     old_db.del(key, function(err, number) {
       deleted += number;
       if (err) return callback(err);
-      new_db.del(key, function(err, deleted) {
-        deleted += number
+      new_db.del(key, function(err, number) {
+        deleted += number;
         callback(err, deleted);
       });
     });
