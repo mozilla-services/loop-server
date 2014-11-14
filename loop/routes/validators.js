@@ -127,7 +127,8 @@ module.exports = function(conf, logError, storage) {
       userMac: req.user,
       callerId: req.body.callerId,
       timestamp: parseInt(Date.now() / 1000, 10),
-      issuer: req.body.issuer || ''
+      issuer: req.body.issuer || '',
+      subject: req.body.subject || undefined
     };
 
     if (expiresIn !== undefined) {
