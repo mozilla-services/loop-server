@@ -193,7 +193,7 @@ var conf = convict({
   fakeTokBoxURL: {
     doc: "URL where to Mock TokBox calls",
     format: String,
-    default: "http://httpbin.org/deny"
+    default: "https://call.stage.mozaws.net/"
   },
   tokBox: {
     apiUrl: {

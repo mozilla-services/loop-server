@@ -71,7 +71,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * Update room data and emit an event if needed so the owner is aware.
    *
    * @param roomToken The roomToken
-   * @param userIdHmac The roomOwnerHmac
+   * @param roomOwnerHmac The roomOwnerHmac
    * @param callback The action to do next
    **/
   function emitRoomEvent(roomToken, roomOwnerHmac, callback) {
@@ -150,7 +150,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         }
         participants = participants.map(function(participant) {
           delete participant.hawkIdHmac;
-          delete participant.userIdHmac;
+          delete participant.userMac;
           delete participant.clientMaxSize;
           return participant;
         });
@@ -336,7 +336,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                           id: uuid.v4(),
                           displayName: req.body.displayName,
                           clientMaxSize: requestMaxSize,
-                          userIdHmac: req.user,
+                          userMac: req.user,
                           account: account
                         }, ttl, function(err) {
                           if (res.serverError(err)) return;
