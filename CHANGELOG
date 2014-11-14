@@ -3,6 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
+0.13.2 (unreleased)
+-------------------
+
+- [refactoring] 1094838 — Be consistent on the userMac wording.
+
+
 0.13.1 (2014-11-13)
 -------------------
 
