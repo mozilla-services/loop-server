@@ -25,6 +25,17 @@ function serverError(error, callback) {
 }
 
 /**
+ * Log some data for heka.
+ **/
+function hekaMetrics(data) {
+  if (conf.get("hekaMetrics").activated) {
+    data.op = data.op || 'websocket.summary';
+    data.time = data.time || isoDateString(new Date());
+    hekaLogger.log('info', data);
+  }
+}
+
+/**
  * Handles the messages coming from the transport layer, and answers to them.
  *
  * Transport is defined outside the message handler itself.
@@ -51,6 +62,11 @@ MessageHandler.prototype = {
       return;
     }
 
+    // Log inboundMessages
+    data = this.decode(data);
+    data.callId = inboundMessage.callId || session.callId;
+    hekaMetrics(data);
+
     var handlers = {
       hello: "handleHello",
       action: "handleAction",
@@ -65,6 +81,14 @@ MessageHandler.prototype = {
     }
     var handler = this[handlers[messageType]].bind(this);
     handler(session, inboundMessage, function(err, outboundMessage, terminate) {
+      // Log outboundMessages
+      if (outboundMessage) {
+        data = JSON.parse(JSON.stringify(outboundMessage));
+        data.callId = session.callId;
+        data.closeConnection = !!terminate;
+        hekaMetrics(data);
+      }
+
       callback(err, this.encode(outboundMessage), terminate);
     }.bind(this));
   },
@@ -396,19 +420,6 @@ MessageHandler.prototype = {
           if (redisCurrentState !== constants.CALL_STATES.HALF_INITIATED) {
             self.pub.publish(callId, publishedState, function(err) {
               if (serverError(err)) return;
-            });
-          }
-
-          if (conf.get("hekaMetrics").activated &&
-              (redisCurrentState === constants.CALL_STATES.CONNECTED ||
-               redisCurrentState === constants.CALL_STATES.TERMINATED)) {
-
-            hekaLogger.log('info', {
-              op: 'websocket.summary',
-              callId: callId,
-              state: redisCurrentState,
-              reason: reason,
-              time: isoDateString(new Date())
             });
           }
         });

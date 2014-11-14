@@ -269,11 +269,21 @@ describe('websockets', function() {
         caller.on('message', function() {
           if (calleeMsgCount === 2) {
             // The heka logger should have been called with the reason.
-            expect(logs).to.length(1);
-            expect(logs[0].callId).to.not.eql(undefined);
-            expect(logs[0].op).to.eql('websocket.summary');
-            expect(logs[0].state).to.eql('terminated');
-            expect(logs[0].reason).to.eql('closed');
+            expect(logs).to.length.gte(1);
+            var last = logs.length - 1;
+            expect(logs[last].callId).to.not.eql(undefined);
+            expect(logs[last].op).to.eql('websocket.summary');
+            expect(logs[last].state).to.eql('terminated');
+            expect(logs[last].reason).to.eql('closed');
+            logs.forEach(function(log) {
+              ['messageType', 'callId', 'op', 'time'].forEach(function(property) {
+                expect(log).to.have.property(property);
+              });
+              Object.keys(log).forEach(function(key) {
+                expect(['messageType', 'callId', 'op', 'time', 'state', 'reason',
+                        'auth', 'closeConnection']).to.include(key);
+              });
+            });
             done();
           }
           calleeMsgCount++;
