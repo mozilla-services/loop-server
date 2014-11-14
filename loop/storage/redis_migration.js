@@ -16,11 +16,11 @@ var SUPPORTED_OPERATIONS = [
 ];
 
 /**
- * Creates a redis proxy clients, which mimics the same APIs as the ones
- * exposes by the default redis client.
+ * Creates a redis proxy client, exposing the same APIs of the default client.
  *
- * The main difference is that this client takes parameters for a new and an
- * old db, and copies data from the old to the new db before asking the new db.
+ * This client takes parameters for a new and an old db, and copies data from
+ * the old to the new db before asking the new db to answer the original
+ * request.
  *
  * @param {Object}   options, which should have an `oldDB` and a `newDB`
  *                   key, which respects the semantics of a redis client (port,
@@ -40,7 +40,7 @@ function createClient(options) {
 
   /**
    * Copy a key from one database to the other.
-   * Keeps the TTL information.
+   * Copies also the TTL information.
    *
    * @param {String} key the key to be copied.
    * @param {Function} callback that will be called once the copy is over.
@@ -53,13 +53,14 @@ function createClient(options) {
         callback(null);
         return;
       } else if(ttl === -1){
-        // Set the ttl to 0 if there is no TTL for the current key.
+        // Set the ttl to 0 if there is no TTL for the current key (it means
+        // there is no expiration set for it)
         ttl = 0;
       }
       // Redis client will return buffers if it has buffers as arguments.
       // We want to have a buffer here to dump/restore keys using the right
       // encoding (otherwise a "DUMP payload version or checksum are wrong"
-      // error is raised)..
+      // error is raised).
       old_db.dump(new Buffer(key), function(err, dump){
         if (err) return callback(err);
         new_db.restore(key, ttl, dump, function(err){
