@@ -85,7 +85,6 @@ function createClient(options) {
    **/
   var migrateAndExecute = function(operation) {
     return function() {
-      console.log("OPERATION", operation, arguments);
       var originalArguments = arguments;
       var key = arguments[0];
       var callback = arguments[arguments.length - 1];
