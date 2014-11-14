@@ -149,6 +149,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           return;
         }
         participants = participants.map(function(participant) {
+          participant.owner = (participant.userIdHmac === roomStorageData.roomOwnerHmac);
           delete participant.hawkIdHmac;
           delete participant.userIdHmac;
           delete participant.clientMaxSize;
