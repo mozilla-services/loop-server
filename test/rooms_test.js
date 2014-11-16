@@ -598,7 +598,7 @@ describe("/rooms", function() {
         });
     });
 
-    it("should return 200 with the list of participants", function(done) {
+    it.only("should return 200 with the list of participants", function(done) {
       var roomToken;
       createRoom(hawkCredentials, {
         roomOwner: "Alexis",
@@ -623,6 +623,7 @@ describe("/rooms", function() {
               expect(getRes.body.participants[0].account)
                 .to.eql("alexis@notmyidea.org");
 
+              console.log(getRes.body);
               expect(getRes.body.participants[0].owner)
                 .to.eql(true);
 
