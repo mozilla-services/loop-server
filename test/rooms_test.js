@@ -598,7 +598,7 @@ describe("/rooms", function() {
         });
     });
 
-    it.only("should return 200 with the list of participants", function(done) {
+    it("should return 200 with the list of participants", function(done) {
       var roomToken;
       createRoom(hawkCredentials, {
         roomOwner: "Alexis",
@@ -615,15 +615,14 @@ describe("/rooms", function() {
             function(err, getRes) {
               if (err) throw err;
               expect(getRes.body.participants).to.length(1);
-              expect(getRes.body.participants[0].id).to.not.eql(undefined);
+              expect(getRes.body.participants[0].roomConnectionId).to.not.eql(undefined);
               expect(getRes.body.participants[0].hawkIdHmac).to.eql(undefined);
-              expect(getRes.body.participants[0].id).to.length(36);
+              expect(getRes.body.participants[0].roomConnectionId).to.length(36);
               expect(getRes.body.clientMaxSize).to.eql(2);
 
               expect(getRes.body.participants[0].account)
                 .to.eql("alexis@notmyidea.org");
 
-              console.log(getRes.body);
               expect(getRes.body.participants[0].owner)
                 .to.eql(true);
 
@@ -1353,7 +1352,7 @@ describe("/rooms", function() {
                 expect(participants).to.length(1);
                 expect(participant.account).to.eql('alexis@notmyidea.org');
                 expect(participant.displayName).to.eql('Alexis');
-                expect(participant.id).to.not.eql(undefined);
+                expect(participant.roomConnectionId).to.not.eql(undefined);
                 expect(participant.userMac).to.eql(undefined);
                 expect(participant.hawkIdHmac).to.eql(undefined);
 
