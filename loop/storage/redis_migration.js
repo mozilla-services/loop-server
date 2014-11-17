@@ -46,13 +46,13 @@ function createClient(options) {
    * @param {Function} callback that will be called once the copy is over.
    **/
   var copyKey = function(key, callback) {
-    old_db.pttl(key, function(err, ttl){
+    old_db.pttl(key, function(err, ttl) {
       if (err) throw err;
-      if (ttl === -2){
+      if (ttl === -2) {
         // The key doesn't exist.
         callback(null);
         return;
-      } else if(ttl === -1){
+      } else if (ttl === -1) {
         // Set the ttl to 0 if there is no TTL for the current key (it means
         // there is no expiration set for it)
         ttl = 0;
@@ -61,9 +61,9 @@ function createClient(options) {
       // We want to have a buffer here to dump/restore keys using the right
       // encoding (otherwise a "DUMP payload version or checksum are wrong"
       // error is raised).
-      old_db.dump(new Buffer(key), function(err, dump){
+      old_db.dump(new Buffer(key), function(err, dump) {
         if (err) return callback(err);
-        new_db.restore(key, ttl, dump, function(err){
+        new_db.restore(key, ttl, dump, function(err) {
           if (err) return callback(err);
           old_db.del(key, function(err){
             if (err) return callback(err);
@@ -100,7 +100,7 @@ function createClient(options) {
       // involved, copy all of them before running the original command on the
       // new database.
       if (operation === 'keys') {
-        old_db.keys(key, function(err, keys){
+        old_db.keys(key, function(err, keys) {
           if (err) return callback(err);
           async.each(keys, copyKey, callOriginalCommand);
         });

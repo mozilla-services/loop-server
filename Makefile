@@ -40,12 +40,6 @@ mocha:
 	@if [ `ulimit -n` -lt 1024 ]; then echo "ulimit is too low. Please run 'ulimit -S -n 2048' before running tests."; exit 1; fi
 	@env NODE_ENV=test ./node_modules/mocha/bin/mocha test/* --reporter spec
 
-.PHONY: test-migration
-test-migration:
-	redis-server --port 7777 & PID=$$!; \
-	  sleep 1 && env NODE_ENV=test ./node_modules/mocha/bin/mocha test/redis_migration_test.js --reporter spec; \
-	  EXIT_CODE=$$?; kill $$PID; exit $$EXIT_CODE
-
 .PHONY: spaceleft
 spaceleft:
 	@if which grin 2>&1 >/dev/null; \

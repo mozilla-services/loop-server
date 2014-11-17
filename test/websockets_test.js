@@ -1183,7 +1183,7 @@ describe('websockets', function() {
       }));
     });
 
-    it("should return the terminated reason on hello.", function(done) {
+    it("should return the termination reason on hello.", function(done) {
       caller.on('message', function(data) {
         var message = JSON.parse(data);
         expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
