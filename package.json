@@ -24,6 +24,7 @@
     "eslint": "0.7.x",
     "express": "4.x",
     "express-hawkauth": "0.3.0",
+    "git-rev": "0.2.1",
     "hiredis": "0.1.17",
     "hkdf": "0.0.2",
     "opentok": "2.2.4",
