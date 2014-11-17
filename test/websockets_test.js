@@ -653,13 +653,11 @@ describe('websockets', function() {
         var message = JSON.parse(data);
         if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
           // Add a delay to avoid race conditions.
-          setTimeout(function(){
           caller.send(JSON.stringify({
             messageType: constants.MESSAGE_TYPES.ACTION,
             event: constants.MESSAGE_EVENTS.TERMINATE,
             reason: constants.MESSAGE_REASONS.CANCEL
           }));
-          }, 10);
         } else {
           expect(message.messageType).eql(constants.MESSAGE_TYPES.PROGRESS);
           expect(message.state).eql(constants.CALL_STATES.TERMINATED);
