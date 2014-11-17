@@ -53,6 +53,10 @@ function isoDateString(d){
 }
 
 function getUserAccount(storage, req, callback) {
+  if (req.hawkIdHmac === undefined) {
+    callback();
+    return;
+  }
   storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
     if (err) {
       callback(err);
