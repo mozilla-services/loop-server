@@ -149,11 +149,12 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           return;
         }
         participants = participants.map(function(participant) {
-          participant.owner = (participant.userMac === roomStorageData.roomOwnerHmac);
-          delete participant.hawkIdHmac;
-          delete participant.userMac;
-          delete participant.clientMaxSize;
-          return participant;
+          return {
+            roomConnectionId: participant.id,
+            displayName: participant.displayName,
+            account: participant.account,
+            owner: (participant.userMac === roomStorageData.roomOwnerHmac)
+          };
         });
         return callback(null, {
           roomUrl: roomsConf.webAppUrl.replace('{token}', token),
