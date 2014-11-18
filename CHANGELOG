@@ -3,6 +3,28 @@ Changelog
 
 This document describes changes between each past release.
 
+0.14.0 (unreleased)
+-------------------
+
+- No changes yet.
+
+
+0.13.2 (2014-11-18)
+-------------------
+
+- [refactoring] 1094838 — Be consistent on the userMac wording.
+- [bug]         1099144 — Remove SimplePush redis keys wildcard lookup
+
+
+0.13.1 (2014-11-13)
+-------------------
+
+- [bugfix]     Configure the new loads cluster broker endpoint.
+- [bugfix]     Touch the RoomToken when touching the participant (1095006)
+- [bugfix]     Let the participant access GET /rooms/:token with Basic Auth (1094817)
+- [bugfix]     Handle pub/sub errors properly.
+
+
 0.13.0 (2014-11-06)
 -------------------
 
