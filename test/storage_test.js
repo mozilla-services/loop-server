@@ -99,6 +99,7 @@ describe("Storage", function() {
       beforeEach(function() {
         storage = createStorage({
           tokenDuration: conf.get('tokBox').tokenDuration,
+          roomExtendTTL: conf.get('rooms').extendTTL,
           hawkSessionDuration: conf.get('hawkSessionDuration'),
           callDuration: conf.get('callDuration'),
           maxSimplePushUrls: conf.get('maxSimplePushUrls')
@@ -786,6 +787,26 @@ describe("Storage", function() {
                   .eql("roomData should have an expiresAt property.");
                 done();
               });
+          });
+      });
+
+      describe("#touchRoomData", function() {
+        it("should update the room expiresAt and updateTime as well as the TTL",
+          function(done) {
+            storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+              if (err) throw err;
+              var start = parseInt(Date.now() / 1000, 10);
+              storage.touchRoomData(roomToken, function(err) {
+                if (err) throw err;
+                storage.getRoomData(roomToken, function(err, storedRoomData) {
+                  if (err) throw err;
+                  expect(storedRoomData.updateTime).to.gte(start);
+                  expect(storedRoomData.expiresAt).to.gte(
+                    start + conf.get('rooms').extendTTL * 3600);
+                  done();
+                });
+              });
+            });
           });
       });
 

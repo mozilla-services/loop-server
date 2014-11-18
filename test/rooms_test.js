@@ -917,6 +917,27 @@ describe("/rooms", function() {
               });
             });
         });
+
+        it("should extends the room ttl.", function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            generateHawkCredentials(storage, 'Julie', function(julieCredentials) {
+              var joinTime = parseInt(Date.now() / 1000, 10);
+              requests = [];
+              joinRoom(julieCredentials, roomToken).end(function(err) {
+                if (err) throw err;
+                getRoomInfo(hawkCredentials, roomToken).end(function(err, res) {
+                  if (err) throw err;
+                  expect(res.body.ctime).to.be.gte(joinTime);
+                  expect(res.body.expiresAt).to.be.gte(
+                    joinTime + conf.get('rooms').extendTTL * 3600);
+                  done();
+                });
+              });
+            });
+          });
+        });
       });
 
       describe("Handle 'refresh'", function() {

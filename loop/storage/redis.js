@@ -896,7 +896,13 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
+
+      // Update the current time
       data.updateTime = parseInt(Date.now() / 1000, 10);
+
+      // Extends the roomTTL
+      data.expiresAt = data.updateTime + self._settings.roomExtendTTL * 3600;
+
       self._client.setex(
         'room.' + roomToken,
         data.expiresAt - data.updateTime,

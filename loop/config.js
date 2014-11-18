@@ -419,7 +419,12 @@ var conf = convict({
     maxTTL: {
       doc: "The maximum TTL for a room (in hours) allowed by the server",
       format: Number,
-      default: 24 * 60 // Two months.
+      default: 8 * 7 * 24 // 8 weeks
+    },
+    extendTTL: {
+      doc: "The new TTL for a room (in hours) after a participant join.",
+      format: Number,
+      default: 8 * 7 * 24 // 8 weeks
     },
     participantTTL: {
       doc: "The TTL (in seconds) for a participant in the room",
