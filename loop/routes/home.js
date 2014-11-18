@@ -5,7 +5,7 @@
 "use strict";
 
 var loopPackageData = require('../../package.json');
-
+var git = require('git-rev');
 
 module.exports = function(app, conf, logError, storage, tokBox) {
   /**
@@ -61,6 +61,19 @@ module.exports = function(app, conf, logError, storage, tokBox) {
     if (!conf.get("displayVersion")) {
       delete credentials.version;
     }
-    res.status(200).json(credentials);
+
+    // Adding revision if available
+    git.long(function (commitId) {
+      if (commitId) {
+        credentials.rev = commitId;
+      }
+      git.branch(function (branch) {
+        if (branch) {
+          credentials.branch = branch;
+        }
+
+        res.status(200).json(credentials);
+      });
+    });
   });
 };
