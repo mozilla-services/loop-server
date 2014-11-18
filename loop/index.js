@@ -37,7 +37,8 @@ var storage = getStorage(conf.get("storage"), {
   'tokenDuration': conf.get('tokBox').tokenDuration,
   'hawkSessionDuration': conf.get('hawkSessionDuration'),
   'callDuration': conf.get('callDuration'),
-  'maxSimplePushUrls': conf.get('maxSimplePushUrls')
+  'maxSimplePushUrls': conf.get('maxSimplePushUrls'),
+  'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
 var tokBox = new TokBox(conf.get('tokBox'));
@@ -49,7 +50,7 @@ if (conf.get('statsdEnabled') === true) {
 }
 
 function logError(err) {
-  if (conf.get('env') !== 'test') {
+  if (conf.get('env') !== 'test' || true) {
     console.log(err);
   }
   ravenClient.captureError(err);

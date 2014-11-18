@@ -406,7 +406,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    **/
 
   apiRouter.get('/rooms', auth.requireHawkSession, function(req, res) {
-    var version = parseInt(req.query.version);
+    var version = parseInt(req.query.version, 10);
     storage.getUserRooms(req.user, function(err, userRooms) {
       if (res.serverError(err)) return;
       // filter the rooms we don't want.
@@ -427,7 +427,16 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         },
         function(err, rooms) {
           if (res.serverError(err)) return;
-          res.status(200).json(rooms);
+          storage.getUserDeletedRooms(req.user, version, function(err, deletedRooms) {
+            if (res.serverError(err)) return;
+            deletedRooms.forEach(function(deleted) {
+              rooms.push({
+                roomToken: deleted,
+                deleted: true
+              });
+            });
+            res.status(200).json(rooms);
+          });
         }
       );
     });

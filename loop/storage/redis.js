@@ -909,12 +909,72 @@ RedisStorage.prototype = {
 
   deleteRoomData: function(roomToken, callback) {
     var self = this;
-    self._client.del('room.' + roomToken, function(err) {
+    self.getRoomData(roomToken, function(err, data) {
       if (err) {
         callback(err);
         return;
       }
-      self.deleteRoomParticipants(roomToken, callback);
+      self._client.del('room.' + roomToken, function(err) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        self.deleteRoomParticipants(roomToken, function(err) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          self._client.hsetnx(
+            'room.deleted.' + data.roomOwnerHmac,
+            roomToken, parseInt(Date.now() / 1000, 10),
+            function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              self._client.expire(
+                'room.deleted.' + data.roomOwnerHmac,
+                self._settings.roomsDeletedTTL,
+                callback
+              );
+            });
+        });
+      });
+    });
+  },
+
+  getUserDeletedRooms: function(userMac, now, callback) {
+    var self = this;
+    var expireTime = parseInt(Date.now() / 1000, 10) - self._settings.roomsDeletedTTL;
+    if (callback === undefined) {
+      callback = now;
+      now = undefined;
+    }
+    if (!now) {
+      now = expireTime;
+    }
+    self._client.hgetall('room.deleted.' + userMac, function(err, deletedRooms) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      if (deletedRooms) {
+        var deleted = Object.keys(deletedRooms).filter(function(roomToken) {
+          return deletedRooms[roomToken] >= now;
+        });
+        var expired = Object.keys(deletedRooms).filter(function(roomToken) {
+          return deletedRooms[roomToken] < expireTime;
+        });
+        if (expired.length > 0) {
+          self._client.hdel('room.deleted.' + userMac, expired, function(err) {
+            callback(err, deleted);
+          });
+          return;
+        }
+        callback(null, deleted);
+        return;
+      }
+      callback(null, []);
     });
   },
 
