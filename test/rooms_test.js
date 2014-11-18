@@ -615,13 +615,16 @@ describe("/rooms", function() {
             function(err, getRes) {
               if (err) throw err;
               expect(getRes.body.participants).to.length(1);
-              expect(getRes.body.participants[0].id).to.not.eql(undefined);
+              expect(getRes.body.participants[0].roomConnectionId).to.not.eql(undefined);
               expect(getRes.body.participants[0].hawkIdHmac).to.eql(undefined);
-              expect(getRes.body.participants[0].id).to.length(36);
+              expect(getRes.body.participants[0].roomConnectionId).to.length(36);
               expect(getRes.body.clientMaxSize).to.eql(2);
 
               expect(getRes.body.participants[0].account)
                 .to.eql("alexis@notmyidea.org");
+
+              expect(getRes.body.participants[0].owner)
+                .to.eql(true);
 
               // Let's join with a second device.
               generateHawkCredentials(storage, "remy@mozilla.com",
@@ -637,12 +640,12 @@ describe("/rooms", function() {
                         if (err) throw err;
 
                         var accounts = getRes2.body.participants.map(function(p) {
-                          return p.account;
+                          return [p.account, p.owner];
                         }).sort();
 
                         expect(accounts).to.length(2);
-                        expect(accounts).to.eql(["alexis@notmyidea.org",
-                                                 "remy@mozilla.com"]);
+                        expect(accounts).to.eql([["alexis@notmyidea.org", true],
+                                                 ["remy@mozilla.com", false]]);
                         done();
                       });
                   });
@@ -1349,7 +1352,7 @@ describe("/rooms", function() {
                 expect(participants).to.length(1);
                 expect(participant.account).to.eql('alexis@notmyidea.org');
                 expect(participant.displayName).to.eql('Alexis');
-                expect(participant.id).to.not.eql(undefined);
+                expect(participant.roomConnectionId).to.not.eql(undefined);
                 expect(participant.userMac).to.eql(undefined);
                 expect(participant.hawkIdHmac).to.eql(undefined);
 

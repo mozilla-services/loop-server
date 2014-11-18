@@ -3,10 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
-0.13.2 (unreleased)
+0.13.2 (2014-11-18)
 -------------------
 
 - [refactoring] 1094838 — Be consistent on the userMac wording.
+- [bug]         1099144 — Remove SimplePush redis keys wildcard lookup
 
 
 0.13.1 (2014-11-13)
