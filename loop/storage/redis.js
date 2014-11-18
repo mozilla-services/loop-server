@@ -95,11 +95,13 @@ RedisStorage.prototype = {
           function(err, simplePushMappings) {
             if (err) return callback(err);
             simplePushMappings.forEach(function(mapping) {
-              SIMPLE_PUSH_TOPICS.forEach(function(topic) {
-                if (output[topic].indexOf(mapping[topic]) === -1){
-                  output[topic].push(mapping[topic]);
-                }
-              });
+              if (mapping) {
+                SIMPLE_PUSH_TOPICS.forEach(function(topic) {
+                  if (mapping.hasOwnProperty(topic) && output[topic].indexOf(mapping[topic]) === -1) {
+                    output[topic].push(mapping[topic]);
+                  }
+                });
+              }
             });
             callback(null, output);
           });
@@ -187,7 +189,7 @@ RedisStorage.prototype = {
       'userUrls.' + userMac,
       'callurl.' + callUrlId,
       function(err, res) {
-        if (err){
+        if (err) {
           callback(err);
           return;
         }
@@ -445,7 +447,7 @@ RedisStorage.prototype = {
    **/
   getCallStateTTL: function(callId, callback) {
     this._client.pttl('callstate.' + callId, function(err, ttl) {
-      if (err){
+      if (err) {
         callback(err);
         return;
       }
@@ -600,7 +602,7 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.get(key, function(err, number) {
-      if (err){
+      if (err) {
         return callback(err);
       }
       return callback(err, parseInt(number));
