@@ -1385,6 +1385,24 @@ describe("/rooms", function() {
         });
       });
 
+    it("should return the deleted rooms", function(done) {
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          deleteRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            getUserRoomsInfo(hawkCredentials).end(
+              function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.length(1);
+                expect(res.body[0].roomToken).to.eql(roomToken);
+                expect(res.body[0].deleted).to.eql(true);
+                done();
+              });
+          });
+        });
+    });
+
     it("should return a 503 if the database errors out", function(done) {
       sandbox.stub(storage, "getUserRooms", function(user, callback) {
         callback("error");

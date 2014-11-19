@@ -426,6 +426,11 @@ var conf = convict({
       format: Number,
       default: 5 * 60  // 5 minutes
     },
+    deletedTTL: {
+      doc: "The TTL (in seconds) for a room delete notification to be saved",
+      format: Number,
+      default: 27 * 60  // 27 minutes
+    },
     maxSize: {
       doc: "The maximum size of a room",
       format: Number,

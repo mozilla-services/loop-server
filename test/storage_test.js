@@ -87,6 +87,7 @@ describe("Storage", function() {
       sessionId: fakeCallInfo.session1,
       roomName: "UX Discussion",
       roomOwner: "Alexis",
+      roomOwnerHmac: userMac,
       maxSize: 3,
       expiresAt: now + 60 * 24,
       updateTime: now,
@@ -101,7 +102,8 @@ describe("Storage", function() {
           tokenDuration: conf.get('tokBox').tokenDuration,
           hawkSessionDuration: conf.get('hawkSessionDuration'),
           callDuration: conf.get('callDuration'),
-          maxSimplePushUrls: conf.get('maxSimplePushUrls')
+          maxSimplePushUrls: conf.get('maxSimplePushUrls'),
+          roomsDeletedTTL: conf.get('rooms').deletedTTL
         });
         sandbox = sinon.sandbox.create();
       });
@@ -804,6 +806,47 @@ describe("Storage", function() {
                 if (err) throw err;
                 expect(storedRoomData).to.eql(null);
                 assert(spy.calledOnce);
+                done();
+              });
+            });
+          });
+        });
+
+        it("should save the room deletion notification", function(done) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.deleteRoomData(roomToken, function(err) {
+              if (err) throw err;
+              storage.getUserDeletedRooms(userMac, function(err, deletedRooms) {
+                if (err) throw err;
+                expect(deletedRooms).to.eql([roomToken]);
+                done();
+              });
+            });
+          });
+        });
+      });
+
+      describe("#getUserDeletedRooms", function() {
+        var clock;
+
+        beforeEach(function() {
+          clock = sinon.useFakeTimers(Date.now());
+        });
+
+        afterEach(function() {
+          clock.restore();
+        });
+
+        it("should remove expired notification", function(done) {
+          storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
+            if (err) throw err;
+            storage.deleteRoomData(roomToken, function(err) {
+              if (err) throw err;
+              clock.tick(30 * 3600 * 1000); // 30 minutes later
+              storage.getUserDeletedRooms(userMac, function(err, deletedRooms) {
+                if (err) throw err;
+                expect(deletedRooms).to.eql([]);
                 done();
               });
             });
