@@ -25,7 +25,7 @@ var websockets = require('./websockets');
 
 var TokBox;
 
-if (conf.get("fakeTokBox") === true) {
+if (conf.get("fakeTokBox")) {
   console.log("Calls to TokBox are now mocked.");
   TokBox = require('./tokbox').FakeTokBox;
 } else {
