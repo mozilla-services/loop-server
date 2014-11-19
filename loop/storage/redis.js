@@ -36,11 +36,11 @@ RedisStorage.prototype = {
   /**
    * Adds a set of simple push urls to an user (one per simple push topic).
    *
-   * @param {String}         userMac, the hmac-ed user, the HMAC of the user;
-   * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
-   * @param {String}         simplePushURLs, an object with a key per SP topic;
-   * @param {Function}       A callback that will be called once data had been
-   *                         proceced.
+   * @param {String}    userHmac, the hmac-ed user, the HMAC of the user;
+   * @param {String}    hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}    simplePushURLs, an object with a key per SP topic;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
    **/
   addUserSimplePushURLs: function(userMac, hawkIdHmac, simplePushURLs, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
@@ -128,7 +128,8 @@ RedisStorage.prototype = {
    * @param {String}         userHmac, the hmac-ed user, the HMAC of the user;
    * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {Function}       A callback that will be called once data had been
-   *                         proceced.
+   *                         processed.
+   *
    **/
   removeSimplePushURLs: function(userMac, hawkIdHmac, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
@@ -147,15 +148,18 @@ RedisStorage.prototype = {
   /**
    * Deletes all the simple push URLs of an user.
    *
-   * @param String the user mac.
+   * @param {String}         userHmac, the hmac-ed user, the HMAC of the user;
+   * @param {Function}       A callback that will be called once data had been
+   *                         processed.
+   *
    **/
   deleteUserSimplePushURLs: function(userMac, callback) {
     var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
     this._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
       if (err) return callback(err);
-      async.each(hawkMacIds, function(hawkHmacId, done) {
-        self._client.del('spurls.' + userMac + '.' + hawkHmacId, done);
+      async.each(hawkMacIds, function(hawkIdHmac, done) {
+        self._client.del('spurls.' + userMac + '.' + hawkIdHmac, done);
       }, function(err) {
         if (err) return callback(err);
         self._client.del('spurls.' + userMac, callback);
@@ -163,6 +167,15 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Add a new user call url.
+   *
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {String}    callUrlId, the call url token;
+   * @param {Mapping}   urlData, the call-url properties;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   **/
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
     if (isUndefined(callUrlId, "callUrlId", callback)) return;
@@ -190,10 +203,14 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Update a call url data.
+   * Update a call-url data.
    *
-   * If the call-url doesn't belong to the given user, returns an
-   * authentication error.
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {String}    callUrlId, the call url token;
+   * @param {Mapping}   newData, the call-url properties;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   *
    **/
   updateUserCallUrlData: function(userMac, callUrlId, newData, callback) {
     var self = this;
@@ -234,6 +251,14 @@ RedisStorage.prototype = {
     );
   },
 
+  /**
+   * Get call-url data
+   *
+   * @param {String}    callUrlId, the call url token;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   *
+   **/
   getCallUrlData: function(callUrlId, callback) {
     if (isUndefined(callUrlId, "callUrlId", callback)) return;
     this._client.get('callurl.' + callUrlId, function(err, data) {
@@ -250,7 +275,9 @@ RedisStorage.prototype = {
    *
    * Deletes the list of call-urls and all the call-url data for each call.
    *
-   * @param String the user mac.
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
    **/
   deleteUserCallUrls: function(userMac, callback) {
     var self = this;
@@ -270,11 +297,25 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Revoke the call-url token.
+   *
+   * @param {String}    callUrlId, the call url token;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   **/
   revokeURLToken: function(callUrlId, callback) {
     if (isUndefined(callUrlId, "callUrlId", callback)) return;
     this._client.del('callurl.' + callUrlId, callback);
   },
 
+  /**
+   * Get the user's call urls
+   *
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   **/
   getUserCallUrls: function(userMac, callback) {
     var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
@@ -320,6 +361,14 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Starts a call.
+   *
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {Mapping}   call, the call properties to be stored;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   **/
   addUserCall: function(userMac, call, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
@@ -348,11 +397,11 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Deletes all the call data for a given user.
+   * Deletes all the call of a given user.
    *
-   * Deletes the list of calls.
-   *
-   * @param String the user mac.
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
    **/
   deleteUserCalls: function(userMac, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
@@ -390,6 +439,13 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Get the user calls list.
+   *
+   * @param {String}    userMac, the hmac-ed user, the HMAC of the user;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
+   **/
   getUserCalls: function(userMac, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
@@ -457,6 +513,10 @@ RedisStorage.prototype = {
   /**
    * Returns the expiricy of the call state (in seconds).
    * In case the call is already expired, returns -1.
+   *
+   * @param {String}    callId, the call id;
+   * @param {Function} A callback that will be called once the action
+   *                    had been processed.
    **/
   getCallStateTTL: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
@@ -479,6 +539,12 @@ RedisStorage.prototype = {
    *
    * In case no TTL is given, fetches the one of the call so the expiration
    * is the same for the call and for its state.
+   *
+   * @param {String}    callId, the call id;
+   * @param {String}    state, the state;
+   * @param {Integer}   ttl, Number of seconds we want to store this state.
+   * @param {Function}  A callback that will be called once the action
+   *                    had been processed.
    **/
   setCallState: function(callId, state, ttl, callback) {
     if (isUndefined(callId, "callId", callback)) return;
@@ -537,6 +603,10 @@ RedisStorage.prototype = {
    *
    * Returns one of "init", "half-initiated", "alerting", "connecting",
    * "half-connected" and "connected".
+   *
+   * @param {String}    callId, the call id;
+   * @param {Function}  A callback that will be called once the action
+   *                    had been processed.
    **/
   getCallState: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
@@ -589,6 +659,14 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Increments the number of connected devices for this call.
+   *
+   * @param {String}    type, callee or caller;
+   * @param {String}    callId, the call id;
+   * @param {Function}  A callback that will be called once the action
+   *                    had been processed.
+   **/
   incrementConnectedCallDevices: function(type, callId, callback) {
     var self = this;
     if (isUndefined(callId, "callId", callback)) return;
@@ -603,6 +681,14 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Decrement the number of connected devices for this call.
+   *
+   * @param {String}    type, callee or caller;
+   * @param {String}    callId, the call id;
+   * @param {Function}  A callback that will be called once the action
+   *                    had been processed.
+   **/
   decrementConnectedCallDevices: function(type, callId, callback) {
     var self = this;
     if (isUndefined(callId, "callId", callback)) return;
@@ -617,6 +703,14 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Return the number of connected devices for this call.
+   *
+   * @param {String}    type, callee or caller;
+   * @param {String}    callId, the call id;
+   * @param {Function}  A callback that will be called once the action
+   *                    had been processed.
+   **/
   getConnectedCallDevices: function(type, callId, callback) {
     var self = this;
     if (isUndefined(callId, "callId", callback)) return;
@@ -632,8 +726,13 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Set the call termination reason
-   */
+   * Set the call termination reason.
+   *
+   * @param {String}    callId, the call id;
+   * @param {String}    reason, the reason why the call has been terminated;
+   * @param {Function}  A callback that will be called once the action
+   *                    had been processed.
+   **/
   setCallTerminationReason: function(callId, reason, callback) {
     var self = this;
     if (isUndefined(callId, "callId", callback)) return;
@@ -652,8 +751,11 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Set the call termination reason
-   */
+   * Get the call termination reason.
+   *
+   * @param {String}    callId, the call id;
+   * @param {Function}  A callback that will be called with the reason.
+   **/
   getCallTerminationReason: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
     this._client.get('callStateReason.' + callId, callback);
@@ -664,6 +766,10 @@ RedisStorage.prototype = {
    *
    * By default, returns the state of the call. You can set getState to false
    * to deactivate this behaviour.
+   *
+   * @param {String}    callId, the call id;
+   * @param {Boolean}   getState, if getState is set to false, don't get the state;
+   * @param {Function}  A callback that will be called with the call.
    **/
   getCall: function(callId, getState, callback) {
     if (callback === undefined) {
@@ -694,6 +800,15 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Delete call.
+   *
+   * Delete a call from its id.
+   *
+   * @param {String}   callId, the call id;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   deleteCall: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
 
@@ -708,6 +823,11 @@ RedisStorage.prototype = {
 
   /**
    * Add an hawk id to the list of valid hawk ids for an user.
+   *
+   * @param {String}   userMac, the user Hmac;
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
    **/
   setHawkUser: function(userMac, hawkIdHmac, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
@@ -721,6 +841,13 @@ RedisStorage.prototype = {
     );
   },
 
+  /**
+   * Get the Hawk user from an Hawk ID.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   getHawkUser: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
@@ -729,7 +856,12 @@ RedisStorage.prototype = {
 
   /**
    * Associates an hawk.id (hmac-ed) to an user identifier (encrypted).
-   */
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}   encryptedUserId, user id encrypted with the HawkId;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   setHawkUserId: function(hawkIdHmac, encryptedUserId, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     if (isUndefined(encryptedUserId, "encryptedUserId", callback)) return;
@@ -741,16 +873,36 @@ RedisStorage.prototype = {
     );
   },
 
+  /**
+   * Get the encrypted User Id.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called with the encrypted user id.
+   **/
   getHawkUserId: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.get('userid.' + hawkIdHmac, callback);
   },
 
+  /**
+   * Delete the encrypted user id.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called with the encrypted user id.
+   **/
   deleteHawkUserId: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.del('userid.' + hawkIdHmac, callback);
   },
 
+  /**
+   * Set the Hawk Session private key.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}   authKey, the Hawk auth Key;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   setHawkSession: function(hawkIdHmac, authKey, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     if (isUndefined(authKey, "authKey", callback)) return;
@@ -762,6 +914,13 @@ RedisStorage.prototype = {
     );
   },
 
+  /**
+   * Update the session time to live.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   touchHawkSession: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
@@ -782,6 +941,13 @@ RedisStorage.prototype = {
       });
   },
 
+  /**
+   * Return the Auth Key for the following session.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   getHawkSession: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
@@ -800,21 +966,51 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Remove the Hawk Session.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   deleteHawkSession: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.del('hawk.' + hawkIdHmac, callback);
   },
 
+  /**
+   * Set the Hawk OAuth token.
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}   token, the FxA oauth token;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   setHawkOAuthToken: function(hawkIdHmac, token, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.set('oauth.token.' + hawkIdHmac, token, callback);
   },
 
+  /**
+   * Get the Hawk OAuth token
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and returns the token.
+   **/
   getHawkOAuthToken: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.get('oauth.token.' + hawkIdHmac, callback);
   },
 
+  /**
+   * Set the Hawk OAuth state
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}   state, the state given by the FxA;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   setHawkOAuthState: function(hawkIdHmac, state, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.setex(
@@ -825,16 +1021,39 @@ RedisStorage.prototype = {
     );
   },
 
+  /**
+   * Returns the Hawk OAuth state
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and returns the state.
+   **/
   getHawkOAuthState: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.get('oauth.state.' + hawkIdHmac, callback);
   },
 
+  /**
+   * Delete the Hawk OAuth state
+   *
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   clearHawkOAuthState: function(hawkIdHmac, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.del('oauth.state.' + hawkIdHmac, callback);
   },
 
+  /**
+   * Set the User Room Data
+   *
+   * @param {String}   userMac, the user Hmac;
+   * @param {String}   roomToken, the room identifier;
+   * @param {String}   roomData, the room properties;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   setUserRoomData: function(userMac, roomToken, roomData, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
     if (isUndefined(roomToken, "roomToken", callback)) return;
@@ -861,6 +1080,13 @@ RedisStorage.prototype = {
       });
   },
 
+  /**
+   * Get the list of user rooms.
+   *
+   * @param {String}   userMac, the user Hmac;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and returns the rooms list.
+   **/
   getUserRooms: function(userMac, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
@@ -906,6 +1132,13 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Get the room properties
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and returns the room properties.
+   **/
   getRoomData: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     this._client.get('room.' + roomToken, function(err, data) {
@@ -917,6 +1150,13 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Update the room time to live.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   touchRoomData: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
@@ -936,6 +1176,13 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Delete the room.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   deleteRoomData: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
@@ -948,12 +1195,27 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Delete the room participants
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   deleteRoomParticipants: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
     self._client.del('roomparticipants.' + roomToken, callback);
   },
 
+  /**
+   * Add a participant to the room.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
                                callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
@@ -967,6 +1229,15 @@ RedisStorage.prototype = {
                       JSON.stringify(data), callback);
   },
 
+  /**
+   * Update the participant time to live.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Integer}  ttl, the new time-to-live;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
@@ -999,6 +1270,14 @@ RedisStorage.prototype = {
     });
   },
 
+  /**
+   * Delete the room participant.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
@@ -1008,6 +1287,13 @@ RedisStorage.prototype = {
     multi.exec(callback);
   },
 
+  /**
+   * Get the list of participants.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and returns the room participant list.
+   **/
   getRoomParticipants: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
 
@@ -1043,7 +1329,12 @@ RedisStorage.prototype = {
 
   /**
    * Set the anonymous participant access token.
-   */
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {String}   sessionTokenHmac, the participant identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
   setRoomAccessToken: function(roomToken, sessionTokenHmac, ttl, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(sessionTokenHmac, "sessionTokenHmac", callback)) return;
@@ -1054,8 +1345,13 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Get the anonymous participant access token.
-   */
+   * Test the anonymous participant access token validity.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and return a boolean that
+   *                   tells if the token is still valid.
+   **/
   isRoomAccessTokenValid: function(roomToken, sessionTokenHmac, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(sessionTokenHmac, "sessionTokenHmac", callback)) return;
@@ -1071,10 +1367,22 @@ RedisStorage.prototype = {
       });
   },
 
+  /**
+   * Drop the database.
+   *
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed .
+   **/
   drop: function(callback) {
     this._client.flushdb(callback);
   },
 
+  /**
+   * Ping the database and test that the database is ready to be used.
+   *
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed and return a boolean with the DB status.
+   **/
   ping: function(callback) {
     var self = this;
     self._client.set('heartbeat', parseInt(Date.now() / 1000, 10),
