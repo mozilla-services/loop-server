@@ -1237,6 +1237,16 @@ describe("/rooms", function() {
     });
 
     describe("Participants", function() {
+      var clock;
+
+      beforeEach(function() {
+        clock = sinon.useFakeTimers(Date.now());
+      });
+
+      afterEach(function() {
+        clock.restore();
+      });
+
       it("should expire automatically.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
@@ -1246,7 +1256,7 @@ describe("/rooms", function() {
               joinRoom(julieCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 // Touch the participant value for a small time.
-                storage.touchRoomParticipant(roomToken, julieHawkIdHmac, 0.01,
+                storage.touchRoomParticipant(roomToken, julieHawkIdHmac, 1,
                   function(err, success) {
                     if (err) throw err;
                     expect(success).to.eql(true);
@@ -1254,14 +1264,13 @@ describe("/rooms", function() {
                       function(err, res) {
                         if (err) throw err;
                         expect(res.body.participants).to.length(1);
-                        setTimeout(function() {
-                          getRoomInfo(hawkCredentials, roomToken).end(
-                            function(err, res) {
-                              if (err) throw err;
-                              expect(res.body.participants).to.length(0);
-                              done();
-                            });
-                        }, 15);
+                        clock.tick(1000);
+                        getRoomInfo(hawkCredentials, roomToken).end(
+                          function(err, res) {
+                            if (err) throw err;
+                            expect(res.body.participants).to.length(0);
+                            done();
+                          });
                       });
                   });
               });
