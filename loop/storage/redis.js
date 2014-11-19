@@ -904,7 +904,7 @@ RedisStorage.prototype = {
 
   deleteRoomParticipants: function(roomToken, callback) {
     var self = this;
-    self._client.del('roomparticipant.' + roomToken, callback);
+    self._client.del('roomparticipants.' + roomToken, callback);
   },
 
   addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
@@ -913,14 +913,14 @@ RedisStorage.prototype = {
     data.hawkIdHmac = hawkIdHmac;
     data.expiresAt = parseInt(Date.now() / 1000, 10) + ttl;
 
-    this._client.hset('roomparticipant.' + roomToken, hawkIdHmac,
+    this._client.hset('roomparticipants.' + roomToken, hawkIdHmac,
                       JSON.stringify(data), callback);
   },
 
   touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
     var self = this;
     var now = parseInt(Date.now() / 1000);
-    self._client.hget('roomparticipant.' + roomToken, hawkIdHmac, function(err, data) {
+    self._client.hget('roomparticipants.' + roomToken, hawkIdHmac, function(err, data) {
       if (err) {
         callback(err);
         return;
@@ -935,7 +935,7 @@ RedisStorage.prototype = {
       if (data.expiresAt > now) {
         data.expiresAt = parseInt(now + ttl, 10);
         var multi = self._client.multi();
-        multi.hset('roomparticipant.' + roomToken, hawkIdHmac, JSON.stringify(data));
+        multi.hset('roomparticipants.' + roomToken, hawkIdHmac, JSON.stringify(data));
         multi.pexpire('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
                       ttl * 1000);
         multi.exec(function(err) {
@@ -949,7 +949,7 @@ RedisStorage.prototype = {
 
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
     var multi = this._client.multi();
-    multi.hdel('roomparticipant.' + roomToken, hawkIdHmac);
+    multi.hdel('roomparticipants.' + roomToken, hawkIdHmac);
     multi.del('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac);
     multi.exec(callback);
   },
@@ -957,7 +957,7 @@ RedisStorage.prototype = {
   getRoomParticipants: function(roomToken, callback) {
     var self = this;
     var now = parseInt(Date.now() / 1000, 10);
-    self._client.hgetall('roomparticipant.' + roomToken,
+    self._client.hgetall('roomparticipants.' + roomToken,
       function(err, participantsMapping) {
         if (err) {
           callback(err);
