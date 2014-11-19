@@ -17,6 +17,21 @@ var isUndefined = function(field, fieldName, callback) {
   return false;
 }
 
+function encode(data) {
+  return JSON.stringify(data);
+}
+
+function decode(data, callback) {
+  try {
+    callback(null, JSON.parse(string));
+  } catch (e) {
+    callback(e);
+  }
+}
+
+function clone(data) {
+  return JSON.parse(JSON.stringify(data));
+}
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -182,14 +197,14 @@ RedisStorage.prototype = {
     if (isUndefined(urlData.timestamp, "urlData.timestamp", callback)) return;
     var self = this;
 
-    var data = JSON.parse(JSON.stringify(urlData));
+    var data = clone(urlData);
     data.userMac = userMac;
 
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
       urlData.expires - parseInt(Date.now() / 1000, 10),
-      JSON.stringify(data),
+      encode(data),
       function(err) {
         if (err) {
           callback(err);
@@ -243,7 +258,7 @@ RedisStorage.prototype = {
           self._client.setex(
             'callurl.' + callUrlId,
             data.expires - parseInt(Date.now() / 1000, 10),
-            JSON.stringify(data),
+            encode(data),
             callback
           );
         });
@@ -266,7 +281,7 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-      callback(null, JSON.parse(data));
+      decode(data, callback);
     });
   },
 
@@ -373,13 +388,13 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     // Clone the args to prevent from modifying it.
-    call = JSON.parse(JSON.stringify(call));
+    call = clone(call);
     var state = call.callState;
     delete call.callState;
     this._client.setex(
       'call.' + call.callId,
       this._settings.callDuration,
-      JSON.stringify(call),
+      encode(call),
       function(err) {
         if (err) {
           callback(err);
@@ -425,8 +440,11 @@ RedisStorage.prototype = {
             callback(err);
             return;
           }
-          async.map(calls.map(JSON.parse), function(call, cb) {
-            self._client.del('callstate.' + call.callId, cb);
+          async.map(calls, function(call, cb) {
+            decode(call, function(err, call) {
+              if (err) return cb(err);
+              self._client.del('callstate.' + call.callId, cb);
+            });
           }, function(err) {
             if (err) {
               callback(err);
@@ -784,19 +802,24 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-      var call = JSON.parse(data);
-      if (call !== null && getState === true) {
-        self.getCallState(callId, function(err, state) {
-          if (err) {
-            callback(err);
-            return;
-          }
-          call.callState = state;
-          callback(err, call);
-        });
-        return;
-      }
-      callback(err, call);
+      decode(data, function(err, call) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (call !== null && getState === true) {
+          self.getCallState(callId, function(err, state) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            call.callState = state;
+            callback(err, call);
+          });
+          return;
+        }
+        callback(err, call);
+      });
     });
   },
 
@@ -1060,14 +1083,14 @@ RedisStorage.prototype = {
     if (isUndefined(roomData.expiresAt, "roomData.expiresAt", callback)) return;
     if (isUndefined(roomData.updateTime, "roomData.updateTime", callback)) return;
 
-    var data = JSON.parse(JSON.stringify(roomData));
+    var data = clone(roomData);
     data.roomToken = roomToken;
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'room.' + roomToken,
       data.expiresAt - data.updateTime,
-      JSON.stringify(data),
+      encode(data),
       function(err) {
         if (err) {
           callback(err);
@@ -1146,7 +1169,7 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-      callback(null, JSON.parse(data));
+      decode(data, callback);
     });
   },
 
@@ -1175,7 +1198,7 @@ RedisStorage.prototype = {
       self._client.setex(
         'room.' + roomToken,
         data.expiresAt - data.updateTime,
-        JSON.stringify(data),
+        encode(data),
         function(err) {
           callback(err, data.updateTime);
         });
@@ -1287,12 +1310,12 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
-    var data = JSON.parse(JSON.stringify(participantData));
+    var data = clone(participantData);
     data.hawkIdHmac = hawkIdHmac;
     data.expiresAt = parseInt(Date.now() / 1000, 10) + ttl;
 
     this._client.hset('roomparticipants.' + roomToken, hawkIdHmac,
-                      JSON.stringify(data), callback);
+                      encode(data), callback);
   },
 
   /**
