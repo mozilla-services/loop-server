@@ -63,9 +63,8 @@ MessageHandler.prototype = {
     }
 
     // Log inboundMessages
-    data = this.decode(data);
-    data.callId = inboundMessage.callId || session.callId;
-    hekaMetrics(data);
+    inboundMessage.callId = inboundMessage.callId || session.callId;
+    hekaMetrics(inboundMessage);
 
     var handlers = {
       hello: "handleHello",
