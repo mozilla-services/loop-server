@@ -31,104 +31,117 @@ function RedisStorage(options, settings) {
 }
 
 RedisStorage.prototype = {
+
+
+  /**
+   * Adds a set of simple push urls to an user (one per simple push topic).
+   *
+   * @param {String}         userMac, the hmac-ed user, the HMAC of the user;
+   * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}         simplePushURLs, an object with a key per SP topic;
+   * @param {Function}       A callback that will be called once data had been
+   *                         proceced.
+   **/
   addUserSimplePushURLs: function(userMac, hawkIdHmac, simplePushURLs, callback) {
-    var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
-
-    // Remove any previous storage spurl.{userMac} LIST
-    // XXX - Bug 1069208 — Remove this two month after 0.13 release
-    // (January 2015)
-    self._client.del('spurl.' + userMac, function(err) {
-      if (err) {
-        callback(err);
+    var self = this;
+    Object.keys(simplePushURLs).forEach(function(topic) {
+      if (SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
+        callback(new Error(topic + " should be one of " +
+                           SIMPLE_PUSH_TOPICS.join(", ")));
         return;
       }
+    });
 
-      for (var topic in simplePushURLs) {
-        if (SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
-          callback(new Error(topic + " should be one of " +
-                             SIMPLE_PUSH_TOPICS.join(", ")));
-          return;
-        }
-      }
-
-      self._client.set('spurl.' + userMac + '.' + hawkIdHmac,
-        JSON.stringify(simplePushURLs), function(err) {
-          if (err) {
-            callback(err);
-            return;
-          }
-          callback(null);
+    // Remove any previous storage spurl.{userMac} LIST
+    // XXX - Bug 1069208 — Remove this two months after 0.13 release
+    // (January 2015)
+    self._client.del('spurl.' + userMac, function(err) {
+      if (err) return callback(err);
+      // Manage each session's SP urls in a hash, and maintain a list of sessions
+      // with a simple push url per user.
+      self._client.hmset('spurls.' + userMac + '.' + hawkIdHmac, simplePushURLs,
+        function(err) {
+          if (err) return callback(err);
+          self._client.sadd('spurls.' + userMac, hawkIdHmac, callback);
         });
-      });
+    });
   },
 
+  /**
+   * Return the simple push URLS for a specified userMac.
+   *
+   * @param {String}    userMac, the userMac to which the simple push urls had
+   *                    been associated;
+   * @param {Function}  callback, the callback to call when data had been
+   *                    loaded. It will be passed an object with a calls and
+   *                    rooms keys, which will each contain a list of simple
+   *                    push urls.
+   **/
   getUserSimplePushURLs: function(userMac, callback) {
     var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
 
-    var result = {};
+    var output = {};
     SIMPLE_PUSH_TOPICS.forEach(function(topic) {
-      result[topic] = [];
+      output[topic] = [];
     });
 
-    // XXX - Bug 1069208 — Remove this two month after 0.13 release
+    // Remove any previous storage spurl.{userHmac} LIST
+    // XXX - Bug 1069208 — Remove this two months after 0.13 release
     // (January 2015)
-    this._client.lrange(
+    self._client.lrange(
       'spurl.' + userMac, 0, this._settings.maxSimplePushUrls,
-      function(err, results) {
-        if (err) {
-          callback(err);
-          return;
-        }
-
-        results.forEach(function(item) {
-          if (result.calls.indexOf(item) === -1)
-            result.calls.push(item);
+      function(err, SPcallUrls) {
+        if (err) return callback(err);
+        SPcallUrls.forEach(function(item) {
+          if (output.calls.indexOf(item) === -1)
+          output.calls.push(item);
         });
-
-        this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
-          if (err) {
-            callback(err);
-            return;
-          }
-
-          if (spurl_keys.length === 0) {
-            callback(null, result);
-            return;
-          }
-
-          self._client.mget(spurl_keys, function(err, simplePushURLsJSONList) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            var simplePushURLsList = simplePushURLsJSONList.map(function(json) {
-              if (json) {
-                return JSON.parse(json);
+        self._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
+          if (err) return callback(err);
+          async.map(hawkMacIds, function(hawkMacId, done) {
+            self._client.hgetall('spurls.' + userMac + '.' + hawkMacId, done);
+          },
+          function(err, simplePushMappings) {
+            if (err) return callback(err);
+            simplePushMappings.forEach(function(mapping) {
+              if (mapping) {
+                SIMPLE_PUSH_TOPICS.forEach(function(topic) {
+                  if (mapping.hasOwnProperty(topic) && output[topic].indexOf(mapping[topic]) === -1) {
+                    output[topic].push(mapping[topic]);
+                  }
+                });
               }
-              return null;
-            }).filter(function (dict) { return dict !== null; });
-
-            simplePushURLsList.forEach(function(item) {
-              SIMPLE_PUSH_TOPICS.forEach(function(topic) {
-                var sp_topic = item[topic];
-                if (result[topic].indexOf(sp_topic) === -1)
-                  result[topic].push(sp_topic);
-              });
             });
-
-            callback(null, result);
+            callback(null, output);
           });
         });
-      }.bind(this));
+      });
   },
 
+
+  /**
+   * Removes the simple push url of the given user/device.
+   *
+   * @param {String}         userHmac, the hmac-ed user, the HMAC of the user;
+   * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function}       A callback that will be called once data had been
+   *                         proceced.
+   **/
   removeSimplePushURLs: function(userMac, hawkIdHmac, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
-    this._client.del('spurl.' + userMac + '.' + hawkIdHmac, callback);
+    var self = this;
+    self._client.srem('spurls.' + userMac, hawkIdHmac, function(err, deleted) {
+      if (err) return callback(err);
+      if (deleted > 0) {
+        self._client.del('spurls.' + userMac + '.' + hawkIdHmac, callback);
+      } else {
+        callback(null);
+      }
+    });
   },
 
   /**
@@ -139,18 +152,14 @@ RedisStorage.prototype = {
   deleteUserSimplePushURLs: function(userMac, callback) {
     var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
-
-    this._client.keys('spurl.' + userMac + '.*', function(err, spurl_keys) {
-      if (err) {
-        callback(err);
-        return;
-      }
-
-      if (spurl_keys.length > 0) {
-        self._client.del(spurl_keys, callback);
-        return;
-      }
-      callback(null);
+    this._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
+      if (err) return callback(err);
+      async.each(hawkMacIds, function(hawkHmacId, done) {
+        self._client.del('spurls.' + userMac + '.' + hawkHmacId, done);
+      }, function(err) {
+        if (err) return callback(err);
+        self._client.del('spurls.' + userMac, callback);
+      });
     });
   },
 
@@ -194,7 +203,7 @@ RedisStorage.prototype = {
       'userUrls.' + userMac,
       'callurl.' + callUrlId,
       function(err, res) {
-        if (err){
+        if (err) {
           callback(err);
           return;
         }
@@ -284,14 +293,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        var expired = urls.map(function(val, index) {
-          return (val === null) ? index : null;
-        }).filter(function(val) {
-          return val !== null;
+        var expired = urls.map(function(url, index) {
+          return (url === null) ? index : null;
+        }).filter(function(url) {
+          return url !== null;
         });
 
-        var pendingUrls = urls.filter(function(val) {
-          return val !== null;
+        var pendingUrls = urls.filter(function(url) {
+          return url !== null;
         }).map(JSON.parse).sort(function(a, b) {
           return a.timestamp - b.timestamp;
         });
@@ -399,14 +408,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        var expired = calls.map(function(val, index) {
-          return (val === null) ? index : null;
-        }).filter(function(val) {
-          return val !== null;
+        var expired = calls.map(function(call, index) {
+          return (call === null) ? index : null;
+        }).filter(function(call) {
+          return call !== null;
         });
 
-        var pendingCalls = calls.filter(function(val) {
-          return val !== null;
+        var pendingCalls = calls.filter(function(call) {
+          return call !== null;
         }).map(JSON.parse).sort(function(a, b) {
           return a.timestamp - b.timestamp;
         });
@@ -452,7 +461,7 @@ RedisStorage.prototype = {
   getCallStateTTL: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
     this._client.pttl('callstate.' + callId, function(err, ttl) {
-      if (err){
+      if (err) {
         callback(err);
         return;
       }
@@ -615,7 +624,7 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.get(key, function(err, number) {
-      if (err){
+      if (err) {
         return callback(err);
       }
       return callback(err, parseInt(number));
@@ -870,14 +879,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        var expired = rooms.map(function(val, index) {
-          return (val === null) ? index : null;
-        }).filter(function(val) {
-          return val !== null;
+        var expired = rooms.map(function(room, index) {
+          return (room === null) ? index : null;
+        }).filter(function(room) {
+          return room !== null;
         });
 
-        var pendingRooms = rooms.filter(function(val) {
-          return val !== null;
+        var pendingRooms = rooms.filter(function(room) {
+          return room !== null;
         }).map(JSON.parse).sort(function(a, b) {
           return a.updateTime - b.updateTime;
         });
