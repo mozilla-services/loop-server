@@ -948,15 +948,10 @@ RedisStorage.prototype = {
   },
 
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
-    var self = this;
-    self._client.hdel('roomparticipant.' + roomToken, hawkIdHmac, function(err) {
-      if (err) {
-        callback(err);
-        return;
-      }
-      self._client.del(
-        'roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac, callback);
-    });
+    var multi = this._client.multi();
+    multi.hdel('roomparticipant.' + roomToken, hawkIdHmac);
+    multi.del('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac);
+    multi.exec(callback);
   },
 
   getRoomParticipants: function(roomToken, callback) {
