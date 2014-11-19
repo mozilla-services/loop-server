@@ -9,6 +9,14 @@ var constants = require("../constants");
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
+var isUndefined = function(field, fieldName, callback) {
+  if (field === undefined) {
+    callback(new Error(fieldName + " should not be undefined"));
+    return true;
+  }
+  return false;
+}
+
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -24,16 +32,19 @@ function RedisStorage(options, settings) {
 
 RedisStorage.prototype = {
 
+
   /**
    * Adds a set of simple push urls to an user (one per simple push topic).
    *
-   * @param {String}         userHmac, the hmac-ed user, the HMAC of the user;
-   * @param {hawkHmacId}     hawkHmacId, the hmac-ed hawk id of the client;
+   * @param {String}         userMac, the hmac-ed user, the HMAC of the user;
+   * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {String}         simplePushURLs, an object with a key per SP topic;
    * @param {Function}       A callback that will be called once data had been
    *                         proceced.
    **/
-  addUserSimplePushURLs: function(userHmac, hawkHmacId, simplePushURLs, callback) {
+  addUserSimplePushURLs: function(userMac, hawkIdHmac, simplePushURLs, callback) {
+    if (isUndefined(userMac, "userMac", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var self = this;
     Object.keys(simplePushURLs).forEach(function(topic) {
       if (SIMPLE_PUSH_TOPICS.indexOf(topic) === -1) {
@@ -43,17 +54,17 @@ RedisStorage.prototype = {
       }
     });
 
-    // Remove any previous storage spurl.{userHmac} LIST
+    // Remove any previous storage spurl.{userMac} LIST
     // XXX - Bug 1069208 — Remove this two months after 0.13 release
     // (January 2015)
-    self._client.del('spurl.' + userHmac, function(err) {
+    self._client.del('spurl.' + userMac, function(err) {
       if (err) return callback(err);
       // Manage each session's SP urls in a hash, and maintain a list of sessions
       // with a simple push url per user.
-      self._client.hmset('spurls.' + userHmac + '.' + hawkHmacId, simplePushURLs,
+      self._client.hmset('spurls.' + userMac + '.' + hawkIdHmac, simplePushURLs,
         function(err) {
           if (err) return callback(err);
-          self._client.sadd('spurls.' + userHmac, hawkHmacId, callback);
+          self._client.sadd('spurls.' + userMac, hawkIdHmac, callback);
         });
     });
   },
@@ -70,6 +81,7 @@ RedisStorage.prototype = {
    **/
   getUserSimplePushURLs: function(userMac, callback) {
     var self = this;
+    if (isUndefined(userMac, "userMac", callback)) return;
 
     var output = {};
     SIMPLE_PUSH_TOPICS.forEach(function(topic) {
@@ -109,20 +121,23 @@ RedisStorage.prototype = {
       });
   },
 
+
   /**
    * Removes the simple push url of the given user/device.
    *
    * @param {String}         userHmac, the hmac-ed user, the HMAC of the user;
-   * @param {hawkHmacId}     hawkHmacId, the hmac-ed hawk id of the client;
+   * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {Function}       A callback that will be called once data had been
    *                         proceced.
    **/
-  removeSimplePushURLs: function(userMac, hawkHmacId, callback) {
+  removeSimplePushURLs: function(userMac, hawkIdHmac, callback) {
+    if (isUndefined(userMac, "userMac", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var self = this;
-    self._client.srem('spurls.' + userMac, hawkHmacId, function(err, deleted) {
+    self._client.srem('spurls.' + userMac, hawkIdHmac, function(err, deleted) {
       if (err) return callback(err);
       if (deleted > 0) {
-        self._client.del('spurls.' + userMac + '.' + hawkHmacId, callback);
+        self._client.del('spurls.' + userMac + '.' + hawkIdHmac, callback);
       } else {
         callback(null);
       }
@@ -136,6 +151,7 @@ RedisStorage.prototype = {
    **/
   deleteUserSimplePushURLs: function(userMac, callback) {
     var self = this;
+    if (isUndefined(userMac, "userMac", callback)) return;
     this._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
       if (err) return callback(err);
       async.each(hawkMacIds, function(hawkHmacId, done) {
@@ -148,13 +164,9 @@ RedisStorage.prototype = {
   },
 
   addUserCallUrlData: function(userMac, callUrlId, urlData, callback) {
-    if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
-      return;
-    } else if (urlData.timestamp === undefined) {
-      callback(new Error("urlData should have a timestamp property."));
-      return;
-    }
+    if (isUndefined(userMac, "userMac", callback)) return;
+    if (isUndefined(callUrlId, "callUrlId", callback)) return;
+    if (isUndefined(urlData.timestamp, "urlData.timestamp", callback)) return;
     var self = this;
 
     var data = JSON.parse(JSON.stringify(urlData));
@@ -185,6 +197,8 @@ RedisStorage.prototype = {
    **/
   updateUserCallUrlData: function(userMac, callUrlId, newData, callback) {
     var self = this;
+    if (isUndefined(userMac, "userMac", callback)) return;
+    if (isUndefined(callUrlId, "callUrlId", callback)) return;
     self._client.sismember(
       'userUrls.' + userMac,
       'callurl.' + callUrlId,
@@ -221,6 +235,7 @@ RedisStorage.prototype = {
   },
 
   getCallUrlData: function(callUrlId, callback) {
+    if (isUndefined(callUrlId, "callUrlId", callback)) return;
     this._client.get('callurl.' + callUrlId, function(err, data) {
       if (err) {
         callback(err);
@@ -239,6 +254,7 @@ RedisStorage.prototype = {
    **/
   deleteUserCallUrls: function(userMac, callback) {
     var self = this;
+    if (isUndefined(userMac, "userMac", callback)) return;
     self._client.smembers('userUrls.' + userMac, function(err, calls) {
       if (err) {
         callback(err);
@@ -255,11 +271,13 @@ RedisStorage.prototype = {
   },
 
   revokeURLToken: function(callUrlId, callback) {
+    if (isUndefined(callUrlId, "callUrlId", callback)) return;
     this._client.del('callurl.' + callUrlId, callback);
   },
 
   getUserCallUrls: function(userMac, callback) {
     var self = this;
+    if (isUndefined(userMac, "userMac", callback)) return;
     this._client.smembers('userUrls.' + userMac, function(err, members) {
       if (err) {
         callback(err);
@@ -303,10 +321,7 @@ RedisStorage.prototype = {
   },
 
   addUserCall: function(userMac, call, callback) {
-    if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
-      return;
-    }
+    if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     // Clone the args to prevent from modifying it.
     call = JSON.parse(JSON.stringify(call));
@@ -340,6 +355,7 @@ RedisStorage.prototype = {
    * @param String the user mac.
    **/
   deleteUserCalls: function(userMac, callback) {
+    if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
       if (err) {
@@ -375,10 +391,7 @@ RedisStorage.prototype = {
   },
 
   getUserCalls: function(userMac, callback) {
-    if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
-      return;
-    }
+    if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
       if (err) {
@@ -446,6 +459,7 @@ RedisStorage.prototype = {
    * In case the call is already expired, returns -1.
    **/
   getCallStateTTL: function(callId, callback) {
+    if (isUndefined(callId, "callId", callback)) return;
     this._client.pttl('callstate.' + callId, function(err, ttl) {
       if (err) {
         callback(err);
@@ -467,6 +481,7 @@ RedisStorage.prototype = {
    * is the same for the call and for its state.
    **/
   setCallState: function(callId, state, ttl, callback) {
+    if (isUndefined(callId, "callId", callback)) return;
     var self = this;
 
     // In case we don't have a TTL, get the one from the call.
@@ -524,6 +539,7 @@ RedisStorage.prototype = {
    * "half-connected" and "connected".
    **/
   getCallState: function(callId, callback) {
+    if (isUndefined(callId, "callId", callback)) return;
     var self = this;
 
     // Get the state of a given call. Because of how we store this information
@@ -575,6 +591,8 @@ RedisStorage.prototype = {
 
   incrementConnectedCallDevices: function(type, callId, callback) {
     var self = this;
+    if (isUndefined(callId, "callId", callback)) return;
+    if (isUndefined(type, "type", callback)) return;
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.incr(key, function(err) {
@@ -587,6 +605,8 @@ RedisStorage.prototype = {
 
   decrementConnectedCallDevices: function(type, callId, callback) {
     var self = this;
+    if (isUndefined(callId, "callId", callback)) return;
+    if (isUndefined(type, "type", callback)) return;
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.decr(key, function(err) {
@@ -599,6 +619,8 @@ RedisStorage.prototype = {
 
   getConnectedCallDevices: function(type, callId, callback) {
     var self = this;
+    if (isUndefined(callId, "callId", callback)) return;
+    if (isUndefined(type, "type", callback)) return;
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.get(key, function(err, number) {
@@ -613,11 +635,13 @@ RedisStorage.prototype = {
    * Set the call termination reason
    */
   setCallTerminationReason: function(callId, reason, callback) {
+    var self = this;
+    if (isUndefined(callId, "callId", callback)) return;
+
     if (reason === undefined) {
       callback(null);
       return;
     }
-    var self = this;
     self._client.ttl('call.' + callId, function(err, ttl) {
       if (err) {
         callback(err);
@@ -631,6 +655,7 @@ RedisStorage.prototype = {
    * Set the call termination reason
    */
   getCallTerminationReason: function(callId, callback) {
+    if (isUndefined(callId, "callId", callback)) return;
     this._client.get('callStateReason.' + callId, callback);
   },
 
@@ -645,6 +670,8 @@ RedisStorage.prototype = {
       callback = getState;
       getState = true;
     }
+    if (isUndefined(callId, "callId", callback)) return;
+
     var self = this;
     this._client.get('call.' + callId, function(err, data) {
       if (err) {
@@ -668,6 +695,8 @@ RedisStorage.prototype = {
   },
 
   deleteCall: function(callId, callback) {
+    if (isUndefined(callId, "callId", callback)) return;
+
     this._client.del('call.' + callId, function(err, result) {
       if (err) {
         callback(err);
@@ -680,16 +709,21 @@ RedisStorage.prototype = {
   /**
    * Add an hawk id to the list of valid hawk ids for an user.
    **/
-  setHawkUser: function(userHash, hawkIdHmac, callback) {
+  setHawkUser: function(userMac, hawkIdHmac, callback) {
+    if (isUndefined(userMac, "userMac", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+
     this._client.setex(
       'hawkuser.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
-      userHash,
+      userMac,
       callback
     );
   },
 
   getHawkUser: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+
     this._client.get('hawkuser.' + hawkIdHmac, callback);
   },
 
@@ -697,6 +731,8 @@ RedisStorage.prototype = {
    * Associates an hawk.id (hmac-ed) to an user identifier (encrypted).
    */
   setHawkUserId: function(hawkIdHmac, encryptedUserId, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+    if (isUndefined(encryptedUserId, "encryptedUserId", callback)) return;
     this._client.setex(
       'userid.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
@@ -706,14 +742,18 @@ RedisStorage.prototype = {
   },
 
   getHawkUserId: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.get('userid.' + hawkIdHmac, callback);
   },
 
   deleteHawkUserId: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.del('userid.' + hawkIdHmac, callback);
   },
 
   setHawkSession: function(hawkIdHmac, authKey, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+    if (isUndefined(authKey, "authKey", callback)) return;
     this._client.setex(
       'hawk.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
@@ -723,6 +763,8 @@ RedisStorage.prototype = {
   },
 
   touchHawkSession: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+
     var self = this;
     self._client.expire(
       'userid.' + hawkIdHmac,
@@ -741,6 +783,8 @@ RedisStorage.prototype = {
   },
 
   getHawkSession: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+
     this._client.get('hawk.' + hawkIdHmac, function(err, key) {
       if (err) {
         callback(err);
@@ -757,18 +801,22 @@ RedisStorage.prototype = {
   },
 
   deleteHawkSession: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.del('hawk.' + hawkIdHmac, callback);
   },
 
   setHawkOAuthToken: function(hawkIdHmac, token, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.set('oauth.token.' + hawkIdHmac, token, callback);
   },
 
   getHawkOAuthToken: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.get('oauth.token.' + hawkIdHmac, callback);
   },
 
   setHawkOAuthState: function(hawkIdHmac, state, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.setex(
       'oauth.state.' + hawkIdHmac,
       this._settings.hawkSessionDuration,
@@ -778,27 +826,21 @@ RedisStorage.prototype = {
   },
 
   getHawkOAuthState: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.get('oauth.state.' + hawkIdHmac, callback);
   },
 
   clearHawkOAuthState: function(hawkIdHmac, callback) {
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     this._client.del('oauth.state.' + hawkIdHmac, callback);
   },
 
   setUserRoomData: function(userMac, roomToken, roomData, callback) {
-    if (userMac === undefined) {
-      callback(new Error("userMac should be defined."));
-      return;
-    } else if (roomToken === undefined) {
-      callback(new Error("roomToken should be defined."));
-      return;
-    } else if (roomData.expiresAt === undefined) {
-      callback(new Error("roomData should have an expiresAt property."));
-      return;
-    } else if (roomData.updateTime === undefined) {
-      callback(new Error("roomData should have an updateTime property."));
-      return;
-    }
+    if (isUndefined(userMac, "userMac", callback)) return;
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(roomData.expiresAt, "roomData.expiresAt", callback)) return;
+    if (isUndefined(roomData.updateTime, "roomData.updateTime", callback)) return;
+
     var data = JSON.parse(JSON.stringify(roomData));
     data.roomToken = roomToken;
     var self = this;
@@ -820,6 +862,7 @@ RedisStorage.prototype = {
   },
 
   getUserRooms: function(userMac, callback) {
+    if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     this._client.smembers('userRooms.' + userMac, function(err, members) {
       if (err) {
@@ -864,6 +907,7 @@ RedisStorage.prototype = {
   },
 
   getRoomData: function(roomToken, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
     this._client.get('room.' + roomToken, function(err, data) {
       if (err) {
         callback(err);
@@ -874,6 +918,7 @@ RedisStorage.prototype = {
   },
 
   touchRoomData: function(roomToken, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
     self.getRoomData(roomToken, function(err, data) {
       if (err) {
@@ -892,6 +937,7 @@ RedisStorage.prototype = {
   },
 
   deleteRoomData: function(roomToken, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
     self._client.del('room.' + roomToken, function(err) {
       if (err) {
@@ -903,12 +949,16 @@ RedisStorage.prototype = {
   },
 
   deleteRoomParticipants: function(roomToken, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
     self._client.del('roomparticipants.' + roomToken, callback);
   },
 
   addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
                                callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+
     var data = JSON.parse(JSON.stringify(participantData));
     data.hawkIdHmac = hawkIdHmac;
     data.expiresAt = parseInt(Date.now() / 1000, 10) + ttl;
@@ -918,6 +968,8 @@ RedisStorage.prototype = {
   },
 
   touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var self = this;
     var now = parseInt(Date.now() / 1000);
     self._client.hget('roomparticipants.' + roomToken, hawkIdHmac, function(err, data) {
@@ -948,6 +1000,8 @@ RedisStorage.prototype = {
   },
 
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var multi = this._client.multi();
     multi.hdel('roomparticipants.' + roomToken, hawkIdHmac);
     multi.del('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac);
@@ -955,6 +1009,8 @@ RedisStorage.prototype = {
   },
 
   getRoomParticipants: function(roomToken, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+
     var self = this;
     var now = parseInt(Date.now() / 1000, 10);
     self._client.hgetall('roomparticipants.' + roomToken,
@@ -989,6 +1045,9 @@ RedisStorage.prototype = {
    * Set the anonymous participant access token.
    */
   setRoomAccessToken: function(roomToken, sessionTokenHmac, ttl, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(sessionTokenHmac, "sessionTokenHmac", callback)) return;
+
     this._client.psetex(
       'roomparticipant_access_token.' + roomToken + '.' + sessionTokenHmac,
       parseInt(ttl * 1000, 10), "", callback);
@@ -998,6 +1057,9 @@ RedisStorage.prototype = {
    * Get the anonymous participant access token.
    */
   isRoomAccessTokenValid: function(roomToken, sessionTokenHmac, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(sessionTokenHmac, "sessionTokenHmac", callback)) return;
+
     this._client.get(
       'roomparticipant_access_token.' + roomToken + '.' + sessionTokenHmac,
       function(err, data) {
