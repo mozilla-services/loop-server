@@ -36,11 +36,11 @@ RedisStorage.prototype = {
   /**
    * Adds a set of simple push urls to an user (one per simple push topic).
    *
-   * @param {String}         userMac, the hmac-ed user, the HMAC of the user;
-   * @param {String}         hawkIdHmac, the hmac-ed hawk id of the client;
-   * @param {String}         simplePushURLs, an object with a key per SP topic;
-   * @param {Function}       A callback that will be called once data had been
-   *                         processed.
+   * @param {String}    userHmac, the hmac-ed user, the HMAC of the user;
+   * @param {String}    hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {String}    simplePushURLs, an object with a key per SP topic;
+   * @param {Function}  A callback that will be called once data had been
+   *                    processed.
    **/
   addUserSimplePushURLs: function(userMac, hawkIdHmac, simplePushURLs, callback) {
     if (isUndefined(userMac, "userMac", callback)) return;
@@ -801,7 +801,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Delete call
+   * Delete call.
    *
    * Delete a call from its id.
    *
@@ -842,7 +842,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * get the Hawk user from an Hawk ID.
+   * Get the Hawk user from an Hawk ID.
    *
    * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {Function} A callback that will be called when the action
@@ -874,7 +874,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Get the encrypted User Id
+   * Get the encrypted User Id.
    *
    * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {Function} A callback that will be called with the encrypted user id.
@@ -885,7 +885,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Delete the encrypted user id
+   * Delete the encrypted user id.
    *
    * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {Function} A callback that will be called with the encrypted user id.
@@ -967,7 +967,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Remove the Hawk Session
+   * Remove the Hawk Session.
    *
    * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {Function} A callback that will be called when the action
@@ -979,7 +979,7 @@ RedisStorage.prototype = {
   },
 
   /**
-   * Set the Hawk OAuth token
+   * Set the Hawk OAuth token.
    *
    * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
    * @param {String}   token, the FxA oauth token;
