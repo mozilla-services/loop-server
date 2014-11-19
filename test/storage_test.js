@@ -269,7 +269,7 @@ describe("Storage", function() {
             storage.addUserCallUrlData(userMac, callToken, invalidData,
               function(err) {
                 expect(err.message)
-                  .eql("urlData should have a timestamp property.");
+                  .eql("urlData.timestamp should not be undefined");
                 done();
               });
           });
@@ -783,7 +783,7 @@ describe("Storage", function() {
             storage.setUserRoomData(userMac, roomToken, invalidData,
               function(err) {
                 expect(err.message)
-                  .eql("roomData should have an expiresAt property.");
+                  .eql("roomData.expiresAt should not be undefined");
                 done();
               });
           });
