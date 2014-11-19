@@ -37,7 +37,7 @@ module.exports = function(app, conf, logError, storage, tokBox) {
    * Displays some version information at the root of the service.
    **/
   app.get("/", function(req, res) {
-    var credentials = {
+    var metadata = {
       name: loopPackageData.name,
       description: loopPackageData.description,
       version: loopPackageData.version,
@@ -46,33 +46,33 @@ module.exports = function(app, conf, logError, storage, tokBox) {
     };
 
     // Adding information about the tokbox backend
-    credentials.fakeTokBox = conf.get('fakeTokBox');
-    credentials.fxaOAuth = conf.get('fxaOAuth').activated;
+    metadata.fakeTokBox = conf.get('fakeTokBox');
+    metadata.fxaOAuth = conf.get('fxaOAuth').activated;
 
     // Adding localization information for the client.
-    credentials.i18n = {
+    metadata.i18n = {
       defaultLang: conf.get("i18n").defaultLang
     };
 
     if (req.headers["accept-language"]) {
-      credentials.i18n.lang = req.headers["accept-language"].split(",")[0];
+      metadata.i18n.lang = req.headers["accept-language"].split(",")[0];
     }
 
     if (!conf.get("displayVersion")) {
-      delete credentials.version;
+      delete metadata.version;
     }
 
     // Adding revision if available
     git.long(function (commitId) {
       if (commitId) {
-        credentials.rev = commitId;
+        metadata.rev = commitId;
       }
       git.branch(function (branch) {
         if (branch) {
-          credentials.branch = branch;
+          metadata.branch = branch;
         }
 
-        res.status(200).json(credentials);
+        res.status(200).json(metadata);
       });
     });
   });
