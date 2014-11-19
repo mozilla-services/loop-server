@@ -275,14 +275,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        var expired = urls.map(function(val, index) {
-          return (val === null) ? index : null;
-        }).filter(function(val) {
-          return val !== null;
+        var expired = urls.map(function(url, index) {
+          return (url === null) ? index : null;
+        }).filter(function(url) {
+          return url !== null;
         });
 
-        var pendingUrls = urls.filter(function(val) {
-          return val !== null;
+        var pendingUrls = urls.filter(function(url) {
+          return url !== null;
         }).map(JSON.parse).sort(function(a, b) {
           return a.timestamp - b.timestamp;
         });
@@ -395,14 +395,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        var expired = calls.map(function(val, index) {
-          return (val === null) ? index : null;
-        }).filter(function(val) {
-          return val !== null;
+        var expired = calls.map(function(call, index) {
+          return (call === null) ? index : null;
+        }).filter(function(call) {
+          return call !== null;
         });
 
-        var pendingCalls = calls.filter(function(val) {
-          return val !== null;
+        var pendingCalls = calls.filter(function(call) {
+          return call !== null;
         }).map(JSON.parse).sort(function(a, b) {
           return a.timestamp - b.timestamp;
         });
@@ -836,14 +836,14 @@ RedisStorage.prototype = {
           callback(err);
           return;
         }
-        var expired = rooms.map(function(val, index) {
-          return (val === null) ? index : null;
-        }).filter(function(val) {
-          return val !== null;
+        var expired = rooms.map(function(room, index) {
+          return (room === null) ? index : null;
+        }).filter(function(room) {
+          return room !== null;
         });
 
-        var pendingRooms = rooms.filter(function(val) {
-          return val !== null;
+        var pendingRooms = rooms.filter(function(room) {
+          return room !== null;
         }).map(JSON.parse).sort(function(a, b) {
           return a.updateTime - b.updateTime;
         });
