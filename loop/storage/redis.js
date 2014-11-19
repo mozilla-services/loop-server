@@ -21,7 +21,7 @@ function encode(data) {
   return JSON.stringify(data);
 }
 
-function decode(data, callback) {
+function decode(string, callback) {
   try {
     callback(null, JSON.parse(string));
   } catch (e) {
@@ -355,23 +355,29 @@ RedisStorage.prototype = {
           return url !== null;
         });
 
-        var pendingUrls = urls.filter(function(url) {
+        async.map(urls.filter(function(url) {
           return url !== null;
-        }).map(JSON.parse).sort(function(a, b) {
-          return a.timestamp - b.timestamp;
-        });
-
-        if (expired.length > 0) {
-          self._client.srem('userUrls.' + userMac, expired, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, pendingUrls);
+        }), decode, function(err, pendingUrls) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          pendingUrls = pendingUrls.sort(function(a, b) {
+            return a.timestamp - b.timestamp;
           });
-          return;
-        }
-        callback(null, pendingUrls);
+
+          if (expired.length > 0) {
+            self._client.srem('userUrls.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null, pendingUrls);
+            });
+            return;
+          }
+          callback(null, pendingUrls);
+        });
       });
     });
   },
@@ -488,42 +494,48 @@ RedisStorage.prototype = {
           return call !== null;
         });
 
-        var pendingCalls = calls.filter(function(call) {
+        async.map(calls.filter(function(call) {
           return call !== null;
-        }).map(JSON.parse).sort(function(a, b) {
-          return a.timestamp - b.timestamp;
-        });
+        }), decode, function(err, pendingCalls) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          pendingCalls = pendingCalls.sort(function(a, b) {
+            return a.timestamp - b.timestamp;
+          });
 
-        function getState() {
-          async.map(pendingCalls, function(call, cb) {
-            self.getCallState(call.callId, function(err, state) {
+          function getState() {
+            async.map(pendingCalls, function(call, cb) {
+              self.getCallState(call.callId, function(err, state) {
+                if (err) {
+                  cb(err);
+                  return;
+                }
+                call.callState = state;
+                cb(null, call);
+              });
+            }, function(err, results) {
               if (err) {
-                cb(err);
+                callback(err);
                 return;
               }
-              call.callState = state;
-              cb(null, call);
+              callback(null, results);
             });
-          }, function(err, results) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, results);
-          });
-        }
+          }
 
-        if (expired.length > 0) {
-          self._client.srem('userCalls.' + userMac, expired, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            getState();
-          });
-          return;
-        }
-        getState();
+          if (expired.length > 0) {
+            self._client.srem('userCalls.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              getState();
+            });
+            return;
+          }
+          getState();
+        });
       });
     });
   },
@@ -1134,23 +1146,29 @@ RedisStorage.prototype = {
           return room !== null;
         });
 
-        var pendingRooms = rooms.filter(function(room) {
+        async.map(rooms.filter(function(room) {
           return room !== null;
-        }).map(JSON.parse).sort(function(a, b) {
-          return a.updateTime - b.updateTime;
-        });
-
-        if (expired.length > 0) {
-          self._client.srem('userRooms.' + userMac, expired, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, pendingRooms);
+        }), decode, function(err, pendingRooms) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          pendingRooms = pendingRooms.sort(function(a, b) {
+            return a.updateTime - b.updateTime;
           });
-          return;
-        }
-        callback(null, pendingRooms);
+
+          if (expired.length > 0) {
+            self._client.srem('userRooms.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null, pendingRooms);
+            });
+            return;
+          }
+          callback(null, pendingRooms);
+        });
       });
     });
   },
@@ -1404,15 +1422,21 @@ RedisStorage.prototype = {
           callback(null, []);
           return;
         }
-        var participants = participantsKeys.map(function(key) {
-          return JSON.parse(participantsMapping[key]);
-        }).filter(function(participant) {
-          return participant.expiresAt > now;
-        }).map(function(participant) {
-          delete participant.expiresAt;
-          return participant;
+        async.map(participantsKeys, function(key, cb) {
+          decode(participantsMapping[key], cb);
+        }, function(err, participants) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          participants = participants.filter(function(participant) {
+            return participant.expiresAt > now;
+          }).map(function(participant) {
+            delete participant.expiresAt;
+            return participant;
+          });
+          callback(null, participants);
         });
-        callback(null, participants);
       });
   },
 
