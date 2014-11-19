@@ -848,33 +848,17 @@ RedisStorage.prototype = {
           return a.updateTime - b.updateTime;
         });
 
-        async.map(pendingRooms, function(room, cb) {
-          self._client.keys('roomparticipant.' + room.roomToken + '.*',
-            function(err, participantsKeys) {
-              if (err) {
-                cb(err);
-                return;
-              }
-              room.currSize = participantsKeys.length;
-              cb(null, room);
-            });
-        }, function(err, results) {
-          if (err) {
-            callback(err);
-            return;
-          }
-          if (expired.length > 0) {
-            self._client.srem('userRooms.' + userMac, expired, function(err) {
-              if (err) {
-                callback(err);
-                return;
-              }
-              callback(null, results);
-            });
-            return;
-          }
-          callback(null, results);
-        });
+        if (expired.length > 0) {
+          self._client.srem('userRooms.' + userMac, expired, function(err) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            callback(null, pendingRooms);
+          });
+          return;
+        }
+        callback(null, pendingRooms);
       });
     });
   },
@@ -920,88 +904,84 @@ RedisStorage.prototype = {
 
   deleteRoomParticipants: function(roomToken, callback) {
     var self = this;
-    self._client.keys('roomparticipant.' + roomToken + '.*',
-      function(err, participantsKeys) {
-        if (err) {
-          callback(err);
-          return;
-        }
-        if (participantsKeys.length === 0) {
-          callback(null);
-          return;
-        }
-        self._client.del(participantsKeys, callback);
-      });
+    self._client.del('roomparticipants.' + roomToken, callback);
   },
 
   addRoomParticipant: function(roomToken, hawkIdHmac, participantData, ttl,
                                callback) {
     var data = JSON.parse(JSON.stringify(participantData));
     data.hawkIdHmac = hawkIdHmac;
+    data.expiresAt = parseInt(Date.now() / 1000, 10) + ttl;
 
-    this._client.setex('roomparticipant.' + roomToken + '.' + hawkIdHmac, ttl,
-     JSON.stringify(data), callback);
+    this._client.hset('roomparticipants.' + roomToken, hawkIdHmac,
+                      JSON.stringify(data), callback);
   },
 
   touchRoomParticipant: function(roomToken, hawkIdHmac, ttl, callback) {
-    this._client.pexpire('roomparticipant.' + roomToken + '.' + hawkIdHmac,
-      ttl * 1000, function(err, result) {
-        if (err) {
-          callback(err);
-          return;
-        }
-        this._client.pexpire('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
-          ttl * 1000, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, result !== 0);
-          });
-      }.bind(this));
+    var self = this;
+    var now = parseInt(Date.now() / 1000);
+    self._client.hget('roomparticipants.' + roomToken, hawkIdHmac, function(err, data) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      if (data === null) {
+        callback(null, false);
+        return;
+      }
+
+      data = JSON.parse(data);
+
+      if (data.expiresAt > now) {
+        data.expiresAt = parseInt(now + ttl, 10);
+        var multi = self._client.multi();
+        multi.hset('roomparticipants.' + roomToken, hawkIdHmac, JSON.stringify(data));
+        multi.pexpire('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
+                      ttl * 1000);
+        multi.exec(function(err) {
+          callback(err, true);
+        });
+        return;
+      }
+      callback(null, false);
+    });
   },
 
   deleteRoomParticipant: function(roomToken, hawkIdHmac, callback) {
-    this._client.del(
-      'roomparticipant.' + roomToken + '.' + hawkIdHmac, function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
-        this._client.del(
-          'roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac, callback);
-      }.bind(this)
-    );
+    var multi = this._client.multi();
+    multi.hdel('roomparticipants.' + roomToken, hawkIdHmac);
+    multi.del('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac);
+    multi.exec(callback);
   },
 
   getRoomParticipants: function(roomToken, callback) {
     var self = this;
-    self._client.keys('roomparticipant.' + roomToken + '.*',
-      function(err, participantsKeys) {
+    var now = parseInt(Date.now() / 1000, 10);
+    self._client.hgetall('roomparticipants.' + roomToken,
+      function(err, participantsMapping) {
         if (err) {
           callback(err);
           return;
         }
+        if (participantsMapping === null) {
+          callback(null, []);
+          return;
+        }
+
+        var participantsKeys = Object.keys(participantsMapping);
         if (participantsKeys.length === 0) {
           callback(null, []);
           return;
         }
-        self._client.mget(participantsKeys, function(err, participants) {
-          if (err) {
-            callback(err);
-            return;
-          }
-          if (participants === null) {
-            callback(null, []);
-            return;
-          }
-
-          callback(null, participants.filter(function(p) {
-            return p !== null;
-          }).map(function(participant) {
-            return JSON.parse(participant);
-          }));
+        var participants = participantsKeys.map(function(key) {
+          return JSON.parse(participantsMapping[key]);
+        }).filter(function(participant) {
+          return participant.expiresAt > now;
+        }).map(function(participant) {
+          delete participant.expiresAt;
+          return participant;
         });
+        callback(null, participants);
       });
   },
 
