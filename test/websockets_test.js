@@ -19,7 +19,7 @@ var server = loop.server;
 var storage = loop.storage;
 var conf = loop.conf;
 
-function createCall(callId, user, cb) {
+function createCall(callId, user, callback) {
   storage.addUserCall(user, {
     callerId: 'Alexis',
     callId: callId,
@@ -30,7 +30,7 @@ function createCall(callId, user, cb) {
     timestamp: Date.now(),
     wsCallerToken: "callerToken",
     wsCalleeToken: "calleeToken"
-  }, cb);
+  }, callback);
 }
 
 describe('websockets', function() {

@@ -172,11 +172,11 @@ try {
 }
 
 // Handle SIGTERM signal.
-function shutdown(cb) {
+function shutdown(callback) {
   server.close(function() {
     process.exit(0);
-    if (cb !== undefined) {
-      cb();
+    if (callback !== undefined) {
+      callback();
     }
   });
 }

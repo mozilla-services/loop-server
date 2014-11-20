@@ -58,7 +58,7 @@ var callUrls = conf.get('callUrls');
 function runOnPrefix(apiPrefix) {
   var userHmac, userHmac2, userHmac3, hawkIdHmac, hawkIdHmac2, hawkIdHmac3;
 
-  function register(url, assertion, credentials, cb) {
+  function register(url, assertion, credentials, callback) {
     supertest(app)
       .post(apiPrefix + '/registration')
       .hawk(credentials)
@@ -67,7 +67,7 @@ function runOnPrefix(apiPrefix) {
       .expect(200)
       .end(function(err, resp) {
         if (err) throw err;
-        cb(resp);
+        callback(resp);
       });
   }
 
@@ -98,11 +98,11 @@ function runOnPrefix(apiPrefix) {
 
       // Mock the calls to the external BrowserID verifier.
       sandbox.stub(fxaAuth, "verifyAssertion",
-        function(assertion, audience, trustedIssuers, cb){
+        function(assertion, audience, trustedIssuers, callback){
           if (assertion === expectedAssertion) {
-            cb(null, {idpClaims: {"fxa-verifiedEmail": user}});
+            callback(null, {idpClaims: {"fxa-verifiedEmail": user}});
           } else {
-            cb("error");
+            callback("error");
           }
         });
 
@@ -211,8 +211,8 @@ function runOnPrefix(apiPrefix) {
         describe(method + ' ' + route, function() {
           beforeEach(function() {
             var fakeCallInfo = conf.get("fakeCallInfo");
-            sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
-              cb(null, {
+            sandbox.stub(tokBox, "getSessionTokens", function(opts, callback) {
+              callback(null, {
                 apiKey: tokBoxConfig.credentials.default.apiKey,
                 sessionId: fakeCallInfo.session1,
                 callerToken: fakeCallInfo.token1,
@@ -245,11 +245,11 @@ function runOnPrefix(apiPrefix) {
     describe("GET /__hearbeat__", function() {
 
       it("should return a 503 if storage is down", function(done) {
-        sandbox.stub(tokBox, "ping", function(options, cb) {
-          cb(null);
+        sandbox.stub(tokBox, "ping", function(options, callback) {
+          callback(null);
         });
-        sandbox.stub(storage, "ping", function(cb) {
-          cb(false);
+        sandbox.stub(storage, "ping", function(callback) {
+          callback(false);
         });
 
         supertest(app)
@@ -266,8 +266,8 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should return a 503 if provider service is down", function(done) {
-        sandbox.stub(tokBox, "ping", function(options, cb) {
-          cb(new Error("blah"));
+        sandbox.stub(tokBox, "ping", function(options, callback) {
+          callback(new Error("blah"));
         });
         supertest(app)
           .get(apiPrefix + '/__heartbeat__')
@@ -284,8 +284,8 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should return a 200 if all dependencies are ok", function(done) {
-        sandbox.stub(tokBox, "ping", function(options, cb) {
-          cb(null);
+        sandbox.stub(tokBox, "ping", function(options, callback) {
+          callback(null);
         });
         supertest(app)
           .get(apiPrefix + '/__heartbeat__')
@@ -704,8 +704,8 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 503 if the database isn't available on update", function(done) {
         sandbox.stub(storage, "addUserSimplePushURLs",
-          function(userMac, hawkHmacId, simplepushURL, cb) {
-            cb("error");
+          function(userMac, hawkHmacId, simplepushURL, callback) {
+            callback("error");
           });
         jsonReq
           .send({'simplePushURL': pushURL})
@@ -903,8 +903,8 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should return a 503 is the database is not available", function(done) {
-        sandbox.stub(storage, "getCallUrlData", function(urlId, cb) {
-          cb("error");
+        sandbox.stub(storage, "getCallUrlData", function(urlId, callback) {
+          callback("error");
         });
         req.expect(503).end(done);
       });
@@ -1104,8 +1104,8 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should answer a 503 if the database isn't available", function(done) {
-        sandbox.stub(storage, "getUserCalls", function(userMac, cb) {
-          cb("error");
+        sandbox.stub(storage, "getUserCalls", function(userMac, callback) {
+          callback("error");
         });
 
         req.expect(503).end(done);
@@ -1165,8 +1165,8 @@ function runOnPrefix(apiPrefix) {
         describe("With working tokbox APIs", function() {
 
           beforeEach(function() {
-            sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
-              cb(null, {
+            sandbox.stub(tokBox, "getSessionTokens", function(opts, callback) {
+              callback(null, {
                 apiKey: tokBoxConfig.credentials.default.apiKey,
                 sessionId: tokBoxSessionId,
                 callerToken: tokBoxCallerToken,
@@ -1180,8 +1180,8 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should return a 503 if urlsStore is not available", function(done) {
-            sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, cb) {
-              cb("error");
+            sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, callback) {
+              callback("error");
             });
             addCallReq
               .expect(503)
@@ -1290,8 +1290,8 @@ function runOnPrefix(apiPrefix) {
               }
             });
 
-            sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
-              cb(null, {
+            sandbox.stub(tokBox, "getSessionTokens", function(opts, callback) {
+              callback(null, {
                 apiKey: tokBoxConfig.credentials.default.apiKey,
                 sessionId: tokBoxSessionId,
                 callerToken: tokBoxCallerToken,
@@ -1326,8 +1326,8 @@ function runOnPrefix(apiPrefix) {
           });
 
           it("should return a 503 if urlsStore is not available", function(done) {
-            sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, cb) {
-              cb("error");
+            sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, callback) {
+              callback("error");
             });
             addCallReq
               .send({calleeId: user, callType: "audio"})

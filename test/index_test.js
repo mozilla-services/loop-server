@@ -76,7 +76,7 @@ describe("index.js", function() {
     beforeEach(function() {
       sandbox = sinon.sandbox.create();
       sandbox.stub(process, "exit");
-      sandbox.stub(server, "close", function(cb) { cb(); });
+      sandbox.stub(server, "close", function(callback) { callback(); });
     });
 
     afterEach(function() {
@@ -344,11 +344,11 @@ describe("index.js", function() {
 
         // Mock the calls to the external BrowserID verifier.
         sandbox.stub(fxaAuth, "verifyAssertion",
-          function(assertion, audience, trustedIssuers, cb){
+          function(assertion, audience, trustedIssuers, callback){
             if (assertion === expectedAssertion) {
-              cb(null, {idpClaims: {"fxa-verifiedEmail": user}});
+              callback(null, {idpClaims: {"fxa-verifiedEmail": user}});
             } else {
-              cb("error");
+              callback("error");
             }
           });
       });
@@ -474,8 +474,8 @@ describe("index.js", function() {
     });
 
     it("should return a 503 if tokbox API errors out", function(done) {
-      sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
-        cb("error");
+      sandbox.stub(tokBox, "getSessionTokens", function(opts, callback) {
+        callback("error");
       });
 
       supertest(app)
@@ -496,8 +496,8 @@ describe("index.js", function() {
       var tokBoxCalleeToken = "anotherToken";
 
       beforeEach(function() {
-        sandbox.stub(tokBox, "getSessionTokens", function(opts, cb) {
-          cb(null, {
+        sandbox.stub(tokBox, "getSessionTokens", function(opts, callback) {
+          callback(null, {
             apiKey: tokBoxApiKey,
             sessionId: tokBoxSessionId,
             callerToken: tokBoxCallerToken,

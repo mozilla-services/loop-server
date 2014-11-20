@@ -106,8 +106,8 @@ describe('/fxa-oauth', function () {
     it("should return a 503 if the database isn't available",
       function(done) {
         sandbox.stub(storage, "setHawkSession",
-          function(tokenId, authKey, cb) {
-            cb(new Error("error"));
+          function(tokenId, authKey, callback) {
+            callback(new Error("error"));
           });
         supertest(app)
           .post(apiPrefix + '/fxa-oauth/params')
@@ -232,8 +232,8 @@ describe('/fxa-oauth', function () {
     });
 
     it('should error when request to the oauth server fails', function(done) {
-      sandbox.stub(request, "post", function(options, cb) {
-        cb("error");
+      sandbox.stub(request, "post", function(options, callback) {
+        callback("error");
       });
 
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
@@ -248,12 +248,12 @@ describe('/fxa-oauth', function () {
     });
 
     it('should error if the request to the profile fails', function(done) {
-      sandbox.stub(request, "post", function(options, cb) {
-        cb(null, null, {access_token: "token"});
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, null, {access_token: "token"});
       });
 
-      sandbox.stub(request, "get", function(options, cb) {
-        cb("error");
+      sandbox.stub(request, "get", function(options, callback) {
+        callback("error");
       });
 
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
@@ -269,12 +269,12 @@ describe('/fxa-oauth', function () {
 
     it('should error if the request to the profile does not have an email',
       function(done) {
-        sandbox.stub(request, "post", function(options, cb) {
-          cb(null, null, {access_token: "token"});
+        sandbox.stub(request, "post", function(options, callback) {
+          callback(null, null, {access_token: "token"});
         });
 
-        sandbox.stub(request, "get", function(options, cb) {
-          cb(null, null, {error: "500"});
+        sandbox.stub(request, "get", function(options, callback) {
+          callback(null, null, {error: "500"});
         });
 
         storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
@@ -289,12 +289,12 @@ describe('/fxa-oauth', function () {
       });
 
     it('should error if the returned json is invalid', function(done) {
-      sandbox.stub(request, "post", function(options, cb) {
-        cb(null, null, {access_token: "token"});
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, null, {access_token: "token"});
       });
 
-      sandbox.stub(request, "get", function(options, cb) {
-        cb(null, null, "{"); // this is invalid JSON.
+      sandbox.stub(request, "get", function(options, callback) {
+        callback(null, null, "{"); // this is invalid JSON.
       });
 
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {
@@ -309,12 +309,12 @@ describe('/fxa-oauth', function () {
     });
 
     it('should return and store the oauth token', function(done) {
-      sandbox.stub(request, "post", function(options, cb) {
-        cb(null, null, {access_token: "token"});
+      sandbox.stub(request, "post", function(options, callback) {
+        callback(null, null, {access_token: "token"});
       });
 
-      sandbox.stub(request, "get", function(options, cb) {
-        cb(null, null, '{"email":"alexis@mozilla.com"}');
+      sandbox.stub(request, "get", function(options, callback) {
+        callback(null, null, '{"email":"alexis@mozilla.com"}');
       });
 
       storage.setHawkOAuthState(hawkIdHmac, "5678", function(err) {

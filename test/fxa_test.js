@@ -45,11 +45,11 @@ describe("fxa authentication", function() {
 
       // Mock the calls to the external BrowserID verifier.
       sandbox.stub(fxa, "verifyAssertion",
-        function(assertion, audience, trustedIssuers, cb){
+        function(assertion, audience, trustedIssuers, callback){
           if (assertion === expectedAssertion) {
-            cb(null, {email: user});
+            callback(null, {email: user});
           } else {
-            cb("invalid assertion \"1a2w3e4r5t6y\"");
+            callback("invalid assertion \"1a2w3e4r5t6y\"");
           }
         });
     });
@@ -123,8 +123,8 @@ describe("fxa authentication", function() {
     });
 
     it("should return an error if the verifier errored", function() {
-      sandbox.stub(fxa.request, "post", function(opts, cb) {
-        cb(null, "message", {
+      sandbox.stub(fxa.request, "post", function(opts, callback) {
+        callback(null, "message", {
           status: "error",
           reason: "something bad"
         });
@@ -136,8 +136,8 @@ describe("fxa authentication", function() {
     });
 
     it("should return an error if the verifier is not responding", function() {
-      sandbox.stub(fxa.request, "post", function(opts, cb) {
-        cb("error", null, null);
+      sandbox.stub(fxa.request, "post", function(opts, callback) {
+        callback("error", null, null);
       });
       fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
         function(err) {
@@ -147,8 +147,8 @@ describe("fxa authentication", function() {
 
     it("should not accept untrusted issuers", function() {
       assertion.issuer = "untrusted-issuer";
-      sandbox.stub(fxa.request, "post", function(opts, cb) {
-        cb(null, null, assertion);
+      sandbox.stub(fxa.request, "post", function(opts, callback) {
+        callback(null, null, assertion);
       });
 
       fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
@@ -159,8 +159,8 @@ describe("fxa authentication", function() {
 
     it("should accept trusted issuers", function() {
       assertion.issuer = "trusted-issuer";
-      sandbox.stub(fxa.request, "post", function(opts, cb) {
-        cb(null, null, assertion);
+      sandbox.stub(fxa.request, "post", function(opts, callback) {
+        callback(null, null, assertion);
       });
 
       fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
@@ -175,10 +175,10 @@ describe("fxa authentication", function() {
         // Set the audience we return to app://
         audience = "app://loop.firefox.com";
 
-        sandbox.stub(fxa.request, "post", function(opts, cb) {
+        sandbox.stub(fxa.request, "post", function(opts, callback) {
           // Should ask the verifier with the app:// scheme.
           expect(opts.json.audience).eql('app://loop.firefox.com');
-          cb(null, null, assertion);
+          callback(null, null, assertion);
         });
 
         // Start the verification.
