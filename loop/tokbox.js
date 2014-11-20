@@ -7,6 +7,7 @@
 var randomBytes = require('crypto').randomBytes;
 var request = require('request');
 var conf = require('./config').conf;
+var time = require('./utils').now;
 
 // Be sure to use the exported OpenTok so we can mock it in the
 // tests.
@@ -70,7 +71,7 @@ TokBox.prototype = {
     });
   },
   getSessionToken: function(sessionId) {
-    var now = parseInt(Date.now() / 1000, 10);
+    var now = time();
     var expirationTime = now + this.tokenDuration;
 
     return this._opentok["default"].generateToken(
@@ -93,7 +94,7 @@ TokBox.prototype = {
     this.getSession(options, function(err, session, opentok) {
       if (err) return callback(err);
       var sessionId = session.sessionId;
-      var now = parseInt(Date.now() / 1000, 10);
+      var now = time();
       var expirationTime = now + self.tokenDuration;
       callback(null, {
         apiKey: opentok.apiKey,

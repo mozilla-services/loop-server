@@ -8,6 +8,7 @@ var errors = require("../errno.json");
 var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 var tokenlib = require('../tokenlib');
+var time = require('../utils').now;
 
 
 module.exports = function(conf, logError, storage) {
@@ -126,7 +127,7 @@ module.exports = function(conf, logError, storage) {
     req.urlData = {
       userMac: req.user,
       callerId: req.body.callerId,
-      timestamp: parseInt(Date.now() / 1000, 10),
+      timestamp: time(),
       issuer: req.body.issuer || '',
       subject: req.body.subject || undefined
     };
