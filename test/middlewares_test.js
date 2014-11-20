@@ -70,9 +70,7 @@ describe("metrics middleware", function() {
       .set('x-forwarded-for', 'ip1, ip2, ip3')
       .expect(200)
       .end(function(err) {
-        if (err) {
-          throw err;
-        }
+        if (err) throw err;
         var logged = logs[0];
 
         expect(logged.op).to.eql('request.summary');
@@ -100,9 +98,7 @@ describe("metrics middleware", function() {
       .get(apiPrefix + '/with-401-on-metrics-middleware')
       .expect(401)
       .end(function(err) {
-        if (err) {
-          throw err;
-        }
+        if (err) throw err;
         var logged = logs[0];
 
         expect(logged.op).to.eql('request.summary');

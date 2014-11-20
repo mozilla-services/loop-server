@@ -1536,9 +1536,7 @@ function runOnPrefix(apiPrefix) {
               .hawk(hawkCredentials)
               .expect(204)
               .end(function(err) {
-                if (err) {
-                  throw err;
-                }
+                if (err) throw err;
                 done();
               });
           });
@@ -1573,10 +1571,7 @@ function runOnPrefix(apiPrefix) {
                 })
                 .expect(204)
                 .end(function(err, res) {
-                  if (err) {
-                    console.log(res.body);
-                    throw err;
-                  }
+                  if (err) throw err;
                   storage.getUserSimplePushURLs(userHmac, function(err, urls) {
                     if (err) throw err;
                     expect(urls.calls).to.length(0);
