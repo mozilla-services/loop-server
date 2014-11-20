@@ -652,7 +652,6 @@ describe('websockets', function() {
       caller.on('message', function(data) {
         var message = JSON.parse(data);
         if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
-          // Add a delay to avoid race conditions.
           caller.send(JSON.stringify({
             messageType: constants.MESSAGE_TYPES.ACTION,
             event: constants.MESSAGE_EVENTS.TERMINATE,

@@ -29,11 +29,12 @@ module.exports = function (app, conf, logError, storage, auth) {
           storage.addUserSimplePushURLs(req.user, req.hawkIdHmac, simplePushURLs,
             function(err) {
               if (res.serverError(err)) return;
+              res.status(200).json();
           });
+        } else {
+          res.status(200).json();
         }
       });
-
-      res.status(200).json();
     });
 
   /**
