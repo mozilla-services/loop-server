@@ -674,8 +674,7 @@ describe("/rooms", function() {
         .include(validators.isRoomOwner);
     });
 
-    it.only("should not overwrite roomData if no values are provided", function() {
-      var startTime = parseInt(Date.now() / 1000, 10);
+    it("should not overwrite roomData if no values are provided", function(done) {
       supertest(app)
         .post('/rooms')
         .type('json')
@@ -690,18 +689,16 @@ describe("/rooms", function() {
         .end(function(err, postRes) {
           if (err) throw err;
           requests = [];
-          var updateTime = parseInt(Date.now() / 1000, 10);
           var roomToken = postRes.body.roomToken;
           supertest(app)
             .patch('/rooms/' + roomToken)
             .hawk(hawkCredentials)
             .send({
-              roomName: "New name",
+              roomName: "New name"
             })
             .expect(200)
-            .end(function(err, patchRes) {
+            .end(function(err) {
               if (err) throw err;
-
               supertest(app)
                 .get('/rooms/' + roomToken)
                 .type('json')
@@ -719,11 +716,11 @@ describe("/rooms", function() {
 
                   expect(getRes.body).to.eql({
                     "roomUrl": roomUrl,
-                    "clientMaxSize": 2,
+                    "clientMaxSize": 3,
                     "maxSize": 3,
                     "participants": [],
                     "roomName": "New name",
-                    "roomOwner": "Natim"
+                    "roomOwner": "Alexis"
                   });
 
                   expect(requests).to.length(1);

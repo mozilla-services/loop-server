@@ -217,7 +217,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       // Update the roomData object with new data from the request.
       Object.keys(req.roomRequestData).forEach(function(key) {
-        roomData[key] = req.roomRequestData[key];
+        if (req.roomRequestData[key] !== undefined) {
+          roomData[key] = req.roomRequestData[key];
+        }
       });
 
       roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
