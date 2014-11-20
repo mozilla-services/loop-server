@@ -12,7 +12,8 @@ var conf = require('../config').conf;
 var SUPPORTED_OPERATIONS = [
   'keys', 'lrange', 'mget', 'sismember', 'smembers', 'get', 'pttl', 'ttl',
   'scard', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
-  'expire', 'incr', 'decr'
+  'expire', 'incr', 'decr', 'hmset', 'hgetall', 'hset', 'hget', 'hsetnx',
+  'hdel'
 ];
 
 /**
