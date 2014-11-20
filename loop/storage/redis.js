@@ -17,6 +17,21 @@ var isUndefined = function(field, fieldName, callback) {
   return false;
 }
 
+function encode(data) {
+  return JSON.stringify(data);
+}
+
+function decode(string, callback) {
+  try {
+    callback(null, JSON.parse(string));
+  } catch (e) {
+    callback(e);
+  }
+}
+
+function clone(data) {
+  return JSON.parse(JSON.stringify(data));
+}
 
 function RedisStorage(options, settings) {
   this._settings = settings;
@@ -182,14 +197,14 @@ RedisStorage.prototype = {
     if (isUndefined(urlData.timestamp, "urlData.timestamp", callback)) return;
     var self = this;
 
-    var data = JSON.parse(JSON.stringify(urlData));
+    var data = clone(urlData);
     data.userMac = userMac;
 
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
       urlData.expires - parseInt(Date.now() / 1000, 10),
-      JSON.stringify(data),
+      encode(data),
       function(err) {
         if (err) {
           callback(err);
@@ -243,7 +258,7 @@ RedisStorage.prototype = {
           self._client.setex(
             'callurl.' + callUrlId,
             data.expires - parseInt(Date.now() / 1000, 10),
-            JSON.stringify(data),
+            encode(data),
             callback
           );
         });
@@ -266,7 +281,7 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-      callback(null, JSON.parse(data));
+      decode(data, callback);
     });
   },
 
@@ -340,23 +355,29 @@ RedisStorage.prototype = {
           return url !== null;
         });
 
-        var pendingUrls = urls.filter(function(url) {
+        async.map(urls.filter(function(url) {
           return url !== null;
-        }).map(JSON.parse).sort(function(a, b) {
-          return a.timestamp - b.timestamp;
-        });
-
-        if (expired.length > 0) {
-          self._client.srem('userUrls.' + userMac, expired, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, pendingUrls);
+        }), decode, function(err, pendingUrls) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          pendingUrls = pendingUrls.sort(function(a, b) {
+            return a.timestamp - b.timestamp;
           });
-          return;
-        }
-        callback(null, pendingUrls);
+
+          if (expired.length > 0) {
+            self._client.srem('userUrls.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null, pendingUrls);
+            });
+            return;
+          }
+          callback(null, pendingUrls);
+        });
       });
     });
   },
@@ -373,13 +394,13 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     // Clone the args to prevent from modifying it.
-    call = JSON.parse(JSON.stringify(call));
+    call = clone(call);
     var state = call.callState;
     delete call.callState;
     this._client.setex(
       'call.' + call.callId,
       this._settings.callDuration,
-      JSON.stringify(call),
+      encode(call),
       function(err) {
         if (err) {
           callback(err);
@@ -425,8 +446,11 @@ RedisStorage.prototype = {
             callback(err);
             return;
           }
-          async.map(calls.map(JSON.parse), function(call, cb) {
-            self._client.del('callstate.' + call.callId, cb);
+          async.map(calls, function(call, cb) {
+            decode(call, function(err, call) {
+              if (err) return cb(err);
+              self._client.del('callstate.' + call.callId, cb);
+            });
           }, function(err) {
             if (err) {
               callback(err);
@@ -470,42 +494,48 @@ RedisStorage.prototype = {
           return call !== null;
         });
 
-        var pendingCalls = calls.filter(function(call) {
+        async.map(calls.filter(function(call) {
           return call !== null;
-        }).map(JSON.parse).sort(function(a, b) {
-          return a.timestamp - b.timestamp;
-        });
+        }), decode, function(err, pendingCalls) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          pendingCalls = pendingCalls.sort(function(a, b) {
+            return a.timestamp - b.timestamp;
+          });
 
-        function getState() {
-          async.map(pendingCalls, function(call, cb) {
-            self.getCallState(call.callId, function(err, state) {
+          function getState() {
+            async.map(pendingCalls, function(call, cb) {
+              self.getCallState(call.callId, function(err, state) {
+                if (err) {
+                  cb(err);
+                  return;
+                }
+                call.callState = state;
+                cb(null, call);
+              });
+            }, function(err, results) {
               if (err) {
-                cb(err);
+                callback(err);
                 return;
               }
-              call.callState = state;
-              cb(null, call);
+              callback(null, results);
             });
-          }, function(err, results) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, results);
-          });
-        }
+          }
 
-        if (expired.length > 0) {
-          self._client.srem('userCalls.' + userMac, expired, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            getState();
-          });
-          return;
-        }
-        getState();
+          if (expired.length > 0) {
+            self._client.srem('userCalls.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              getState();
+            });
+            return;
+          }
+          getState();
+        });
       });
     });
   },
@@ -784,19 +814,24 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-      var call = JSON.parse(data);
-      if (call !== null && getState === true) {
-        self.getCallState(callId, function(err, state) {
-          if (err) {
-            callback(err);
-            return;
-          }
-          call.callState = state;
-          callback(err, call);
-        });
-        return;
-      }
-      callback(err, call);
+      decode(data, function(err, call) {
+        if (err) {
+          callback(err);
+          return;
+        }
+        if (call !== null && getState === true) {
+          self.getCallState(callId, function(err, state) {
+            if (err) {
+              callback(err);
+              return;
+            }
+            call.callState = state;
+            callback(err, call);
+          });
+          return;
+        }
+        callback(err, call);
+      });
     });
   },
 
@@ -1060,14 +1095,14 @@ RedisStorage.prototype = {
     if (isUndefined(roomData.expiresAt, "roomData.expiresAt", callback)) return;
     if (isUndefined(roomData.updateTime, "roomData.updateTime", callback)) return;
 
-    var data = JSON.parse(JSON.stringify(roomData));
+    var data = clone(roomData);
     data.roomToken = roomToken;
     var self = this;
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'room.' + roomToken,
       data.expiresAt - data.updateTime,
-      JSON.stringify(data),
+      encode(data),
       function(err) {
         if (err) {
           callback(err);
@@ -1111,23 +1146,29 @@ RedisStorage.prototype = {
           return room !== null;
         });
 
-        var pendingRooms = rooms.filter(function(room) {
+        async.map(rooms.filter(function(room) {
           return room !== null;
-        }).map(JSON.parse).sort(function(a, b) {
-          return a.updateTime - b.updateTime;
-        });
-
-        if (expired.length > 0) {
-          self._client.srem('userRooms.' + userMac, expired, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
-            callback(null, pendingRooms);
+        }), decode, function(err, pendingRooms) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          pendingRooms = pendingRooms.sort(function(a, b) {
+            return a.updateTime - b.updateTime;
           });
-          return;
-        }
-        callback(null, pendingRooms);
+
+          if (expired.length > 0) {
+            self._client.srem('userRooms.' + userMac, expired, function(err) {
+              if (err) {
+                callback(err);
+                return;
+              }
+              callback(null, pendingRooms);
+            });
+            return;
+          }
+          callback(null, pendingRooms);
+        });
       });
     });
   },
@@ -1146,7 +1187,7 @@ RedisStorage.prototype = {
         callback(err);
         return;
       }
-      callback(null, JSON.parse(data));
+      decode(data, callback);
     });
   },
 
@@ -1175,7 +1216,7 @@ RedisStorage.prototype = {
       self._client.setex(
         'room.' + roomToken,
         data.expiresAt - data.updateTime,
-        JSON.stringify(data),
+        encode(data),
         function(err) {
           callback(err, data.updateTime);
         });
@@ -1287,12 +1328,12 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
-    var data = JSON.parse(JSON.stringify(participantData));
+    var data = clone(participantData);
     data.hawkIdHmac = hawkIdHmac;
     data.expiresAt = parseInt(Date.now() / 1000, 10) + ttl;
 
     this._client.hset('roomparticipants.' + roomToken, hawkIdHmac,
-                      JSON.stringify(data), callback);
+                      encode(data), callback);
   },
 
   /**
@@ -1381,15 +1422,21 @@ RedisStorage.prototype = {
           callback(null, []);
           return;
         }
-        var participants = participantsKeys.map(function(key) {
-          return JSON.parse(participantsMapping[key]);
-        }).filter(function(participant) {
-          return participant.expiresAt > now;
-        }).map(function(participant) {
-          delete participant.expiresAt;
-          return participant;
+        async.map(participantsKeys, function(key, cb) {
+          decode(participantsMapping[key], cb);
+        }, function(err, participants) {
+          if (err) {
+            callback(err);
+            return;
+          }
+          participants = participants.filter(function(participant) {
+            return participant.expiresAt > now;
+          }).map(function(participant) {
+            delete participant.expiresAt;
+            return participant;
+          });
+          callback(null, participants);
         });
-        callback(null, participants);
       });
   },
 
