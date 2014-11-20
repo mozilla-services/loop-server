@@ -16,6 +16,11 @@ var SUPPORTED_OPERATIONS = [
   'hdel'
 ];
 
+var MULTI_OPERATIONS = [
+  'pttl', 'ttl', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
+  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del'
+];
+
 /**
  * Creates a redis proxy client, exposing the same APIs of the default client.
  *
@@ -145,6 +150,37 @@ function createClient(options) {
         callback(err, deleted);
       });
     });
+  };
+
+  // For multi, we just chain them as "normal" operations, copying keys for all
+  // the operations (so we actually lose the benefit offered by multi).
+  Proxy.prototype.multi = function() {
+    var self = this;
+    var Multi = function(){};
+    var operations = [];
+
+    // Each time an operation is done on a multi, add it to a
+    // list to execute.
+
+    MULTI_OPERATIONS.forEach(function(operation) {
+      Multi.prototype[operation] = function() {
+        operations.push([
+          operation, Array.prototype.slice.call(arguments)
+        ]);
+      }
+    });
+
+    Multi.prototype.exec = function(callback){
+      async.eachSeries(operations, function(operation, done){
+        var operationName = operation[0];
+        var operationArguments = operation[1];
+        operationArguments.push(done);
+
+        var executor = migrateAndExecute(operationName);
+        executor.apply(self, operationArguments);
+      }, callback);
+    }
+    return new Multi();
   };
 
   return new Proxy();

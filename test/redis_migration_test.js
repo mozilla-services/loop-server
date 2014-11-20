@@ -74,6 +74,25 @@ describe("redis migration", function() {
       });
   });
 
+  it("should have a working multi implementation", function(done) {
+    var multi = client.multi();
+    multi.set('key', 'value');
+    multi.set('anotherkey', 'anothervalue');
+    multi.exec(function(err) {
+      if (err) throw err;
+      client.new_db.get('key', function(err, value) {
+        if (err) throw err;
+        expect(value).to.eql('value');
+        client.new_db.get('anotherkey', function(err, value) {
+          if (err) throw err;
+          expect(value).to.eql('anothervalue');
+          done();
+        });
+      });
+    });
+
+  });
+
   describe("with env set to prod", function() {
     var env;
     beforeEach(function(){
@@ -99,4 +118,5 @@ describe("redis migration", function() {
       });
     });
   });
+
 });
