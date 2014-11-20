@@ -91,10 +91,7 @@ TokBox.prototype = {
     options.mediaMode = options.mediaMode || "relayed";
 
     this.getSession(options, function(err, session, opentok) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       var sessionId = session.sessionId;
       var now = parseInt(Date.now() / 1000, 10);
       var expirationTime = now + self.tokenDuration;

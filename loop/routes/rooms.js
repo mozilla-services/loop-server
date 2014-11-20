@@ -51,10 +51,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   function notifyOwner(roomOwnerHmac, version, callback) {
     storage.getUserSimplePushURLs(roomOwnerHmac,
       function(err, simplePushURLsMapping) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         simplePushURLsMapping.rooms.forEach(function(simplePushUrl) {
           request.put({
             url: simplePushUrl,
@@ -76,10 +73,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    **/
   function emitRoomEvent(roomToken, roomOwnerHmac, callback) {
     storage.touchRoomData(roomToken, function(err, version) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       notifyOwner(roomOwnerHmac, version, callback);
     });
   }
@@ -144,10 +138,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           callback(null, participant);
         });
       }, function(err, participants) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         participants = participants.map(function(participant) {
           return {
             roomConnectionId: participant.id,
@@ -417,10 +408,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       async.map(rooms,
         function(room, callback) {
           storage.getRoomParticipants(room.roomToken, function(err, participants) {
-            if (err){
-              callback(err);
-              return;
-            }
+            if (err) return callback(err);
             room.participants = participants;
             getRoomInfo(room.roomToken, room, callback);
           });

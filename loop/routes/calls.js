@@ -33,10 +33,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
     tokBox.getSessionTokens({
       channel: options.channel
     }, function(err, tokboxInfo) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
 
       var currentTimestamp = parseInt(Date.now() / 1000, 10);
       var callId = randomBytes(16).toString('hex');
@@ -180,10 +177,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
             }
             var calleeMac = hmac(identity, conf.get('userMacSecret'));
             storage.getUserSimplePushURLs(calleeMac, function(err, simplePushURLsMapping) {
-              if (err) {
-                callback(err);
-                return;
-              }
+              if (err) return callback(err);
               var urls = simplePushURLsMapping.calls;
               if (urls.length === 0) {
                 callback();
@@ -192,10 +186,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
               callees.push(calleeMac);
               storage.addUserCall(calleeMac, callInfo,
                 function(err) {
-                  if (err) {
-                    callback(err);
-                    return;
-                  }
+                  if (err) return callback(err);
 
                   storage.setCallState(
                     callInfo.callId, constants.CALL_STATES.INIT,

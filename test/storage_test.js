@@ -360,13 +360,9 @@ describe("Storage", function() {
       describe("#getCallUrlData", function() {
         it("should be able to list a call-url by its id", function(done) {
           storage.addUserCallUrlData(userMac, callToken, urlData, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getCallUrlData(callToken, function(err, result) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(result).to.eql(urlData);
               done();
             });
@@ -417,13 +413,9 @@ describe("Storage", function() {
       describe("#addUserCalls", function() {
         it("should be able to add one call to the store", function(done) {
           storage.addUserCall(userMac, call, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getUserCalls(userMac, function(err, results) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(results).to.have.length(1);
               expect(results).to.eql([call]);
               storage.deleteCall(call.callId, function(err) {
@@ -476,13 +468,9 @@ describe("Storage", function() {
       describe("#getCall", function() {
         it("should be able to list a call by its id", function(done) {
           storage.addUserCall(userMac, call, function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getCall(call.callId, function(err, result) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(result).to.eql(call);
               done();
             });
@@ -563,9 +551,7 @@ describe("Storage", function() {
       describe("#setHawkSession", function() {
         it("should return a valid hawk session", function(done) {
           storage.setHawkSession("id", "key", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getHawkSession("id", function(err, result) {
               if (err) throw err;
               expect(result).to.eql({
@@ -581,13 +567,9 @@ describe("Storage", function() {
       describe("#deleteHawkSession", function() {
         it("should delete an existing hawk session", function(done) {
           storage.setHawkSession("id", "key", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.deleteHawkSession("id", function(err) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               storage.getHawkSession("id", function(err, result) {
                 if (err) throw err;
                 expect(result).to.eql(null);
@@ -601,13 +583,9 @@ describe("Storage", function() {
       describe("#setHawkUser, #getHawkUser", function() {
         it("should store and retrieve an user hawk session", function(done) {
           storage.setHawkUser("userhash", "tokenid", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getHawkUser("tokenid", function(err, result) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(result).to.eql("userhash");
               done();
             });
@@ -618,13 +596,9 @@ describe("Storage", function() {
       describe("#setHawkUserId, #getHawkUserId", function() {
         it("should store and retrieve an user hawk session", function(done) {
           storage.setHawkUserId("tokenId", "userId", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.getHawkUserId("tokenId", function(err, result) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(result).to.eql("userId");
               done();
             });
@@ -635,17 +609,11 @@ describe("Storage", function() {
       describe("#deleteHawkUserId", function() {
         it("should delete an existing user hawk session", function(done) {
           storage.setHawkUserId("tokenId", "userId", function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             storage.deleteHawkUserId("tokenId", function(err) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               storage.getHawkUserId("tokenId", function(err, result) {
-                if (err) {
-                  throw err;
-                }
+                if (err) throw err;
                 expect(result).to.eql(null);
                 done();
               });

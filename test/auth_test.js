@@ -133,9 +133,7 @@ describe("auth.js", function() {
           .auth(expectedToken, '')
           .expect(200)
           .end(function(err, res) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             expect(res.body).to.eql(expectedTokenHmac);
             done();
           });
@@ -191,9 +189,7 @@ describe("auth.js", function() {
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             assert.calledWithExactly(
               storage.touchHawkSession,
               userHmac
@@ -209,9 +205,7 @@ describe("auth.js", function() {
           .post(apiPrefix + "/authenticateWithHawkOrToken")
           .expect(200)
           .end(function(err, res) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             expect(res.body).to.eql({});
             done();
           });

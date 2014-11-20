@@ -58,10 +58,7 @@ function getUserAccount(storage, req, callback) {
     return;
   }
   storage.getHawkUserId(req.hawkIdHmac, function(err, encryptedUserId) {
-    if (err) {
-      callback(err);
-      return;
-    }
+    if (err) return callback(err);
 
     var userId;
     if (encryptedUserId !== null) {

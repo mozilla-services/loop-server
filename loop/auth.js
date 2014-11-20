@@ -57,10 +57,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
   function getOAuthHawkSession(tokenId, callback) {
     var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
     storage.getHawkOAuthState(hawkIdHmac, function(err, state) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       if (state === null) {
         // This means it is not an OAuth session
         callback(null, null);

@@ -364,9 +364,7 @@ describe("index.js", function() {
             .set('Authorization', 'BrowserID ' + expectedAssertion)
             .expect(200)
             .end(function(err, res) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(res.header['hawk-session-token']).to.not.be.undefined;
               done();
             });
@@ -421,9 +419,7 @@ describe("index.js", function() {
           .hawk(hawkCredentials)
           .expect(200)
           .end(function(err) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             assert.calledWithExactly(
               storage.touchHawkSession,
               userHmac
@@ -439,9 +435,7 @@ describe("index.js", function() {
           .post(apiPrefix + "/with-authenticate")
           .expect(200)
           .end(function(err, res) {
-            if (err) {
-              throw err;
-            }
+            if (err) throw err;
             expect(res.header['hawk-session-token']).to.not.be.undefined;
             expect(res.header['hawk-session-token']).to.length(64);
             done();
@@ -519,9 +513,7 @@ describe("index.js", function() {
             })
             .expect(200)
             .end(function(err, res) {
-              if (err) {
-                throw err;
-              }
+              if (err) throw err;
               expect(res.body).to.have.property('callId');
               expect(res.body).to.have.property('wsCallerToken');
               expect(res.body).to.have.property('wsCalleeToken');

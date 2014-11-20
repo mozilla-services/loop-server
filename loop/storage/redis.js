@@ -206,10 +206,7 @@ RedisStorage.prototype = {
       urlData.expires - parseInt(Date.now() / 1000, 10),
       encode(data),
       function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self._client.sadd(
           'userUrls.' + userMac,
           'callurl.' + callUrlId, callback
@@ -235,10 +232,7 @@ RedisStorage.prototype = {
       'userUrls.' + userMac,
       'callurl.' + callUrlId,
       function(err, res) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         if (res === 0) {
           var error = new Error("Doesn't exist");
           error.notFound = true;
@@ -247,10 +241,7 @@ RedisStorage.prototype = {
         }
         // Get and update the existing data.
         self.getCallUrlData(callUrlId, function(err, data) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           Object.keys(newData).forEach(function(key) {
             data[key] = newData[key];
           });
@@ -277,10 +268,7 @@ RedisStorage.prototype = {
   getCallUrlData: function(callUrlId, callback) {
     if (isUndefined(callUrlId, "callUrlId", callback)) return;
     this._client.get('callurl.' + callUrlId, function(err, data) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       decode(data, callback);
     });
   },
@@ -298,15 +286,9 @@ RedisStorage.prototype = {
     var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
     self._client.smembers('userUrls.' + userMac, function(err, calls) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       self._client.del(calls, function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self._client.del('userUrls.' + userMac, callback);
       });
     });
@@ -335,20 +317,14 @@ RedisStorage.prototype = {
     var self = this;
     if (isUndefined(userMac, "userMac", callback)) return;
     this._client.smembers('userUrls.' + userMac, function(err, members) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
 
       if (members.length === 0) {
         callback(null, []);
         return;
       }
       self._client.mget(members, function(err, urls) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         var expired = urls.map(function(url, index) {
           return (url === null) ? index : null;
         }).filter(function(url) {
@@ -358,20 +334,14 @@ RedisStorage.prototype = {
         async.map(urls.filter(function(url) {
           return url !== null;
         }), decode, function(err, pendingUrls) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           pendingUrls = pendingUrls.sort(function(a, b) {
             return a.timestamp - b.timestamp;
           });
 
           if (expired.length > 0) {
             self._client.srem('userUrls.' + userMac, expired, function(err) {
-              if (err) {
-                callback(err);
-                return;
-              }
+              if (err) return callback(err);
               callback(null, pendingUrls);
             });
             return;
@@ -402,15 +372,9 @@ RedisStorage.prototype = {
       this._settings.callDuration,
       encode(call),
       function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self.setCallState(call.callId, state, function(err) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           self._client.sadd('userCalls.' + userMac,
                             'call.' + call.callId, callback);
         });
@@ -428,34 +392,22 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       if (members.length === 0) {
         callback(null);
         return;
       }
       self._client.mget(members, function(err, calls) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self._client.del(members, function(err) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           async.map(calls, function(call, cb) {
             decode(call, function(err, call) {
               if (err) return cb(err);
               self._client.del('callstate.' + call.callId, cb);
             });
           }, function(err) {
-            if (err) {
-              callback(err);
-              return;
-            }
+            if (err) return callback(err);
             self._client.del('userCalls.' + userMac, callback);
           });
         });
@@ -474,20 +426,14 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     this._client.smembers('userCalls.' + userMac, function(err, members) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
 
       if (members.length === 0) {
         callback(null, []);
         return;
       }
       self._client.mget(members, function(err, calls) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         var expired = calls.map(function(call, index) {
           return (call === null) ? index : null;
         }).filter(function(call) {
@@ -497,10 +443,7 @@ RedisStorage.prototype = {
         async.map(calls.filter(function(call) {
           return call !== null;
         }), decode, function(err, pendingCalls) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           pendingCalls = pendingCalls.sort(function(a, b) {
             return a.timestamp - b.timestamp;
           });
@@ -508,28 +451,19 @@ RedisStorage.prototype = {
           function getState() {
             async.map(pendingCalls, function(call, cb) {
               self.getCallState(call.callId, function(err, state) {
-                if (err) {
-                  cb(err);
-                  return;
-                }
+                if (err) return cb(err);
                 call.callState = state;
                 cb(null, call);
               });
             }, function(err, results) {
-              if (err) {
-                callback(err);
-                return;
-              }
+              if (err) return callback(err);
               callback(null, results);
             });
           }
 
           if (expired.length > 0) {
             self._client.srem('userCalls.' + userMac, expired, function(err) {
-              if (err) {
-                callback(err);
-                return;
-              }
+              if (err) return callback(err);
               getState();
             });
             return;
@@ -551,10 +485,7 @@ RedisStorage.prototype = {
   getCallStateTTL: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
     this._client.pttl('callstate.' + callId, function(err, ttl) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       if (ttl <= 1) {
         ttl = -1;
       } else {
@@ -584,10 +515,7 @@ RedisStorage.prototype = {
     if (ttl === undefined || callback === undefined) {
       if (callback === undefined) callback = ttl;
       this._client.ttl('call.' + callId, function(err, res) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self.setCallState(callId, state, res, callback);
       });
       return;
@@ -620,10 +548,7 @@ RedisStorage.prototype = {
     // Internally, this uses a redis set to be sure we don't store twice the
     // same call state.
     self._client.sadd(key, state, function(err) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       self._client.pexpire(key, ttl * 1000, callback);
     });
   },
@@ -649,10 +574,7 @@ RedisStorage.prototype = {
     // connected. In case of terminate, nothing is stored in the database (the
     // key is dropped).
     self._client.scard('callstate.' + callId, function(err, score) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       switch (score) {
       case 1:
         callback(null, constants.CALL_STATES.INIT);
@@ -675,10 +597,7 @@ RedisStorage.prototype = {
       default:
         // Ensure a call exists if nothing is stored on this key.
         self.getCall(callId, false, function(err, result) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           if (result !== null) {
             callback(null, constants.CALL_STATES.TERMINATED);
             return;
@@ -704,9 +623,7 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.incr(key, function(err) {
-      if (err) {
-        return callback(err);
-      }
+      if (err) return callback(err);
       self._client.expire(key, self._settings.callDuration, callback);
     });
   },
@@ -726,9 +643,7 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.decr(key, function(err) {
-      if (err) {
-        return callback(err);
-      }
+      if (err) return callback(err);
       self._client.expire(key, self._settings.callDuration, callback);
     });
   },
@@ -748,9 +663,7 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.get(key, function(err, number) {
-      if (err) {
-        return callback(err);
-      }
+      if (err) return callback(err);
       return callback(err, parseInt(number));
     });
   },
@@ -772,10 +685,7 @@ RedisStorage.prototype = {
       return;
     }
     self._client.ttl('call.' + callId, function(err, ttl) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       self._client.setex('callStateReason.' + callId, ttl, reason, callback);
     });
   },
@@ -810,21 +720,12 @@ RedisStorage.prototype = {
 
     var self = this;
     this._client.get('call.' + callId, function(err, data) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       decode(data, function(err, call) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         if (call !== null && getState === true) {
           self.getCallState(callId, function(err, state) {
-            if (err) {
-              callback(err);
-              return;
-            }
+            if (err) return callback(err);
             call.callState = state;
             callback(err, call);
           });
@@ -848,10 +749,7 @@ RedisStorage.prototype = {
     if (isUndefined(callId, "callId", callback)) return;
 
     this._client.del('call.' + callId, function(err, result) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       callback(null, result !== 0);
     });
   },
@@ -964,10 +862,7 @@ RedisStorage.prototype = {
       'userid.' + hawkIdHmac,
       self._settings.hawkSessionDuration,
       function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self._client.expire(
           'hawk.' + hawkIdHmac,
           self._settings.hawkSessionDuration,
@@ -987,10 +882,7 @@ RedisStorage.prototype = {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
     this._client.get('hawk.' + hawkIdHmac, function(err, key) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
 
       var data = {
         key: key,
@@ -1104,10 +996,7 @@ RedisStorage.prototype = {
       data.expiresAt - data.updateTime,
       encode(data),
       function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self._client.sadd(
           'userRooms.' + userMac,
           'room.' + roomToken, callback
@@ -1126,20 +1015,14 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     var self = this;
     this._client.smembers('userRooms.' + userMac, function(err, members) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
 
       if (members.length === 0) {
         callback(null, []);
         return;
       }
       self._client.mget(members, function(err, rooms) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         var expired = rooms.map(function(room, index) {
           return (room === null) ? index : null;
         }).filter(function(room) {
@@ -1149,20 +1032,14 @@ RedisStorage.prototype = {
         async.map(rooms.filter(function(room) {
           return room !== null;
         }), decode, function(err, pendingRooms) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           pendingRooms = pendingRooms.sort(function(a, b) {
             return a.updateTime - b.updateTime;
           });
 
           if (expired.length > 0) {
             self._client.srem('userRooms.' + userMac, expired, function(err) {
-              if (err) {
-                callback(err);
-                return;
-              }
+              if (err) return callback(err);
               callback(null, pendingRooms);
             });
             return;
@@ -1183,10 +1060,7 @@ RedisStorage.prototype = {
   getRoomData: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     this._client.get('room.' + roomToken, function(err, data) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       decode(data, callback);
     });
   },
@@ -1202,10 +1076,7 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
     self.getRoomData(roomToken, function(err, data) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
 
       // Update the current time
       data.updateTime = parseInt(Date.now() / 1000, 10);
@@ -1234,28 +1105,16 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     var self = this;
     self.getRoomData(roomToken, function(err, data) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       self._client.del('room.' + roomToken, function(err) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         self.deleteRoomParticipants(roomToken, function(err) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           self._client.hsetnx(
             'room.deleted.' + data.roomOwnerHmac,
             roomToken, parseInt(Date.now() / 1000, 10),
             function(err) {
-              if (err) {
-                callback(err);
-                return;
-              }
+              if (err) return callback(err);
               self._client.expire(
                 'room.deleted.' + data.roomOwnerHmac,
                 self._settings.roomsDeletedTTL,
@@ -1278,10 +1137,7 @@ RedisStorage.prototype = {
       now = expireTime;
     }
     self._client.hgetall('room.deleted.' + userMac, function(err, deletedRooms) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       if (deletedRooms) {
         var deleted = Object.keys(deletedRooms).filter(function(roomToken) {
           return deletedRooms[roomToken] >= now;
@@ -1351,10 +1207,7 @@ RedisStorage.prototype = {
     var self = this;
     var now = parseInt(Date.now() / 1000);
     self._client.hget('roomparticipants.' + roomToken, hawkIdHmac, function(err, data) {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       if (data === null) {
         callback(null, false);
         return;
@@ -1408,10 +1261,7 @@ RedisStorage.prototype = {
     var now = parseInt(Date.now() / 1000, 10);
     self._client.hgetall('roomparticipants.' + roomToken,
       function(err, participantsMapping) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         if (participantsMapping === null) {
           callback(null, []);
           return;
@@ -1425,10 +1275,7 @@ RedisStorage.prototype = {
         async.map(participantsKeys, function(key, cb) {
           decode(participantsMapping[key], cb);
         }, function(err, participants) {
-          if (err) {
-            callback(err);
-            return;
-          }
+          if (err) return callback(err);
           participants = participants.filter(function(participant) {
             return participant.expiresAt > now;
           }).map(function(participant) {
@@ -1472,10 +1319,7 @@ RedisStorage.prototype = {
     this._client.get(
       'roomparticipant_access_token.' + roomToken + '.' + sessionTokenHmac,
       function(err, data) {
-        if (err) {
-          callback(err);
-          return;
-        }
+        if (err) return callback(err);
         callback(null, data === "");
       });
   },
@@ -1500,10 +1344,7 @@ RedisStorage.prototype = {
     var self = this;
     self._client.set('heartbeat', parseInt(Date.now() / 1000, 10),
       function(err) {
-        if (err) {
-          callback(false);
-          return;
-        }
+        if (err) return callback(false);
         callback(true);
       });
   }

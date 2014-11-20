@@ -66,10 +66,7 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
       assertion: assertion
     }
   }, function(err, message, data) {
-    if (err) {
-      callback(err);
-      return;
-    }
+    if (err) return callback(err);
     // Check the issuer is trusted.
     if (data.status !== "okay") {
       callback(data.reason);
@@ -128,10 +125,7 @@ function getMiddleware(conf, callback) {
     module.exports.verifyAssertion(
       assertion, conf.audiences, conf.trustedIssuers,
       function(err, data) {
-        if (err) {
-          _unauthorized(err);
-          return;
-        }
+        if (err) return _unauthorized(err);
         callback(req, res, data, next);
       });
   }
