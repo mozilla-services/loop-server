@@ -1185,6 +1185,20 @@ describe("/rooms", function() {
           clock.restore();
         });
 
+        it("should reject an unauthenticated user with a 401.",
+          function(done) {
+            createRoom(hawkCredentials).end(function(err, res) {
+              if (err) throw err;
+              var roomToken = res.body.roomToken;
+              supertest(app)
+                .post('/rooms/' + roomToken)
+                .send({action: "refresh"})
+                .type("json")
+                .expect(401)
+                .end(done);
+            });
+          });
+
         it("should touch the participant and return the next expiration.",
           function(done) {
             var startTime = parseInt(Date.now() / 1000, 10);
