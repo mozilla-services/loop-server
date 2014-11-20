@@ -1066,8 +1066,8 @@ describe("Storage", function() {
 
     it("#ping should fails when redis is in read-only mode", function(done) {
       sandbox.stub(storage._client, "set",
-        function(key, value, cb){
-          cb("Error: Redis is read-only");
+        function(key, value, callback){
+          callback("Error: Redis is read-only");
         });
       storage.ping(function(connected) {
         expect(connected).to.be.false;
@@ -1091,8 +1091,8 @@ describe("Storage", function() {
 
     it("should handle storage errors correctly.", function(done) {
       sandbox.stub(storage._client, "smembers",
-        function(key, cb){
-          cb("error");
+        function(key, callback){
+          callback("error");
         });
 
       storage.getUserCallUrls(userMac, function(err, results) {

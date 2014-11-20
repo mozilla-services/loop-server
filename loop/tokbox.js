@@ -33,9 +33,9 @@ function TokBox(settings) {
 
 TokBox.prototype = {
 
-  getSession: function(options, cb) {
-    if (cb === undefined) {
-      cb = options;
+  getSession: function(options, callback) {
+    if (callback === undefined) {
+      callback = options;
       options = undefined;
     }
 
@@ -60,13 +60,13 @@ TokBox.prototype = {
         if (err !== null) {
           options.retry--;
           if (options.retry <= 0) {
-            cb(err);
+            callback(err);
             return;
           }
-          self.getSession(options, cb);
+          self.getSession(options, callback);
           return;
         }
-        cb(null, session, opentok);
+        callback(null, session, opentok);
     });
   },
   getSessionToken: function(sessionId) {
@@ -80,11 +80,11 @@ TokBox.prototype = {
       }
     );
   },
-  getSessionTokens: function(options, cb) {
+  getSessionTokens: function(options, callback) {
     var self = this;
 
-    if (cb === undefined) {
-      cb = options;
+    if (callback === undefined) {
+      callback = options;
       options = {};
     }
 
@@ -92,13 +92,13 @@ TokBox.prototype = {
 
     this.getSession(options, function(err, session, opentok) {
       if (err) {
-        cb(err);
+        callback(err);
         return;
       }
       var sessionId = session.sessionId;
       var now = parseInt(Date.now() / 1000, 10);
       var expirationTime = now + self.tokenDuration;
-      cb(null, {
+      callback(null, {
         apiKey: opentok.apiKey,
         sessionId: sessionId,
         callerToken: opentok.generateToken(sessionId, {
@@ -112,9 +112,9 @@ TokBox.prototype = {
       });
     });
   },
-  ping: function(options, cb) {
-    if (cb === undefined) {
-      cb = options;
+  ping: function(options, callback) {
+    if (callback === undefined) {
+      callback = options;
       options = undefined;
     }
 
@@ -133,10 +133,10 @@ TokBox.prototype = {
       mediaMode: 'relayed'
     }, function(err) {
       if (err !== null) {
-        cb(err);
+        callback(err);
         return;
       }
-      cb(null);
+      callback(null);
     });
   }
 };
@@ -169,9 +169,9 @@ FakeTokBox.prototype = {
     return 'T' + this._token + '==' + this._urlSafeBase64RandomBytes(293);
   },
 
-  getSession: function(options, cb) {
-    if (cb === undefined) {
-      cb = options;
+  getSession: function(options, callback) {
+    if (callback === undefined) {
+      callback = options;
       options = {};
     }
 
@@ -181,7 +181,7 @@ FakeTokBox.prototype = {
       url: self.serverURL,
       timeout: options.timeout
     }, function(err) {
-      cb(err, self._fakeSessionId(), {apiKey: self._fakeApiKey()});
+      callback(err, self._fakeSessionId(), {apiKey: self._fakeApiKey()});
     });
   },
 
@@ -189,9 +189,9 @@ FakeTokBox.prototype = {
     return this._generateFakeToken();
   },
 
-  getSessionTokens: function(options, cb) {
-    if (cb === undefined) {
-      cb = options;
+  getSessionTokens: function(options, callback) {
+    if (callback === undefined) {
+      callback = options;
       options = {};
     }
     var self = this;
@@ -200,7 +200,7 @@ FakeTokBox.prototype = {
       url: self.serverURL,
       timeout: options.timeout
     }, function(err) {
-      cb(err, {
+      callback(err, {
         apiKey: self._fakeApiKey(),
         sessionId: self._fakeSessionId(),
         callerToken: self._generateFakeToken(),
@@ -208,8 +208,8 @@ FakeTokBox.prototype = {
       });
     });
   },
-  ping: function(options, cb) {
-    this.getSessionTokens(options, cb);
+  ping: function(options, callback) {
+    this.getSessionTokens(options, callback);
   }
 };
 

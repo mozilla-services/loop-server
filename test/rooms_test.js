@@ -211,8 +211,8 @@ describe("/rooms", function() {
     });
 
     sandbox.stub(tokBox._opentok.default, "createSession",
-      function(options, cb) {
-        cb(null, {sessionId: sessionId});
+      function(options, callback) {
+        callback(null, {sessionId: sessionId});
       });
 
     sessionToken = conf.get("fakeCallInfo").token1;

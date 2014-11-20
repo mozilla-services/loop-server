@@ -111,8 +111,8 @@ describe("TokBox", function() {
     it("should return session and token info if tokbox API are working",
     function(done) {
       sandbox.stub(tokBox._opentok.default, "createSession",
-      function(options, cb) {
-        cb(null, {sessionId: fakeCallInfo.session1});
+      function(options, callback) {
+        callback(null, {sessionId: fakeCallInfo.session1});
       });
 
       var generateTokenCalls = 0;
@@ -144,8 +144,8 @@ describe("TokBox", function() {
 
     it("should error out if the tokbox API doesn't work", function(done) {
       sandbox.stub(tokBox._opentok.default, "createSession",
-        function(options, cb) {
-          cb("error");
+        function(options, callback) {
+          callback("error");
         });
       tokBox.getSessionTokens(function(error) {
         expect(error).eql("error");
@@ -157,8 +157,8 @@ describe("TokBox", function() {
     it("should use the default credentials if the channel is not known",
       function(done) {
         sandbox.stub(tokBox._opentok.default, "createSession",
-          function(options, cb) {
-            cb(null, {sessionId: fakeCallInfo.session1});
+          function(options, callback) {
+            callback(null, {sessionId: fakeCallInfo.session1});
           });
         tokBox.getSessionTokens({
           channel: "unknown"
@@ -176,8 +176,8 @@ describe("TokBox", function() {
     it("should create an new client with a known channel and specific apiUrl",
       function(done) {
         sandbox.stub(tokBox._opentok.release, "createSession",
-          function(options, cb) {
-            cb(null, {sessionId: fakeCallInfo.session1});
+          function(options, callback) {
+            callback(null, {sessionId: fakeCallInfo.session1});
           });
         tokBox.getSessionTokens({
           channel: "release"
@@ -195,8 +195,8 @@ describe("TokBox", function() {
     it("should create an new client with a known channel and default apiUrl",
       function(done) {
         sandbox.stub(tokBox._opentok.nightly, "createSession",
-          function(options, cb) {
-            cb(null, {sessionId: fakeCallInfo.session1});
+          function(options, callback) {
+            callback(null, {sessionId: fakeCallInfo.session1});
           });
         tokBox.getSessionTokens({
           channel: "nightly"
@@ -228,8 +228,8 @@ describe("TokBox", function() {
       sandbox = sinon.sandbox.create();
 
       sandbox.stub(loopTokbox.OpenTok.prototype, "createSession",
-        function(options, cb) {
-          cb(null);
+        function(options, callback) {
+          callback(null);
         });
       sandbox.spy(loopTokbox, "OpenTok");
     });
@@ -262,9 +262,9 @@ describe("FakeTokBox", function() {
       sandbox = sinon.sandbox.create();
 
       requests = [];
-      sandbox.stub(request, "get", function(options, cb) {
+      sandbox.stub(request, "get", function(options, callback) {
         requests.push(options.url);
-        cb(null);
+        callback(null);
       });
       tokbox = new FakeTokBox();
     });
