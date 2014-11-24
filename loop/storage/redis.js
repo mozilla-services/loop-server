@@ -6,6 +6,7 @@
 var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
+var migrationClient = require("./redis_migration");
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
@@ -35,13 +36,23 @@ function clone(data) {
 
 function RedisStorage(options, settings) {
   this._settings = settings;
-  this._client = redis.createClient(
-    options.port,
-    options.host,
-    options.options
-  );
-  if (options.db) {
-    this._client.select(options.db);
+
+  // In case migration is enabled, use the passed database as the new database
+  // and the old database is provided as part of the migration object.
+  if (options.migrateFrom !== undefined) {
+    this._client = migrationClient({
+      oldDB: options.migrateFrom,
+      newDB: options
+    });
+  } else {
+    this._client = redis.createClient(
+      options.port,
+      options.host,
+      options.options
+    );
+    if (options.db) {
+      this._client.select(options.db);
+    }
   }
 }
 

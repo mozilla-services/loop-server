@@ -1015,6 +1015,18 @@ describe("Storage", function() {
     return getStorage({engine: "redis", settings: {"db": 5}}, options);
   });
 
+  testStorage("Redis migration", function(options) {
+    return getStorage({
+      engine: "redis",
+      settings: {
+        "db": 5,
+        "migrateFrom": {
+          "db": 4
+        }
+      }
+    }, options);
+  });
+
   describe("Redis specifics", function() {
     var sandbox, storage;
 
@@ -1043,7 +1055,7 @@ describe("Storage", function() {
       });
     });
 
-    // XXX - Bug 1069208 — Remove this two month after 0.13 release
+    // XXX - Bug 1069208 — Remove this two months after 0.13 release
     // (January 2015)
     it("should be able to retrieve old calls simplePushURLs", function(done) {
       storage._client.lpush('spurl.' + userMac, "http://spurl.com", function(err) {

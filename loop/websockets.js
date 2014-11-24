@@ -217,38 +217,42 @@ MessageHandler.prototype = {
               helloState = constants.CALL_STATES.INIT;
             }
 
-            callback(null, {
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              state: helloState,
-              reason: reason || undefined
-            });
-
             // After the hello phase and as soon the callee is connected,
             // the call changes to the "alerting" state.
             if (currentState === constants.CALL_STATES.INIT ||
                 currentState === constants.CALL_STATES.HALF_INITIATED) {
 
-              self.broadcastState(
-                session,
-                constants.CALL_STATES.INIT + "." + session.type
-              );
-
-              if (session.type === "callee") {
-                session.timeouts.push(setTimeout(function() {
-                  // Ringing timer until the callee picks up the phone
-                  self.storage.getCallState(session.callId, function(err, state) {
-                    if (serverError(err, callback)) return;
-                    if (state === constants.CALL_STATES.ALERTING) {
-                      self.broadcastState(
-                        session,
-                        constants.CALL_STATES.TERMINATED + ":" +
-                        constants.MESSAGE_REASONS.TIMEOUT
-                      );
-                    }
+              self.broadcastState(session,
+                constants.CALL_STATES.INIT + "." + session.type,
+                function() {
+                  callback(null, {
+                    messageType: constants.MESSAGE_TYPES.HELLO,
+                    state: helloState,
+                    reason: reason || undefined
                   });
-                }, self.conf.ringingDuration * 1000));
-              }
 
+                  if (session.type === "callee") {
+                    session.timeouts.push(setTimeout(function() {
+                      // Ringing timer until the callee picks up the phone
+                      self.storage.getCallState(session.callId, function(err, state) {
+                        if (serverError(err, callback)) return;
+                        if (state === constants.CALL_STATES.ALERTING) {
+                          self.broadcastState(
+                            session,
+                            constants.CALL_STATES.TERMINATED + ":" +
+                            constants.MESSAGE_REASONS.TIMEOUT
+                          );
+                        }
+                      });
+                    }, self.conf.ringingDuration * 1000));
+                  }
+              });
+            } else {
+              callback(null, {
+                messageType: constants.MESSAGE_TYPES.HELLO,
+                state: helloState,
+                reason: reason || undefined
+              });
             }
           });
         });
@@ -391,7 +395,7 @@ MessageHandler.prototype = {
    * In case there a reason to broadcast, it's specified as
    * "terminated:{reason}".
    **/
-  broadcastState: function(session, stateData) {
+  broadcastState: function(session, stateData, callback) {
     var self = this;
     var callId = session.callId;
     var parts = stateData.split(":");
@@ -420,6 +424,9 @@ MessageHandler.prototype = {
             self.pub.publish(callId, publishedState, function(err) {
               if (serverError(err)) return;
             });
+          }
+          if (callback !== undefined) {
+            callback();
           }
         });
       });

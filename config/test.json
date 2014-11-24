@@ -4,7 +4,10 @@
   "storage": {
     "engine": "redis",
     "settings": {
-      "db": 5
+      "db": 5,
+      "migrateFrom": {
+        "db": 4
+      }
     }
   },
   "hawkIdSecret": "6b4a7eec5406fcb3d394e7f64b2a72a2",
