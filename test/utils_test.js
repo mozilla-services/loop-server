@@ -3,9 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-var expect = require("chai").expect;
-var utils = require("../loop/utils");
-var conf = require("../loop").conf;
+var expect = require('chai').expect;
+var utils = require('../loop/utils');
+var conf = require('../loop').conf;
+var sinon = require('sinon');
 
 
 describe("utils", function() {
@@ -28,6 +29,23 @@ describe("utils", function() {
       var progressURL = utils.getProgressURL(host);
       expect(progressURL).to.match(/wss:\/\//);
       expect(progressURL).to.match(/127.0.0.1:443/);
+    });
+  });
+
+  describe("#time", function() {
+    var clock, now;
+
+    beforeEach(function() {
+      now = Date.now()
+      clock = sinon.useFakeTimers(now);
+    });
+
+    afterEach(function() {
+      clock.restore();
+    });
+
+    it("should return the current timestamp", function() {
+      expect(utils.time()).to.eql(parseInt(now / 1000, 10));
     });
   });
 });

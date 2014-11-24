@@ -7,6 +7,7 @@ var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
 var migrationClient = require("./redis_migration");
+var time = require('../utils').time;
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
@@ -214,7 +215,7 @@ RedisStorage.prototype = {
     // In that case use setex to add the metadata of the url.
     this._client.setex(
       'callurl.' + callUrlId,
-      urlData.expires - parseInt(Date.now() / 1000, 10),
+      urlData.expires - time(),
       encode(data),
       function(err) {
         if (err) return callback(err);
@@ -259,7 +260,7 @@ RedisStorage.prototype = {
 
           self._client.setex(
             'callurl.' + callUrlId,
-            data.expires - parseInt(Date.now() / 1000, 10),
+            data.expires - time(),
             encode(data),
             callback
           );
@@ -675,7 +676,7 @@ RedisStorage.prototype = {
 
     self._client.get(key, function(err, number) {
       if (err) return callback(err);
-      return callback(err, parseInt(number));
+      return callback(err, parseInt(number, 10));
     });
   },
 
@@ -1090,7 +1091,7 @@ RedisStorage.prototype = {
       if (err) return callback(err);
 
       // Update the current time
-      data.updateTime = parseInt(Date.now() / 1000, 10);
+      data.updateTime = time();
 
       // Extends the roomTTL
       data.expiresAt = data.updateTime + self._settings.roomExtendTTL * 3600;
@@ -1123,7 +1124,7 @@ RedisStorage.prototype = {
           if (err) return callback(err);
           self._client.hsetnx(
             'room.deleted.' + data.roomOwnerHmac,
-            roomToken, parseInt(Date.now() / 1000, 10),
+            roomToken, time(),
             function(err) {
               if (err) return callback(err);
               self._client.expire(
@@ -1139,7 +1140,7 @@ RedisStorage.prototype = {
 
   getUserDeletedRooms: function(userMac, now, callback) {
     var self = this;
-    var expireTime = parseInt(Date.now() / 1000, 10) - self._settings.roomsDeletedTTL;
+    var expireTime = time() - self._settings.roomsDeletedTTL;
     if (callback === undefined) {
       callback = now;
       now = undefined;
@@ -1197,7 +1198,7 @@ RedisStorage.prototype = {
 
     var data = clone(participantData);
     data.hawkIdHmac = hawkIdHmac;
-    data.expiresAt = parseInt(Date.now() / 1000, 10) + ttl;
+    data.expiresAt = time() + ttl;
 
     this._client.hset('roomparticipants.' + roomToken, hawkIdHmac,
                       encode(data), callback);
@@ -1216,7 +1217,7 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var self = this;
-    var now = parseInt(Date.now() / 1000);
+    var now = time();
     self._client.hget('roomparticipants.' + roomToken, hawkIdHmac, function(err, data) {
       if (err) return callback(err);
       if (data === null) {
@@ -1269,7 +1270,7 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
 
     var self = this;
-    var now = parseInt(Date.now() / 1000, 10);
+    var now = time();
     self._client.hgetall('roomparticipants.' + roomToken,
       function(err, participantsMapping) {
         if (err) return callback(err);
@@ -1353,7 +1354,7 @@ RedisStorage.prototype = {
    **/
   ping: function(callback) {
     var self = this;
-    self._client.set('heartbeat', parseInt(Date.now() / 1000, 10),
+    self._client.set('heartbeat', time(),
       function(err) {
         if (err) return callback(false);
         callback(true);

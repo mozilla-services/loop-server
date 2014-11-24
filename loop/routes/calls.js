@@ -5,7 +5,7 @@
 "use strict";
 
 var async = require('async');
-var randomBytes = require("crypto").randomBytes;
+var randomBytes = require('crypto').randomBytes;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
 var getProgressURL = require('../utils').getProgressURL;
@@ -13,7 +13,8 @@ var request = require('request');
 var sendError = require('../utils').sendError;
 var getUserAccount = require('../utils').getUserAccount;
 var phone = require('phone');
-var constants = require("../constants");
+var constants = require('../constants');
+var time = require('../utils').time;
 
 module.exports = function(app, conf, logError, storage, tokBox, auth,
   validators) {
@@ -36,7 +37,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
     }, function(err, tokboxInfo) {
       if (err) return callback(err);
 
-      var currentTimestamp = parseInt(Date.now() / 1000, 10);
+      var now = time();
       var callId = randomBytes(16).toString('hex');
 
       var wsCalleeToken = randomBytes(16).toString('hex');
@@ -46,9 +47,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
         'callId': callId,
         'callType': options.callType,
         'callState': constants.CALL_STATES.INIT,
-        'timestamp': currentTimestamp,
         'subject': options.subject,
-
+        'timestamp': now,
         'callerId': options.callerId,
         'calleeFriendlyName': options.calleeFriendlyName,
 

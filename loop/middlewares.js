@@ -15,6 +15,7 @@ var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
 var hekaLogger = require('./logger').hekaLogger;
 var logging = require("express-logging");
+var time = require('./utils').time;
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
@@ -42,7 +43,7 @@ function addHeaders(req, res, next) {
   res._headersMiddleware = true;
   res.writeHead = function headersWriteHead() {
     if (res.statusCode === 200 || res.statusCode === 401) {
-      res.setHeader('Timestamp', parseInt(Date.now() / 1000, 10));
+      res.setHeader('Timestamp', time());
     }
 
     if (res.statusCode === 503 || res.statusCode === 429) {

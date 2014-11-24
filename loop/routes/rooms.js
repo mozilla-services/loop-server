@@ -15,6 +15,7 @@ var errors = require('../errno.json');
 var getUserAccount = require('../utils').getUserAccount;
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
+var time = require('../utils').time;
 
 var hmac = require('../hmac');
 
@@ -171,7 +172,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       var roomData = req.roomRequestData;
       var token = tokenlib.generateToken(roomsConf.tokenSize);
-      var now = parseInt(Date.now() / 1000, 10);
+      var now = time();
       roomData.creationTime = now;
       roomData.updateTime = now;
       roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
@@ -203,7 +204,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.patch('/rooms/:token', auth.requireHawkSession,
     validators.validateRoomToken, validators.validateRoomUrlParams,
     validators.isRoomOwner, function(req, res) {
-      var now = parseInt(Date.now() / 1000, 10);
+      var now = time();
       var roomData = req.roomStorageData;
 
       roomData.updateTime = now;
@@ -237,7 +238,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     function(req, res) {
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
-        var now = parseInt(Date.now() / 1000, 10);
+        var now = time();
         notifyOwner(req.user, now, function(err) {
           if (res.serverError(err)) return;
           res.status(204).json({});
