@@ -28,6 +28,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
    * - calleeFriendlyName: the friendly name of the person called;
    * - callToken: the call token that was used to initiate the call (if any;
    * - urlCreationDate: the timestamp of the url used to make the call;
+   * - subject: the conversation subject
    */
   function storeUserCallTokens(options, callback) {
     tokBox.getSessionTokens({
@@ -46,6 +47,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
         'callType': options.callType,
         'callState': constants.CALL_STATES.INIT,
         'timestamp': currentTimestamp,
+        'subject': options.subject,
 
         'callerId': options.callerId,
         'calleeFriendlyName': options.calleeFriendlyName,
@@ -93,7 +95,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
             apiKey: record.apiKey,
             sessionId: record.sessionId,
             sessionToken: record.calleeToken,
-            progressURL: progressURL
+            progressURL: progressURL,
+            subject: record.subject
           };
           if (record.callToken !== undefined) {
             result.callUrl = conf.get("callUrls").webAppUrl
@@ -135,6 +138,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
           callType: req.body.callType,
           channel: req.body.channel,
           callerId: userId,
+          subject: req.body.subject,
           progressURL: progressURL
         }, function(err, callInfo) {
           if (res.serverError(err)) return;
@@ -263,7 +267,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
               callerId: userId || req.callUrlData.callerId,
               calleeFriendlyName: req.callUrlData.issuer,
               callToken: req.token,
-              urlCreationDate: req.callUrlData.timestamp
+              urlCreationDate: req.callUrlData.timestamp,
+              subject: req.body.subject
             }, function(err, callInfo) {
               if (res.serverError(err)) return;
 

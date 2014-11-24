@@ -389,12 +389,39 @@ function runOnPrefix(apiPrefix) {
                 expect(callUrlData).to.have.property("timestamp");
                 delete callUrlData.expires;
                 delete callUrlData.timestamp;
-                expect(callUrlData).to.eql(
-                    {
-                      "callerId": "natim@mozilla.com",
-                      "issuer": "alexis"
-                    }
-                );
+                expect(callUrlData).to.eql({
+                  "callerId": "natim@mozilla.com",
+                  "issuer": "alexis"
+                });
+                done();
+              });
+            });
+        });
+
+      it("should return a list of call-url with some information & subject",
+        function(done) {
+          supertest(app)
+            .post(apiPrefix + '/call-url')
+            .hawk(hawkCredentials)
+            .type('json')
+            .send({callerId: callerId, expiresIn: 5, issuer: "alexis",
+                   subject: "dummySubject"})
+            .end(function(err) {
+              if (err) throw err;
+
+              jsonReq.send({}).expect(200).end(function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.length(1);
+                var callUrlData = res.body[0];
+                expect(callUrlData).to.have.property("expires");
+                expect(callUrlData).to.have.property("timestamp");
+                delete callUrlData.expires;
+                delete callUrlData.timestamp;
+                expect(callUrlData).to.eql({
+                  "callerId": "natim@mozilla.com",
+                  "issuer": "alexis",
+                  "subject": "dummySubject"
+                });
                 done();
               });
             });
@@ -865,6 +892,26 @@ function runOnPrefix(apiPrefix) {
           });
 
       });
+
+      it("should accept optional subject field", function(done) {
+        supertest(app)
+          .put(apiPrefix + '/call-url/' + token)
+          .hawk(hawkCredentials)
+          .send({
+            callerId: "Adam",
+            expiresIn: 250,
+            issuer: "Mark Banner",
+            subject: "DummySubject"
+          })
+          .expect(200)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body.expiresAt).not.eql(undefined);
+            done();
+          });
+
+      });
+
     });
 
     describe("DELETE /call-url/:token", function() {
@@ -1249,6 +1296,22 @@ function runOnPrefix(apiPrefix) {
                   });
               });
           });
+
+          it("should store optional subject data.", function(done) {
+            addCallReq
+              .send({callType: 'audio-video', subject: 'dummySubject'})
+              .end(function(err) {
+                if (err) throw err;
+                storage.getUserCalls(userHmac, function(err, res) {
+                  if (err) throw err;
+                  expect(res).to.length(1);
+                  expect(res[0].callType).to.eql("audio-video");
+                  expect(res[0].subject).to.eql("dummySubject");
+                  done();
+                });
+              });
+          });
+
         });
       });
 
