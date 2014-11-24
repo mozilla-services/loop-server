@@ -7,7 +7,7 @@ var redis = require("redis");
 var async = require("async");
 var constants = require("../constants");
 var migrationClient = require("./redis_migration");
-var time = require('../utils').now;
+var time = require('../utils').time;
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
 
@@ -675,15 +675,8 @@ RedisStorage.prototype = {
     var key = 'call.devices.' + callId + '.' + type;
 
     self._client.get(key, function(err, number) {
-<<<<<<< HEAD
       if (err) return callback(err);
-      return callback(err, parseInt(number));
-=======
-      if (err) {
-        return callback(err);
-      }
       return callback(err, parseInt(number, 10));
->>>>>>> Refactoring - parseInt(Date.now(), 10) => time()
     });
   },
 

@@ -15,7 +15,7 @@ var errors = require('../errno.json');
 var getUserAccount = require('../utils').getUserAccount;
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
-var time = require('../utils').now;
+var time = require('../utils').time;
 
 var hmac = require('../hmac');
 

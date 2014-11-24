@@ -14,7 +14,7 @@ var sendError = require('../utils').sendError;
 var getUserAccount = require('../utils').getUserAccount;
 var phone = require('phone');
 var constants = require('../constants');
-var time = require('../utils').now;
+var time = require('../utils').time;
 
 module.exports = function(app, conf, logError, storage, tokBox, auth,
   validators) {
@@ -37,7 +37,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
     }, function(err, tokboxInfo) {
       if (err) return callback(err);
 
-      var currentTimestamp = time();
+      var now = time();
       var callId = randomBytes(16).toString('hex');
 
       var wsCalleeToken = randomBytes(16).toString('hex');
@@ -47,9 +47,8 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
         'callId': callId,
         'callType': options.callType,
         'callState': constants.CALL_STATES.INIT,
-        'timestamp': currentTimestamp,
         'subject': options.subject,
-
+        'timestamp': now,
         'callerId': options.callerId,
         'calleeFriendlyName': options.calleeFriendlyName,
 

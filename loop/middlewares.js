@@ -15,7 +15,7 @@ var isoDateString = require("./utils").isoDateString;
 var errors = require("./errno.json");
 var hekaLogger = require('./logger').hekaLogger;
 var logging = require("express-logging");
-var time = require('./utils').now;
+var time = require('./utils').time;
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {

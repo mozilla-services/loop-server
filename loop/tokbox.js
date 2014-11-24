@@ -7,7 +7,7 @@
 var randomBytes = require('crypto').randomBytes;
 var request = require('request');
 var conf = require('./config').conf;
-var time = require('./utils').now;
+var time = require('./utils').time;
 
 // Be sure to use the exported OpenTok so we can mock it in the
 // tests.

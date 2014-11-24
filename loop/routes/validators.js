@@ -8,7 +8,7 @@ var errors = require("../errno.json");
 var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 var tokenlib = require('../tokenlib');
-var time = require('../utils').now;
+var time = require('../utils').time;
 
 
 module.exports = function(conf, logError, storage) {

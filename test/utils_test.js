@@ -32,7 +32,7 @@ describe("utils", function() {
     });
   });
 
-  describe("#now", function() {
+  describe("#time", function() {
     var clock, now;
 
     beforeEach(function() {
@@ -45,7 +45,7 @@ describe("utils", function() {
     });
 
     it("should return the current timestamp", function() {
-      expect(utils.now()).to.eql(parseInt(now / 1000, 10));
+      expect(utils.time()).to.eql(parseInt(now / 1000, 10));
     });
   });
 });

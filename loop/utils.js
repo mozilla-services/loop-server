@@ -95,7 +95,7 @@ function getSimplePushURLS(req, callback) {
 /**
  * Return a unix timestamp in seconds.
  **/
-function now() {
+function time() {
   return parseInt(Date.now() / 1000, 10);
 }
 
@@ -103,7 +103,7 @@ module.exports = {
   getProgressURL: getProgressURL,
   sendError: sendError,
   isoDateString: isoDateString,
-  now: now,
+  time: time,
   getUserAccount: getUserAccount,
   getSimplePushURLS: getSimplePushURLS
 };

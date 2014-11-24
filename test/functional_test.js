@@ -1633,7 +1633,7 @@ function runOnPrefix(apiPrefix) {
                   algorithm: "sha256"
                 })
                 .expect(204)
-                .end(function(err, res) {
+                .end(function(err) {
                   if (err) throw err;
                   storage.getUserSimplePushURLs(userHmac, function(err, urls) {
                     if (err) throw err;
