@@ -299,6 +299,51 @@ function runOnPrefix(apiPrefix) {
             done();
           });
       });
+
+      it("should return a 503 if it's not able to reach the SP url", function(done) {
+        sandbox.stub(tokBox, "ping", function(options, callback) {
+          callback(null);
+        });
+
+        sandbox.stub(request, "put", function(options, callback) {
+          callback(new Error("error"));
+        });
+        supertest(app)
+          .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+          .expect(503)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.eql({
+              'storage': true,
+              'provider': true,
+              'push': false
+            });
+            done();
+          });
+      });
+
+      it("should return a 200 if it's able to reach all backends (with SP specified)",
+        function(done) {
+          sandbox.stub(tokBox, "ping", function(options, callback) {
+            callback(null);
+          });
+
+          sandbox.stub(request, "put", function(options, callback) {
+            callback(null, {statusCode: 200});
+          });
+          supertest(app)
+            .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+            .expect(200)
+            .end(function(err, res) {
+              if (err) throw err;
+              expect(res.body).to.eql({
+                'storage': true,
+                'provider': true,
+                'push': true
+              });
+              done();
+            });
+      });
     });
 
     describe("GET /", function() {

@@ -6,29 +6,46 @@
 
 var loopPackageData = require('../../package.json');
 var git = require('git-rev');
+var request = require('request');
 
 module.exports = function(app, conf, logError, storage, tokBox) {
   /**
    * Checks that the service and its dependencies are healthy.
    **/
   app.get("/__heartbeat__", function(req, res) {
+    function returnStatus(storageStatus, requestError, pushStatus) {
+      var status, message;
+      if (storageStatus === true && requestError === null &&
+          pushStatus !== false) {
+        status = 200;
+      } else {
+        status = 503;
+        if (requestError !== null) message = "TokBox " + requestError;
+      }
+
+      res.status(status)
+         .json({
+           storage: storageStatus,
+           provider: (requestError === null) ? true : false,
+           message: message,
+           push: pushStatus
+         });
+    }
+
     storage.ping(function(storageStatus) {
       tokBox.ping({timeout: conf.get('heartbeatTimeout')},
         function(requestError) {
-          var status, message;
-          if (storageStatus === true && requestError === null) {
-            status = 200;
+          // Setting pushStatus to undefined makes it not included in the json
+          // response.
+          var pushStatus;
+          if (req.query.SP_LOCATION !== undefined) {
+            request.put(req.query.SP_LOCATION, function(error, response) {
+              pushStatus = (!error && response.statusCode === 200);
+              returnStatus(storageStatus, requestError, pushStatus);
+            });
           } else {
-            status = 503;
-            if (requestError !== null) message = "TokBox " + requestError;
+            returnStatus(storageStatus, requestError, pushStatus);
           }
-
-          res.status(status)
-             .json({
-               storage: storageStatus,
-               provider: (requestError === null) ? true : false,
-               message: message
-             });
         });
     });
   });
