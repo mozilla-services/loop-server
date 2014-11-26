@@ -305,7 +305,7 @@ function runOnPrefix(apiPrefix) {
           callback(null);
         });
 
-        sandbox.stub(request, "get", function(options, callback) {
+        sandbox.stub(request, "put", function(options, callback) {
           callback(new Error("error"));
         });
         supertest(app)
@@ -328,7 +328,7 @@ function runOnPrefix(apiPrefix) {
             callback(null);
           });
 
-          sandbox.stub(request, "get", function(options, callback) {
+          sandbox.stub(request, "put", function(options, callback) {
             callback(null, {statusCode: 200});
           });
           supertest(app)

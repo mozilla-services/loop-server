@@ -35,9 +35,11 @@ module.exports = function(app, conf, logError, storage, tokBox) {
     storage.ping(function(storageStatus) {
       tokBox.ping({timeout: conf.get('heartbeatTimeout')},
         function(requestError) {
+          // Setting pushStatus to undefined makes it not included in the json
+          // response.
           var pushStatus;
           if (req.query.SP_LOCATION !== undefined) {
-            request.get(req.query.SP_LOCATION, function(error, response) {
+            request.put(req.query.SP_LOCATION, function(error, response) {
               pushStatus = (!error && response.statusCode === 200);
               returnStatus(storageStatus, requestError, pushStatus);
             });
