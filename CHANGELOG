@@ -3,17 +3,27 @@ Changelog
 
 This document describes changes between each past release.
 
-0.14.0 (unreleased)
+0.14.0 (2014-11-26)
 -------------------
 
-- No changes yet.
+- [bugfix] Make sure Redis is never calls with undefined keys (1090140)
+- [feature] Add git revision and branch to the loop-server homepage (1090819)
+- [feature] Add heka metrics for websockets (1085252)
+- [feature] When a room participant joins, extends the room expiration (1100556)
+- [feature] Add the deleted rooms in GET /rooms (1094838)
+- [bugfix] Remove redis wildcard lookups (1094838)
+- [bugfix] POST /rooms/:token action refresh without Authorization (1094998)
+- [bugfix] Fix PATCH for rooms (1099063)
+- [api-change] Add subject to direct calls (1095358)
+- [bugfix] POST /rooms/:token action refresh without Authorization should 401 (1094998)
+- [feature] Add push to the __heartbeat__ (1101774)
 
 
 0.13.2 (2014-11-18)
 -------------------
 
 - [refactoring] Be consistent on the userMac wording. (1090138)
-- [bug]         Remove SimplePush redis keys wildcard lookup (1099144)
+- [bugfix]         Remove SimplePush redis keys wildcard lookup (1099144)
 
 
 0.13.1 (2014-11-13)
