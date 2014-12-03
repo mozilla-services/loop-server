@@ -414,7 +414,7 @@ var conf = convict({
     defaultTTL: {
       doc: "The default TTL for a room (in hours)",
       format: Number,
-      default: 24 * 30 // One month.
+      default: 8 * 7 * 24 // 8 weeks
     },
     maxTTL: {
       doc: "The maximum TTL for a room (in hours) allowed by the server",
