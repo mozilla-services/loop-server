@@ -386,6 +386,12 @@ describe("/rooms", function() {
           done();
         });
       });
+
+      it("should return a 400 if bad-json is sent", function(done) {
+        validateRoomReq.send("{bad json]")
+        .expect(400)
+        .end(done);
+      });
     });
 
     describe("#isRoomOwner", function() {

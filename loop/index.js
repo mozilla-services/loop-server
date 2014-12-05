@@ -17,10 +17,7 @@ var bodyParser = require('body-parser');
 var raven = require('raven');
 var cors = require('cors');
 var StatsdClient = require('statsd-node').client;
-var addHeaders = require('./middlewares').addHeaders;
-var handle503 = require("./middlewares").handle503;
-var logMetrics = require('./middlewares').logMetrics;
-var sendError = require('./utils').sendError;
+var middlewares = require('./middlewares');
 var websockets = require('./websockets');
 
 var TokBox;
@@ -74,13 +71,13 @@ var app = express();
  * Enable CORS for all requests.
  **/
 app.use(corsEnabled);
-app.use(addHeaders);
+app.use(middlewares.addHeaders);
 app.disable('x-powered-by');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
-app.use(handle503(logError));
-app.use(logMetrics);
+app.use(middlewares.handle503(logError));
+app.use(middlewares.logMetrics);
 
 var apiRouter = express.Router();
 var loopPackageData = require('../package.json');
@@ -130,22 +127,10 @@ app.use("/", apiRouter);
 // Exception logging should come at the end of the list of middlewares.
 app.use(raven.middleware.express(conf.get('sentryDSN')));
 
-// In case of apiPrefix missing redirect the user to the right URL
-// In case of apiPrefix present, raise a 404 error.
-// Must be the last middleware.
-app.use(function(req, res) {
-  if (req.path.indexOf(apiPrefix) !== 0) {
-    res.redirect(307, apiPrefix + req.path);
-    return;
-  }
-  sendError(res, 404, 999, "Resource not found.");
-});
-
-/* eslint-disable */
-app.use(function(error, req, res, next) {
-/* eslint-enable */
-  sendError(res, 500, 999, "" + error);
-});
+// Proceed with extra care if you change the order of these middlwares.
+// Redirect must happen last.
+app.use(middlewares.handleRedirects(apiPrefix));
+app.use(middlewares.handleUncatchedErrors);
 
 // Starts HTTP server.
 var argv = require('yargs').argv;
