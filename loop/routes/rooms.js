@@ -290,6 +290,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
   apiRouter.post('/rooms/:token', validators.validateRoomToken,
     auth.authenticateWithHawkOrToken, function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
+      var roomOwnerHmac = req.roomStorageData.roomOwnerHmac;
       var ROOM_ACTIONS = ["join", "refresh", "leave"];
       var action = req.body.action;
       var code;
@@ -322,8 +323,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 return;
               }
               var ttl = roomsConf.participantTTL;
+              var role = req.user === roomOwnerHmac ? 'moderator' : 'publisher';
               var sessionToken = tokBox.getSessionToken(
-                req.roomStorageData.sessionId
+                req.roomStorageData.sessionId,
+                role
               );
 
               function next(err) {

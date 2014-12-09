@@ -70,13 +70,13 @@ TokBox.prototype = {
         callback(null, session, opentok);
     });
   },
-  getSessionToken: function(sessionId) {
+  getSessionToken: function(sessionId, role) {
     var now = time();
     var expirationTime = now + this.tokenDuration;
 
     return this._opentok["default"].generateToken(
       sessionId, {
-        role: 'publisher',
+        role: role,
         expireTime: expirationTime
       }
     );

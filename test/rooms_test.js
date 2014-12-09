@@ -8,6 +8,7 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
+var assert = sinon.assert;
 var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
@@ -212,10 +213,11 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
 };
 
 describe("/rooms", function() {
-  var sandbox, hawkCredentials, userHmac, hawkCredentials2, requests;
+  var sandbox, hawkCredentials, userHmac, hawkCredentials2, requests, generatedTokens;
 
   beforeEach(function(done) {
     requests = [];
+    generatedTokens = [];
     sandbox = sinon.sandbox.create();
 
     sandbox.stub(request, "put", function(options) {
@@ -229,7 +231,8 @@ describe("/rooms", function() {
 
     sessionToken = conf.get("fakeCallInfo").token1;
      sandbox.stub(tokBox._opentok.default, "generateToken",
-       function() {
+       function(sessionId, options) {
+         generatedTokens.push({sessionId: sessionId, options: options});
          return sessionToken;
        });
 
@@ -237,7 +240,7 @@ describe("/rooms", function() {
       hawkCredentials = credentials;
       userHmac = userMac;
 
-      register(hawkCredentials, spurl).end(function(err, res) {
+      register(hawkCredentials, spurl).end(function(err) {
         if (err) throw err;
 
         generateHawkCredentials(storage, user,
@@ -1029,6 +1032,30 @@ describe("/rooms", function() {
                   expect(res.body.ctime).to.be.gte(joinTime);
                   expect(res.body.expiresAt).to.be.gte(
                     joinTime + conf.get('rooms').extendTTL * 3600);
+                  done();
+                });
+              });
+            });
+          });
+        });
+
+        it("should use the moderator role when creation room owner session token",
+        function(done){
+          createRoom(hawkCredentials, {
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "2",
+            expiresIn: "10"
+          }).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinWithNewUser(storage, 'user1', roomToken, function(res) {
+              res.end(function(err) {
+                if (err) throw err;
+                expect(generatedTokens[0].options.role).to.eql('publisher');
+                joinRoom(hawkCredentials, roomToken).end(function(err) {
+                  if (err) throw err;
+                  expect(generatedTokens[1].options.role).to.eql('moderator');
                   done();
                 });
               });
