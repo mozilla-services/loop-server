@@ -87,7 +87,7 @@ function register(credentials, url, status) {
 }
 
 
-var getRoomInfo = function(credentials, roomToken, status) {
+function getRoomInfo(credentials, roomToken, status) {
   var hawkCredentials = credentials.hawkCredentials || credentials;
   var req = supertest(app)
     .get('/rooms/' + roomToken)
@@ -100,9 +100,21 @@ var getRoomInfo = function(credentials, roomToken, status) {
     req = req.hawk(credentials.hawkCredentials || credentials);
   }
   return req;
-};
+}
 
-var joinRoom = function(credentials, roomToken, data, status) {
+/**
+ * Joins the specified room using the given userName.
+ **/
+function joinWithNewUser(storage, userName, roomToken, callback) {
+  generateHawkCredentials(storage, userName, function(credentials) {
+    callback(joinRoom(credentials, roomToken, {
+      displayName: userName,
+      clientMaxSize: 2
+    }));
+  });
+}
+
+function joinRoom(credentials, roomToken, data, status) {
   if (data === undefined) {
     data = {
       displayName: "Alexis",
@@ -128,7 +140,7 @@ var joinRoom = function(credentials, roomToken, data, status) {
   }
 
   return req;
-};
+}
 
 var refreshRoom = function(credentials, roomToken, status) {
   var req = supertest(app)
@@ -958,6 +970,29 @@ describe("/rooms", function() {
                });
              });
           });
+
+        it("should keep a spot for the room owner in a room", function(done){
+          createRoom(hawkCredentials, {
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "2",
+            expiresIn: "10"
+          }).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinWithNewUser(storage, 'user1', roomToken, function(res) {
+              res.end(function(err) {
+                if (err) throw err;
+                joinWithNewUser(storage, 'user2', roomToken, function(res) {
+                  res.expect(400).end(function(err) {
+                    if (err) throw err;
+                    joinRoom(hawkCredentials, roomToken).end(done);
+                  });
+                });
+              });
+            });
+          });
+        });
 
         it("should notify all the room owner devices.", function(done) {
             register(hawkCredentials2, spurl + "2").end(function(err) {

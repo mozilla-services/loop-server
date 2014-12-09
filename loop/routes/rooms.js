@@ -41,6 +41,29 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     return Math.min(clientMaxSize, roomMaxSize);
   }
 
+  /**
+   * Returns if it is possible to join a room, given a list of participants
+   * and a room maximum size.
+   *
+   * Always let a free spot for the owner of the room to join.
+   *
+   * @param {Array} participants, the list of participants.
+   * @param {Number} roomMaxSize, the maximum size of the room.
+   * @param {String} roomOwnerHmac, the hmac of the room owner.
+   **/
+  function canJoinRoom(participants, roomMaxSize, roomOwnerHmac, currentHmac) {
+    var spareSpots = roomMaxSize - participants.length;
+    var ownerConnected = participants.some(function(participant){
+      return participant.hawkIdHmac === roomOwnerHmac;
+    });
+
+    if (!ownerConnected && currentHmac !== roomOwnerHmac) {
+      spareSpots--;
+    }
+
+    return spareSpots > 0;
+  }
+
 
   /**
    * Ping the room Owner simplePush rooms endpoints.
@@ -264,8 +287,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    *
    * Actions are "join", "leave", "refresh".
    **/
-  apiRouter.post('/rooms/:token', validators.validateRoomToken, auth.authenticateWithHawkOrToken,
-    function(req, res) {
+  apiRouter.post('/rooms/:token', validators.validateRoomToken,
+    auth.authenticateWithHawkOrToken, function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var ROOM_ACTIONS = ["join", "refresh", "leave"];
       var action = req.body.action;
@@ -308,17 +331,19 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 storage.getRoomParticipants(req.token, function(err,
                   participants) {
                     if (res.serverError(err)) return;
+                    var roomMaxSize = req.roomStorageData.maxSize;
                     var clientMaxSize = getClientMaxSize(
                       participants,
-                      req.roomStorageData.maxSize
+                      roomMaxSize
                     );
 
-                    if (clientMaxSize <= participants.length) {
-                      // The room is already full.
-                      sendError(res, 400, errors.ROOM_FULL,
-                                "The room is full.");
+                    if (!canJoinRoom(
+                          participants, roomMaxSize,
+                          req.roomStorageData.roomOwnerHmac,
+                          req.user)) {
+                      sendError(res, 400, errors.ROOM_FULL, "The room is full.");
                       return;
-                    } else if (requestMaxSize <= participants.length) {
+                    } else if (clientMaxSize <= participants.length) {
                       // You cannot handle the number of actual participants.
                       sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
                         "Too many participants in the room for you to handle.");
