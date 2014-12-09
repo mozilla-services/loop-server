@@ -8,7 +8,6 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
-var assert = sinon.assert;
 var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
@@ -89,7 +88,6 @@ function register(credentials, url, status) {
 
 
 function getRoomInfo(credentials, roomToken, status) {
-  var hawkCredentials = credentials.hawkCredentials || credentials;
   var req = supertest(app)
     .get('/rooms/' + roomToken)
     .type('json')

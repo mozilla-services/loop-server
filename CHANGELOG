@@ -3,6 +3,16 @@ Changelog
 
 This document describes changes between each past release.
 
+0.14.1 (2014-12-09)
+-------------------
+
+- [bugfix] Keep a spot for the room owner (1107536)
+- [bugfix] Set the default room expiration time to 8 weeks (1106760)
+- [bugfix] Make the server return a 400 on bad json (1108025)
+- [bugfix] Set the "moderator" role when the room owner joins (1107743)
+- [metrics] Add metrics for rooms join, leave and reresh (1107357)
+
+
 0.14.0 (2014-11-26)
 -------------------
 
