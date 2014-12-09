@@ -59,6 +59,9 @@ function logMetrics(req, res, next) {
   if (conf.get('hekaMetrics').activated === true) {
     res.on('finish', function() {
       var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      if (req.body && req.body.action) {
+        var action = req.body.action;
+      }
 
       var line = {
         op: 'request.summary',
@@ -76,7 +79,8 @@ function logMetrics(req, res, next) {
         hostname: hostname,
         lang: req.headers["accept-language"],
         ip: ip,
-        errno: res.errno || 0
+        errno: res.errno || 0,
+        action: action
       };
 
       if (req.hasOwnProperty("callUrlData")) {

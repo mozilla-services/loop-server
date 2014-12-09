@@ -68,6 +68,7 @@ describe("metrics middleware", function() {
       .set('user-agent', 'Mouzilla')
       .set('accept-language', 'Breton du sud')
       .set('x-forwarded-for', 'ip1, ip2, ip3')
+      .send({'action': 'join'})
       .expect(200)
       .end(function(err) {
         if (err) throw err;
@@ -89,6 +90,7 @@ describe("metrics middleware", function() {
         expect(logged.method).to.eql('get');
         expect(logged.calleeId).to.eql('userMacHere');
         expect(logged.callerId).to.eql('uuid');
+        expect(logged.action).to.eql('join');
         done();
       });
   });
