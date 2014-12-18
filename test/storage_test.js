@@ -944,6 +944,51 @@ describe("Storage", function() {
           });
       });
 
+      describe("#touchHawkSession", function() {
+        var oldDuration;
+
+        beforeEach(function() {
+          oldDuration = storage._settings.hawkSessionDuration;
+          // First, setup keys with an expiration in the future (800s).
+          storage._settings.hawkSessionDuration = 800;
+        });
+
+        afterEach(function() {
+          storage._settings.hawkSessionDuration = oldDuration;
+        });
+
+        it("should touch user session and associated account data", function(done) {
+          storage.setHawkSession(idHmac, "auth key", function(err) {
+            if (err) throw err;
+            storage.setHawkUser(userMac, idHmac, function(err) {
+              if (err) throw err;
+              storage.setHawkUserId(idHmac, "encrypted user id", function(err) {
+                if (err) throw err;
+                // Set the expiration at 0 so that it expires immediatly.
+                storage._settings.hawkSessionDuration = 0;
+                // Then, check that all the keys have been deleted.
+                storage.touchHawkSession(idHmac, function(err) {
+                  if (err) throw err;
+                  storage.getHawkSession(idHmac, function(err, data) {
+                    if (err) throw err;
+                    expect(data).to.eql(null);
+                    storage.getHawkUser(idHmac, function(err, data) {
+                      if (err) throw err;
+                      expect(data).to.eql(null);
+                      storage.getHawkUserId(idHmac, function(err, data) {
+                        if (err) throw err;
+                        expect(data).to.eql(null);
+                        done();
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+
       describe("#decrementConnectedCallDevices", function() {
         it("should increment the number of connected call devices, per type",
           function(done) {
@@ -961,6 +1006,7 @@ describe("Storage", function() {
               });
           });
       });
+
     });
   }
 
