@@ -878,7 +878,14 @@ RedisStorage.prototype = {
         self._client.expire(
           'hawk.' + hawkIdHmac,
           self._settings.hawkSessionDuration,
-          callback
+          function(err) {
+            if (err) return callback(err);
+            self._client.expire(
+              'hawkuser.' + hawkIdHmac,
+              self._settings.hawkSessionDuration,
+              callback
+            );
+          }
         );
       });
   },
