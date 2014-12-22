@@ -995,6 +995,25 @@ describe("/rooms", function() {
           });
         });
 
+        it("a user should be able to join after the room owner", function(done){
+          createRoom(hawkCredentials, {
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "2",
+            expiresIn: "10"
+          }).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              joinWithNewUser(storage, 'user1', roomToken, function(res) {
+                res.expect(200).end(done);
+              });
+            });
+          });
+        });
+
+
         it("should notify all the room owner devices.", function(done) {
             register(hawkCredentials2, spurl + "2").end(function(err) {
               if (err) throw err;
@@ -1225,7 +1244,7 @@ describe("/rooms", function() {
              createRoom(hawkCredentials).end(function(err, res) {
                if (err) throw err;
                var roomToken = res.body.roomToken;
-               joinRoom(null, roomToken).end(function(err) {
+               joinRoom(hawkCredentials, roomToken).end(function(err) {
                  if (err) throw err;
                  joinRoom(null, roomToken, {
                    displayName: "Natim",
@@ -1248,7 +1267,7 @@ describe("/rooms", function() {
                if (err) throw err;
                var roomToken = res.body.roomToken;
                // Alexis joins
-               joinRoom(null, roomToken).end(function(err) {
+               joinRoom(hawkCredentials, roomToken).end(function(err) {
                  if (err) throw err;
                  sessionToken = conf.get("fakeCallInfo").token2;
                  // Natim joins

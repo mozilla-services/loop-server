@@ -52,9 +52,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * @param {String} roomOwnerHmac, the hmac of the room owner.
    **/
   function canJoinRoom(participants, roomMaxSize, roomOwnerHmac, currentHmac) {
-    var spareSpots = roomMaxSize - participants.length;
+    var maxSize = getClientMaxSize(participants, roomMaxSize);
+    var spareSpots = maxSize - participants.length;
     var ownerConnected = participants.some(function(participant){
-      return participant.hawkIdHmac === roomOwnerHmac;
+      return participant.userMac === roomOwnerHmac;
     });
 
     if (!ownerConnected && currentHmac !== roomOwnerHmac) {
