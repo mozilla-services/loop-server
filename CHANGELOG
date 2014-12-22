@@ -3,6 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
+0.14.3 (2014-12-22)
+-------------------
+
+- [bugfix] 1114374 - Fix how the room owner is counted.
+
 0.14.2 (2014-12-19)
 -------------------
 
