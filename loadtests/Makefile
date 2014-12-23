@@ -37,6 +37,9 @@ bench:
 megabench:
 	./venv/bin/loads-runner --config=./config/megabench.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 #	./venv/bin/loads-runner --config=./config/megabench.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_websockets
+#
+smoke:
+	./venv/bin/loads-runner --config=./config/smoke.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 
 # Purge any currently-running loadtest runs.
 purge:
