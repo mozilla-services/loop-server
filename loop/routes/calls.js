@@ -117,6 +117,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
    **/
   app.post('/calls', auth.requireHawkSession, auth.requireRegisteredUser,
     validators.requireParams('calleeId'), validators.validateCallType,
+    validators.validateCallParams,
     function(req, res) {
       getUserAccount(storage, req, function(err, userId) {
         if (res.serverError(err)) return;

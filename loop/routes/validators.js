@@ -140,6 +140,26 @@ module.exports = function(conf, logError, storage) {
   }
 
   /**
+   * Validates the call params passed in the body.
+   *
+   * In case they aren't, error out with an HTTP 400.
+   **/
+  function validateCallParams(req, res, next) {
+    var roomsConf = conf.get('calls');
+
+    if (req.body.hasOwnProperty('subject')) {
+      if (req.body.subject.length > roomsConf.maxSubjectSize) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "Call subject should be shorter than " +
+                  roomsConf.maxSubjectSize + " characters");
+        return;
+      }
+    }
+
+    next();
+  }
+
+  /**
    * Validate the room parameters passed in the body.
    **/
   function validateRoomParams(req, res, next) {
@@ -282,6 +302,7 @@ module.exports = function(conf, logError, storage) {
     requireParams: requireParams,
     validateSimplePushURL: validateSimplePushURL,
     validateCallType: validateCallType,
+    validateCallParams: validateCallParams,
     validateCallUrlParams: validateCallUrlParams,
     validateRoomParams: validateRoomParams,
     validateRoomToken: validateRoomToken,
