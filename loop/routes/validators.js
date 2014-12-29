@@ -140,9 +140,9 @@ module.exports = function(conf, logError, storage) {
   }
 
   /**
-   * Validate the room url parameters passed in the body.
+   * Validate the room parameters passed in the body.
    **/
-  function validateRoomUrlParams(req, res, next) {
+  function validateRoomParams(req, res, next) {
     var roomsConf = conf.get('rooms');
 
     var expiresIn = roomsConf.defaultTTL,
@@ -283,7 +283,7 @@ module.exports = function(conf, logError, storage) {
     validateSimplePushURL: validateSimplePushURL,
     validateCallType: validateCallType,
     validateCallUrlParams: validateCallUrlParams,
-    validateRoomUrlParams: validateRoomUrlParams,
+    validateRoomParams: validateRoomParams,
     validateRoomToken: validateRoomToken,
     isRoomOwner: isRoomOwner,
     isRoomParticipant: isRoomParticipant

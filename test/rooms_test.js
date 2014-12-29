@@ -298,8 +298,8 @@ describe("/rooms", function() {
       });
     });
 
-    describe("#validateRoomUrlParams", function() {
-      apiRouter.post('/validate-room-url', validators.validateRoomUrlParams, function(req, res) {
+    describe("#validateRoomParams", function() {
+      apiRouter.post('/validate-room-url', validators.validateRoomParams, function(req, res) {
         res.status(200).json(req.roomRequestData);
       });
 
@@ -456,9 +456,9 @@ describe("/rooms", function() {
         .hawk(hawkCredentials);
     });
 
-    it("should have the validateRoomUrlParams middleware.", function() {
+    it("should have the validateRoomParams middleware.", function() {
       expect(getMiddlewares(apiRouter, 'post', '/rooms'))
-        .include(validators.validateRoomUrlParams);
+        .include(validators.validateRoomParams);
     });
 
     it("should have the requireHawkSession middleware installed", function() {
@@ -681,9 +681,9 @@ describe("/rooms", function() {
         .include(validators.validateRoomToken);
     });
 
-    it("should have the validateRoomUrlParams middleware.", function() {
+    it("should have the validateRoomParams middleware.", function() {
       expect(getMiddlewares(apiRouter, 'patch', '/rooms/:token'))
-        .include(validators.validateRoomUrlParams);
+        .include(validators.validateRoomParams);
     });
 
     it("should have the requireHawkSession middleware.", function() {

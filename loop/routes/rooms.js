@@ -192,7 +192,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    **/
   apiRouter.post('/rooms', auth.requireHawkSession,
     validators.requireParams('roomName', 'roomOwner', 'maxSize'),
-    validators.validateRoomUrlParams, function(req, res) {
+    validators.validateRoomParams, function(req, res) {
 
       var roomData = req.roomRequestData;
       var token = tokenlib.generateToken(roomsConf.tokenSize);
@@ -226,7 +226,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * Updates information about a room.
    **/
   apiRouter.patch('/rooms/:token', auth.requireHawkSession,
-    validators.validateRoomToken, validators.validateRoomUrlParams,
+    validators.validateRoomToken, validators.validateRoomParams,
     validators.isRoomOwner, function(req, res) {
       var now = time();
       var roomData = req.roomStorageData;
