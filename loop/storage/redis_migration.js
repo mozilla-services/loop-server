@@ -176,8 +176,12 @@ function createClient(options) {
         var operationArguments = operation[1];
         operationArguments.push(done);
 
-        var executor = migrateAndExecute(operationName);
-        executor.apply(self, operationArguments);
+        if (operationName === "del") {
+          self.del.apply(self, operationArguments);
+        } else {
+          var executor = migrateAndExecute(operationName);
+          executor.apply(self, operationArguments);
+        }
       }, callback);
     }
     return new Multi();
