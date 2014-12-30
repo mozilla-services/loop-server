@@ -443,16 +443,24 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         },
         function(err, rooms) {
           if (res.serverError(err)) return;
-          storage.getUserDeletedRooms(req.user, version, function(err, deletedRooms) {
-            if (res.serverError(err)) return;
-            deletedRooms.forEach(function(deleted) {
-              rooms.push({
-                roomToken: deleted,
-                deleted: true
+
+          if (version > 0) {
+            // Include deleted rooms only if version is specified
+            storage.getUserDeletedRooms(req.user, version,
+              function(err, deletedRooms) {
+                if (res.serverError(err)) return;
+                deletedRooms.forEach(function(deleted) {
+                  rooms.push({
+                    roomToken: deleted,
+                    deleted: true
+                  });
+                });
+                res.status(200).json(rooms);
               });
-            });
-            res.status(200).json(rooms);
-          });
+            return;
+          }
+
+          res.status(200).json(rooms);
         }
       );
     });
