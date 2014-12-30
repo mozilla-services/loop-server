@@ -88,6 +88,12 @@ function logMetrics(req, res, next) {
         line.callerId = req.user;
       }
 
+      if (req.hasOwnProperty("roomStorageData")) {
+        if (req.roomStorageData.hasOwnProperty("participants")) {
+          line.participants = req.roomStorageData.participants.length;
+        }
+      }
+
       if (res.statusCode === 401) {
         line.authorization = req.headers.authorization;
         line.hawk = req.hawk;
