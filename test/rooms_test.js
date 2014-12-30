@@ -210,6 +210,17 @@ var deleteRoom = function(hawkCredentials, roomToken, status) {
     .expect(status || 204);
 };
 
+var deleteRooms = function(hawkCredentials, roomTokens, status) {
+  return supertest(app)
+    .patch('/rooms')
+    .type('json')
+    .send({
+      deleteRoomTokens: roomTokens
+    })
+    .hawk(hawkCredentials)
+    .expect(status || 200);
+};
+
 describe("/rooms", function() {
   var sandbox, hawkCredentials, userHmac, hawkCredentials2, requests, generatedTokens;
 
@@ -1533,6 +1544,69 @@ describe("/rooms", function() {
           if (err) throw err;
           expect(requests).to.length(1);
           getRoomInfo(hawkCredentials, roomToken, 404).end(done);
+        });
+      });
+    });
+  });
+
+  describe("DELETE /rooms", function() {
+    it("should have the requireHawkSession middleware.", function() {
+      expect(getMiddlewares(apiRouter, 'patch', '/rooms'))
+        .include(requireHawkSession);
+    });
+
+    it("should clear the participants list", function(done) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+
+        joinRoom(hawkCredentials, roomToken).end(function(err) {
+          if (err) throw err;
+          deleteRooms(hawkCredentials, [roomToken]).end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.eql({"deletedRoomTokens": [roomToken]});
+            storage.getRoomParticipants(roomToken, function(err, participants) {
+              if (err) throw err;
+              expect(participants).to.length(0);
+              done();
+            });
+          });
+        });
+      });
+    });
+
+    it("should delete rooms if the user is the room owner", function(done) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken2 = res.body.roomToken;
+          requests = [];
+          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err, res) {
+            if (err) throw err;
+            expect(res.body.deletedRoomTokens).to.length(2);
+            expect(requests).to.length(1);
+            getRoomInfo(hawkCredentials, roomToken, 404).end(function(err) {
+              if (err) throw err;
+              getRoomInfo(hawkCredentials, roomToken2, 404).end(done);
+            });
+          });
+        });
+      });
+    });
+
+    it("should return a 404 if no room where found", function(done) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken2 = res.body.roomToken;
+          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err) {
+            if (err) throw err;
+            deleteRooms(hawkCredentials, [roomToken, roomToken2], 404).end(done);
+          });
         });
       });
     });

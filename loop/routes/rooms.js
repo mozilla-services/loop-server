@@ -481,4 +481,36 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       );
     });
   });
+
+  /**
+   * Remove given rooms
+   **/
+  apiRouter.patch('/rooms', auth.requireHawkSession,
+    validators.requireParams('deleteRoomTokens'), function(req, res) {
+      var roomTokens = req.body.deleteRoomTokens;
+      storage.getUserRooms(req.user, function(err, userRooms) {
+        if (res.serverError(err)) return;
+
+        var roomsToDelete = userRooms.filter(function(room) {
+          return roomTokens.indexOf(room.roomToken) !== -1;
+        }).map(function(room) {
+          return room.roomToken;
+        });
+
+        if (roomsToDelete.length === 0) {
+          sendError(res, 404, errors.INVALID_TOKEN,
+                    "No rooms found for these tokens and this user.");
+          return;
+        }
+
+        async.map(roomsToDelete, storage.deleteRoomData.bind(storage), function(err) {
+          if (res.serverError(err)) return;
+          var now = time();
+          notifyOwner(req.user, now, function(err) {
+            if (res.serverError(err)) return;
+            res.status(200).json({ deletedRoomTokens: roomsToDelete });
+          });
+        });
+      });
+  });
 };
