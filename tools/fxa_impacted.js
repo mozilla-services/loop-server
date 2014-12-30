@@ -20,15 +20,18 @@ if (storage.engine === "redis") {
     console.log("processing", keys.length, "keys");
     async.map(keys, function(key, done) {
       client.ttl(key.replace("userid", "hawkuser"), function(err, ttl) {
-        if (ttl === -2) {
+        var isImpacted = ttl === -2;
+        if (isImpacted) {
           process.stdout.write("i"); // This is an impacted user.
         } else {
           process.stdout.write(".");
         }
-        done(null, ttl === -2);
+        done(null, isImpacted);
       });
     }, function(err, results){
-      var impacted = results.reduce(function(total, current){ return total + (current === true)}, 0)
+      var impacted = results.reduce(function(total, current) {
+        return total + (current === true);
+      }, 0);
       console.log('\nnumber of impacted users', impacted, "over", results.length);
       process.exit(0);
     });

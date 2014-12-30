@@ -14,13 +14,14 @@ if (storage.engine === "redis") {
   if (options.db) client.select(options.db);
 
   client.keys("userUrls.*", function(err, keys){
+    if (err) throw err;
     console.log("processing", keys.length, "users");
 
     var multi = client.multi();
     keys.forEach(function(key) {
       multi.scard(key);
     });
-        multi.exec(function(err, results) {
+    multi.exec(function(err, results) {
       if (err) throw err;
       var totalUrls = results.reduce(function(total, result) {
         return total + result;

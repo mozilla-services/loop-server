@@ -14,6 +14,7 @@ if (storage.engine === "redis") {
   if (options.db) client.select(options.db);
 
   client.info(function(err, info){
+    if (err) throw err;
     process.stdout.write(info);
     process.stdout.write("\n ==== \n\n");
 
@@ -31,10 +32,14 @@ if (storage.engine === "redis") {
       var i = 0;
       results.forEach(function(result) {
         process.stdout.write(KEYS[i] + ".*: \t" + result.length + "\n");
+
+        // If possible display one or two key sample.
         if (result.length > 0) {
           process.stdout.write(result[0]);
           process.stdout.write("\n");
         }
+
+        // If possible display one or two key sample.
         if (result.length > 1) {
           process.stdout.write(result[1]);
           process.stdout.write("\n");
