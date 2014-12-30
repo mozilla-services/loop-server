@@ -294,7 +294,6 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       validators.isRoomParticipant(req, res, function() {
         getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
           if (res.serverError(err)) return;
-          delete roomData.roomToken;
           res.status(200).json(roomData);
         });
       });

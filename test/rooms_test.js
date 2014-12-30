@@ -635,6 +635,7 @@ describe("/rooms", function() {
                 .replace('{token}', roomToken);
 
               expect(getRes.body).to.eql({
+                roomToken: roomToken,
                 roomUrl: roomUrl,
                 roomOwner: "Alexis",
                 roomName: "UX discussion",
@@ -767,12 +768,13 @@ describe("/rooms", function() {
                     .replace('{token}', roomToken);
 
                   expect(getRes.body).to.eql({
-                    "roomUrl": roomUrl,
-                    "clientMaxSize": 3,
-                    "maxSize": 3,
-                    "participants": [],
-                    "roomName": "New name",
-                    "roomOwner": "Alexis"
+                    roomToken: roomToken,
+                    roomUrl: roomUrl,
+                    clientMaxSize: 3,
+                    maxSize: 3,
+                    participants: [],
+                    roomName: "New name",
+                    roomOwner: "Alexis"
                   });
 
                   expect(requests).to.length(1);
@@ -838,12 +840,13 @@ describe("/rooms", function() {
                     .replace('{token}', roomToken);
 
                   expect(getRes.body).to.eql({
-                    "roomUrl": roomUrl,
-                    "clientMaxSize": 2,
-                    "maxSize": 2,
-                    "participants": [],
-                    "roomName": "About UX",
-                    "roomOwner": "Natim"
+                    roomToken: roomToken,
+                    roomUrl: roomUrl,
+                    clientMaxSize: 2,
+                    maxSize: 2,
+                    participants: [],
+                    roomName: "About UX",
+                    roomOwner: "Natim"
                   });
 
                   expect(requests).to.length(1);
