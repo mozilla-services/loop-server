@@ -272,14 +272,31 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
   /**
    * Retrieves information about a specific room.
+   *
+   * If performed anonymously, only public information is returned.
    **/
   apiRouter.get('/rooms/:token', validators.validateRoomToken,
-    auth.authenticateWithHawkOrToken, validators.isRoomParticipant,
+    auth.authenticateWithHawkOrToken,
     function(req, res) {
-      getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
-        delete roomData.roomToken;
-        if (res.serverError(err)) return;
-        res.status(200).json(roomData);
+      var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
+
+      if (participantHmac === undefined) {
+        var roomToken = req.roomStorageData.roomToken;
+        res.status(200).json({
+          roomToken: req.roomStorageData.roomToken,
+          roomName: req.roomStorageData.roomName,
+          roomOwner: req.roomStorageData.roomOwner,
+          roomUrl: roomsConf.webAppUrl.replace('{token}', roomToken)
+        });
+        return;
+      }
+
+      validators.isRoomParticipant(req, res, function() {
+        getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
+          if (res.serverError(err)) return;
+          delete roomData.roomToken;
+          res.status(200).json(roomData);
+        });
       });
     });
 

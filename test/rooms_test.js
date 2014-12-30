@@ -570,7 +570,37 @@ describe("/rooms", function() {
         .include(authenticateWithHawkOrToken);
     });
 
-    it("should return 200 with room info", function(done) {
+    it("should return 200 with public room info if not participating", function(done) {
+      createRoom(hawkCredentials, {
+        roomOwner: "Mathieu",
+        roomName: "UX discussion",
+        maxSize: "3",
+        expiresIn: "10"
+      }).end(function(err, postRes) {
+        if (err) throw err;
+
+        var roomToken = postRes.body.roomToken;
+        var roomUrl = conf.get('rooms').webAppUrl
+          .replace('{token}', roomToken);
+
+        supertest(app)
+          .get('/rooms/' + roomToken)
+          .type('json')
+          .expect(200)
+          .end(function(err, getRes) {
+            if (err) throw err;
+            expect(getRes.body).to.eql({
+              roomToken: roomToken,
+              roomName: "UX discussion",
+              roomOwner: "Mathieu",
+              roomUrl: roomUrl
+            });
+            done();
+          });
+      });
+    });
+
+    it("should return 200 with all room info if participating", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
         .post('/rooms')
@@ -617,7 +647,7 @@ describe("/rooms", function() {
         });
     });
 
-    it("should return 200 with the list of participants", function(done) {
+    it("should return 200 with the list of participants if participating", function(done) {
       var roomToken;
       createRoom(hawkCredentials, {
         roomOwner: "Alexis",
