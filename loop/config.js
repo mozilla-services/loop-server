@@ -140,6 +140,13 @@ var conf = convict({
     default: "sha256",
     env: "USER_MAC_ALGORITHM"
   },
+  calls: {
+    maxSubjectSize: {
+      doc: "The maximum number of chars for the subject of a call",
+      format: Number,
+      default: 124
+    }
+  },
   callUrls: {
     tokenSize: {
       doc: "The callUrl token size (in bytes).",

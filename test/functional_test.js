@@ -44,6 +44,7 @@ var requireRegisteredUser = auth.requireRegisteredUser;
 var validators = loop.validators;
 var validateToken = validators.validateToken;
 var validateCallType = validators.validateCallType;
+var validateCallParams = validators.validateCallParams;
 
 var fakeNow = 1393595554796;
 var user = "alexis@notmyidea.org";
@@ -1383,6 +1384,12 @@ function runOnPrefix(apiPrefix) {
               .include(validateCallType);
           });
 
+        it("should have the validateCallParams middleware installed",
+          function() {
+            expect(getMiddlewares(apiRouter, 'post', '/calls'))
+              .include(validateCallParams);
+          });
+
         describe("With working tokbox APIs", function() {
           var _logs = [], oldMetrics;
 
@@ -1594,6 +1601,22 @@ function runOnPrefix(apiPrefix) {
                   done(err);
                 });
             });
+
+          it("should return a 400 if subject is too long", function(done) {
+            storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
+              if (err) throw err;
+              var longSubject = new Array(126).join("~");
+              addCallReq
+                .send({calleeId: user, subject: longSubject, callType: "audio"})
+                .expect(400)
+                .end(function(err, res) {
+                  if (err) throw err;
+                  expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+                                      "Call subject should be shorter than 124 characters");
+                  done();
+                });
+              });
+          });
 
           it("should ping all the user ids URLs", function(done) {
             storage.addUserSimplePushURLs(userHmac, hawkIdHmac, {calls: pushURL}, function(err) {
