@@ -42,6 +42,10 @@ var storage = getStorage(conf.get("storage"), {
 var tokBox = new TokBox(conf.get('tokBox'));
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
+
+var startupMessage = 'Server was able to communicate with Sentry';
+ravenClient.captureMessage(startupMessage, {level: 'info'});
+
 var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
