@@ -33,10 +33,13 @@ if (storage.engine === "redis") {
         process.stdout.write(KEYS[i] + ".*: \t" + result.length + "\n");
         if (result.length > 0) {
           process.stdout.write(result[0]);
+          process.stdout.write("\n");
         }
         if (result.length > 1) {
           process.stdout.write(result[1]);
+          process.stdout.write("\n");
         }
+        process.stdout.write("\n");
         i++;
       });
       process.exit(0);
