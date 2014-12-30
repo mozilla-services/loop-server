@@ -1561,13 +1561,13 @@ describe("/rooms", function() {
         });
       });
 
-    it("should return the deleted rooms", function(done) {
+    it("should return the deleted rooms if version specified", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
           var roomToken = res.body.roomToken;
           deleteRoom(hawkCredentials, roomToken).end(function(err) {
             if (err) throw err;
-            getUserRoomsInfo(hawkCredentials).end(
+            getUserRoomsInfo(hawkCredentials, 1419934455).end(
               function(err, res) {
                 if (err) throw err;
                 expect(res.body).to.length(1);
@@ -1578,6 +1578,23 @@ describe("/rooms", function() {
           });
         });
     });
+
+    it("should not return the deleted rooms if no version is specified",
+      function(done) {
+        createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          deleteRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            getUserRoomsInfo(hawkCredentials).end(
+              function(err, res) {
+                if (err) throw err;
+                expect(res.body).to.length(0);
+                done();
+              });
+          });
+        });
+      });
 
     it("should return a 503 if the database errors out", function(done) {
       sandbox.stub(storage, "getUserRooms", function(user, callback) {
