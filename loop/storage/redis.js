@@ -436,15 +436,20 @@ RedisStorage.prototype = {
           });
 
           function getState() {
-            async.map(pendingCalls, function(call, cb) {
-              self.getCallState(call.callId, function(err, state) {
-                if (err) return cb(err);
-                call.callState = state;
-                cb(null, call);
-              });
-            }, function(err, results) {
+            var multi = self._client.multi();
+            pendingCalls.forEach(function(call) {
+              multi.scard('callstate.' + call.callId);
+            });
+            multi.exec(function(err, callStates) {
               if (err) return callback(err);
-              callback(null, results);
+              for (var i = 0; i < pendingCalls.length; i++) {
+                var callState = processCallScore(callStates[i]);
+                if (callState === null) {
+                  callState = constants.CALL_STATES.TERMINATED;
+                }
+                pendingCalls[i].callState = callState;
+              }
+              callback(null, pendingCalls);
             });
           }
 
@@ -458,27 +463,6 @@ RedisStorage.prototype = {
           getState();
         });
       });
-    });
-  },
-
-  /**
-   * Returns the expiricy of the call state (in seconds).
-   * In case the call is already expired, returns -1.
-   *
-   * @param {String}    callId, the call id;
-   * @param {Function} A callback that will be called once the action
-   *                    had been processed.
-   **/
-  getCallStateTTL: function(callId, callback) {
-    if (isUndefined(callId, "callId", callback)) return;
-    this._client.pttl('callstate.' + callId, function(err, ttl) {
-      if (err) return callback(err);
-      if (ttl <= 1) {
-        ttl = -1;
-      } else {
-        ttl = ttl / 1000;
-      }
-      callback(null, ttl);
     });
   },
 
@@ -562,28 +546,9 @@ RedisStorage.prototype = {
     // key is dropped).
     self._client.scard('callstate.' + callId, function(err, score) {
       if (err) return callback(err);
-      switch (score) {
-      case 1:
-        callback(null, constants.CALL_STATES.INIT);
-        break;
-      case 2:
-        callback(null, constants.CALL_STATES.HALF_INITIATED);
-        break;
-      case 3:
-        callback(null, constants.CALL_STATES.ALERTING);
-        break;
-      case 4:
-        callback(null, constants.CALL_STATES.CONNECTING);
-        break;
-      case 5:
-        callback(null, constants.CALL_STATES.HALF_CONNECTED);
-        break;
-      case 6:
-        callback(null, constants.CALL_STATES.CONNECTED);
-        break;
-      default:
-        // Ensure a call exists if nothing is stored on this key.
-        self.getCall(callId, false, function(err, result) {
+      var state = processCallScore(score);
+      if (state === null) {
+        self.getCall(callId, function(err, result) {
           if (err) return callback(err);
           if (result !== null) {
             callback(null, constants.CALL_STATES.TERMINATED);
@@ -591,7 +556,9 @@ RedisStorage.prototype = {
           }
           callback(null, null);
         });
+        return;
       }
+      callback(null, state);
     });
   },
 
@@ -698,28 +665,31 @@ RedisStorage.prototype = {
    * @param {Boolean}   getState, if getState is set to false, don't get the state;
    * @param {Function}  A callback that will be called with the call.
    **/
-  getCall: function(callId, getState, callback) {
-    if (callback === undefined) {
-      callback = getState;
-      getState = true;
-    }
+  getCall: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
 
     var self = this;
-    this._client.get('call.' + callId, function(err, data) {
+    var multi = self._client.multi();
+    multi.get('call.' + callId);
+    multi.scard('callstate.' + callId);
+    multi.exec(function(err, data) {
       if (err) return callback(err);
-      decode(data, function(err, call) {
-        if (err) return callback(err);
-        if (call !== null && getState === true) {
-          self.getCallState(callId, function(err, state) {
-            if (err) return callback(err);
-            call.callState = state;
-            callback(err, call);
-          });
-          return;
-        }
-        callback(err, call);
-      });
+
+      var callData = data[0];
+      var score = data[1];
+
+      if (callData !== null) {
+        decode(callData, function(err, call) {
+          if (err) return callback(err);
+          call.callState = processCallScore(score);
+          if (call.callState === null) {
+            call.callState = constants.CALL_STATES.TERMINATED;
+          }
+          callback(null, call);
+        });
+        return;
+      }
+      callback(null, null);
     });
   },
 
@@ -1332,3 +1302,23 @@ RedisStorage.prototype = {
 };
 
 module.exports = RedisStorage;
+
+
+function processCallScore(score, callback) {
+  switch (score) {
+    case 1:
+      return constants.CALL_STATES.INIT;
+    case 2:
+      return constants.CALL_STATES.HALF_INITIATED;
+    case 3:
+      return constants.CALL_STATES.ALERTING;
+    case 4:
+      return constants.CALL_STATES.CONNECTING;
+    case 5:
+      return constants.CALL_STATES.HALF_CONNECTED;
+    case 6:
+      return constants.CALL_STATES.CONNECTED;
+    default:
+      return null;
+  }
+}
