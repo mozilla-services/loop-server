@@ -107,9 +107,13 @@ RedisStorage.prototype = {
 
     self._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
       if (err) return callback(err);
-      async.map(hawkMacIds, function(hawkMacId, done) {
-        self._client.hgetall('spurls.' + userMac + '.' + hawkMacId, done);
-      }, function(err, simplePushMappings) {
+      var multi = self._client.multi();
+
+      hawkMacIds.forEach(function(hawkMacId) {
+        multi.hgetall('spurls.' + userMac + '.' + hawkMacId);
+      });
+
+      multi.exec(function(err, simplePushMappings) {
         if (err) return callback(err);
         simplePushMappings.forEach(function(mapping) {
           if (mapping) {
