@@ -20,7 +20,9 @@ class TestRoomsMixin(object):
         num_participants = random.randint(1, MAX_NUMBER_OF_PEOPLE_JOINING)
         self.incr_counter("num-participants-%d" % num_participants)
 
-        for x in range(num_participants):
+        self.join_room(room_token, self.hawk_room_owner)
+
+        for x in range(num_participants-1):
             participant_hawk_auth = self.register()
             self.join_room(room_token, participant_hawk_auth)
 
@@ -29,6 +31,8 @@ class TestRoomsMixin(object):
 
             if random.randint(0, 100) < PERCENTAGE_OF_MANUAL_LEAVE:
                 self.leave_room(room_token, participant_hawk_auth)
+
+        self.leave_room(room_token, self.hawk_room_owner)
 
         if random.randint(0, 100) < PERCENTAGE_OF_MANUAL_ROOM_DELETE:
             self.delete_room(room_token)
