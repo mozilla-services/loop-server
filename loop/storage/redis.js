@@ -538,27 +538,12 @@ RedisStorage.prototype = {
     if (isUndefined(callId, "callId", callback)) return;
     var self = this;
 
-    // Get the state of a given call. Because of how we store this information
-    // (in a redis set), count the number of elements in the set to know what
-    // the current state is.
-    // State can be (in order) init, alerting, connecting, half-connected,
-    // connected. In case of terminate, nothing is stored in the database (the
-    // key is dropped).
-    self._client.scard('callstate.' + callId, function(err, score) {
+    self.getCall(callId, function(err, call) {
       if (err) return callback(err);
-      var state = processCallScore(score);
-      if (state === null) {
-        self.getCall(callId, function(err, result) {
-          if (err) return callback(err);
-          if (result !== null) {
-            callback(null, constants.CALL_STATES.TERMINATED);
-            return;
-          }
-          callback(null, null);
-        });
-        return;
+      if (call === null) {
+        return callback(null, null);
       }
-      callback(null, state);
+      callback(null, call.callState);
     });
   },
 
@@ -1304,7 +1289,7 @@ RedisStorage.prototype = {
 module.exports = RedisStorage;
 
 
-function processCallScore(score, callback) {
+function processCallScore(score) {
   switch (score) {
     case 1:
       return constants.CALL_STATES.INIT;

@@ -18,7 +18,7 @@ var SUPPORTED_OPERATIONS = [
 
 var MULTI_OPERATIONS = [
   'pttl', 'ttl', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
-  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del', 
+  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del',
   'hgetall', 'get', 'scard'
 ];
 
