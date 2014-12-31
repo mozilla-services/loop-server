@@ -1549,7 +1549,7 @@ describe("/rooms", function() {
     });
   });
 
-  describe("DELETE /rooms", function() {
+  describe.only("PATCH /rooms", function() {
     it("should have the requireHawkSession middleware.", function() {
       expect(getMiddlewares(apiRouter, 'patch', '/rooms'))
         .include(requireHawkSession);
@@ -1564,7 +1564,6 @@ describe("/rooms", function() {
           if (err) throw err;
           deleteRooms(hawkCredentials, [roomToken]).end(function(err, res) {
             if (err) throw err;
-            expect(res.body).to.eql({"deletedRoomTokens": [roomToken]});
             storage.getRoomParticipants(roomToken, function(err, participants) {
               if (err) throw err;
               expect(participants).to.length(0);
@@ -1585,7 +1584,6 @@ describe("/rooms", function() {
           requests = [];
           deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err, res) {
             if (err) throw err;
-            expect(res.body.deletedRoomTokens).to.length(2);
             expect(requests).to.length(1);
             getRoomInfo(hawkCredentials, roomToken, 404).end(function(err) {
               if (err) throw err;
@@ -1603,13 +1601,42 @@ describe("/rooms", function() {
         createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
           var roomToken2 = res.body.roomToken;
-          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err) {
+          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err, res) {
             if (err) throw err;
-            deleteRooms(hawkCredentials, [roomToken, roomToken2], 404).end(done);
+            var data = {responses: {}};
+            data.responses[roomToken] = {code: 200};
+            data.responses[roomToken2] = {code: 200};
+            expect(res.body).to.eql(data);
+
+            deleteRooms(hawkCredentials, [roomToken, roomToken2], 404).end(function(err, res2) {
+              if (err) throw err;
+              var data = {responses: {}};
+              data.responses[roomToken] = {code: 404, errno: 105, error: "Room not found."};
+              data.responses[roomToken2] = {code: 404, errno: 105, error: "Room not found."};
+              expect(res2.body).to.eql(data);
+              done();
+            });
           });
         });
       });
     });
+
+    it("should return a 207 if some room where found and other not", function(done) {
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        deleteRooms(hawkCredentials, [roomToken, "foobar"], 207).end(function(err, res) {
+          if (err) throw err;
+          var data = {responses: {
+            "foobar": {code: 404, errno: 105, error: "Room not found."}
+          }};
+          data.responses[roomToken] = {code: 200};
+          expect(res.body).to.eql(data);
+          done();
+        });
+      });
+    });
+
   });
 
   describe("GET /rooms", function() {

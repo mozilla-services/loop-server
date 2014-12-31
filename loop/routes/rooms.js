@@ -487,6 +487,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    **/
   apiRouter.patch('/rooms', auth.requireHawkSession,
     validators.requireParams('deleteRoomTokens'), function(req, res) {
+      var status = 200;
       var roomTokens = req.body.deleteRoomTokens;
       storage.getUserRooms(req.user, function(err, userRooms) {
         if (res.serverError(err)) return;
@@ -498,9 +499,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         });
 
         if (roomsToDelete.length === 0) {
-          sendError(res, 404, errors.INVALID_TOKEN,
-                    "No rooms found for these tokens and this user.");
-          return;
+          // No rooms founds
+          status = 404;
+        } else if (roomsToDelete.length !== roomTokens.length) {
+          // Multiple status
+          status = 207;
         }
 
         async.map(roomsToDelete, storage.deleteRoomData.bind(storage), function(err) {
@@ -508,7 +511,18 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           var now = time();
           notifyOwner(req.user, now, function(err) {
             if (res.serverError(err)) return;
-            res.status(200).json({ deletedRoomTokens: roomsToDelete });
+
+            var responses = {};
+            roomTokens.forEach(function(roomToken) {
+              if (roomsToDelete.indexOf(roomToken) === -1) {
+                responses[roomToken] = {
+                  code: 404, errno: errors.INVALID_TOKEN, error: "Room not found."
+                };
+              } else {
+                responses[roomToken] = {code: 200};
+              }
+            });
+            res.status(status).json({"responses": responses});
           });
         });
       });
