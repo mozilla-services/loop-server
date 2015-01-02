@@ -251,7 +251,8 @@ describe('websockets', function() {
       beforeEach(function() {
         oldMetrics.activated = true;
         conf.set("hekaMetrics", oldMetrics);
-        sandbox.stub(hekaLogger, 'log', function(type, log) {
+        sandbox.stub(hekaLogger, 'info', function(op, log) {
+          log.op = op;
           logs.push(log);
         });
       });

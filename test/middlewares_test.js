@@ -49,7 +49,8 @@ describe("metrics middleware", function() {
     var hekaMetrics = JSON.parse(JSON.stringify(oldMetrics));
     hekaMetrics.activated = true;
     conf.set('hekaMetrics', hekaMetrics);
-    sandbox.stub(hekaLogger, "log", function(info, log) {
+    sandbox.stub(hekaLogger, "info", function(op, log) {
+      log.op = op;
       logs.push(log);
     });
     logs = [];
@@ -81,7 +82,6 @@ describe("metrics middleware", function() {
         expect(logged.callId).to.eql('1234');
         expect(logged.agent).to.eql('Mouzilla');
         expect(logged.v).to.eql(pjson.version);
-        expect(logged.name).to.eql(pjson.name);
         expect(logged.hostname).to.eql(os.hostname());
         expect(logged.lang).to.eql('Breton du sud');
         expect(logged.ip).to.eql('ip1, ip2, ip3');

@@ -19,11 +19,12 @@ var cors = require('cors');
 var StatsdClient = require('statsd-node').client;
 var middlewares = require('./middlewares');
 var websockets = require('./websockets');
+var hekaLogger = middlewares.hekaLogger;
 
 var TokBox;
 
 if (conf.get("fakeTokBox")) {
-  console.log("Calls to TokBox are now mocked.");
+  hekaLogger.debug("server", "Calls to TokBox are now mocked.");
   TokBox = require('./tokbox').FakeTokBox;
 } else {
   TokBox = require('./tokbox').TokBox;
@@ -49,7 +50,7 @@ if (conf.get('statsdEnabled') === true) {
 
 function logError(err) {
   if (conf.get('env') !== 'test') {
-    console.log(err);
+    hekaLogger.debug("error", err);
   }
   ravenClient.captureError(err);
 }
@@ -139,12 +140,12 @@ var server = http.createServer(app);
 if (argv.hasOwnProperty("fd")) {
   var fd = parseInt(argv.fd, 10);
   server.listen({fd: fd}, function() {
-    console.log('Server listening on fd://' + fd);
+    hekaLogger.debug("server", 'Server listening on fd://' + fd);
   });
 } else {
   server.listen(conf.get('port'), conf.get('ip'), function() {
-    console.log('Server listening on http://' +
-                conf.get('ip') + ':' + conf.get('port'));
+    hekaLogger.debug("server", 'Server listening on http://' +
+                     conf.get('ip') + ':' + conf.get('port'));
   });
 }
 
