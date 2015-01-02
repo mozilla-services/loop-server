@@ -493,11 +493,18 @@ MessageHandler.prototype = {
             // Don't catch the errors here since we're already closing the
             // socket.
             if (connectedDevices === 1) {
-              self.broadcastState(
-                session,
-                constants.CALL_STATES.TERMINATED + ":" +
-                constants.MESSAGE_REASONS.CLOSED
-              );
+              // We want to broadcast the state only if there is no
+              // other terminate reason.
+              self.storage.getCallState(session.callId, function(err, state) {
+                if (err === null && state !== null &&
+                    state !== constants.CALL_STATES.TERMINATED) {
+                  self.broadcastState(
+                    session,
+                    constants.CALL_STATES.TERMINATED + ":" +
+                      constants.MESSAGE_REASONS.CLOSED
+                  );
+                }
+              });
             }
           });
         });
