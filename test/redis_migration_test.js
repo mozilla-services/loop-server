@@ -11,6 +11,7 @@ var async = require("async");
 
 describe("redis migration", function() {
   var client;
+
   beforeEach(function() {
     var options = {
       oldDB: conf.get('storage').settings,
@@ -18,13 +19,11 @@ describe("redis migration", function() {
     };
     client = getClient(options)
   });
+
   afterEach(function(done){
-    client.old_db.flushdb(function(){
-      client.new_db.flushdb(function(){
-        done();
-      });
-    });
+    client.flushdb(done);
   });
+
   it("should copy a key from the old db if it exists", function(done) {
     client.old_db.set('key', 'value', function(err){
       if (err) throw err;
@@ -51,6 +50,17 @@ describe("redis migration", function() {
           });
         });
       });
+    });
+  });
+
+  it("should return multi's commands results.", function(done) {
+    var multi = client.multi();
+    multi.set("foo", "foobar");
+    multi.get("foo");
+    multi.exec(function(err, results) {
+      if (err) throw err;
+      expect(results).to.eql(["OK", "foobar"])
+      done();
     });
   });
 
@@ -118,5 +128,4 @@ describe("redis migration", function() {
       });
     });
   });
-
 });

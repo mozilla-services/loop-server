@@ -443,7 +443,7 @@ RedisStorage.prototype = {
             multi.exec(function(err, callStates) {
               if (err) return callback(err);
               for (var i = 0; i < pendingCalls.length; i++) {
-                var callState = processCallScore(callStates[i]);
+                var callState = getStateFromScore(callStates[i]);
                 if (callState === null) {
                   callState = constants.CALL_STATES.TERMINATED;
                 }
@@ -666,7 +666,7 @@ RedisStorage.prototype = {
       if (callData !== null) {
         decode(callData, function(err, call) {
           if (err) return callback(err);
-          call.callState = processCallScore(score);
+          call.callState = getStateFromScore(score);
           if (call.callState === null) {
             call.callState = constants.CALL_STATES.TERMINATED;
           }
@@ -801,13 +801,11 @@ RedisStorage.prototype = {
 
     var self = this;
     var multi = self._client.multi();
+    var hawkSessionDuration = self._settings.hawkSessionDuration;
 
-    multi.expire('userid.' + hawkIdHmac,
-                 self._settings.hawkSessionDuration);
-    multi.expire('hawk.' + hawkIdHmac,
-                 self._settings.hawkSessionDuration);
-    multi.expire('hawkuser.' + hawkIdHmac,
-                 self._settings.hawkSessionDuration);
+    multi.expire('userid.' + hawkIdHmac, hawkSessionDuration);
+    multi.expire('hawk.' + hawkIdHmac, hawkSessionDuration);
+    multi.expire('hawkuser.' + hawkIdHmac, hawkSessionDuration);
     multi.exec(callback);
   },
 
@@ -1289,7 +1287,7 @@ RedisStorage.prototype = {
 module.exports = RedisStorage;
 
 
-function processCallScore(score) {
+function getStateFromScore(score) {
   switch (score) {
     case 1:
       return constants.CALL_STATES.INIT;
