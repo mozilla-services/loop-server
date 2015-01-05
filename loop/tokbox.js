@@ -70,18 +70,28 @@ TokBox.prototype = {
         callback(null, session, opentok);
     });
   },
+
   getSessionToken: function(sessionId, role, options) {
     options = options || {};
     var now = time();
     var expirationTime = now + this.tokenDuration;
 
-    return this._opentok["default"].generateToken(
+    var opentok;
+
+    if (this.credentials.hasOwnProperty(options.channel)) {
+      opentok = this._opentok[options.channel];
+    } else {
+      opentok = this._opentok["default"];
+    }
+
+    return opentok.generateToken(
       sessionId, {
         role: role,
         expireTime: expirationTime
       }
     );
   },
+
   getSessionTokens: function(options, callback) {
     var self = this;
 
@@ -111,6 +121,7 @@ TokBox.prototype = {
       });
     });
   },
+
   ping: function(options, callback) {
     if (callback === undefined) {
       callback = options;
