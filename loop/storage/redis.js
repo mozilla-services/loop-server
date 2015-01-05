@@ -59,7 +59,6 @@ function RedisStorage(options, settings) {
 
 RedisStorage.prototype = {
 
-
   /**
    * Adds a set of simple push urls to an user (one per simple push topic).
    *
