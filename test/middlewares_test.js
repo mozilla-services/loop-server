@@ -31,6 +31,7 @@ describe("metrics middleware", function() {
     req.user = 'uuid';
     req.callId = '1234';
     req.callUrlData = {userMac: 'userMacHere'};
+    req.roomStorageData = {participants: new Array(5)}
     res.status(200).json();
   });
 
@@ -91,6 +92,7 @@ describe("metrics middleware", function() {
         expect(logged.calleeId).to.eql('userMacHere');
         expect(logged.callerId).to.eql('uuid');
         expect(logged.action).to.eql('join');
+        expect(logged.participants).to.eql(5);
         done();
       });
   });

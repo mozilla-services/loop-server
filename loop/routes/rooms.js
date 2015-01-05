@@ -351,8 +351,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 storage.getRoomParticipants(req.token, function(err,
                   participants) {
                     if (res.serverError(err)) return;
-                    var roomMaxSize = req.roomStorageData.maxSize;
 
+                    // Room participants are used by metrics
+                    req.roomStorageData.participants = participants;
+
+                    var roomMaxSize = req.roomStorageData.maxSize;
                     if (!canJoinRoom(
                           participants, roomMaxSize,
                           req.roomStorageData.roomOwnerHmac,
