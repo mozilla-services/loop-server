@@ -511,7 +511,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           status = 207;
         }
 
-        async.map(roomsToDelete, storage.deleteRoomData.bind(storage), function(err) {
+        storage.deleteRoomsData(roomsToDelete, function(err) {
           if (res.serverError(err)) return;
           var now = time();
           notifyOwner(req.user, now, function(err) {
@@ -531,5 +531,5 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           });
         });
       });
-  });
+    });
 };

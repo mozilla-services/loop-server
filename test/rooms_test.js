@@ -1645,6 +1645,19 @@ describe("/rooms", function() {
           done();
       });
     });
+
+    it("should return a 503 in case of storage error.", function(done) {
+      sandbox.stub(storage, "getUserRooms", function(roomTokens, callback) {
+        callback("error");
+      });
+
+      deleteRooms(hawkCredentials, ["foo"], 503).end(function(err, res) {
+          if (err) throw err;
+          expectFormattedError(res, 503, errors.BACKEND,
+            "Service Unavailable");
+          done();
+      });
+    });
   });
 
   describe("GET /rooms", function() {
