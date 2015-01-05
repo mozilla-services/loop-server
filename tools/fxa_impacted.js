@@ -4,8 +4,21 @@ var async = require('async');
 var redis = require("redis");
 
 var storage = conf.get("storage");
-
 var hawkIdSecret = conf.get("hawkIdSecret");
+
+var args = process.argv.slice(2);
+
+if (args.indexOf('--help') >= 0) {
+  console.log("USAGE: " + process.argv.slice(0, 2).join(' ') + " [--delete]");
+  process.exit(0);
+}
+
+var delKeys = false;
+
+if (args.indexOf('--delete') >= 0) {
+  delKeys = true;
+}
+
 
 if (storage.engine === "redis") {
   var options = storage.settings;
@@ -16,12 +29,20 @@ if (storage.engine === "redis") {
   );
   if (options.db) client.select(options.db);
 
+  var toDelete = [];
+
   client.keys("userid.*", function(err, keys){
     console.log("processing", keys.length, "keys");
     async.map(keys, function(key, done) {
-      client.ttl(key.replace("userid", "hawkuser"), function(err, ttl) {
+      var hawkUserKey = key.replace("userid", "hawkuser")
+      client.ttl(hawkUserKey, function(err, ttl) {
         var isImpacted = ttl === -2;
         if (isImpacted) {
+          if (delKeys) {
+            toDelete.push(key);
+            toDelete.push(key.replace("userid", "hawkuser"));
+          }
+
           process.stdout.write("i"); // This is an impacted user.
         } else {
           process.stdout.write(".");
@@ -32,8 +53,18 @@ if (storage.engine === "redis") {
       var impacted = results.reduce(function(total, current) {
         return total + (current === true);
       }, 0);
+
       console.log('\nnumber of impacted users', impacted, "over", results.length);
-      process.exit(0);
+
+      if (delKeys === true) {
+        client.del(toDelete, function(err) {
+          console.log('\nThe keys have been removed from the database');
+          process.exit(0);
+
+        });
+      } else {
+        process.exit(0);
+      }
     });
   });
 }
