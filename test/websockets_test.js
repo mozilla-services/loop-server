@@ -309,6 +309,60 @@ describe('websockets', function() {
           callId: callId
         }));
       });
+
+      it('should log only one termination reason in heka', function(done) {
+        caller.on('error', function(data) {
+          throw new Error('Error: ' + data);
+        });
+
+        caller.on('message', function() {
+          if (calleeMsgCount >= 2) {
+            // The heka logger should have been called with the reason.
+            expect(logs).to.length.gte(1);
+            var last = logs[logs.length - 1];
+            expect(last.callId).to.not.eql(undefined);
+            expect(last.op).to.eql('websocket.summary');
+            expect(last.state).to.eql('terminated');
+            expect(last.reason).to.eql('busy');
+            logs.forEach(function(log) {
+              ['messageType', 'callId', 'op', 'time'].forEach(function(property) {
+                expect(log).to.have.property(property);
+              });
+              Object.keys(log).forEach(function(key) {
+                expect(['messageType', 'callId', 'op', 'time', 'state', 'reason',
+                        'auth', 'closeConnection', 'event']).to.include(key);
+              });
+            });
+            done();
+          }
+          calleeMsgCount++;
+        });
+
+        callee.on('message', function() {
+          // Send process terminate
+          callee.send(JSON.stringify({
+            messageType: constants.MESSAGE_TYPES.ACTION,
+            auth: "calleeToken",
+            callId: callId,
+            event: "terminate",
+            reason: "busy"
+          }));
+        });
+
+        // Caller registers to the socket.
+        caller.send(JSON.stringify({
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          auth: "callerToken",
+          callId: callId
+        }));
+
+        // Callee registers to the socket.
+        callee.send(JSON.stringify({
+          messageType: constants.MESSAGE_TYPES.HELLO,
+          auth: "calleeToken",
+          callId: callId
+        }));
+      });
     });
 
     it('should broadcast progress terminated:closed to other interested parties',
