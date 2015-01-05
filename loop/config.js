@@ -318,13 +318,6 @@ var conf = convict({
       default: 10
     }
   },
-  // XXX - Bug 1069208 — Remove this two month after 0.13 release
-  // (January 2015)
-  maxSimplePushUrls: {
-    doc: "The maximum number of simple-push urls stored for an user",
-    format: Number,
-    default: 10
-  },
   progressURLEndpoint: {
     doc: "The endpoint to use for the progressURL.",
     format: String,

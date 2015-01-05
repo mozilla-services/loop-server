@@ -1101,20 +1101,6 @@ describe("Storage", function() {
       });
     });
 
-    // XXX - Bug 1069208 — Remove this two months after 0.13 release
-    // (January 2015)
-    it("should be able to retrieve old calls simplePushURLs", function(done) {
-      storage._client.lpush('spurl.' + userMac, "http://spurl.com", function(err) {
-        if (err) throw err;
-        storage.getUserSimplePushURLs(userMac, function(err, urls) {
-          if (err) throw err;
-          expect(urls.calls).to.length(1);
-          expect(urls.calls[0]).to.eql("http://spurl.com");
-          done();
-        });
-      });
-    });
-
     it("should handle storage errors correctly.", function(done) {
       sandbox.stub(storage._client, "smembers",
         function(key, callback){

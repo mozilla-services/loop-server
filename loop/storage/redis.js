@@ -17,7 +17,7 @@ var isUndefined = function(field, fieldName, callback) {
     return true;
   }
   return false;
-}
+};
 
 function encode(data) {
   return JSON.stringify(data);
@@ -59,7 +59,6 @@ function RedisStorage(options, settings) {
 
 RedisStorage.prototype = {
 
-
   /**
    * Adds a set of simple push urls to an user (one per simple push topic).
    *
@@ -81,19 +80,10 @@ RedisStorage.prototype = {
       }
     });
 
-    // Remove any previous storage spurl.{userMac} LIST
-    // XXX - Bug 1069208 — Remove this two months after 0.13 release
-    // (January 2015)
-    self._client.del('spurl.' + userMac, function(err) {
-      if (err) return callback(err);
-      // Manage each session's SP urls in a hash, and maintain a list of sessions
-      // with a simple push url per user.
-      self._client.hmset('spurls.' + userMac + '.' + hawkIdHmac, simplePushURLs,
-        function(err) {
-          if (err) return callback(err);
-          self._client.sadd('spurls.' + userMac, hawkIdHmac, callback);
-        });
-    });
+    var multi = self._client.multi();
+    multi.hmset('spurls.' + userMac + '.' + hawkIdHmac, simplePushURLs);
+    multi.sadd('spurls.' + userMac, hawkIdHmac);
+    multi.exec(callback);
   },
 
   /**
@@ -115,37 +105,24 @@ RedisStorage.prototype = {
       output[topic] = [];
     });
 
-    // Remove any previous storage spurl.{userHmac} LIST
-    // XXX - Bug 1069208 — Remove this two months after 0.13 release
-    // (January 2015)
-    self._client.lrange(
-      'spurl.' + userMac, 0, this._settings.maxSimplePushUrls,
-      function(err, SPcallUrls) {
+    self._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
+      if (err) return callback(err);
+      async.map(hawkMacIds, function(hawkMacId, done) {
+        self._client.hgetall('spurls.' + userMac + '.' + hawkMacId, done);
+      }, function(err, simplePushMappings) {
         if (err) return callback(err);
-        SPcallUrls.forEach(function(item) {
-          if (output.calls.indexOf(item) === -1)
-          output.calls.push(item);
-        });
-        self._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
-          if (err) return callback(err);
-          async.map(hawkMacIds, function(hawkMacId, done) {
-            self._client.hgetall('spurls.' + userMac + '.' + hawkMacId, done);
-          },
-          function(err, simplePushMappings) {
-            if (err) return callback(err);
-            simplePushMappings.forEach(function(mapping) {
-              if (mapping) {
-                SIMPLE_PUSH_TOPICS.forEach(function(topic) {
-                  if (mapping.hasOwnProperty(topic) && output[topic].indexOf(mapping[topic]) === -1) {
-                    output[topic].push(mapping[topic]);
-                  }
-                });
+        simplePushMappings.forEach(function(mapping) {
+          if (mapping) {
+            SIMPLE_PUSH_TOPICS.forEach(function(topic) {
+              if (mapping.hasOwnProperty(topic) && output[topic].indexOf(mapping[topic]) === -1) {
+                output[topic].push(mapping[topic]);
               }
             });
-            callback(null, output);
-          });
+          }
         });
+        callback(null, output);
       });
+    });
   },
 
 
