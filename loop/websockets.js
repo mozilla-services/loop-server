@@ -494,7 +494,7 @@ MessageHandler.prototype = {
             // socket.
             if (connectedDevices === 1) {
               // We want to broadcast the state only if there is no
-              // other terminate reason.
+              // other TERMINATED reason.
               self.storage.getCallState(session.callId, function(err, state) {
                 if (err === null && state !== null &&
                     state !== constants.CALL_STATES.TERMINATED) {
