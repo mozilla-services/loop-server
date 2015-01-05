@@ -1549,7 +1549,7 @@ describe("/rooms", function() {
     });
   });
 
-  describe.only("PATCH /rooms", function() {
+  describe("PATCH /rooms", function() {
     it("should have the requireHawkSession middleware.", function() {
       expect(getMiddlewares(apiRouter, 'patch', '/rooms'))
         .include(requireHawkSession);
@@ -1562,7 +1562,7 @@ describe("/rooms", function() {
 
         joinRoom(hawkCredentials, roomToken).end(function(err) {
           if (err) throw err;
-          deleteRooms(hawkCredentials, [roomToken]).end(function(err, res) {
+          deleteRooms(hawkCredentials, [roomToken]).end(function(err) {
             if (err) throw err;
             storage.getRoomParticipants(roomToken, function(err, participants) {
               if (err) throw err;
@@ -1582,7 +1582,7 @@ describe("/rooms", function() {
           if (err) throw err;
           var roomToken2 = res.body.roomToken;
           requests = [];
-          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err, res) {
+          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err) {
             if (err) throw err;
             expect(requests).to.length(1);
             getRoomInfo(hawkCredentials, roomToken, 404).end(function(err) {
@@ -1637,6 +1637,14 @@ describe("/rooms", function() {
       });
     });
 
+    it("should return a 400 if no room where sent.", function(done) {
+      deleteRooms(hawkCredentials, [], 400).end(function(err, res) {
+          if (err) throw err;
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+            "deleteRoomTokens should not be empty.");
+          done();
+      });
+    });
   });
 
   describe("GET /rooms", function() {
