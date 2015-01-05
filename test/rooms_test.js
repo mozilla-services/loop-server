@@ -557,6 +557,53 @@ describe("/rooms", function() {
      });
     });
 
+    it("should handle a specific channel.", function(done) {
+      supertest(app)
+      .post('/rooms')
+      .type('json')
+      .hawk(hawkCredentials)
+      .send({
+        roomOwner: "Alexis",
+        roomName: "UX discussion",
+        maxSize: "3",
+        expiresIn: "10",
+        channel: "nightly"
+      })
+      .expect(201)
+      .end(function(err, res) {
+        if (err) throw err;
+        expect(res.body.roomToken).to.not.be.undefined;
+        expect(res.body.roomUrl).to.eql(
+          conf.get('rooms').webAppUrl.replace('{token}', res.body.roomToken));
+
+        storage.getRoomData(res.body.roomToken, function(err, roomData) {
+          if (err) throw err;
+
+          expect(roomData.expiresAt).to.not.eql(undefined);
+          delete roomData.expiresAt;
+          expect(roomData.creationTime).to.not.eql(undefined);
+          delete roomData.creationTime;
+          expect(roomData.updateTime).to.not.eql(undefined);
+          delete roomData.updateTime;
+
+          expect(roomData).to.eql({
+            apiKey: tokBox._opentok.default.apiKey,
+            sessionId: sessionId,
+            channel: "nightly",
+            roomName: "UX discussion",
+            roomToken: res.body.roomToken,
+            maxSize: 3,
+            roomOwner: "Alexis",
+            expiresIn: 10,
+            roomOwnerHmac: userHmac
+          });
+
+          expect(requests).to.length(1);
+          done();
+        });
+     });
+    });
+
     it("should not use two times the same token");
   });
 
