@@ -201,25 +201,27 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       roomData.updateTime = now;
       roomData.expiresAt = now + roomData.expiresIn * tokenlib.ONE_HOUR;
       roomData.roomOwnerHmac = req.user;
+      roomData.channel = req.body.channel || "default";
 
-      tokBox.getSession(function(err, session, opentok) {
-        if (res.serverError(err)) return;
-
-        roomData.sessionId = session.sessionId;
-        roomData.apiKey = opentok.apiKey;
-
-        storage.setUserRoomData(req.user, token, roomData, function(err) {
+      tokBox.getSession({channel: roomData.channel},
+        function(err, session, opentok) {
           if (res.serverError(err)) return;
-          notifyOwner(req.user, roomData.updateTime, function(err) {
+
+          roomData.sessionId = session.sessionId;
+          roomData.apiKey = opentok.apiKey;
+
+          storage.setUserRoomData(req.user, token, roomData, function(err) {
             if (res.serverError(err)) return;
-            res.status(201).json({
-              roomToken: token,
-              roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-              expiresAt: roomData.expiresAt
+            notifyOwner(req.user, roomData.updateTime, function(err) {
+              if (res.serverError(err)) return;
+              res.status(201).json({
+                roomToken: token,
+                roomUrl: roomsConf.webAppUrl.replace('{token}', token),
+                expiresAt: roomData.expiresAt
+              });
             });
           });
         });
-      });
     });
 
   /**
@@ -339,11 +341,13 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                           "clientMaxSize should be a number.");
                 return;
               }
+              var channel = req.roomStorageData.channel;
               var ttl = roomsConf.participantTTL;
               var role = req.user === roomOwnerHmac ? 'moderator' : 'publisher';
               var sessionToken = tokBox.getSessionToken(
                 req.roomStorageData.sessionId,
-                role
+                role,
+                {channel: channel}
               );
 
               function next(err) {

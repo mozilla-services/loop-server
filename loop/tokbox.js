@@ -70,7 +70,8 @@ TokBox.prototype = {
         callback(null, session, opentok);
     });
   },
-  getSessionToken: function(sessionId, role) {
+  getSessionToken: function(sessionId, role, options) {
+    options = options || {};
     var now = time();
     var expirationTime = now + this.tokenDuration;
 

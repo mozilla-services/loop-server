@@ -542,6 +542,7 @@ describe("/rooms", function() {
           expect(roomData).to.eql({
             apiKey: tokBox._opentok.default.apiKey,
             sessionId: sessionId,
+            channel: "default",
             roomName: "UX discussion",
             roomToken: res.body.roomToken,
             maxSize: 3,
