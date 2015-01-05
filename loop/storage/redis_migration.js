@@ -18,7 +18,8 @@ var SUPPORTED_OPERATIONS = [
 
 var MULTI_OPERATIONS = [
   'pttl', 'ttl', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
-  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del'
+  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del',
+  'hgetall', 'get', 'scard'
 ];
 
 /**
@@ -78,7 +79,7 @@ function createClient(options) {
         });
       });
     });
-  }
+  };
 
   /**
    * Decorator which, given an operation, returns a function that will
@@ -100,7 +101,7 @@ function createClient(options) {
       var callOriginalCommand = function(err){
         if (err) { return callback(err); }
         new_db[operation].apply(new_db, originalArguments);
-      }
+      };
 
       // In case we have a keys or a mget command, since we have multiple keys
       // involved, copy all of them before running the original command on the
@@ -116,7 +117,7 @@ function createClient(options) {
         copyKey(key, callOriginalCommand);
       }
     };
-  }
+  };
 
   // For each of the supported operations, proxy the call the the migration
   // logic.
@@ -128,7 +129,7 @@ function createClient(options) {
   Proxy.prototype.flushdb = function(callback) {
     if (conf.get('env') !== 'test') {
       callback();
-      return
+      return;
     }
     old_db.flushdb(function(err) {
       if (err) return callback(err);
@@ -167,19 +168,23 @@ function createClient(options) {
         operations.push([
           operation, Array.prototype.slice.call(arguments)
         ]);
-      }
+      };
     });
 
     Multi.prototype.exec = function(callback){
-      async.eachSeries(operations, function(operation, done){
+      async.mapSeries(operations, function(operation, done){
         var operationName = operation[0];
         var operationArguments = operation[1];
         operationArguments.push(done);
 
-        var executor = migrateAndExecute(operationName);
-        executor.apply(self, operationArguments);
+        if (operationName === "del") {
+          self.del.apply(self, operationArguments);
+        } else {
+          var executor = migrateAndExecute(operationName);
+          executor.apply(self, operationArguments);
+        }
       }, callback);
-    }
+    };
     return new Multi();
   };
 

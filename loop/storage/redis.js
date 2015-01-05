@@ -107,9 +107,13 @@ RedisStorage.prototype = {
 
     self._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
       if (err) return callback(err);
-      async.map(hawkMacIds, function(hawkMacId, done) {
-        self._client.hgetall('spurls.' + userMac + '.' + hawkMacId, done);
-      }, function(err, simplePushMappings) {
+      var multi = self._client.multi();
+
+      hawkMacIds.forEach(function(hawkMacId) {
+        multi.hgetall('spurls.' + userMac + '.' + hawkMacId);
+      });
+
+      multi.exec(function(err, simplePushMappings) {
         if (err) return callback(err);
         simplePushMappings.forEach(function(mapping) {
           if (mapping) {
@@ -139,14 +143,10 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var self = this;
-    self._client.srem('spurls.' + userMac, hawkIdHmac, function(err, deleted) {
-      if (err) return callback(err);
-      if (deleted > 0) {
-        self._client.del('spurls.' + userMac + '.' + hawkIdHmac, callback);
-      } else {
-        callback(null);
-      }
-    });
+    var multi = self._client.multi();
+    multi.srem('spurls.' + userMac, hawkIdHmac);
+    multi.del('spurls.' + userMac + '.' + hawkIdHmac);
+    multi.exec(callback);
   },
 
   /**
@@ -162,9 +162,11 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     this._client.smembers('spurls.' + userMac, function(err, hawkMacIds) {
       if (err) return callback(err);
-      async.each(hawkMacIds, function(hawkIdHmac, done) {
-        self._client.del('spurls.' + userMac + '.' + hawkIdHmac, done);
-      }, function(err) {
+      var multi = self._client.multi();
+      hawkMacIds.forEach(function(hawkIdHmac) {
+        multi.del('spurls.' + userMac + '.' + hawkIdHmac);
+      });
+      multi.exec(function(err) {
         if (err) return callback(err);
         self._client.del('spurls.' + userMac, callback);
       });
@@ -189,18 +191,18 @@ RedisStorage.prototype = {
     var data = clone(urlData);
     data.userMac = userMac;
 
+    var multi = self._client.multi();
     // In that case use setex to add the metadata of the url.
-    this._client.setex(
+    multi.setex(
       'callurl.' + callUrlId,
       urlData.expires - time(),
-      encode(data),
-      function(err) {
-        if (err) return callback(err);
-        self._client.sadd(
-          'userUrls.' + userMac,
-          'callurl.' + callUrlId, callback
-        );
-      });
+      encode(data)
+    );
+    multi.sadd(
+      'userUrls.' + userMac,
+      'callurl.' + callUrlId
+    );
+    multi.exec(callback);
   },
 
   /**
@@ -276,10 +278,10 @@ RedisStorage.prototype = {
     if (isUndefined(userMac, "userMac", callback)) return;
     self._client.smembers('userUrls.' + userMac, function(err, calls) {
       if (err) return callback(err);
-      self._client.del(calls, function(err) {
-        if (err) return callback(err);
-        self._client.del('userUrls.' + userMac, callback);
-      });
+      var multi = self._client.multi();
+      multi.del(calls);
+      multi.del('userUrls.' + userMac);
+      multi.exec(callback);
     });
   },
 
@@ -356,18 +358,16 @@ RedisStorage.prototype = {
     call = clone(call);
     var state = call.callState;
     delete call.callState;
-    this._client.setex(
-      'call.' + call.callId,
-      this._settings.callDuration,
-      encode(call),
-      function(err) {
-        if (err) return callback(err);
-        self.setCallState(call.callId, state, function(err) {
-          if (err) return callback(err);
-          self._client.sadd('userCalls.' + userMac,
-                            'call.' + call.callId, callback);
-        });
-      });
+
+    var multi = self._client.multi();
+    multi.setex(
+      'call.' + call.callId, this._settings.callDuration, encode(call)
+    );
+    multi.sadd('userCalls.' + userMac, 'call.' + call.callId);
+    multi.exec(function(err) {
+      if (err) return callback(err);
+      self.setCallState(call.callId, state, callback);
+    });
   },
 
   /**
@@ -388,18 +388,16 @@ RedisStorage.prototype = {
       }
       self._client.mget(members, function(err, calls) {
         if (err) return callback(err);
-        self._client.del(members, function(err) {
-          if (err) return callback(err);
-          async.map(calls, function(call, cb) {
-            decode(call, function(err, call) {
-              if (err) return cb(err);
-              self._client.del('callstate.' + call.callId, cb);
-            });
-          }, function(err) {
+        var multi = self._client.multi();
+        multi.del(members);
+        calls.forEach(function(call) {
+          decode(call, function(err, call) {
+            // Handle the JSON decode error and stop the transaction
             if (err) return callback(err);
-            self._client.del('userCalls.' + userMac, callback);
+            multi.del('callstate.' + call.callId);
           });
         });
+        multi.exec(callback);
       });
     });
   },
@@ -438,15 +436,20 @@ RedisStorage.prototype = {
           });
 
           function getState() {
-            async.map(pendingCalls, function(call, cb) {
-              self.getCallState(call.callId, function(err, state) {
-                if (err) return cb(err);
-                call.callState = state;
-                cb(null, call);
-              });
-            }, function(err, results) {
+            var multi = self._client.multi();
+            pendingCalls.forEach(function(call) {
+              multi.scard('callstate.' + call.callId);
+            });
+            multi.exec(function(err, callStates) {
               if (err) return callback(err);
-              callback(null, results);
+              for (var i = 0; i < pendingCalls.length; i++) {
+                var callState = getStateFromScore(callStates[i]);
+                if (callState === null) {
+                  callState = constants.CALL_STATES.TERMINATED;
+                }
+                pendingCalls[i].callState = callState;
+              }
+              callback(null, pendingCalls);
             });
           }
 
@@ -460,27 +463,6 @@ RedisStorage.prototype = {
           getState();
         });
       });
-    });
-  },
-
-  /**
-   * Returns the expiricy of the call state (in seconds).
-   * In case the call is already expired, returns -1.
-   *
-   * @param {String}    callId, the call id;
-   * @param {Function} A callback that will be called once the action
-   *                    had been processed.
-   **/
-  getCallStateTTL: function(callId, callback) {
-    if (isUndefined(callId, "callId", callback)) return;
-    this._client.pttl('callstate.' + callId, function(err, ttl) {
-      if (err) return callback(err);
-      if (ttl <= 1) {
-        ttl = -1;
-      } else {
-        ttl = ttl / 1000;
-      }
-      callback(null, ttl);
     });
   },
 
@@ -536,10 +518,10 @@ RedisStorage.prototype = {
 
     // Internally, this uses a redis set to be sure we don't store twice the
     // same call state.
-    self._client.sadd(key, state, function(err) {
-      if (err) return callback(err);
-      self._client.pexpire(key, ttl * 1000, callback);
-    });
+    var multi = self._client.multi();
+    multi.sadd(key, state);
+    multi.pexpire(key, ttl * 1000);
+    multi.exec(callback);
   },
 
   /**
@@ -556,44 +538,12 @@ RedisStorage.prototype = {
     if (isUndefined(callId, "callId", callback)) return;
     var self = this;
 
-    // Get the state of a given call. Because of how we store this information
-    // (in a redis set), count the number of elements in the set to know what
-    // the current state is.
-    // State can be (in order) init, alerting, connecting, half-connected,
-    // connected. In case of terminate, nothing is stored in the database (the
-    // key is dropped).
-    self._client.scard('callstate.' + callId, function(err, score) {
+    self.getCall(callId, function(err, call) {
       if (err) return callback(err);
-      switch (score) {
-      case 1:
-        callback(null, constants.CALL_STATES.INIT);
-        break;
-      case 2:
-        callback(null, constants.CALL_STATES.HALF_INITIATED);
-        break;
-      case 3:
-        callback(null, constants.CALL_STATES.ALERTING);
-        break;
-      case 4:
-        callback(null, constants.CALL_STATES.CONNECTING);
-        break;
-      case 5:
-        callback(null, constants.CALL_STATES.HALF_CONNECTED);
-        break;
-      case 6:
-        callback(null, constants.CALL_STATES.CONNECTED);
-        break;
-      default:
-        // Ensure a call exists if nothing is stored on this key.
-        self.getCall(callId, false, function(err, result) {
-          if (err) return callback(err);
-          if (result !== null) {
-            callback(null, constants.CALL_STATES.TERMINATED);
-            return;
-          }
-          callback(null, null);
-        });
+      if (call === null) {
+        return callback(null, null);
       }
+      callback(null, call.callState);
     });
   },
 
@@ -611,10 +561,10 @@ RedisStorage.prototype = {
     if (isUndefined(type, "type", callback)) return;
     var key = 'call.devices.' + callId + '.' + type;
 
-    self._client.incr(key, function(err) {
-      if (err) return callback(err);
-      self._client.expire(key, self._settings.callDuration, callback);
-    });
+    var multi = self._client.multi();
+    multi.incr(key);
+    multi.expire(key, self._settings.callDuration);
+    multi.exec(callback);
   },
 
   /**
@@ -631,10 +581,10 @@ RedisStorage.prototype = {
     if (isUndefined(type, "type", callback)) return;
     var key = 'call.devices.' + callId + '.' + type;
 
-    self._client.decr(key, function(err) {
-      if (err) return callback(err);
-      self._client.expire(key, self._settings.callDuration, callback);
-    });
+    var multi = self._client.multi();
+    multi.decr(key);
+    multi.expire(key, self._settings.callDuration);
+    multi.exec(callback);
   },
 
   /**
@@ -700,28 +650,31 @@ RedisStorage.prototype = {
    * @param {Boolean}   getState, if getState is set to false, don't get the state;
    * @param {Function}  A callback that will be called with the call.
    **/
-  getCall: function(callId, getState, callback) {
-    if (callback === undefined) {
-      callback = getState;
-      getState = true;
-    }
+  getCall: function(callId, callback) {
     if (isUndefined(callId, "callId", callback)) return;
 
     var self = this;
-    this._client.get('call.' + callId, function(err, data) {
+    var multi = self._client.multi();
+    multi.get('call.' + callId);
+    multi.scard('callstate.' + callId);
+    multi.exec(function(err, data) {
       if (err) return callback(err);
-      decode(data, function(err, call) {
-        if (err) return callback(err);
-        if (call !== null && getState === true) {
-          self.getCallState(callId, function(err, state) {
-            if (err) return callback(err);
-            call.callState = state;
-            callback(err, call);
-          });
-          return;
-        }
-        callback(err, call);
-      });
+
+      var callData = data[0];
+      var score = data[1];
+
+      if (callData !== null) {
+        decode(callData, function(err, call) {
+          if (err) return callback(err);
+          call.callState = getStateFromScore(score);
+          if (call.callState === null) {
+            call.callState = constants.CALL_STATES.TERMINATED;
+          }
+          callback(null, call);
+        });
+        return;
+      }
+      callback(null, null);
     });
   },
 
@@ -847,24 +800,13 @@ RedisStorage.prototype = {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
     var self = this;
-    self._client.expire(
-      'userid.' + hawkIdHmac,
-      self._settings.hawkSessionDuration,
-      function(err) {
-        if (err) return callback(err);
-        self._client.expire(
-          'hawk.' + hawkIdHmac,
-          self._settings.hawkSessionDuration,
-          function(err) {
-            if (err) return callback(err);
-            self._client.expire(
-              'hawkuser.' + hawkIdHmac,
-              self._settings.hawkSessionDuration,
-              callback
-            );
-          }
-        );
-      });
+    var multi = self._client.multi();
+    var hawkSessionDuration = self._settings.hawkSessionDuration;
+
+    multi.expire('userid.' + hawkIdHmac, hawkSessionDuration);
+    multi.expire('hawk.' + hawkIdHmac, hawkSessionDuration);
+    multi.expire('hawkuser.' + hawkIdHmac, hawkSessionDuration);
+    multi.exec(callback);
   },
 
   /**
@@ -986,18 +928,19 @@ RedisStorage.prototype = {
     var data = clone(roomData);
     data.roomToken = roomToken;
     var self = this;
+    var multi = self._client.multi();
+
     // In that case use setex to add the metadata of the url.
-    this._client.setex(
+    multi.setex(
       'room.' + roomToken,
       data.expiresAt - data.updateTime,
-      encode(data),
-      function(err) {
-        if (err) return callback(err);
-        self._client.sadd(
-          'userRooms.' + userMac,
-          'room.' + roomToken, callback
-        );
-      });
+      encode(data)
+    );
+    multi.sadd(
+      'userRooms.' + userMac,
+      'room.' + roomToken
+    );
+    multi.exec(callback);
   },
 
   /**
@@ -1102,22 +1045,17 @@ RedisStorage.prototype = {
     var self = this;
     self.getRoomData(roomToken, function(err, data) {
       if (err) return callback(err);
-      self._client.del('room.' + roomToken, function(err) {
+      self.deleteRoomParticipants(roomToken, function(err) {
         if (err) return callback(err);
-        self.deleteRoomParticipants(roomToken, function(err) {
-          if (err) return callback(err);
-          self._client.hsetnx(
-            'room.deleted.' + data.roomOwnerHmac,
-            roomToken, time(),
-            function(err) {
-              if (err) return callback(err);
-              self._client.expire(
-                'room.deleted.' + data.roomOwnerHmac,
-                self._settings.roomsDeletedTTL,
-                callback
-              );
-            });
-        });
+        var multi = self._client.multi();
+        multi.del('room.' + roomToken);
+        multi.hsetnx(
+          'room.deleted.' + data.roomOwnerHmac,
+          roomToken, time());
+        multi.expire(
+          'room.deleted.' + data.roomOwnerHmac,
+          self._settings.roomsDeletedTTL);
+        multi.exec(callback);
       });
     });
   },
@@ -1347,3 +1285,23 @@ RedisStorage.prototype = {
 };
 
 module.exports = RedisStorage;
+
+
+function getStateFromScore(score) {
+  switch (score) {
+    case 1:
+      return constants.CALL_STATES.INIT;
+    case 2:
+      return constants.CALL_STATES.HALF_INITIATED;
+    case 3:
+      return constants.CALL_STATES.ALERTING;
+    case 4:
+      return constants.CALL_STATES.CONNECTING;
+    case 5:
+      return constants.CALL_STATES.HALF_CONNECTED;
+    case 6:
+      return constants.CALL_STATES.CONNECTED;
+    default:
+      return null;
+  }
+}

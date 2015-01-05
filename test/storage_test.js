@@ -624,27 +624,32 @@ describe("Storage", function() {
 
       describe("#setCallState", function() {
         it("should set the call state", function(done) {
-          storage.setCallState("12345", constants.CALL_STATES.INIT, 10,
-            function(err) {
-              if (err) throw err;
-              storage.getCallState("12345", function(err, state) {
+          storage.addUserCall(userMac, call, function(err) {
+            if (err) throw err;
+            storage.setCallState(call.callId, constants.CALL_STATES.INIT, 10,
+              function(err) {
                 if (err) throw err;
-                expect(state).to.eql(constants.CALL_STATES.INIT);
-                done();
+                storage.getCallState(call.callId, function(err, state) {
+                  if (err) throw err;
+                  expect(state).to.eql(constants.CALL_STATES.INIT);
+                  done();
+                });
               });
-            });
+          });
         });
 
         it("should check the states are valid before storing them",
           function(done) {
-            storage.setCallState(
-              "12345",
-              constants.CALL_STATES.TERMINATED + ":unauthorized",
-              function(err) {
-                expect(err).to.not.eql(null);
-                expect(err.message).match(/should be one of/);
-                done();
-              });
+            storage.addUserCall(userMac, call, function(err) {
+              if (err) throw err;
+              storage.setCallState(call.callId,
+                constants.CALL_STATES.TERMINATED + ":unauthorized",
+                function(err) {
+                  expect(err).to.not.eql(null);
+                  expect(err.message).match(/should be one of/);
+                  done();
+                });
+            });
           });
       });
 
