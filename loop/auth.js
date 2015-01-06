@@ -38,7 +38,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     storage.getHawkUser(req.hawkIdHmac, function(err, user) {
       if (res.serverError(err)) return;
 
-      storage.touchHawkSession(req.hawkIdHmac);
+      storage.touchHawkSession(req.user, req.hawkIdHmac);
       // If an identity is defined for this hawk session, use it.
       if (user !== null) {
         req.user = user;

@@ -80,9 +80,15 @@ RedisStorage.prototype = {
       }
     });
 
+    var ttl = this._settings.hawkSessionDuration;
     var multi = self._client.multi();
+
     multi.hmset('spurls.' + userMac + '.' + hawkIdHmac, simplePushURLs);
+    multi.expire('spurls.' + userMac + '.' + hawkIdHmac, ttl);
+
     multi.sadd('spurls.' + userMac, hawkIdHmac);
+    multi.expire('spurls.' + userMac, ttl);
+
     multi.exec(callback);
   },
 
@@ -202,6 +208,7 @@ RedisStorage.prototype = {
       'userUrls.' + userMac,
       'callurl.' + callUrlId
     );
+    multi.expire('userUrls.' + userMac, self._settings.hawkSessionDuration);
     multi.exec(callback);
   },
 
@@ -364,6 +371,7 @@ RedisStorage.prototype = {
       'call.' + call.callId, this._settings.callDuration, encode(call)
     );
     multi.sadd('userCalls.' + userMac, 'call.' + call.callId);
+    multi.expire('userCalls.' + userMac, self._settings.hawkSessionDuration);
     multi.exec(function(err) {
       if (err) return callback(err);
       self.setCallState(call.callId, state, callback);
@@ -796,16 +804,23 @@ RedisStorage.prototype = {
    * @param {Function} A callback that will be called when the action
    *                   has been processed.
    **/
-  touchHawkSession: function(hawkIdHmac, callback) {
+  touchHawkSession: function(userMac, hawkIdHmac, callback) {
+    if (isUndefined(userMac, "hawkIdHmac", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
 
     var self = this;
     var multi = self._client.multi();
-    var hawkSessionDuration = self._settings.hawkSessionDuration;
+    var ttl = self._settings.hawkSessionDuration;
 
-    multi.expire('userid.' + hawkIdHmac, hawkSessionDuration);
-    multi.expire('hawk.' + hawkIdHmac, hawkSessionDuration);
-    multi.expire('hawkuser.' + hawkIdHmac, hawkSessionDuration);
+    multi.expire('userid.' + hawkIdHmac, ttl);
+    multi.expire('hawk.' + hawkIdHmac, ttl);
+    multi.expire('hawkuser.' + hawkIdHmac, ttl);
+    multi.expire('spurls.' + userMac, ttl);
+    multi.expire('spurls.' + userMac + '.' + hawkIdHmac, ttl);
+    multi.expire('userUrls.' + userMac, ttl);
+    multi.expire('userCalls.' + userMac, ttl);
+    multi.expire('userRooms.' + userMac, ttl);
+
     multi.exec(callback);
   },
 
@@ -942,6 +957,7 @@ RedisStorage.prototype = {
       'userRooms.' + userMac,
       'room.' + roomToken
     );
+    multi.expire('userRooms.' + userMac, self._settings.hawkSessionDuration);
     multi.exec(callback);
   },
 
@@ -1148,8 +1164,11 @@ RedisStorage.prototype = {
     data.hawkIdHmac = hawkIdHmac;
     data.expiresAt = time() + ttl;
 
-    this._client.hset('roomparticipants.' + roomToken, hawkIdHmac,
-                      encode(data), callback);
+    var multi = this._client.multi();
+    multi.hset('roomparticipants.' + roomToken, hawkIdHmac,
+               encode(data));
+    multi.expire('roomparticipants.' + roomToken, ttl);
+    multi.exec(callback);
   },
 
   /**
@@ -1179,6 +1198,7 @@ RedisStorage.prototype = {
         data.expiresAt = parseInt(now + ttl, 10);
         var multi = self._client.multi();
         multi.hset('roomparticipants.' + roomToken, hawkIdHmac, JSON.stringify(data));
+        multi.pexpire('roomparticipants.' + roomToken, ttl * 1000);
         multi.pexpire('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
                       ttl * 1000);
         multi.exec(function(err) {

@@ -1022,7 +1022,7 @@ describe("Storage", function() {
                 // Set the expiration at 0 so that it expires immediatly.
                 storage._settings.hawkSessionDuration = 0;
                 // Then, check that all the keys have been deleted.
-                storage.touchHawkSession(idHmac, function(err) {
+                storage.touchHawkSession(userMac, idHmac, function(err) {
                   if (err) throw err;
                   storage.getHawkSession(idHmac, function(err, data) {
                     if (err) throw err;
