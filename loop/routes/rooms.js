@@ -506,9 +506,6 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         } else if (roomsToDelete.length === 0) {
           // No rooms founds
           status = 404;
-        } else if (roomsToDelete.length !== roomTokens.length) {
-          // Multiple status
-          status = 207;
         }
 
         storage.deleteRoomsData(roomsToDelete, function(err) {
@@ -527,7 +524,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 responses[roomToken] = {code: 200};
               }
             });
-            res.status(status || 200).json({"responses": responses});
+            res.status(status || 207).json({"responses": responses});
           });
         });
       });

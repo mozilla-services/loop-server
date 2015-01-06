@@ -218,7 +218,7 @@ var deleteRooms = function(hawkCredentials, roomTokens, status) {
       deleteRoomTokens: roomTokens
     })
     .hawk(hawkCredentials)
-    .expect(status || 200);
+    .expect(status || 207);
 };
 
 describe("/rooms", function() {

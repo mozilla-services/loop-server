@@ -1066,16 +1066,18 @@ RedisStorage.prototype = {
 
     var multi2 = self._client.multi();
 
+    var handleDeletedNotification = function(err, data) {
+      if (err) return callback(err);
+      var key = 'room.deleted.' + data.roomOwnerHmac;
+      multi2.hsetnx(key, data.roomToken, time());
+      multi2.expire(key, self._settings.roomsDeletedTTL);
+    };
+
     multi.exec(function(err, results) {
       if (err) return callback(err);
       for (var i = 0; i < results.length; i++) {
         if (i % 3 === 0) {
-          decode(results[i], function(err, data) {
-            if (err) return callback(err);
-            var key = 'room.deleted.' + data.roomOwnerHmac;
-            multi2.hsetnx(key, data.roomToken, time());
-            multi2.expire(key, self._settings.roomsDeletedTTL);
-          });
+          decode(results[i], handleDeletedNotification);
         }
       }
       multi2.exec(callback);

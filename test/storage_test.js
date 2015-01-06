@@ -811,6 +811,7 @@ describe("Storage", function() {
             var roomToken2 = generateToken(conf.get("rooms").tokenSize);
             storage.setUserRoomData(userMac, roomToken2, roomData,
               function(err) {
+                if (err) throw err;
                 storage.deleteRoomsData([roomToken, roomToken2], function(err) {
                   if (err) throw err;
                   storage.getUserDeletedRooms(userMac, function(err, deletedRooms) {
