@@ -484,4 +484,52 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       );
     });
   });
+
+  /**
+   * Remove given rooms
+   **/
+  apiRouter.patch('/rooms', auth.requireHawkSession,
+    validators.requireParams('deleteRoomTokens'), function(req, res) {
+      var status;
+      var roomTokens = req.body.deleteRoomTokens;
+      storage.getUserRooms(req.user, function(err, userRooms) {
+        if (res.serverError(err)) return;
+
+        var roomsToDelete = userRooms.filter(function(room) {
+          return roomTokens.indexOf(room.roomToken) !== -1;
+        }).map(function(room) {
+          return room.roomToken;
+        });
+
+        if (roomTokens.length === 0) {
+          // No room tokens sent.
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "deleteRoomTokens should not be empty.");
+          return;
+        } else if (roomsToDelete.length === 0) {
+          // No rooms founds
+          status = 404;
+        }
+
+        storage.deleteRoomsData(roomsToDelete, function(err) {
+          if (res.serverError(err)) return;
+          var now = time();
+          notifyOwner(req.user, now, function(err) {
+            if (res.serverError(err)) return;
+
+            var responses = {};
+            roomTokens.forEach(function(roomToken) {
+              if (roomsToDelete.indexOf(roomToken) === -1) {
+                responses[roomToken] = {
+                  code: 404, errno: errors.INVALID_TOKEN, error: "Room not found."
+                };
+              } else {
+                responses[roomToken] = {code: 200};
+              }
+            });
+            res.status(status || 207).json({"responses": responses});
+          });
+        });
+      });
+    });
 };

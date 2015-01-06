@@ -157,22 +157,23 @@ function createClient(options) {
   // the operations (so we actually lose the benefit offered by multi).
   Proxy.prototype.multi = function() {
     var self = this;
-    var Multi = function(){};
-    var operations = [];
+    var Multi = function() {
+      this.operations = [];
+    };
 
     // Each time an operation is done on a multi, add it to a
     // list to execute.
 
     MULTI_OPERATIONS.forEach(function(operation) {
       Multi.prototype[operation] = function() {
-        operations.push([
+        this.operations.push([
           operation, Array.prototype.slice.call(arguments)
         ]);
       };
     });
 
     Multi.prototype.exec = function(callback){
-      async.mapSeries(operations, function(operation, done){
+      async.mapSeries(this.operations, function(operation, done){
         var operationName = operation[0];
         var operationArguments = operation[1];
         operationArguments.push(done);

@@ -1042,21 +1042,45 @@ RedisStorage.prototype = {
    **/
   deleteRoomData: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
+    this.deleteRoomsData([roomToken], callback);
+  },
+
+  /**
+   * Delete given rooms.
+   *
+   * @param {List}   List of roomTokens, the room identifiers;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
+  deleteRoomsData: function(roomTokens, callback) {
+    if (isUndefined(roomTokens, "roomTokens", callback)) return;
+
     var self = this;
-    self.getRoomData(roomToken, function(err, data) {
+    var multi = self._client.multi();
+
+    roomTokens.forEach(function(roomToken) {
+      multi.get('room.' + roomToken);
+      multi.del('room.' + roomToken);
+      multi.del('roomparticipants.' + roomToken);  // deleteRoomParticipants
+    });
+
+    var multi2 = self._client.multi();
+
+    var handleDeletedNotification = function(err, data) {
       if (err) return callback(err);
-      self.deleteRoomParticipants(roomToken, function(err) {
-        if (err) return callback(err);
-        var multi = self._client.multi();
-        multi.del('room.' + roomToken);
-        multi.hsetnx(
-          'room.deleted.' + data.roomOwnerHmac,
-          roomToken, time());
-        multi.expire(
-          'room.deleted.' + data.roomOwnerHmac,
-          self._settings.roomsDeletedTTL);
-        multi.exec(callback);
-      });
+      var key = 'room.deleted.' + data.roomOwnerHmac;
+      multi2.hsetnx(key, data.roomToken, time());
+      multi2.expire(key, self._settings.roomsDeletedTTL);
+    };
+
+    multi.exec(function(err, results) {
+      if (err) return callback(err);
+      for (var i = 0; i < results.length; i++) {
+        if (i % 3 === 0) {
+          decode(results[i], handleDeletedNotification);
+        }
+      }
+      multi2.exec(callback);
     });
   },
 

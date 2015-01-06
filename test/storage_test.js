@@ -785,38 +785,42 @@ describe("Storage", function() {
           });
       });
 
-      describe("#deleteRoomData", function() {
-        var spy;
-        beforeEach(function() {
-          spy = sandbox.spy(storage, 'deleteRoomParticipants');
-        });
-
-        it("should remove the room from the store", function(done) {
+      describe("#deleteRoomsData", function() {
+        it("should remove rooms from the store", function(done) {
           storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
-            storage.deleteRoomData(roomToken, function(err) {
-              if (err) throw err;
-              storage.getRoomData(roomToken, function(err, storedRoomData) {
+            var roomToken2 = generateToken(conf.get("rooms").tokenSize);
+            storage.setUserRoomData(userMac, roomToken2, roomData,
+              function(err) {
                 if (err) throw err;
-                expect(storedRoomData).to.eql(null);
-                assert(spy.calledOnce);
-                done();
+                storage.deleteRoomsData([roomToken, roomToken2], function(err) {
+                  if (err) throw err;
+                  storage.getUserRooms(userMac, function(err, rooms) {
+                    if (err) throw err;
+                    expect(rooms).to.eql([]);
+                    done();
+                  });
+                });
               });
-            });
           });
         });
 
         it("should save the room deletion notification", function(done) {
           storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
-            storage.deleteRoomData(roomToken, function(err) {
-              if (err) throw err;
-              storage.getUserDeletedRooms(userMac, function(err, deletedRooms) {
+            var roomToken2 = generateToken(conf.get("rooms").tokenSize);
+            storage.setUserRoomData(userMac, roomToken2, roomData,
+              function(err) {
                 if (err) throw err;
-                expect(deletedRooms).to.eql([roomToken]);
-                done();
+                storage.deleteRoomsData([roomToken, roomToken2], function(err) {
+                  if (err) throw err;
+                  storage.getUserDeletedRooms(userMac, function(err, deletedRooms) {
+                    if (err) throw err;
+                    expect(deletedRooms).to.eql([roomToken, roomToken2]);
+                    done();
+                  });
+                });
               });
-            });
           });
         });
       });
