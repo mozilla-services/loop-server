@@ -604,9 +604,7 @@ describe("/rooms", function() {
      });
     });
 
-    it("should not use two times the same token", function(done) {
-
-    });
+    it("should not use two times the same token");
   });
 
   describe("GET /rooms/:token", function() {
