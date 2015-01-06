@@ -1119,6 +1119,30 @@ describe("/rooms", function() {
           });
         });
 
+        it.only("should notify the room owner when a participant expires",
+        function(done) {
+          createRoom(hawkCredentials, {
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "2",
+            expiresIn: "10"
+          }).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinWithNewUser(storage, 'user1', roomToken, function(res) {
+              res.end(function(err) {
+                if (err) throw err;
+                // Wait a bit for the key to expire. We should get a
+                // SP notification.
+                setTimeout(function() {
+                  expect(requests).to.length(3);
+                  done();
+                }, 1000);
+              });
+            });
+          });
+        });
+
         it("should use the moderator role when creation room owner session token",
         function(done){
           createRoom(hawkCredentials, {

@@ -21,7 +21,7 @@ var hmac = require('../hmac');
 
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
-                           validators, tokBox) {
+                           validators, tokBox, notifications) {
 
   var roomsConf = conf.get("rooms");
 
@@ -399,6 +399,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                     });
                 });
               }
+              console.log("TTL", ttl);
+              console.log("participantHmac", participantHmac);
               if (participantHmac === undefined) {
                 participantHmac = hmac(sessionToken, conf.get('userMacSecret'));
                 storage.setRoomAccessToken(req.token, participantHmac, ttl, next);
@@ -535,5 +537,31 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           });
         });
       });
+  });
+
+  // Handle expiration notifications from the db.
+
+  // Notify the room owner when a participant access token expires and he's
+  // not in the room.
+  notifications.on('roomparticipant_access_token', function(key) {
+    var parts = key.split('.');
+    var roomToken = parts[1];
+    var hawkIdHmac = parts[2];
+
+    // Check if the participant is still in the room.
+    storage.getRoomParticipants(roomToken, function(err, participants) {
+      if (err) return logError(err);
+      var isRoomParticipant = participants.some(function(participant) {
+        return participant.hawkIdHmac === hawkIdHmac;
+      });
+
+      if (isRoomParticipant) {
+        storage.getRoomData(roomToken, function(err, roomData) {
+          emitRoomEvent(roomToken, roomData.roomOwnerHmac, function(err) {
+            if (err) return logError(err);
+          });
+        });
+      }
     });
+  })
 };

@@ -17,6 +17,9 @@ var bodyParser = require('body-parser');
 var raven = require('raven');
 var cors = require('cors');
 var StatsdClient = require('statsd-node').client;
+
+var PubSub = require('./pubsub');
+
 var middlewares = require('./middlewares');
 var websockets = require('./websockets');
 var hekaLogger = middlewares.hekaLogger;
@@ -58,6 +61,8 @@ function logError(err) {
   ravenClient.captureError(err);
 }
 
+var Notifications = require("./notifications");
+var notifications = new Notifications(new PubSub(conf.get('pubsub'), logError));
 
 var corsEnabled = cors({
   origin: function(origin, callback) {
@@ -117,13 +122,15 @@ if (conf.get("fxaOAuth").activated !== false) {
 }
 
 var rooms = require("./routes/rooms");
-rooms(apiRouter, conf, logError, storage, auth, validators, tokBox);
+rooms(apiRouter, conf, logError, storage, auth, validators, tokBox,
+      notifications);
 
 var session = require("./routes/session");
 session(apiRouter, conf, storage, auth);
 
 var videur = require("./routes/videur");
 videur(apiRouter, conf);
+
 
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);
