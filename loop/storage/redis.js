@@ -853,7 +853,9 @@ RedisStorage.prototype = {
    **/
   setHawkOAuthToken: function(hawkIdHmac, token, callback) {
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
-    this._client.set('oauth.token.' + hawkIdHmac, token, callback);
+    this._client.setex('oauth.token.' + hawkIdHmac,
+                       this._settings.hawkSessionDuration,
+                       token, callback);
   },
 
   /**
@@ -1300,7 +1302,7 @@ RedisStorage.prototype = {
    **/
   ping: function(callback) {
     var self = this;
-    self._client.set('heartbeat', time(),
+    self._client.setex('heartbeat', 3600, time(),
       function(err) {
         if (err) return callback(false);
         callback(true);
