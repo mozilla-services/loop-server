@@ -1398,7 +1398,8 @@ function runOnPrefix(apiPrefix) {
             var hekaMetrics = JSON.parse(JSON.stringify(oldMetrics));
             hekaMetrics.activated = true;
             conf.set('hekaMetrics', hekaMetrics);
-            sandbox.stub(hekaLogger, "log", function(level, log) {
+            sandbox.stub(hekaLogger, "info", function(op, log) {
+              log.op = op;
               try {
                 _logs.push(log);
               } catch (e) {

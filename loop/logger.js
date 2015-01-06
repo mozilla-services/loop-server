@@ -5,13 +5,13 @@
 "use strict";
 
 var conf = require("./config").conf;
-var winston = require('winston');
+var mozlog = require('mozlog');
+var loopPackageData = require('../package.json');
 
 var metricsFileParams = JSON.parse(JSON.stringify(conf.get('hekaMetrics')));
-metricsFileParams.timestamp = false;
+delete metricsFileParams.activated;
+metricsFileParams.app = loopPackageData.name;
 
-exports.hekaLogger = new winston.Logger({
-  transports: [
-    new winston.transports.File(metricsFileParams)
-  ]
-});
+mozlog.config(metricsFileParams);
+
+exports.hekaLogger = mozlog("loop");

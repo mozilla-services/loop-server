@@ -64,7 +64,6 @@ function logMetrics(req, res, next) {
       }
 
       var line = {
-        op: 'request.summary',
         code: res.statusCode,
         path: req.path,
         method: req.method.toLowerCase(),
@@ -75,7 +74,6 @@ function logMetrics(req, res, next) {
         callId: req.callId,
         token: req.token,
         v: loopPackageData.version,
-        name: loopPackageData.name,
         hostname: hostname,
         lang: req.headers["accept-language"],
         ip: ip,
@@ -100,7 +98,7 @@ function logMetrics(req, res, next) {
         line.error = res.get("www-authenticate");
       }
 
-      hekaLogger.log('info', line);
+      hekaLogger.info('request.summary', line);
     });
   }
   if (conf.get('logRequests').activated === true) {

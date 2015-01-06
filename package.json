@@ -27,6 +27,7 @@
     "git-rev": "0.2.1",
     "hiredis": "0.1.17",
     "hkdf": "0.0.2",
+    "mozlog": "1.0.1",
     "opentok": "2.2.4",
     "phone": "git://github.com/Natim/node-phone.git#83a4f48",
     "node-uuid": "1.4.1",
@@ -37,7 +38,6 @@
     "statsd-node": "0.2.3",
     "strftime": "0.8.1",
     "urlsafe-base64": "0.0.2",
-    "winston": "0.7.3",
     "ws": "0.4.31",
     "yargs": "1.3.1"
   },

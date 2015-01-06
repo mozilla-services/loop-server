@@ -394,20 +394,20 @@ var conf = convict({
       default: false,
       format: Boolean
     },
-    filename: {
-      doc: "Heka logger file path",
+    debug: {
+      doc: "Heka logger display development logs",
+      format: Boolean,
+      default: false
+    },
+    level: {
+      doc: "Log level.",
       format: String,
-      default: path.join(__dirname, "..", "heka.log")
+      default: "INFO"
     },
-    maxsize: {
-      doc: "Max size in bytes of the logfile before creating a new one.",
-      format: Number,
-      default: 2097152  // 2MB === 2097152
-    },
-    maxFiles: {
-      doc: "Limit the number of files created when logfile size is exeeded.",
-      format: Number,
-      default: 5
+    fmt: {
+      doc: "Log level.",
+      format: String,
+      default: "heka"
     }
   },
   rooms: {

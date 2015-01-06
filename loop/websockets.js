@@ -29,9 +29,9 @@ function serverError(error, callback) {
  **/
 function hekaMetrics(data) {
   if (conf.get("hekaMetrics").activated) {
-    data.op = data.op || 'websocket.summary';
+    var op = data.op || 'websocket.summary';
     data.time = data.time || isoDateString(new Date());
-    hekaLogger.log('info', data);
+    hekaLogger.info(op, data);
   }
 }
 
