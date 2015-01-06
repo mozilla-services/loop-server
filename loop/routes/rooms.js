@@ -347,7 +347,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               var sessionToken = tokBox.getSessionToken(
                 req.roomStorageData.sessionId,
                 role,
-                {channel: channel}
+                channel
               );
 
               function next(err) {

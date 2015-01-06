@@ -578,27 +578,7 @@ describe("/rooms", function() {
 
         storage.getRoomData(res.body.roomToken, function(err, roomData) {
           if (err) throw err;
-
-          expect(roomData.expiresAt).to.not.eql(undefined);
-          delete roomData.expiresAt;
-          expect(roomData.creationTime).to.not.eql(undefined);
-          delete roomData.creationTime;
-          expect(roomData.updateTime).to.not.eql(undefined);
-          delete roomData.updateTime;
-
-          expect(roomData).to.eql({
-            apiKey: tokBox._opentok.default.apiKey,
-            sessionId: sessionId,
-            channel: "nightly",
-            roomName: "UX discussion",
-            roomToken: res.body.roomToken,
-            maxSize: 3,
-            roomOwner: "Alexis",
-            expiresIn: 10,
-            roomOwnerHmac: userHmac
-          });
-
-          expect(requests).to.length(1);
+          expect(roomData.channel).to.eql("nightly");
           done();
         });
      });

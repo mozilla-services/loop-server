@@ -71,15 +71,14 @@ TokBox.prototype = {
     });
   },
 
-  getSessionToken: function(sessionId, role, options) {
-    options = options || {};
+  getSessionToken: function(sessionId, role, channel) {
     var now = time();
     var expirationTime = now + this.tokenDuration;
 
     var opentok;
 
-    if (this.credentials.hasOwnProperty(options.channel)) {
-      opentok = this._opentok[options.channel];
+    if (channel !== undefined && this.credentials.hasOwnProperty(channel)) {
+      opentok = this._opentok[channel];
     } else {
       opentok = this._opentok["default"];
     }
