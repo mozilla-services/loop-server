@@ -39,8 +39,10 @@ if (storage.engine === "redis") {
         var isImpacted = ttl === -2;
         if (isImpacted) {
           if (delKeys) {
+            // Remove the impacted userid
             toDelete.push(key);
-            toDelete.push(key.replace("userid", "hawkuser"));
+            // Remove the session
+            toDelete.push(key.replace("userid", "hawk"));
           }
 
           process.stdout.write("i"); // This is an impacted user.
