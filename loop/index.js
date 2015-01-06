@@ -36,7 +36,6 @@ var storage = getStorage(conf.get("storage"), {
   'roomExtendTTL': conf.get('rooms').extendTTL,
   'hawkSessionDuration': conf.get('hawkSessionDuration'),
   'callDuration': conf.get('callDuration'),
-  'maxSimplePushUrls': conf.get('maxSimplePushUrls'),
   'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
