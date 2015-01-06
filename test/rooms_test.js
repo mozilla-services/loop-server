@@ -911,44 +911,34 @@ describe("/rooms", function() {
 
 
     describe("Using Hawk", function() {
-      beforeEach(function(done) {
-        supertest(app)
-          .post('/rooms')
-          .type('json')
-          .hawk(hawkCredentials)
-          .send({
-            roomOwner: "Alexis",
-            roomName: "UX discussion",
-            maxSize: "3",
-            expiresIn: "10"
-          })
-          .expect(201)
-          .end(function(err, postRes) {
-            if (err) throw err;
-            token = postRes.body.roomToken;
-            postReq = supertest(app)
-              .post('/rooms/' + token)
-              .type('json')
-              .hawk(hawkCredentials);
-            done();
-          });
-      });
 
-      it("should fails if action is missing", function(done) {
-       postReq
-          .send({})
-          .expect(400)
-          .end(function(err, res) {
-            if (err) throw err;
-            expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                "action should be one of join, refresh, leave");
-            done();
-          });
+      it("should fail if action is missing", function(done) {
+        createRoom(hawkCredentials).end(function(err, res) {
+          var roomToken = res.body.roomToken;
+          supertest(app)
+            .post('/rooms/' + roomToken)
+            .type('json')
+            .hawk(hawkCredentials)
+            .send({})
+            .expect(400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
+                "action should be one of join, refresh, leave");
+              done();
+            });
+        });
       });
 
       describe("Handle 'join'", function() {
+
         it("should fail if params are missing.", function(done) {
-          postReq
+        createRoom(hawkCredentials).end(function(err, res) {
+          var roomToken = res.body.roomToken;
+          supertest(app)
+            .post('/rooms/' + roomToken)
+            .type('json')
+            .hawk(hawkCredentials)
             .send({
               action: "join"
             })
@@ -956,20 +946,20 @@ describe("/rooms", function() {
             .end(function(err, res) {
               if (err) throw err;
               expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                  "Missing: displayName, clientMaxSize");
-              done();
+                "Missing: displayName, clientMaxSize");
+                done();
+              });
             });
         });
 
         it("should return new participant information.", function(done) {
-          postReq
-            .send({
+          createRoom(hawkCredentials).end(function(err, res) {
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken, {
               action: "join",
               clientMaxSize: 10,
               displayName: "Natim"
-            })
-            .expect(200)
-            .end(function(err, res) {
+            }).end(function(err, res) {
               if (err) throw err;
               expect(res.body).to.eql({
                 "apiKey": tokBox._opentok.default.apiKey,
@@ -977,12 +967,13 @@ describe("/rooms", function() {
                 "sessionId": sessionId,
                 "sessionToken": sessionToken
               });
-              storage.getRoomParticipants(token, function(err, participants) {
+              storage.getRoomParticipants(roomToken, function(err, participants) {
                 if (err) throw err;
                 expect(participants).to.length(1);
                 done();
               });
             });
+          });
         });
 
         it("should reject new participant if new participant clientMaxSize is " +
