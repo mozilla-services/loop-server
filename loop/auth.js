@@ -37,16 +37,17 @@ module.exports = function(conf, logError, storage, statsdClient) {
     req.hawkIdHmac = hmac(credentials.id, conf.get("hawkIdSecret"));
     storage.getHawkUser(req.hawkIdHmac, function(err, user) {
       if (res.serverError(err)) return;
-
-      storage.touchHawkSession(req.user, req.hawkIdHmac);
-      // If an identity is defined for this hawk session, use it.
       if (user !== null) {
+        // If an identity is defined for this hawk session, use it.
         req.user = user;
-        done();
-        return;
+      } else {
+        req.user = req.hawkIdHmac;
       }
-      req.user = req.hawkIdHmac;
-      done();
+
+      storage.touchHawkSession(req.user, req.hawkIdHmac, function(err) {
+        if (res.serverError(err)) return;
+        done();
+      });
     });
   }
 

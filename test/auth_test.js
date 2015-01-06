@@ -190,9 +190,9 @@ describe("auth.js", function() {
           .expect(200)
           .end(function(err) {
             if (err) throw err;
-            assert.calledWithExactly(
+            assert.calledWithMatch(
               storage.touchHawkSession,
-              userHmac
+              userHmac, userHmac
             );
             done();
           });

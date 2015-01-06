@@ -1100,8 +1100,8 @@ describe("Storage", function() {
     });
 
     it("#ping should fails when redis is in read-only mode", function(done) {
-      sandbox.stub(storage._client, "set",
-        function(key, value, callback){
+      sandbox.stub(storage._client, "setex",
+        function(key, ttl, value, callback){
           callback("Error: Redis is read-only");
         });
       storage.ping(function(connected) {
