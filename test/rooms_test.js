@@ -553,6 +553,7 @@ describe("/rooms", function() {
           expect(roomData).to.eql({
             apiKey: tokBox._opentok.default.apiKey,
             sessionId: sessionId,
+            channel: "default",
             roomName: "UX discussion",
             roomToken: res.body.roomToken,
             maxSize: 3,
@@ -562,6 +563,33 @@ describe("/rooms", function() {
           });
 
           expect(requests).to.length(1);
+          done();
+        });
+     });
+    });
+
+    it("should handle a specific channel.", function(done) {
+      supertest(app)
+      .post('/rooms')
+      .type('json')
+      .hawk(hawkCredentials)
+      .send({
+        roomOwner: "Alexis",
+        roomName: "UX discussion",
+        maxSize: "3",
+        expiresIn: "10",
+        channel: "nightly"
+      })
+      .expect(201)
+      .end(function(err, res) {
+        if (err) throw err;
+        expect(res.body.roomToken).to.not.be.undefined;
+        expect(res.body.roomUrl).to.eql(
+          conf.get('rooms').webAppUrl.replace('{token}', res.body.roomToken));
+
+        storage.getRoomData(res.body.roomToken, function(err, roomData) {
+          if (err) throw err;
+          expect(roomData.channel).to.eql("nightly");
           done();
         });
      });
