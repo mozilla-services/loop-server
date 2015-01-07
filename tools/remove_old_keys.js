@@ -28,15 +28,18 @@ if (storage.engine === "redis") {
     console.log("Looking for keys not used since : " + new Date(Date.now() - TWO_WEEKS * 1000).toLocaleDateString());
 
     var toDelete = [];
+    var freed = 0;
 
     keysInfo.forEach(function(key) {
       var lruDate = new Date(Date.now() - key.lru_seconds_idle * 1000).getTime();
       var now = Date.now();
+      var size = parseInt(key.serializedlength, 10);
 
       var delta = (now - lruDate) / 1000;
 
       if (delta > TWO_WEEKS) {
         toDelete.push(key.key);
+        freed = freed + size;
       }
 
     });
@@ -47,14 +50,14 @@ if (storage.engine === "redis") {
         console.log("- " + key + " deleted");
       });
     }
-    console.log(toDelete.length + " keys found.");
+    console.log(toDelete.length + " keys found. (" + freed + " Bytes)");
 
     if (toDelete.length > 0) {
       var entry = sget("Would you like to remove these keys? [y/N]");
       if (entry.toLowerCase().indexOf("y") === 0) {
         client.del(toDelete, function(err) {
           if (err) throw err;
-          console.log(toDelete.length + " keys have been removed.");
+          console.log(toDelete.length + " keys have been removed. And " + freed + " Bytes freed.");
           process.exit(0);
         });
         return;
