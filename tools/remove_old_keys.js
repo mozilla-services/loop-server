@@ -47,7 +47,7 @@ if (storage.engine === "redis") {
     if (verbose) {
       console.log("Selected keys:");
       toDelete.forEach(function(key) {
-        console.log("- " + key + " deleted");
+        console.log("- " + key);
       });
     }
     console.log(toDelete.length + " keys found. (" + freed + " Bytes)");

@@ -53,8 +53,8 @@ if (storage.engine === "redis") {
       var today = new Date();
       creation_keys.forEach(function(key) {
         var date = new Date(key);
-        var nb_days = parseInt((date.getTime() - today.getTime()) / (24 * 3600 * 1000), 10) + 1;
-        console.log(date.getUTCFullYear() + "/" + (date.getUTCMonth() + 1) + "/" + date.getUTCDate() + "\t" + creations[key] + "\t" + (sizes[key]) + " Bytes\t(in " + nb_days + " days)");
+        var nb_days = parseInt((today.getTime() - date.getTime()) / (24 * 3600 * 1000), 10) + 1;
+        console.log(date.getUTCFullYear() + "/" + (date.getUTCMonth() + 1) + "/" + date.getUTCDate() + "\t" + creations[key] + "\t" + (sizes[key]) + " Bytes\t(" + nb_days + " days ago)");
       });
 
       var expiration_keys = Object.keys(expirations);
