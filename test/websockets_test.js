@@ -19,6 +19,14 @@ var server = loop.server;
 var storage = loop.storage;
 var conf = loop.conf;
 
+ws.prototype.sendHello = function(callId, authToken) {
+  this.send(JSON.stringify({
+    messageType: constants.MESSAGE_TYPES.HELLO,
+    auth: authToken,
+    callId: callId
+  }));
+};
+
 function createCall(callId, user, callback) {
   storage.addUserCall(user, {
     callerId: 'Alexis',
@@ -95,11 +103,7 @@ describe('websockets', function() {
         expect(error.reason).eql(constants.ERROR_REASONS.BAD_AUTHENTICATION);
         done();
       });
-      client.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: 'wrongCalleeToken',
-        callId: callId
-      }));
+      client.sendHello(callId, 'wrongCalleeToken');
     });
   });
 
@@ -112,11 +116,7 @@ describe('websockets', function() {
         done();
       });
 
-      client.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "calleeToken",
-        callId: '1234'
-      }));
+      client.sendHello("1234", "calleeToken");
     });
 
   it('should accept caller authenticating with a valid token url',
@@ -134,12 +134,8 @@ describe('websockets', function() {
             expect(message.state).eql(constants.CALL_STATES.INIT);
             done();
           });
-
-          client.send(JSON.stringify({
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            auth: "callerToken",
-            callId: callId
-          }));
+          
+          client.sendHello(callId, "callerToken");
         });
       });
     });
@@ -158,11 +154,7 @@ describe('websockets', function() {
           done();
         });
 
-        client.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "calleeToken",
-          callId: callId
-        }));
+        client.sendHello(callId, "calleeToken");
       });
     });
   });
@@ -219,11 +211,7 @@ describe('websockets', function() {
           // First message should be "hello/init".
           if (calleeMsgCount === 0) {
             // Callee registers to the socket.
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else {
@@ -236,11 +224,7 @@ describe('websockets', function() {
         });
 
         // Caller registers to the socket.
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     describe('With mocked heka logger', function() {
@@ -269,12 +253,7 @@ describe('websockets', function() {
 
         caller.on('message', function() {
           if (callerMsgCount === 0) {
-            // Callee registers to the socket.
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
           } else if (callerMsgCount === 2) {
             // The heka logger should have been called with the reason.
             expect(logs).to.length.gte(1);
@@ -304,11 +283,7 @@ describe('websockets', function() {
         });
 
         // Caller registers to the socket.
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
       it('should log only one termination reason in heka', function(done) {
@@ -319,11 +294,7 @@ describe('websockets', function() {
         caller.on('message', function() {
           if (calleeMsgCount === 0) {
             // Callee registers to the socket.
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
           } else if (calleeMsgCount >= 2) {
             // The heka logger should have been called with the reason.
             expect(logs).to.length.gte(1);
@@ -358,11 +329,7 @@ describe('websockets', function() {
         });
 
         // Caller registers to the socket.
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
     });
 
@@ -377,11 +344,7 @@ describe('websockets', function() {
           // First message should be "hello/init".
           if (calleeMsgCount === 0) {
             // Callee registers to the socket.
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (calleeMsgCount === 2) {
@@ -401,11 +364,7 @@ describe('websockets', function() {
         });
 
         // Caller registers to the socket.
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it('should broadcast action change and handle race condition.',
@@ -422,11 +381,7 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
 
@@ -485,12 +440,7 @@ describe('websockets', function() {
           calleeMsgCount++;
         });
 
-
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it('should broadcast half-connected signal.',
@@ -500,11 +450,7 @@ describe('websockets', function() {
         caller.on('message', function(data) {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
 
@@ -564,11 +510,7 @@ describe('websockets', function() {
           calleeMsgCount++;
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should close socket on progress/connected message", function(done) {
@@ -589,11 +531,7 @@ describe('websockets', function() {
       caller.on('message', function(data) {
         var message = JSON.parse(data);
         if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
-          callee.send(JSON.stringify({
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            auth: "calleeToken",
-            callId: callId
-          }));
+          callee.sendHello(callId, "calleeToken");
         } else if (message.state === constants.CALL_STATES.HALF_CONNECTED) {
           caller.send(JSON.stringify({
             messageType: constants.MESSAGE_TYPES.ACTION,
@@ -618,11 +556,7 @@ describe('websockets', function() {
         }
       });
 
-      caller.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "callerToken",
-        callId: callId
-      }));
+      caller.sendHello(callId, "callerToken");
     });
 
     it("should close the socket on progress/terminate message", function(done) {
@@ -642,11 +576,7 @@ describe('websockets', function() {
         }
       });
 
-      caller.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "callerToken",
-        callId: callId
-      }));
+      caller.sendHello(callId, "callerToken");
     });
 
     it("should close the socket on storage error", function(done) {
@@ -659,11 +589,7 @@ describe('websockets', function() {
         done();
       });
 
-      caller.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "callerToken",
-        callId: callId
-      }));
+      caller.sendHello(callId, "callerToken");
     });
 
     it("should not accept a non-alphanumeric reason on action/terminate",
@@ -688,11 +614,7 @@ describe('websockets', function() {
           }
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should proxy the reason on action/terminate", function(done) {
@@ -716,11 +638,7 @@ describe('websockets', function() {
         }
       });
 
-      caller.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "callerToken",
-        callId: callId
-      }));
+      caller.sendHello(callId, "callerToken");
     });
 
     it("should reject invalid transitions", function(done) {
@@ -732,11 +650,7 @@ describe('websockets', function() {
       caller.on('message', function(data) {
         var message = JSON.parse(data);
         if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
-          callee.send(JSON.stringify({
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            auth: "calleeToken",
-            callId: callId
-          }));
+          callee.sendHello(callId, "calleeToken");
         } else if (message.messageType === constants.MESSAGE_TYPES.PROGRESS) {
           caller.send(JSON.stringify({
             messageType: constants.MESSAGE_TYPES.ACTION,
@@ -749,11 +663,7 @@ describe('websockets', function() {
         }
       });
 
-      caller.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "callerToken",
-        callId: callId
-      }));
+      caller.sendHello(callId, "callerToken");
     });
 
     it("should close the connection if callee doesn't connect",
@@ -775,11 +685,7 @@ describe('websockets', function() {
           }
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should close the connection if caller doesn't connect",
@@ -801,11 +707,7 @@ describe('websockets', function() {
           }
         });
 
-        callee.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "calleeToken",
-          callId: callId
-        }));
+        callee.sendHello(callId, "calleeToken");
       });
 
     it("should not broadcast progress/terminate if callee subscribed in " +
@@ -814,45 +716,29 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
             // The callee connects!
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
           } else if (message.messageType === constants.MESSAGE_TYPES.PROGRESS){
             expect(message.state).not.eql(constants.CALL_STATES.TERMINATED);
             done();
           }
         });
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should not broadcast progress/terminate if caller subscribed in " +
        "less than X seconds", function(done) {
-        callee.on('message', function(data) {
-          var message = JSON.parse(data);
-          if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
-            // The callee connects!
-            caller.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "callerToken",
-              callId: callId
-            }));
-          } else if (message.messageType === constants.MESSAGE_TYPES.PROGRESS){
-            expect(message.state).not.eql(constants.CALL_STATES.TERMINATED);
-            done();
-          }
-        });
-        callee.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "calleeToken",
-          callId: callId
-        }));
-      });
+         callee.on('message', function(data) {
+           var message = JSON.parse(data);
+           if (message.messageType === constants.MESSAGE_TYPES.HELLO) {
+             // The callee connects!
+             caller.sendHello(callId, "callerToken");
+           } else if (message.messageType === constants.MESSAGE_TYPES.PROGRESS){
+             expect(message.state).not.eql(constants.CALL_STATES.TERMINATED);
+             done();
+           }
+         });
+         callee.sendHello(callId, "calleeToken");
+       });
 
     it("should close the connection if ringing for too long",
       function(done) {
@@ -880,12 +766,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
             // The callee connects!
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
-
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
@@ -915,11 +796,7 @@ describe('websockets', function() {
           calleeMsgCount++;
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should not close the connection if call had been anwsered",
@@ -930,11 +807,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
             // The callee connects!
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
@@ -964,11 +837,7 @@ describe('websockets', function() {
           calleeMsgCount++;
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should close the connection if media-up not send by anybody",
@@ -993,12 +862,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
             // The callee connects!
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
-
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
@@ -1046,11 +910,7 @@ describe('websockets', function() {
           calleeMsgCount++;
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should close the connection if media-up sent by only one party",
@@ -1075,11 +935,7 @@ describe('websockets', function() {
           var message = JSON.parse(data);
           if (callerMsgCount === 0) {
             // The callee connects!
-            callee.send(JSON.stringify({
-              messageType: constants.MESSAGE_TYPES.HELLO,
-              auth: "calleeToken",
-              callId: callId
-            }));
+            callee.sendHello(callId, "calleeToken");
             expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
             expect(message.state).eql(constants.CALL_STATES.INIT);
           } else if (callerMsgCount === 1) {
@@ -1137,11 +993,7 @@ describe('websockets', function() {
           calleeMsgCount++;
         });
 
-        caller.send(JSON.stringify({
-          messageType: constants.MESSAGE_TYPES.HELLO,
-          auth: "callerToken",
-          callId: callId
-        }));
+        caller.sendHello(callId, "callerToken");
       });
 
     it("should not close if both parties got connected", function(done) {
@@ -1165,11 +1017,7 @@ describe('websockets', function() {
         var message = JSON.parse(data);
         if (callerMsgCount === 0) {
           // The callee connects!
-          callee.send(JSON.stringify({
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            auth: "calleeToken",
-            callId: callId
-          }));
+          callee.sendHello(callId, "calleeToken");
           expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
           expect(message.state).eql(constants.CALL_STATES.INIT);
         } else if (callerMsgCount === 1) {
@@ -1221,11 +1069,7 @@ describe('websockets', function() {
         calleeMsgCount++;
       });
 
-      caller.send(JSON.stringify({
-        messageType: constants.MESSAGE_TYPES.HELLO,
-        auth: "callerToken",
-        callId: callId
-      }));
+      caller.sendHello(callId, "callerToken");
     });
 
     it("should return the termination reason on hello.", function(done) {
@@ -1243,11 +1087,7 @@ describe('websockets', function() {
           storage.setCallTerminationReason(callId, constants.MESSAGE_REASONS.BUSY,
             function(err) {
               if (err) throw err;
-              caller.send(JSON.stringify({
-                messageType: constants.MESSAGE_TYPES.HELLO,
-                auth: "callerToken",
-                callId: callId
-              }));
+              caller.sendHello(callId, "callerToken");
             });
         });
     });
@@ -1332,11 +1172,7 @@ describe('websockets', function() {
             var message = JSON.parse(data);
             if (callerMsgCount === 0) {
               // The callee connects his first device.
-              callee.send(JSON.stringify({
-                messageType: constants.MESSAGE_TYPES.HELLO,
-                auth: "calleeToken",
-                callId: callId
-              }));
+              callee.sendHello(callId, "calleeToken");
               expect(message.messageType).eql(constants.MESSAGE_TYPES.HELLO);
               expect(message.state).eql(constants.CALL_STATES.INIT);
             } else if (callerMsgCount === 1) {
@@ -1396,11 +1232,7 @@ describe('websockets', function() {
             calleeMsgCount++;
           });
 
-          caller.send(JSON.stringify({
-            messageType: constants.MESSAGE_TYPES.HELLO,
-            auth: "callerToken",
-            callId: callId
-          }));
+           caller.sendHello(callId, "callerToken");
         });
     });
   });
