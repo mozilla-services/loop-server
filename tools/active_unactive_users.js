@@ -11,6 +11,11 @@ var args = process.argv.slice(2);
 
 var verbose = args.indexOf('--verbose') !== -1;
 
+var A_DAY = 3600 * 24;
+var TWO_WEEKS = 3600 * 24 * 7 * 2;
+var A_MONTH = 3600 * 24 * 30;
+
+
 if (storage.engine === "redis") {
   var options = storage.settings;
   var client = redis.createClient(
@@ -23,7 +28,7 @@ if (storage.engine === "redis") {
   keysInformation(client, 'hawk.*', function(err, keysInfo) {
     if (err) throw err;
 
-     console.log("Processing " + keysInfo.length + " keys");
+    console.log("Processing " + keysInfo.length + " keys");
 
     var active = 0;
     var unactive = 0;
@@ -35,21 +40,18 @@ if (storage.engine === "redis") {
       var now = Date.now();
 
       var delta = (now - lruDate) / 1000;
-      var aDay = 3600 * 24;
-      var twoWeeks = 3600 * 24 * 7 * 2;
-      var aMonth = 3600 * 24 * 30;
 
-      if (delta <= aDay) {
+      if (delta <= A_DAY) {
         active++;
       } else {
         unactive++;
       }
 
-      if (delta > twoWeeks) {
+      if (delta > TWO_WEEKS) {
         fifteen++;
       }
 
-      if (delta > twoWeeks) {
+      if (delta > A_MONTH) {
         monthly++;
       }
     });
