@@ -9,25 +9,26 @@ and thus the IDLETIME of the key.
 
 Some of this tools are based on the TTL command:
 
- - ``expiration.js``
- - ``graph_expiration.sh``
- - ``fxa_impacted.js``
- - ``ttl_hawk.js``
+ - ``_get_expiration.js``
+ - ``_graph_expiration.sh``
+ - ``_get_fxa_impacted.js``
+ - ``_get_ttl_hawk.js``
 
 Some of this tool are based on the IDLETIME value:
 
- - ``active_unactive_users.js``
- - ``expiration-estimate.js``
+ - ``get_active_unactive_users.js``
+ - ``get_expiration_estimate.js``
  - ``remove_old_keys.js``
 
 The use of one of the first list's command will override the result of
-the second list's commands.
+the second list's commands. To prevent errorneous usage, commands
+based on TTL are their name prefixed with an ``_``.
 
 
 Active and Unactive users
 -------------------------
 
- - ``active_unactive_users.js``
+ - ``get_active_unactive_users.js``
 
 This script gives you some information about users activity::
 
@@ -43,7 +44,7 @@ It is based on the key idletime.
 Average calls per user
 ----------------------
 
- - ``average_calls_per_user.js``
+ - ``get_average_calls_per_user.js``
 
 Return the average number of calls per user::
 
@@ -57,7 +58,7 @@ Return the average number of calls per user::
 Average call-urls per user
 --------------------------
 
- - ``average_call-urls_per_user.js``
+ - ``get_average_call-urls_per_user.js``
 
 Return the average number of call-urls per user::
 
@@ -69,7 +70,7 @@ Return the average number of call-urls per user::
 Average rooms per user
 ----------------------
 
- - ``average_rooms_per_user.js``
+ - ``get_average_rooms_per_user.js``
 
 Return the average number of rooms per user::
 
@@ -81,9 +82,9 @@ Return the average number of rooms per user::
 Keys expirations
 ----------------
 
-- ``expiration.js``
-- ``graph_expiration.sh``
-- ``expiration-estimate.js``
+- ``_get_expiration.js``
+- ``_graph_expiration.sh``
+- ``get_expiration_estimate.js``
 
 Each redis keys have got a Time-To-Live so we know when it would exipre.
 This script gives you an agenda of what amount of data will expire at which date.
@@ -95,7 +96,7 @@ This script gives you an agenda of what amount of data will expire at which date
     2015/1/31	49	49	4944 Bytes	(in 24 days)
     2015/2/6	9	58	907 Bytes	(in 30 days)
 
-You can also use ``graph_expiration.sh`` to draw an histogram of this data
+You can also use ``_graph_expiration.sh`` to draw an histogram of this data
 
 ::
 
@@ -105,7 +106,7 @@ You can also use ``graph_expiration.sh`` to draw an histogram of this data
 
 These two first commands updates the LRU of the keys.
 
-If you want an estimation of the expiration, you can use ``expiration-estimate.js``::
+If you want an estimation of the expiration, you can use ``get_expiration_estimate.js``::
 
 This command will display the creation date and the average expiration date::
 
@@ -116,15 +117,15 @@ This command will display the creation date and the average expiration date::
 This ``expiration-estimate`` works better when all keys have a TTL
 because it cannot detect the one which will never expire.
 
-Also because ``expiration-estimate`` is based on the IDLETIME, if you
-run it after ``expiration.js`` all keys will have the same expiration
+Also because ``get_expiration_estimate`` is based on the IDLETIME, if you
+run it after ``_get_expiration.js`` all keys will have the same expiration
 date in the average time.
 
 
 Impacted users by the FxA bug
 -----------------------------
 
-- ``fxa_impacted.js``
+- ``_get_fxa_impacted.js``
 
 We had Bug 1111579 that was converting some existing authenticated
 users into unauthenticated users.
@@ -132,14 +133,14 @@ users into unauthenticated users.
 This command let you know the number of impacted sessions and delete broken ones.
 
 ::
-    $ node fxa_impacted
+    $ node _get_fxa_impacted
     processing 1 keys
     .
     number of impacted users 0 over 1
 
 ::
 
-    $ node fxa_impacted --delete
+    $ node _get_fxa_impacted --delete
     processing 1 keys
     .
     number of impacted users 0 over 1
@@ -149,26 +150,26 @@ This command let you know the number of impacted sessions and delete broken ones
 Hawk User Info
 --------------
 
-- ``hawk_user_info.js``
+- ``get_hawk_user_info.js``
 
 This script takes an HawkId or HawkIdHmac and give you informations about the user.
 
 Providing an HawkId::
 
-    $ node hawk_user_info.js 88d5a28f545bb406ddc6c6a5276cbfe0aa10fdba425f4808e2d6c3acdbfdaeda
+    $ node get_hawk_user_info.js 88d5a28f545bb406ddc6c6a5276cbfe0aa10fdba425f4808e2d6c3acdbfdaeda
     Trying with HawkIdHmac: de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
     { anonymous: false, userId: 'foobar@example.com' }
 
 Providing an HawkIdHmac::
 
-    $ node hawk_user_info.js de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
+    $ nodeget_hawk_user_info.js de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
     Trying with HawkIdHmac: dcf3932ac6c0ed48994bb17c5ecc150e03e84a76e523b698c8cc75c2ca278611
     Trying with HawkIdHmac: de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
     { anonymous: false, userId: '<ciphered>' }
 
 Providing an unauthenticated HawkIdHmac::
 
-    $ node hawk_user_info.js 81d2afea33181e32023c9042b42157ebf453d3c04435b386ded7c378fb338b01
+    $ nodeget_hawk_user_info.js 81d2afea33181e32023c9042b42157ebf453d3c04435b386ded7c378fb338b01
     Trying with HawkIdHmac: c4c9a59a1a12719e395cb64e35d53d515335612e4b3208c51c89beecaa496393
     Trying with HawkIdHmac: 81d2afea33181e32023c9042b42157ebf453d3c04435b386ded7c378fb338b01
     { anonymous: true }
@@ -177,7 +178,7 @@ Providing an unauthenticated HawkIdHmac::
 Redis Usage
 -----------
 
-- ``redis_usage.js``
+- ``get_redis_usage.js``
 
 This script gives you general information about the redis keys::
 
@@ -295,7 +296,7 @@ A command that send an error message to Sentry to check the Sentry configuration
 TTL of an Hawk session
 ----------------------
 
-- ``ttl_hawk.js``
+- ``_get_ttl_hawk.js``
 
 This command tells you the time to live of an hawk session given it's HawkId::
 
