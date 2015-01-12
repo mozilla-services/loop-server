@@ -914,6 +914,7 @@ describe("/rooms", function() {
 
       it("should fail if action is missing", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
           var roomToken = res.body.roomToken;
           supertest(app)
             .post('/rooms/' + roomToken)
@@ -934,6 +935,7 @@ describe("/rooms", function() {
 
         it("should fail if params are missing.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
+          if (err) throw err;
           var roomToken = res.body.roomToken;
           supertest(app)
             .post('/rooms/' + roomToken)
@@ -954,6 +956,7 @@ describe("/rooms", function() {
 
         it("should return new participant information.", function(done) {
           createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
             var roomToken = res.body.roomToken;
             joinRoom(hawkCredentials, roomToken, {
               action: "join",
@@ -1119,8 +1122,10 @@ describe("/rooms", function() {
           });
         });
 
-        it.only("should notify the room owner when a participant expires",
+        it("should notify the room owner when a participant expires",
         function(done) {
+          var participantTTL = conf.get('rooms').participantTTL;
+          sandbox.stub()
           createRoom(hawkCredentials, {
             roomOwner: "Alexis",
             roomName: "UX discussion",
@@ -1137,7 +1142,7 @@ describe("/rooms", function() {
                 setTimeout(function() {
                   expect(requests).to.length(3);
                   done();
-                }, 1000);
+                }, participantTTL * 1000 + 500);
               });
             });
           });
@@ -1499,46 +1504,39 @@ describe("/rooms", function() {
       });
     });
 
-    describe("Participants", function() {
-      var clock;
+    it("should expire participants automatically.", function(done) {
+      var participantTTL = conf.get('rooms').participantTTL;
 
-      beforeEach(function() {
-        clock = sinon.useFakeTimers(Date.now());
-      });
-
-      afterEach(function() {
-        clock.restore();
-      });
-
-      it("should expire automatically.", function(done) {
-        createRoom(hawkCredentials).end(function(err, res) {
-          if (err) throw err;
-          var roomToken = res.body.roomToken;
-          generateHawkCredentials(storage, 'Julie',
-            function(julieCredentials, julieHawkIdHmac) {
-              joinRoom(julieCredentials, roomToken).end(function(err) {
-                if (err) throw err;
-                // Touch the participant value for a small time.
-                storage.touchRoomParticipant(roomToken, julieHawkIdHmac, 1,
-                  function(err, success) {
-                    if (err) throw err;
-                    expect(success).to.eql(true);
-                    getRoomInfo(hawkCredentials, roomToken).end(
-                      function(err, res) {
-                        if (err) throw err;
-                        expect(res.body.participants).to.length(1);
-                        clock.tick(1000);
+      createRoom(hawkCredentials).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        generateHawkCredentials(storage, 'Julie',
+          function(julieCredentials, julieHawkIdHmac) {
+            joinRoom(julieCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              // Touch the participant value for a small time.
+              storage.touchRoomParticipant(roomToken, julieHawkIdHmac,
+                participantTTL, function(err, success) {
+                  if (err) throw err;
+                  expect(success).to.eql(true);
+                  getRoomInfo(hawkCredentials, roomToken).end(
+                    function(err, res) {
+                      if (err) throw err;
+                      expect(res.body.participants).to.length(1);
+                      // We have no other choice than setting a setTimeout here
+                      // since we rely on redis.
+                      setTimeout(function() {
                         getRoomInfo(hawkCredentials, roomToken).end(
                           function(err, res) {
                             if (err) throw err;
                             expect(res.body.participants).to.length(0);
                             done();
                           });
-                      });
-                  });
-              });
+                      }, participantTTL * 1000 + 150);
+                    });
+                });
             });
-        });
+          });
       });
     });
   });

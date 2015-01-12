@@ -890,33 +890,28 @@ describe("Storage", function() {
       });
 
       describe("#touchRoomParticipant", function() {
-        var clock;
-
-        beforeEach(function() {
-          clock = sinon.useFakeTimers(Date.now());
-        });
-
-        afterEach(function() {
-          clock.restore();
-        });
 
         it("should change the room participant expiricy", function(done) {
+          var participantTTL = conf.get('rooms').participantTTL;
           storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, 30,
             function(err) {
               if (err) throw err;
-              storage.touchRoomParticipant(roomToken, idHmac, 1, function(err, success) {
+              storage.touchRoomParticipant(roomToken, idHmac, participantTTL,
+                function(err, success) {
                 if (err) throw err;
                 expect(success).to.eql(true);
-                clock.tick(1000);
-                storage.touchRoomParticipant(roomToken, idHmac, 1, function(err, success) {
-                  if (err) return done(err);
-                  expect(success).to.eql(false);
-                  storage.getRoomParticipants(roomToken, function(err, results) {
-                    if (err) throw err;
-                    expect(results).to.length(0);
-                    done();
+                setTimeout(function() {
+                  storage.touchRoomParticipant(roomToken, idHmac, participantTTL,
+                    function(err, success) {
+                      if (err) return done(err);
+                      expect(success).to.eql(false);
+                      storage.getRoomParticipants(roomToken, function(err, results) {
+                        if (err) throw err;
+                        expect(results).to.length(0);
+                        done();
+                      });
                   });
-                });
+                }, participantTTL * 1000 + 150);
               });
             });
         });
@@ -931,11 +926,8 @@ describe("Storage", function() {
                   if (err) throw err;
                   expect(success).to.eql(true);
                   // We need to stop the fakeTimers in order to have setTimeout working
-                  clock.restore();
-
                   setTimeout(function() {
                     // Then we fake it again.
-                    clock = sinon.useFakeTimers(Date.now() + 1000);
                     storage.isRoomAccessTokenValid(roomToken, idHmac, function(err, success) {
                       if (err) throw err;
                       expect(success).to.eql(false);

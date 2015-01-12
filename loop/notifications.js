@@ -1,6 +1,3 @@
-var PubSub = require('./pubsub');
-
-
 var Notifications = function(pubsub) {
   this.observers = {};
   this.pubsub = pubsub;
@@ -17,7 +14,6 @@ Notifications.prototype = {
     var self = this;
 
     self.pubsub.on("pmessage", function(pattern, channel, key) {
-      console.log("Something EXPIRED");
       Object.keys(self.observers).forEach(function(prefix) {
         if (key.indexOf(prefix) === 0) {
           self.observers[prefix](key);
