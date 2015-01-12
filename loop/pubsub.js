@@ -20,6 +20,7 @@ function RedisPubSub(options, logError) {
 
   // Let's report errors when they occur.
   client.on('error', logError);
+  client.config('set', 'notify-keyspace-events', 'Ex');
   return client;
 }
 
