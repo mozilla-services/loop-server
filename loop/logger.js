@@ -10,6 +10,9 @@ var loopPackageData = require('../package.json');
 
 var metricsFileParams = JSON.parse(JSON.stringify(conf.get('hekaMetrics')));
 delete metricsFileParams.activated;
+if (metricsFileParams.debug === true) {
+  metricsFileParams.level = "DEBUG";
+}
 metricsFileParams.app = loopPackageData.name;
 
 mozlog.config(metricsFileParams);
