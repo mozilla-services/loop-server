@@ -1,6 +1,11 @@
 var fs = require('fs'),
     rl = require('readline');
 
+/**
+ * Returns the DEBUG OBJECT key information for each key matching the
+ * pattern into a list of dict.
+ *  - Contains refcount, encoding, serializedlength, lru and lru_seconds_idle
+ */
 function keysInformation(client, pattern, callback) {
   if (callback === undefined) {
     callback = pattern;
@@ -22,8 +27,7 @@ function keysInformation(client, pattern, callback) {
       if (err) return callback(err);
       var results = [];
 
-      for(var i = 0; i < keys.length; i++) {
-        var key = keys[i];
+      keys.forEach(function(key, i) {
         var obj = objects[i].split(" ");
         var data = {key: key};
         obj.forEach(function(value) {
@@ -33,12 +37,19 @@ function keysInformation(client, pattern, callback) {
           }
         });
         results.push(data);
-      }
+      });
 
       callback(null, results);
     });
   });
 }
+
+/**
+ * Returns the current database information into a dict.
+ *  - keys: Total keys' number,
+ *  - expires: Total expiring keys' number,
+ *  - avg_ttl: Average keys' time to live.
+ */
 
 function dbInformation(client, db, callback) {
   if (callback === undefined) {
