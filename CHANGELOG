@@ -3,10 +3,33 @@ Changelog
 
 This document describes changes between each past release.
 
-0.15.0 (unreleased)
+0.15.0 (2015-01-13)
 -------------------
 
-- No changes yet.
+- [bugfix]  Update loadtest with the new room's owner guarented seat. (1111655)
+- [bugfix]  Treat user identifier as case-insensitive (1119855)
+- [config]  Change logging from winston to mozlog - logs are now with heka
+            format on STDOUT (1080133)
+- [feature] Make sure all keys have an expiration TTL. (1118233)
+- [feature] Add PATCH /rooms that let you delete multiple rooms at once (1106562)
+- [feature] Handle the channel parameter for rooms (1094852)
+- [feature] Improve trades between redis and loop-server using multi. (1100903)
+- [feature] Let the future participant grab information about the room before entering it. (1103331)
+- [feature] Limit length of room subjects to 124 characters. (1107082)
+- [feature] Send a message to sentry on server startup to make sure sentry is configured (1098241)
+- [feature] Show deleted rooms only if a version has been specified. (1106902)
+- [feature] Add notifications on participant leave (1093569)
+
+- [metrics] Do not broadcast terminate:close if another terminate message has been logged (1103898)
+- [metrics] Logs number of participants in rooms metrics (1112379)
+
+- [migration] Remove old 0.13 migration code. (1069208)
+
+- [tools] Add a script to remove broken session fixed by 0.14.2 (1111579)
+- [tools] Add a smoketest target for the loadtest.
+- [tools] Rewrite all redis tools in Javascript to benefit from the server config. (1079812)
+- [tools] Update the script to estimate the redis usage wrt user count (1067401)
+- [tools] Add some CLI Tools for OPS to get redis cluster status (1113094)
 
 
 0.14.3 (2014-12-22)
