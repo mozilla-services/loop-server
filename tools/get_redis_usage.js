@@ -18,9 +18,9 @@ if (storage.engine === "redis") {
     process.stdout.write(info);
     process.stdout.write("\n ==== \n\n");
 
-    var KEYS = ["spurl", "callurl", "userUrls", "call", "userCalls",
+    var KEYS = ["spurls", "callurl", "userUrls", "call", "userCalls",
                 "callstate", "hawkuser", "userid", "hawk", "oauth.token",
-                "oauth.state"];
+                "oauth.state", "userRooms", "rooms"];
 
     var multi = client.multi();
     KEYS.forEach(function(key) {
