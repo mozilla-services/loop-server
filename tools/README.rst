@@ -11,7 +11,7 @@ Some of this tools are based on the TTL command:
 
  - ``_get_expiration.js``
  - ``_graph_expiration.sh``
- - ``_get_fxa_impacted.js``
+ - ``_get_1111579_fxa_impacted.js``
  - ``_get_ttl_hawk.js``
 
 Some of this tool are based on the IDLETIME value:
@@ -22,10 +22,10 @@ Some of this tool are based on the IDLETIME value:
 
 The use of one of the first list's command will override the result of
 the second list's commands. To prevent errorneous usage, commands
-based on TTL are their name prefixed with an ``_``.
+based on TTL have their names prefixed with an ``_``.
 
 
-Active and Unactive users
+Active and Inactive users
 -------------------------
 
  - ``get_active_unactive_users.js``
@@ -86,7 +86,7 @@ Keys expirations
 - ``_graph_expiration.sh``
 - ``get_expiration_estimate.js``
 
-Each redis keys have got a Time-To-Live so we know when it would exipre.
+Each redis keys has a Time-To-Live so we know when it would exipre.
 This script gives you an agenda of what amount of data will expire at which date.
 
 ::
@@ -125,7 +125,7 @@ date in the average time.
 Impacted users by the FxA bug
 -----------------------------
 
-- ``_get_fxa_impacted.js``
+- ``_get_1111579_fxa_impacted.js``
 
 We had Bug 1111579 that was converting some existing authenticated
 users into unauthenticated users.
@@ -133,14 +133,14 @@ users into unauthenticated users.
 This command let you know the number of impacted sessions and delete broken ones.
 
 ::
-    $ node _get_fxa_impacted
+    $ node _get_1111579_fxa_impacted
     processing 1 keys
     .
     number of impacted users 0 over 1
 
 ::
 
-    $ node _get_fxa_impacted --delete
+    $ node _get_1111579_fxa_impacted --delete
     processing 1 keys
     .
     number of impacted users 0 over 1
@@ -162,14 +162,14 @@ Providing an HawkId::
 
 Providing an HawkIdHmac::
 
-    $ nodeget_hawk_user_info.js de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
+    $ node get_hawk_user_info.js de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
     Trying with HawkIdHmac: dcf3932ac6c0ed48994bb17c5ecc150e03e84a76e523b698c8cc75c2ca278611
     Trying with HawkIdHmac: de9cd5c5ded9e2df982723d96361f56c0d72c936dc177cbff1f147bac1445f63
     { anonymous: false, userId: '<ciphered>' }
 
 Providing an unauthenticated HawkIdHmac::
 
-    $ nodeget_hawk_user_info.js 81d2afea33181e32023c9042b42157ebf453d3c04435b386ded7c378fb338b01
+    $ node get_hawk_user_info.js 81d2afea33181e32023c9042b42157ebf453d3c04435b386ded7c378fb338b01
     Trying with HawkIdHmac: c4c9a59a1a12719e395cb64e35d53d515335612e4b3208c51c89beecaa496393
     Trying with HawkIdHmac: 81d2afea33181e32023c9042b42157ebf453d3c04435b386ded7c378fb338b01
     { anonymous: true }
@@ -184,30 +184,30 @@ This script gives you general information about the redis keys::
 
     # Server
     [...]
-    
+
     # Clients
     [...]
-    
+
     # Memory
     [...]
 
     # Persistence
     [...]
-    
+
     # Stats
     [...]
-    
+
     # Replication
     [...]
-    
+
     # CPU
     [...]
-    
+
     # Keyspace
     db0:keys=179,expires=58,avg_ttl=2118094581
-    
-     ==== 
-    
+
+     ====
+
     spurls.*: 	64
     spurls.6e0a93dd218b767f799be64534c01c1f0706361a6b0caba1ca9c8099d2d8078b.6e0a93dd218b767f799be64534c01c1f0706361a6b0caba1ca9c8099d2d8078b
     spurls.a33b8202d462bbfa0bf1559b8ff3e05f710832c5103a142a2263e178810f858f
@@ -268,7 +268,7 @@ it or not.
     Looking for keys not used since : Thursday, January 08, 2015
     179 keys found. (11928 Bytes)
     Would you like to remove these keys? [y/N]
-    
+
     No key has been removed.
 
 With the ``--verbose`` option::

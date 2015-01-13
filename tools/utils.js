@@ -16,7 +16,7 @@ function keysInformation(client, pattern, callback) {
       if (key) {
         multi.debug("object", key);
       }
-      
+
     });
     multi.exec(function(err, objects) {
       if (err) return callback(err);

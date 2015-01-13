@@ -29,7 +29,7 @@ if (storage.engine === "redis") {
         multi.ttl(key);
         multi2.debug("object", key);
       }
-      
+
     });
     multi.exec(function(err, ttls) {
       if (err) throw err;
@@ -39,11 +39,11 @@ if (storage.engine === "redis") {
 
         var expirations = {};
         var key_sizes = {};
-  
+
         if (verbose && ttls.indexOf(-1) !== -1) {
           console.log("Keys that will never expires:");
         }
-  
+
         for(var i = 0; i < keys.length; i++) {
           var ttl = ttls[i];
           var size = parseInt(sizes[i].split(' ')[4].split(':')[1], 10);
@@ -60,7 +60,7 @@ if (storage.engine === "redis") {
             key_sizes[day] = key_sizes[day] ? key_sizes[day] + size : size;
           }
         }
-  
+
         var expiration_keys = Object.keys(expirations);
         expiration_keys.sort(function(a, b) {
           if (a === "never") {
@@ -73,7 +73,7 @@ if (storage.engine === "redis") {
             return date_a.getTime() - date_b.getTime();
           }
         });
-  
+
         var today = new Date();
         var cumulative = 0;
         expiration_keys.forEach(function(key) {
