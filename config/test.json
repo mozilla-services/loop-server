@@ -64,8 +64,8 @@
     "HKDFSalt": "6b4a7eec5406fcb3d394e7f64b2a72a2"
   },
   "hekaMetrics": {
-    "activated": true,
-    "debug": true,
+    "activated": false,
+    "debug": false,
     "level": "DEBUG"
   }
 }
