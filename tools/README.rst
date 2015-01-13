@@ -16,7 +16,7 @@ Some of this tools are based on the TTL command:
 
 Some of this tool are based on the IDLETIME value:
 
- - ``get_active_unactive_users.js``
+ - ``get_active_inactive_users.js``
  - ``get_expiration_estimate.js``
  - ``remove_old_keys.js``
 
@@ -28,7 +28,7 @@ based on TTL have their names prefixed with an ``_``.
 Active and Inactive users
 -------------------------
 
- - ``get_active_unactive_users.js``
+ - ``get_active_inactive_users.js``
 
 This script gives you some information about users activity::
 

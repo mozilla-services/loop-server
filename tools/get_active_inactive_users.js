@@ -32,7 +32,7 @@ if (storage.engine === "redis") {
 
     var active = 0;
     var unactive = 0;
-    var fifteen = 0;
+    var biweekly = 0;
     var monthly = 0;
 
     keysInfo.forEach(function(key) {
@@ -48,7 +48,7 @@ if (storage.engine === "redis") {
       }
 
       if (delta > TWO_WEEKS) {
-        fifteen++;
+        biweekly++;
       }
 
       if (delta > A_MONTH) {
@@ -58,7 +58,7 @@ if (storage.engine === "redis") {
 
     console.log(active + " sessions used during the last 24 hours.");
     console.log(unactive + " sessions not used for the last 24 hours.");
-    console.log(fifteen + " sessions not used for the last two weeks.");
+    console.log(biweekly + " sessions not used for the last two weeks.");
     console.log(monthly + " sessions not used for a month.");
 
     process.exit(0);
