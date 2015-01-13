@@ -164,7 +164,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
         return;
       }
 
-      var userHmac = hmac(identifier, conf.get('userMacSecret'));
+      var userHmac = hmac(identifier.toLowerCase(), conf.get('userMacSecret'));
 
       // generate the hawk session.
       hawk.generateHawkSession(createHawkSession,

@@ -124,7 +124,7 @@ module.exports = function (app, conf, logError, storage, auth, validators) {
               }
               // Store the appropriate profile information into the database,
               // associated with the hawk session.
-              var userHmac = hmac(data.email, conf.get('userMacSecret'));
+              var userHmac = hmac(data.email.toLowerCase(), conf.get('userMacSecret'));
               storage.setHawkUser(userHmac, req.hawkIdHmac, function(err) {
                 if (res.serverError(err)) return;
                 storage.setHawkUserId(req.hawkIdHmac, encrypt(req.hawk.id, data.email),

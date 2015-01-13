@@ -1441,6 +1441,18 @@ function runOnPrefix(apiPrefix) {
               });
           });
 
+          it("should accept a valid call identity even if the case differs",
+            function(done) {
+              storage.addUserSimplePushURLs(userHmac, hawkIdHmac,
+                {calls: pushURL}, function(err) {
+                  if (err) throw err;
+                  
+                  addCallReq
+                    .send({calleeId: user.toUpperCase(), callType: 'audio'})
+                    .end(done);
+                });
+            });
+
           it("should return a 503 if urlsStore is not available", function(done) {
             sandbox.stub(storage, "getUserSimplePushURLs", function(userMac, callback) {
               callback("error");
