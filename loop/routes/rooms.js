@@ -21,7 +21,7 @@ var hmac = require('../hmac');
 
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
-                           validators, tokBox) {
+                           validators, tokBox, notifications) {
 
   var roomsConf = conf.get("rooms");
 
@@ -535,5 +535,27 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           });
         });
       });
+  });
+
+  // Handle expiration notifications from the db.
+
+  // Notify the room owner when a participant expires.
+  notifications.on('roomparticipant.', function(key) {
+    var parts = key.split('.');
+    var roomToken = parts[1];
+
+    // Get the owner of the room to notify it.
+    storage.getRoomData(roomToken, function(err, roomData) {
+      if (err) {
+        logError(err);
+        return;
+      }
+      if (roomData) {
+        emitRoomEvent(roomToken, roomData.roomOwnerHmac, function(err) {
+          if (err) return logError(err);
+        });
+      }
     });
+  });
+
 };

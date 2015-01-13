@@ -1143,8 +1143,16 @@ RedisStorage.prototype = {
    **/
   deleteRoomParticipants: function(roomToken, callback) {
     if (isUndefined(roomToken, "roomToken", callback)) return;
-    var self = this;
-    self._client.del('roomparticipants.' + roomToken, callback);
+
+    var multi = this._client.multi();
+    this._client.smembers('roomparticipants.' + roomToken, function(err, keys) {
+      if (err) return callback(err);
+      keys.forEach(function(key) {
+        multi.del('roomparticipant.' + roomToken + '.' + key);
+      });
+    });
+    multi.del('roomparticipants.' + roomToken);
+    multi.exec(callback);
   },
 
   /**
@@ -1162,12 +1170,16 @@ RedisStorage.prototype = {
 
     var data = clone(participantData);
     data.hawkIdHmac = hawkIdHmac;
-    data.expiresAt = time() + ttl;
 
     var multi = this._client.multi();
-    multi.hset('roomparticipants.' + roomToken, hawkIdHmac,
-               encode(data));
-    multi.expire('roomparticipants.' + roomToken, ttl);
+
+    multi.psetex(
+      'roomparticipant.' + roomToken + '.' + hawkIdHmac,
+      parseInt(ttl * 1000, 10),
+      encode(data)
+    );
+    multi.sadd('roomparticipants.' + roomToken, hawkIdHmac);
+    multi.pexpire('roomparticipants.' + roomToken, parseInt(ttl * 1000, 10));
     multi.exec(callback);
   },
 
@@ -1184,30 +1196,29 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var self = this;
-    var now = time();
-    self._client.hget('roomparticipants.' + roomToken, hawkIdHmac, function(err, data) {
-      if (err) return callback(err);
-      if (data === null) {
-        callback(null, false);
-        return;
-      }
+    self._client.pexpire(
+      'roomparticipant.' + roomToken + '.' + hawkIdHmac,
+      ttl * 1000, function(err, reply) {
+        var success = (reply === 1 ) ? true : false;
+        if (err) return callback(err);
 
-      data = JSON.parse(data);
-
-      if (data.expiresAt > now) {
-        data.expiresAt = parseInt(now + ttl, 10);
         var multi = self._client.multi();
-        multi.hset('roomparticipants.' + roomToken, hawkIdHmac, JSON.stringify(data));
         multi.pexpire('roomparticipants.' + roomToken, ttl * 1000);
-        multi.pexpire('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
-                      ttl * 1000);
+        if (success === false) {
+          multi.srem('roomparticipants.' + roomToken, hawkIdHmac);
+        } else {
+          multi.pexpire(
+            'roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac,
+            ttl * 1000
+          );
+        }
+
         multi.exec(function(err) {
-          callback(err, true);
+          callback(err, success);
         });
-        return;
       }
-      callback(null, false);
-    });
+    );
+
   },
 
   /**
@@ -1222,7 +1233,8 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
     if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
     var multi = this._client.multi();
-    multi.hdel('roomparticipants.' + roomToken, hawkIdHmac);
+    multi.srem('roomparticipants.' + roomToken, hawkIdHmac);
+    multi.del('roomparticipant.' + roomToken + '.' + hawkIdHmac);
     multi.del('roomparticipant_access_token.' + roomToken + '.' + hawkIdHmac);
     multi.exec(callback);
   },
@@ -1238,33 +1250,39 @@ RedisStorage.prototype = {
     if (isUndefined(roomToken, "roomToken", callback)) return;
 
     var self = this;
-    var now = time();
-    self._client.hgetall('roomparticipants.' + roomToken,
-      function(err, participantsMapping) {
-        if (err) return callback(err);
-        if (participantsMapping === null) {
-          callback(null, []);
-          return;
-        }
 
-        var participantsKeys = Object.keys(participantsMapping);
-        if (participantsKeys.length === 0) {
-          callback(null, []);
-          return;
-        }
-        async.map(participantsKeys, function(key, cb) {
-          decode(participantsMapping[key], cb);
-        }, function(err, participants) {
+    self._client.smembers('roomparticipants.' + roomToken, function(err, keys) {
+      if (err) return callback(err);
+
+      if (keys.length === 0) {
+        callback(null, []);
+        return;
+      }
+      self._client.mget(keys.map(function(hawkIdHmac) {
+        return 'roomparticipant.' + roomToken + '.' + hawkIdHmac;
+      }), function(err, res) {
+        if (err) return callback(err);
+        var multi = self._client.multi();
+        async.map(res, decode, function(err, participants) {
           if (err) return callback(err);
-          participants = participants.filter(function(participant) {
-            return participant.expiresAt > now;
-          }).map(function(participant) {
-            delete participant.expiresAt;
-            return participant;
+
+          // Remove the expired participants from the list.
+          var activeParticipants = participants.filter(function(participant, i) {
+            if (participant !== null){
+              return true;
+            } else {
+              multi.del('roomparticipant.' + roomToken + '.' + keys[i]);
+              return false;
+            }
           });
-          callback(null, participants);
+
+          multi.exec(function(err) {
+            if (err) return callback(err);
+            callback(null, activeParticipants);
+          })
         });
       });
+    });
   },
 
   /**
