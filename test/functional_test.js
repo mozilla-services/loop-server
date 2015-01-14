@@ -1596,7 +1596,7 @@ function runOnPrefix(apiPrefix) {
               .expect(400)
               .end(function(err, res) {
                 if (err) throw err;
-                expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+                expectFormattedError(res, 400, errors.USER_UNAVAILABLE,
                                     "Could not find any existing user to call");
                 done();
               });
@@ -1609,7 +1609,7 @@ function runOnPrefix(apiPrefix) {
                 .send({calleeId: user, callType: "audio"})
                 .expect(400)
                 .end(function(err, res) {
-                  expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+                  expectFormattedError(res, 400, errors.USER_UNAVAILABLE,
                                       "Could not find any existing user to call");
                   done(err);
                 });

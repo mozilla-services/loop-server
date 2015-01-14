@@ -214,7 +214,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
             if (res.serverError(err)) return;
 
             if (callees.length === 0) {
-              sendError(res, 400, errors.INVALID_PARAMETERS,
+              sendError(res, 400, errors.USER_UNAVAILABLE,
                         "Could not find any existing user to call");
               return;
             }
