@@ -1446,7 +1446,7 @@ function runOnPrefix(apiPrefix) {
               storage.addUserSimplePushURLs(userHmac, hawkIdHmac,
                 {calls: pushURL}, function(err) {
                   if (err) throw err;
-                  
+
                   addCallReq
                     .send({calleeId: user.toUpperCase(), callType: 'audio'})
                     .end(done);

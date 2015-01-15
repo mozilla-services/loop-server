@@ -36,7 +36,7 @@ describe('Tools', function() {
         clientMaxSize: 4,
         userMac: 'natim mac',
         account: 'natim account'
-      },
+      }
     };
 
     beforeEach(function(done) {
