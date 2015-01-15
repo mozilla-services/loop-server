@@ -23,6 +23,7 @@ describe('Tools', function() {
     var participants = {
       '12345': {
         id: uuid.v4(),
+        hawkIdHmac: '12345',
         displayName: 'alexis',
         clientMaxSize: 4,
         userMac: 'alexis mac',
@@ -30,6 +31,7 @@ describe('Tools', function() {
       },
       '45678': {
         id: uuid.v4(),
+        hawkIdHmac: '45678',
         displayName: 'natim',
         clientMaxSize: 4,
         userMac: 'natim mac',
@@ -41,8 +43,7 @@ describe('Tools', function() {
       var multi = storage._client.multi();
       roomTokens.forEach(function(token) {
         Object.keys(participants).forEach(function(id) {
-          var participant = participants[id];
-          participant.hawkIdHmac = id;
+          var participant = JSON.parse(JSON.stringify(participants[id]));
           participant.expiresAt = time() + 5000;
 
           var data = JSON.stringify(participant);
@@ -63,13 +64,8 @@ describe('Tools', function() {
           storage.getRoomParticipants(roomToken, function(err, dbParticipants) {
             if (err) return ok(err);
             expect(dbParticipants).to.length(2);
-            var alexis = dbParticipants[0];
-            var natim = dbParticipants[1];
-            delete participants['12345'].expiresAt;
-            delete participants['45678'].expiresAt;
-
-            expect(alexis).to.eql(participants['12345']);
-            expect(natim).to.eql(participants['45678']);
+            expect(dbParticipants[0]).to.eql(participants['12345']);
+            expect(dbParticipants[1]).to.eql(participants['45678']);
             ok();
           });
         }, function(err) {
