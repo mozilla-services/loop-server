@@ -5,11 +5,11 @@
  * Migrate the room participants from the old format to the new one.
  *
  * Previously, a "roomparticipants.{roomToken}" key was holding the list of
- * participants, wich their value. The Redis data-type was a hash.
+ * participants, with their value. The Redis data-type was a hash.
  *
  * Bug 1121403 changed that in order to have expiration events on the
  * participants; the data type is now a set, refering to all the participants
- * which are stored in independent keys.
+ * ids. Participants details are now stored with their own independent key.
  *
  * This script copies all the old keys to the new format.
  **/

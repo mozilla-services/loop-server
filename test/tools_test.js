@@ -43,6 +43,7 @@ describe('Tools', function() {
       var multi = storage._client.multi();
       roomTokens.forEach(function(token) {
         Object.keys(participants).forEach(function(id) {
+          // Deep copy.
           var participant = JSON.parse(JSON.stringify(participants[id]));
           participant.expiresAt = time() + 5000;
 
