@@ -8,6 +8,12 @@ This document describes changes between each past release.
 
 - XXX
 
+0.15.1 (2015-01-20)
+-------------------
+
+- [bugfix] Add a migration script for room participants (1121403)
+- [feature] Split out USER_UNAVAILABLE from INVALID_PARAMETERS (1120001)
+
 
 0.15.0 (2015-01-13)
 -------------------
