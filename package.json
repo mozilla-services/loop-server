@@ -1,7 +1,7 @@
 {
   "name": "mozilla-loop-server",
   "description": "The Mozilla Loop (WebRTC App) server",
-  "version": "0.15.1",
+  "version": "0.15.2",
   "author": "Mozilla (https://mozilla.org/)",
   "homepage": "https://github.com/mozilla-services/loop-server/",
   "bugs": "https://bugzilla.mozilla.org/enter_bug.cgi?product=Loop&component=Server",
@@ -27,7 +27,7 @@
     "git-rev": "0.2.1",
     "hiredis": "0.1.17",
     "hkdf": "0.0.2",
-    "mozlog": "1.0.1",
+    "mozlog": "1.0.2",
     "opentok": "2.2.4",
     "phone": "git://github.com/Natim/node-phone.git#83a4f48",
     "node-uuid": "1.4.1",
