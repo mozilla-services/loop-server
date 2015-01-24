@@ -17,4 +17,4 @@ metricsFileParams.app = loopPackageData.name;
 
 mozlog.config(metricsFileParams);
 
-exports.hekaLogger = mozlog("loop");
+exports.hekaLogger = mozlog();
