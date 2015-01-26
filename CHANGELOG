@@ -7,6 +7,7 @@ This document describes changes between each past release.
 -------------------
 
 - [metrics] Do not use loop. prefix for event types (1080133)
+- [tools] Add a script to move redis data over (1023396)
 
 0.15.1 (2015-01-19)
 -------------------
