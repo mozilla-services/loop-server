@@ -11,7 +11,7 @@ var loop = require("../loop");
 var time = require('../loop/utils').time;
 var getStorage = require("../loop/storage");
 
-var migrateRedis = require("../tools/migrate_redis");
+var moveRedisData = require("../tools/move_redis_data");
 var migrateRoomParticipants = require("../tools/migrate_1121403_roomparticipants");
 
 
@@ -56,7 +56,7 @@ describe('Tools', function() {
     });
 
     it("old+new values should be in the new db after migration", function(done){
-      migrateRedis(options.settings, function(err) {
+      moveRedisData(options.settings, function(err) {
         if (err) throw err;
         // Check old and new values are present.
         var multi = storage._client.new_db.multi();
@@ -82,7 +82,7 @@ describe('Tools', function() {
     });
 
     it("should delete keys from the old database once copied", function(done) {
-      migrateRedis(options.settings, function(err) {
+      moveRedisData(options.settings, function(err) {
         if (err) throw err;
         // Check old and new values are present.
         var multi = storage._client.old_db.multi();

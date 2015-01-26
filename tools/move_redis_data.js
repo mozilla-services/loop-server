@@ -2,7 +2,7 @@ var conf = require('../loop/config').conf;
 var migrationClient = require("../loop/storage/redis_migration");
 var async = require('async');
 
-var migrateDatabase = function(options, callback) {
+var moveRedisData = function(options, callback) {
   var client = migrationClient({
     oldDB: options.migrateFrom,
     newDB: options
@@ -24,8 +24,7 @@ function main(options, callback) {
   if (options.migrateFrom !== undefined) {
     console.log("starting migration");
     console.time("migration");
-    migrateDatabase(options, function(){
-      console.log("migration finished");
+    moveRedisData(options, function(){
       console.timeEnd("migration");
       callback();
     });
