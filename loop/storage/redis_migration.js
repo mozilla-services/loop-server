@@ -189,6 +189,8 @@ function createClient(options) {
     return new Multi();
   };
 
+  Proxy.prototype.copyKey = copyKey;
+
   return new Proxy();
 }
 
