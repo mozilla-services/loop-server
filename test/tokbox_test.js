@@ -75,7 +75,7 @@ describe("TokBox", function() {
 
     beforeEach(function() {
       statsdClient = { timing: function() {} };
-      statsdSpy = sandbox.spy(statsdClient,"timing");
+      statsdSpy = sandbox.spy(statsdClient, "timing");
 
       openTokSpy = sandbox.spy(loopTokbox, "OpenTok");
       openTokSpy.withArgs(
