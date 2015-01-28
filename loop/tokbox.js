@@ -13,11 +13,12 @@ var time = require('./utils').time;
 // tests.
 exports.OpenTok = require('opentok');
 
-function TokBox(settings) {
+function TokBox(settings, statsdClient) {
   this.credentials = settings.credentials;
   if (settings.retryOnError === undefined) {
     settings.retryOnError = 3;
   }
+  this.statsdClient = statsdClient;
   this.retryOnError = settings.retryOnError;
   this.tokenDuration = settings.tokenDuration;
   this._opentok = {};
@@ -55,6 +56,9 @@ TokBox.prototype = {
     }
 
     var self = this;
+    if (self.statsdClient !== undefined) {
+      var startTime = Date.now();
+    }
     opentok.createSession({
       mediaMode: options.mediaMode || "relayed"
     }, function(err, session) {
@@ -66,6 +70,12 @@ TokBox.prototype = {
           }
           self.getSession(options, callback);
           return;
+        }
+        if (self.statsdClient !== undefined) {
+          self.statsdClient.timing(
+            'tokbox.createSession',
+            Date.now() - startTime
+          );
         }
         callback(null, session, opentok);
     });
