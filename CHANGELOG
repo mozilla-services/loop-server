@@ -3,6 +3,14 @@ Changelog
 
 This document describes changes between each past release.
 
+0.15.3 (2015-01-28)
+-------------------
+
+- [bugfix] ignore unexisting rooms when deleting multiple rooms
+- [bugfix] ignore unexisting rooms when using touchRoomData
+- [config] Increase the default HTTP connection pool size (1125777)
+- [metrics] Time calls to tokbox (1125878)
+
 0.15.2 (2015-01-23)
 -------------------
 
