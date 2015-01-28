@@ -812,6 +812,14 @@ describe("Storage", function() {
           });
         });
 
+        it("should remove rooms from the store and ignore expired ones.", function(done) {
+          var roomToken2 = generateToken(conf.get("rooms").tokenSize);
+          storage.deleteRoomsData([roomToken2], function(err) {
+            if (err) throw err;
+            done();
+          });
+        });
+
         it("should save the room deletion notification", function(done) {
           storage.setUserRoomData(userMac, roomToken, roomData, function(err) {
             if (err) throw err;
