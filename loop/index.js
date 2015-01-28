@@ -42,7 +42,7 @@ var storage = getStorage(conf.get("storage"), {
   'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
-var tokBox = new TokBox(conf.get('tokBox'));
+var tokBox = new TokBox(conf.get('tokBox'), statsdClient);
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
 

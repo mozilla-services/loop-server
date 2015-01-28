@@ -71,9 +71,12 @@ describe("TokBox", function() {
   });
 
   describe("#getSessionTokens", function() {
-    var tokBox, openTokSpy;
+    var tokBox, openTokSpy, statsdClient, statsdSpy;
 
     beforeEach(function() {
+      statsdClient = { timing: function() {} };
+      statsdSpy = sandbox.spy(statsdClient,"timing");
+
       openTokSpy = sandbox.spy(loopTokbox, "OpenTok");
       openTokSpy.withArgs(
         apiKey + "_nightly",
@@ -105,7 +108,32 @@ describe("TokBox", function() {
         },
         tokenDuration: 3600, // 1h.
         timeout: 2000
+      }, statsdClient);
+    });
+
+    it("should send the request time to statsd", function(done){
+      sandbox.stub(tokBox._opentok.default, "createSession",
+      function(options, callback) {
+        callback(null, {sessionId: fakeCallInfo.session1});
       });
+
+      var generateTokenCalls = 0;
+      sandbox.stub(tokBox._opentok.default, "generateToken",
+        /* eslint-disable */
+        function(sessionId, options) {
+          generateTokenCalls += 1;
+          if (generateTokenCalls === 1) {
+            return fakeCallInfo.token1;
+          }
+          return fakeCallInfo.token2;
+        });
+
+      tokBox.getSessionTokens(function(error, info) {
+        expect(error).eql(null);
+        assert.calledOnce(statsdSpy);
+        done();
+      });
+
     });
 
     it("should return session and token info if tokbox API are working",
