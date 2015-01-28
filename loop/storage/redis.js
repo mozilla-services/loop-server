@@ -1086,9 +1086,11 @@ RedisStorage.prototype = {
 
     var handleDeletedNotification = function(err, data) {
       if (err) return callback(err);
-      var key = 'room.deleted.' + data.roomOwnerHmac;
-      multi2.hsetnx(key, data.roomToken, time());
-      multi2.expire(key, self._settings.roomsDeletedTTL);
+      if (data !== null) {
+        var key = 'room.deleted.' + data.roomOwnerHmac;
+        multi2.hsetnx(key, data.roomToken, time());
+        multi2.expire(key, self._settings.roomsDeletedTTL);
+      }
     };
 
     multi.exec(function(err, results) {
