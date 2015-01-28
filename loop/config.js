@@ -294,7 +294,7 @@ var conf = convict({
   maxHTTPSockets: {
     doc: "The maximum of HTTP sockets to use when doing requests",
     format: Number,
-    default: 5
+    default: 10000000
   },
   heartbeatTimeout: {
     doc: "Timeout for requests when doing heartbeat checks (ms)",
