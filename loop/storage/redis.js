@@ -1035,6 +1035,10 @@ RedisStorage.prototype = {
     self.getRoomData(roomToken, function(err, data) {
       if (err) return callback(err);
 
+      if (data === null) {
+        return callback();
+      }
+
       // Update the current time
       data.updateTime = time();
 

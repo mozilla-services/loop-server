@@ -783,6 +783,13 @@ describe("Storage", function() {
               });
             });
           });
+
+        it("should not fail if the room doesn't exists", function(done) {
+          storage.touchRoomData(roomToken, function(err) {
+            if (err) throw err;
+            done();
+          });
+        });
       });
 
       describe("#deleteRoomsData", function() {
