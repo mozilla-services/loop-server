@@ -73,6 +73,9 @@ var corsEnabled = cors({
   }
 });
 
+var SimplePush = require("./simplepush");
+var simplePush = new SimplePush(statsdClient);
+
 
 var app = express();
 
@@ -111,7 +114,7 @@ callUrl(apiRouter, conf, logError, storage, auth, validators, statsdClient);
 
 var calls = require("./routes/calls");
 var storeUserCallTokens = calls(apiRouter, conf, logError, storage, tokBox,
-                                auth, validators);
+                                simplePush, auth, validators);
 
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(apiRouter, conf);
@@ -123,7 +126,7 @@ if (conf.get("fxaOAuth").activated !== false) {
 
 var rooms = require("./routes/rooms");
 rooms(apiRouter, conf, logError, storage, auth, validators, tokBox,
-      notifications);
+      simplePush, notifications);
 
 var session = require("./routes/session");
 session(apiRouter, conf, storage, auth);

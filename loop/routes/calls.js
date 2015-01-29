@@ -9,15 +9,14 @@ var randomBytes = require('crypto').randomBytes;
 var errors = require('../errno.json');
 var hmac = require('../hmac');
 var getProgressURL = require('../utils').getProgressURL;
-var request = require('request');
 var sendError = require('../utils').sendError;
 var getUserAccount = require('../utils').getUserAccount;
 var phone = require('phone');
 var constants = require('../constants');
 var time = require('../utils').time;
 
-module.exports = function(app, conf, logError, storage, tokBox, auth,
-  validators) {
+module.exports = function(app, conf, logError, storage, tokBox, simplePush,
+  auth, validators) {
   var progressURL = getProgressURL(conf.get('publicServerAddress'));
 
   /**
@@ -198,14 +197,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                     function() {
                       if (res.serverError(err)) return;
 
-                      urls.forEach(function(simplePushUrl) {
-                        request.put({
-                          url: simplePushUrl,
-                          form: { version: callInfo.timestamp }
-                        }, function() {
-                          // Catch errors.
-                        });
-                      });
+                      simplePush.notify("call.direct", urls, callInfo.timestamp);
                       callback();
                     });
                 });
@@ -289,18 +281,7 @@ module.exports = function(app, conf, logError, storage, tokBox, auth,
                       if (res.serverError(err)) return;
 
                       // Call SimplePush urls.
-                      if (!Array.isArray(urls)) {
-                        urls = [urls];
-                      }
-
-                      urls.forEach(function(simplePushUrl) {
-                        request.put({
-                          url: simplePushUrl,
-                          form: { version: callInfo.timestamp }
-                        }, function() {
-                          // Catch errors.
-                        });
-                      });
+                      simplePush.notify('call.token', urls, callInfo.timestamp);
 
                       res.status(200).json({
                         callId: callInfo.callId,
