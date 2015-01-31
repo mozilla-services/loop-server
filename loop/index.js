@@ -42,17 +42,17 @@ var storage = getStorage(conf.get("storage"), {
   'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
+var statsdClient;
+if (conf.get('statsdEnabled') === true) {
+  statsdClient = new StatsdClient(conf.get('statsd'));
+}
+
 var tokBox = new TokBox(conf.get('tokBox'), statsdClient);
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
 
 var startupMessage = 'Server was able to communicate with Sentry';
 ravenClient.captureMessage(startupMessage, {level: 'info'});
-
-var statsdClient;
-if (conf.get('statsdEnabled') === true) {
-  statsdClient = new StatsdClient(conf.get('statsd'));
-}
 
 function logError(err) {
   if (conf.get('env') !== 'test') {
