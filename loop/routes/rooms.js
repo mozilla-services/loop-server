@@ -7,7 +7,6 @@
 var async = require('async');
 var HKDF = require('hkdf');
 var uuid = require('node-uuid');
-var request = require('request');
 
 var decrypt = require('../encrypt').decrypt;
 var encrypt = require('../encrypt').encrypt;
@@ -21,7 +20,7 @@ var hmac = require('../hmac');
 
 
 module.exports = function (apiRouter, conf, logError, storage, auth,
-                           validators, tokBox, notifications) {
+                           validators, tokBox, simplePush, notifications) {
 
   var roomsConf = conf.get("rooms");
 
@@ -73,18 +72,15 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * @param {Number} version, the version to pass in the request,
    * @param {Function} callback(err), called when notification is complete.
    **/
-  function notifyOwner(roomOwnerHmac, version, callback) {
+  function notifyOwner(roomOwnerHmac, version, reason, callback) {
     storage.getUserSimplePushURLs(roomOwnerHmac,
       function(err, simplePushURLsMapping) {
         if (err) return callback(err);
-        simplePushURLsMapping.rooms.forEach(function(simplePushUrl) {
-          request.put({
-            url: simplePushUrl,
-            form: { version: version }
-          }, function() {
-            // Catch errors.
-          });
-        });
+        simplePush.notify(
+          'rooms.notifyowner.' + reason,
+          simplePushURLsMapping.rooms,
+          version
+        );
         callback(null);
       });
   }
@@ -96,10 +92,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * @param roomOwnerHmac The roomOwnerHmac
    * @param callback The action to do next
    **/
-  function emitRoomEvent(roomToken, roomOwnerHmac, callback) {
+  function emitRoomEvent(roomToken, roomOwnerHmac, reason, callback) {
     storage.touchRoomData(roomToken, function(err, version) {
       if (err) return callback(err);
-      notifyOwner(roomOwnerHmac, version, callback);
+      notifyOwner(roomOwnerHmac, version, reason, callback);
     });
   }
 
@@ -212,7 +208,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
           storage.setUserRoomData(req.user, token, roomData, function(err) {
             if (res.serverError(err)) return;
-            notifyOwner(req.user, roomData.updateTime, function(err) {
+            notifyOwner(req.user, roomData.updateTime, "creation", function(err) {
               if (res.serverError(err)) return;
               res.status(201).json({
                 roomToken: token,
@@ -246,7 +242,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       storage.setUserRoomData(req.user, req.token, roomData, function(err) {
         if (res.serverError(err)) return;
-        notifyOwner(req.user, now, function(err) {
+        notifyOwner(req.user, now, "modification", function(err) {
           if (res.serverError(err)) return;
           res.status(200).json({
             expiresAt: roomData.expiresAt
@@ -265,7 +261,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
         var now = time();
-        notifyOwner(req.user, now, function(err) {
+        notifyOwner(req.user, now, "deletion", function(err) {
           if (res.serverError(err)) return;
           res.status(204).json({});
         });
@@ -385,7 +381,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                         }, ttl, function(err) {
                           if (res.serverError(err)) return;
                           emitRoomEvent(req.token,
-                            req.roomStorageData.roomOwnerHmac, function(err) {
+                            req.roomStorageData.roomOwnerHmac,
+                            "join",
+                            function(err) {
                               if (res.serverError(err)) return;
                               res.status(200).json({
                                 apiKey: req.roomStorageData.apiKey,
@@ -425,7 +423,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           storage.deleteRoomParticipant(req.token, participantHmac,
             function(err) {
               if (res.serverError(err)) return;
-              emitRoomEvent(req.token, req.roomStorageData.roomOwnerHmac,
+              emitRoomEvent(
+                req.token, req.roomStorageData.roomOwnerHmac,
+                "leave",
                 function(err) {
                   if (res.serverError(err)) return;
                   res.status(204).json();
@@ -518,7 +518,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         storage.deleteRoomsData(roomsToDelete, function(err) {
           if (res.serverError(err)) return;
           var now = time();
-          notifyOwner(req.user, now, function(err) {
+          notifyOwner(req.user, now, "deletion", function(err) {
             if (res.serverError(err)) return;
 
             var responses = {};
@@ -551,7 +551,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         return;
       }
       if (roomData) {
-        emitRoomEvent(roomToken, roomData.roomOwnerHmac, function(err) {
+        emitRoomEvent(roomToken, roomData.roomOwnerHmac, "leave", function(err) {
           if (err) return logError(err);
         });
       }

@@ -99,11 +99,21 @@ function time() {
   return parseInt(Date.now() / 1000, 10);
 }
 
+/**
+ * Dedupe arrays, see http://stackoverflow.com/questions/9229645/remove-duplicates-from-javascript-array
+ **/
+function dedupeArray(array) {
+  return array.sort().filter(function(item, pos) {
+    return !pos || item !== array[pos - 1];
+  });
+}
+
 module.exports = {
   getProgressURL: getProgressURL,
   sendError: sendError,
   isoDateString: isoDateString,
   time: time,
   getUserAccount: getUserAccount,
-  getSimplePushURLS: getSimplePushURLS
+  getSimplePushURLS: getSimplePushURLS,
+  dedupeArray: dedupeArray
 };
