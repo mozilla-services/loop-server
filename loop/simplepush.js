@@ -26,7 +26,8 @@ SimplePush.prototype = {
 
     urls.forEach(function(simplePushUrl) {
       if (self.statsdClient !== undefined) {
-        self.statsdClient.count("simplepush." + reason, 1);
+        self.statsdClient.count("simplepush.call", 1);
+        self.statsdClient.count("simplepush.call." + reason, 1);
       }
       request.put({
         url: simplePushUrl,
