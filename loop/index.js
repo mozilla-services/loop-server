@@ -6,6 +6,10 @@
 
 var conf = require('./config').conf;
 
+if (conf.get('newRelic').activated) {
+  require('newrelic');
+}
+
 // Configure http agents to use more than the default number of sockets.
 var http = require('http');
 var https = require('https');

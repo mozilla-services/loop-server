@@ -410,6 +410,28 @@ var conf = convict({
       default: "heka"
     }
   },
+  newRelic: {
+    activated: {
+      doc: "Defines if newrelic is activated or not",
+      default: false,
+      format: Boolean
+    },
+    licenceKey: {
+      doc: "New Relic licence key",
+      format: String,
+      default: ""
+    },
+    loggingLevel: {
+      doc: "Logging level to use",
+      format: String,
+      default: "info"
+    },
+    appName: {
+      doc: "New Relic application name",
+      format: String,
+      default: "Loop Server"
+    }
+  },
   rooms: {
     defaultTTL: {
       doc: "The default TTL for a room (in hours)",
