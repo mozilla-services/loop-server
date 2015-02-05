@@ -140,22 +140,38 @@ TokBox.prototype = {
     options = options || {};
     var timeout = options.timeout;
 
-    var opentok = new exports.OpenTok(
-      this.credentials.default.apiKey,
-      this.credentials.default.apiSecret, {
-        apiUrl: this.credentials.default.apiUrl || conf.get("tokBox").apiUrl,
-        timeout: timeout
-      }
-    );
+    request.post({
+      url: this._opentok.default._client.c.apiUrl +
+           this._opentok.default._client.c.endpoints.createSession,
+      form: {"p2p.preference": "enabled"},
+      headers: {
+        'User-Agent': 'OpenTok-Node-SDK/2.2.4',
+        'X-TB-PARTNER-AUTH': this._opentok.default._client.c.apiKey +
+                             ':' + this._opentok.default._client.c.apiSecret
+      }, timeout: timeout
+      }, function(err, resp, body) {
+        if (err) {
+          callback(new Error('The request failed: ' + err));
+          return;
+        }
 
-    opentok.createSession({
-      mediaMode: 'relayed'
-    }, function(err) {
-      if (err !== null) {
-        callback(err);
-        return;
-      }
-      callback(null);
+        // handle client errors
+        if (resp.statusCode === 403) {
+          callback(new Error(
+            'An authentication error occured: (' +
+            resp.statusCode + ')' + body
+          ));
+          return;
+        }
+
+        // handle server errors
+        if (resp.statusCode >= 500 && resp.statusCode <= 599) {
+          callback(new Error(
+            'A server error occured: (' + resp.statusCode + ')' + body
+          ));
+          return;
+        }
+        callback(null);
     });
   }
 };

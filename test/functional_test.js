@@ -246,8 +246,8 @@ function runOnPrefix(apiPrefix) {
     describe("GET /__hearbeat__", function() {
 
       it("should return a 503 if storage is down", function(done) {
-        sandbox.stub(tokBox, "ping", function(options, callback) {
-          callback(null);
+        sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
         });
         sandbox.stub(storage, "ping", function(callback) {
           callback(false);
@@ -267,7 +267,7 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should return a 503 if provider service is down", function(done) {
-        sandbox.stub(tokBox, "ping", function(options, callback) {
+        sandbox.stub(request, "post", function(options, callback) {
           callback(new Error("blah"));
         });
         supertest(app)
@@ -278,15 +278,15 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': false,
-              'message': "TokBox Error: blah"
+              'message': "TokBox Error: The request failed: Error: blah"
             });
             done();
           });
       });
 
       it("should return a 200 if all dependencies are ok", function(done) {
-        sandbox.stub(tokBox, "ping", function(options, callback) {
-          callback(null);
+        sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
         });
         supertest(app)
           .get(apiPrefix + '/__heartbeat__')
