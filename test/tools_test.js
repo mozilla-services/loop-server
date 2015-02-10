@@ -6,6 +6,7 @@
 var async = require('async');
 var expect = require("chai").expect;
 var uuid = require('node-uuid');
+var sinon = require('sinon');
 
 var loop = require("../loop");
 var time = require('../loop/utils').time;
@@ -28,14 +29,18 @@ describe('Tools', function() {
       }
     };
 
-    var storage, range;
+    var storage, range, sandbox;
 
     beforeEach(function(done) {
+      sandbox = sinon.sandbox.create();
+      // Mock console.log to not output during the tests.
+      sandbox.stub(console, 'log', function(){});
+
       range = [];
       // Populate the range with a number of items.
-      for (var i = 0; i >= 200; i++) {
+      for (var i = 0; i < 200; i++) {
         range.push(i);
-      };
+      }
 
       storage = getStorage(options);
       // Add items to the old database.
@@ -60,6 +65,7 @@ describe('Tools', function() {
     });
 
     afterEach(function(done) {
+      sandbox.restore();
       storage._client.old_db.flushdb(function(err) {
         if (err) throw err;
         storage._client.new_db.flushdb(done);
@@ -67,10 +73,12 @@ describe('Tools', function() {
     });
 
     it("old+new values should be in the new db after migration", function(done){
-      moveRedisData(options.settings, function(err) {
+      moveRedisData(options.settings, function(err, counter) {
         if (err) throw err;
+        expect(counter).to.eql(600);
+        expect(range).to.length(200);
         // Check old and new values are present.
-        range.forEach(function(i) {
+        async.each(range, function(i, cb) {
           var multi = storage._client.new_db.multi();
           multi.get('old.foo' + i);
           multi.ttl('old.foofoo' + i);
@@ -88,9 +96,9 @@ describe('Tools', function() {
             expect(results[4]).to.be.lte(10);
             expect(results[4]).to.be.gt(0);
             expect(results[5]).to.eql('bar');
+            cb();
           });
-        });
-        done();
+        }, done);
       });
     });
 
