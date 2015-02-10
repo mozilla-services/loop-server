@@ -3,6 +3,13 @@ Changelog
 
 This document describes changes between each past release.
 
+0.15.5 (2015-02-10)
+-------------------
+
+- [tools] Update the migration script to use a redis scan (1125788)
+- [bugfix] Fix the heartbeat tokbox handling (1129905)
+- [metrics] Integrate with newrelic for performance monitoring (1126889)
+
 0.15.4 (2015-02-02)
 -------------------
 
