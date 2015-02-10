@@ -8,15 +8,36 @@ var moveRedisData = function(options, callback) {
     newDB: options
   });
 
-  client.old_db.keys('*', function(err, keys) {
-    if (err) throw err;
-    console.log("migrating ", keys.length, "keys");
-    async.each(keys, function(key, done) {
-      client.copyKey(key, done);
-    }, function(err) {
-      callback();
+  var migratedCounter = 0;
+
+  function scanAndMigrate(cursor) {
+    if (cursor === undefined) {
+      cursor = 0;
+    }
+    client.old_db.scan(cursor, function(err, results) {
+      if (err) return callback(err);
+      var nextCursor = parseInt(results[0], 10);
+      if (results[1] === "") {
+        return callback(null, 0);
+      }
+      var keys = results[1].split(',');
+
+      console.log("migrating ", keys.length, "keys");
+      migratedCounter += keys.length;
+
+      async.each(keys, function(key, done) {
+        client.copyKey(key, done);
+      }, function(err) {
+        if (nextCursor === 0 || err) {
+          callback(err, migratedCounter);
+        } else {
+          scanAndMigrate(nextCursor);
+        }
+      });
     });
-  });
+  };
+
+  scanAndMigrate();
 }
 
 function main(options, callback) {
@@ -24,9 +45,10 @@ function main(options, callback) {
   if (options.migrateFrom !== undefined) {
     console.log("starting migration");
     console.time("migration");
-    moveRedisData(options, function(){
+    moveRedisData(options, function(err, counter){
       console.timeEnd("migration");
-      callback();
+      console.log("migrated", counter, "keys");
+      callback(err, counter);
     });
   } else {
     console.log("please, change your configuration to enable migration");

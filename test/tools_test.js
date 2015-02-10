@@ -6,6 +6,7 @@
 var async = require('async');
 var expect = require("chai").expect;
 var uuid = require('node-uuid');
+var sinon = require('sinon');
 
 var loop = require("../loop");
 var time = require('../loop/utils').time;
@@ -28,27 +29,43 @@ describe('Tools', function() {
       }
     };
 
-    var storage;
+    var storage, range, sandbox;
 
     beforeEach(function(done) {
+      sandbox = sinon.sandbox.create();
+      // Mock console.log to not output during the tests.
+      sandbox.stub(console, 'log', function(){});
+
+      range = [];
+      // Populate the range with a number of items.
+      for (var i = 0; i < 200; i++) {
+        range.push(i);
+      }
+
       storage = getStorage(options);
       // Add items to the old database.
       var multi = storage._client.old_db.multi();
-      multi.set('old.foo', 'bar');
-      multi.setex('old.foofoo', 10, 'barbar');
-      multi.hmset('old.myhash', {'foo': 'bar'});
+      range.forEach(function(i) {
+        multi.set('old.foo' + i, 'bar');
+        multi.setex('old.foofoo' + i, 10, 'barbar');
+        multi.hmset('old.myhash' + i, {'foo': 'bar'});
+      });
+
       multi.exec(function(err) {
         if (err) throw err;
         // Add items to the new database.
         var multi = storage._client.new_db.multi();
-        multi.set('new.foo', 'bar');
-        multi.setex('new.foofoo', 10, 'barbar');
-        multi.hmset('new.myhash', {'foo': 'bar'});
+        range.forEach(function(i) {
+          multi.set('new.foo' + i, 'bar');
+          multi.setex('new.foofoo' + i, 10, 'barbar');
+          multi.hmset('new.myhash' + i, {'foo': 'bar'});
+        });
         multi.exec(done);
       });
     });
 
     afterEach(function(done) {
+      sandbox.restore();
       storage._client.old_db.flushdb(function(err) {
         if (err) throw err;
         storage._client.new_db.flushdb(done);
@@ -56,28 +73,32 @@ describe('Tools', function() {
     });
 
     it("old+new values should be in the new db after migration", function(done){
-      moveRedisData(options.settings, function(err) {
+      moveRedisData(options.settings, function(err, counter) {
         if (err) throw err;
+        expect(counter).to.eql(600);
+        expect(range).to.length(200);
         // Check old and new values are present.
-        var multi = storage._client.new_db.multi();
-        multi.get('old.foo');
-        multi.ttl('old.foofoo');
-        multi.hmget('old.myhash', 'foo');
-        multi.get('new.foo');
-        multi.ttl('new.foofoo');
-        multi.hmget('new.myhash', 'foo');
-        multi.exec(function(err, results) {
-          if (err) throw err;
-          expect(results[0]).to.eql('bar');
-          expect(results[1]).to.be.lte(10);
-          expect(results[1]).to.be.gt(0);
-          expect(results[2]).to.eql('bar');
-          expect(results[3]).to.eql('bar');
-          expect(results[4]).to.be.lte(10);
-          expect(results[4]).to.be.gt(0);
-          expect(results[5]).to.eql('bar');
-          done();
-        });
+        async.each(range, function(i, cb) {
+          var multi = storage._client.new_db.multi();
+          multi.get('old.foo' + i);
+          multi.ttl('old.foofoo' + i);
+          multi.hmget('old.myhash' + i, 'foo');
+          multi.get('new.foo' + i);
+          multi.ttl('new.foofoo' + i);
+          multi.hmget('new.myhash' + i, 'foo');
+          multi.exec(function(err, results) {
+            if (err) throw err;
+            expect(results[0]).to.eql('bar');
+            expect(results[1]).to.be.lte(10);
+            expect(results[1]).to.be.gt(0);
+            expect(results[2]).to.eql('bar');
+            expect(results[3]).to.eql('bar');
+            expect(results[4]).to.be.lte(10);
+            expect(results[4]).to.be.gt(0);
+            expect(results[5]).to.eql('bar');
+            cb();
+          });
+        }, done);
       });
     });
 
@@ -101,7 +122,6 @@ describe('Tools', function() {
   });
 
   describe('room participants migration bug 1121413', function() {
-
     // Before each test, populate the database with some old data.
     var roomTokens = ['ooByyZNJyEs', 'M6iilFJply8'];
     var participants = {
