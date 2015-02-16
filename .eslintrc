@@ -94,4 +94,3 @@ rules:
   "no-path-concat": 0
   "no-process-exit": 0
   "eol-last": 2
-  "key-spacing": 0

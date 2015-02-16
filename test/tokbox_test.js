@@ -37,7 +37,7 @@ describe("TokBox", function() {
 
       new TokBox({
         credentials: {
-          default : {
+          default: {
             apiKey: apiKey,
             apiSecret: apiSecret
           }

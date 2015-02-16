@@ -1031,49 +1031,49 @@ function runOnPrefix(apiPrefix) {
       beforeEach(function(done) {
         calls = [
           {
-           callId:          randomBytes(16).toString("hex"),
-           wsCallerToken:   randomBytes(16).toString("hex"),
-           wsCalleeToken:   randomBytes(16).toString("hex"),
-           callerId:        callerId,
-           userMac:         userHmac,
-           apiKey:          tokBoxConfig.credentials.default.apiKey,
-           sessionId:       fakeCallInfo.session1,
-           calleeToken:     fakeCallInfo.token1,
-           callToken:       callToken,
-           callType:        'audio',
+           callId: randomBytes(16).toString("hex"),
+           wsCallerToken: randomBytes(16).toString("hex"),
+           wsCalleeToken: randomBytes(16).toString("hex"),
+           callerId: callerId,
+           userMac: userHmac,
+           apiKey: tokBoxConfig.credentials.default.apiKey,
+           sessionId: fakeCallInfo.session1,
+           calleeToken: fakeCallInfo.token1,
+           callToken: callToken,
+           callType: 'audio',
            urlCreationDate: urlCreationDate,
-           callState:       constants.CALL_STATES.INIT,
-           timestamp:       parseInt(Date.now() / 1000, 10)
+           callState: constants.CALL_STATES.INIT,
+           timestamp: parseInt(Date.now() / 1000, 10)
           },
           {
-           callId:          randomBytes(16).toString("hex"),
-           wsCallerToken:   randomBytes(16).toString("hex"),
-           wsCalleeToken:   randomBytes(16).toString("hex"),
-           callerId:        callerId,
-           userMac:         userHmac,
-           apiKey:          tokBoxConfig.credentials.default.apiKey,
-           sessionId:       fakeCallInfo.session2,
-           calleeToken:     fakeCallInfo.token2,
-           callToken:       callToken,
-           callType:        'audio-video',
+           callId: randomBytes(16).toString("hex"),
+           wsCallerToken: randomBytes(16).toString("hex"),
+           wsCalleeToken: randomBytes(16).toString("hex"),
+           callerId: callerId,
+           userMac: userHmac,
+           apiKey: tokBoxConfig.credentials.default.apiKey,
+           sessionId: fakeCallInfo.session2,
+           calleeToken: fakeCallInfo.token2,
+           callToken: callToken,
+           callType: 'audio-video',
            urlCreationDate: urlCreationDate,
-           callState:       constants.CALL_STATES.INIT,
-           timestamp:       parseInt(Date.now() / 1000, 10) + 1
+           callState: constants.CALL_STATES.INIT,
+           timestamp: parseInt(Date.now() / 1000, 10) + 1
           },
           {
-           callId:          randomBytes(16).toString("hex"),
-           wsCallerToken:   randomBytes(16).toString("hex"),
-           wsCalleeToken:   randomBytes(16).toString("hex"),
-           callerId:        callerId,
-           userMac:         userHmac,
-           apiKey:          tokBoxConfig.credentials.default.apiKey,
-           sessionId:       fakeCallInfo.session3,
-           calleeToken:     fakeCallInfo.token2,
-           callState:       constants.CALL_STATES.TERMINATED,
-           callToken:       callToken,
-           callType:        'audio-video',
+           callId: randomBytes(16).toString("hex"),
+           wsCallerToken: randomBytes(16).toString("hex"),
+           wsCalleeToken: randomBytes(16).toString("hex"),
+           callerId: callerId,
+           userMac: userHmac,
+           apiKey: tokBoxConfig.credentials.default.apiKey,
+           sessionId: fakeCallInfo.session3,
+           calleeToken: fakeCallInfo.token2,
+           callState: constants.CALL_STATES.TERMINATED,
+           callToken: callToken,
+           callType: 'audio-video',
            urlCreationDate: urlCreationDate,
-           timestamp:       parseInt(Date.now() / 1000, 10) + 2
+           timestamp: parseInt(Date.now() / 1000, 10) + 2
           }
         ];
 
@@ -1152,17 +1152,17 @@ function runOnPrefix(apiPrefix) {
 
       it("shouldn't list callToken and urls for a direct call", function(done) {
         var call = {
-          callId:          randomBytes(16).toString("hex"),
-          wsCallerToken:   randomBytes(16).toString("hex"),
-          wsCalleeToken:   randomBytes(16).toString("hex"),
-          callerId:        callerId,
-          userMac:         userHmac,
-          apiKey:          tokBoxConfig.credentials.default.apiKey,
-          sessionId:       fakeCallInfo.session3,
-          calleeToken:     fakeCallInfo.token2,
-          callState:       constants.CALL_STATES.INIT,
-          callType:        'audio-video',
-          timestamp:       parseInt(Date.now() / 1000, 10) + 3
+          callId: randomBytes(16).toString("hex"),
+          wsCallerToken: randomBytes(16).toString("hex"),
+          wsCalleeToken: randomBytes(16).toString("hex"),
+          callerId: callerId,
+          userMac: userHmac,
+          apiKey: tokBoxConfig.credentials.default.apiKey,
+          sessionId: fakeCallInfo.session3,
+          calleeToken: fakeCallInfo.token2,
+          callState: constants.CALL_STATES.INIT,
+          callType: 'audio-video',
+          timestamp: parseInt(Date.now() / 1000, 10) + 3
         };
 
         req = supertest(app)
