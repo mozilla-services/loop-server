@@ -1067,6 +1067,7 @@ describe('websockets', function() {
          "accepted by another device", function(done) {
           var callerMsgCount = 0;
           var calleeSecondDeviceCount = 0;
+          var testOver = false;
 
           function checkCountsAndExit() {
             if (callee.isClosed &&
@@ -1075,7 +1076,10 @@ describe('websockets', function() {
               expect(calleeSecondDeviceCount).to.eql(2);
               expect(calleeMsgCount).to.eql(5);
               expect(callerMsgCount).to.eql(5);
-              done();
+              if (testOver === false) {
+                testOver = true;
+                done();
+              }
             }
           }
 

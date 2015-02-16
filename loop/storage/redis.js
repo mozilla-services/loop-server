@@ -231,7 +231,7 @@ RedisStorage.prototype = {
       'callurl.' + callUrlId,
       function(err, res) {
         if (err) return callback(err);
-        if (res === 0) {
+        if (parseInt(res, 10) === 0) {
           var error = new Error("Doesn't exist");
           error.notFound = true;
           callback(error);
@@ -451,7 +451,7 @@ RedisStorage.prototype = {
             multi.exec(function(err, callStates) {
               if (err) return callback(err);
               for (var i = 0; i < pendingCalls.length; i++) {
-                var callState = getStateFromScore(callStates[i]);
+                var callState = getStateFromScore(parseInt(callStates[i], 10));
                 if (callState === null) {
                   callState = constants.CALL_STATES.TERMINATED;
                 }
@@ -487,6 +487,7 @@ RedisStorage.prototype = {
    *                    had been processed.
    **/
   setCallState: function(callId, state, ttl, callback) {
+
     if (isUndefined(callId, "callId", callback)) return;
     var self = this;
 
@@ -495,7 +496,7 @@ RedisStorage.prototype = {
       if (callback === undefined) callback = ttl;
       this._client.ttl('call.' + callId, function(err, res) {
         if (err) return callback(err);
-        self.setCallState(callId, state, res, callback);
+        self.setCallState(callId, state, parseInt(res, 10), callback);
       });
       return;
     }
@@ -528,6 +529,7 @@ RedisStorage.prototype = {
     // same call state.
     var multi = self._client.multi();
     multi.sadd(key, state);
+
     multi.pexpire(key, ttl * 1000);
     multi.exec(callback);
   },
@@ -669,7 +671,7 @@ RedisStorage.prototype = {
       if (err) return callback(err);
 
       var callData = data[0];
-      var score = data[1];
+      var score = parseInt(data[1], 10);
 
       if (callData !== null) {
         decode(callData, function(err, call) {
@@ -700,7 +702,7 @@ RedisStorage.prototype = {
 
     this._client.del('call.' + callId, function(err, result) {
       if (err) return callback(err);
-      callback(null, result !== 0);
+      callback(null, parseInt(result) !== 0);
     });
   },
 
@@ -791,10 +793,8 @@ RedisStorage.prototype = {
     if (isUndefined(authKey, "authKey", callback)) return;
     this._client.setex(
       'hawk.' + hawkIdHmac,
-      this._settings.hawkSessionDuration,
-      authKey,
-      callback
-    );
+      parseInt(this._settings.hawkSessionDuration, 10),
+      authKey, callback);
   },
 
   /**
@@ -1205,7 +1205,7 @@ RedisStorage.prototype = {
     self._client.pexpire(
       'roomparticipant.' + roomToken + '.' + hawkIdHmac,
       ttl * 1000, function(err, reply) {
-        var success = (reply === 1 ) ? true : false;
+        var success = (parseInt(reply, 10) === 1) ? true : false;
         if (err) return callback(err);
 
         var multi = self._client.multi();
