@@ -202,7 +202,7 @@ describe('websockets', function() {
     });
 
     afterEach(function(done) {
-      if (! caller.isClosed) {
+      if (!caller.isClosed) {
         caller.close();
       }
       done();
@@ -1057,7 +1057,7 @@ describe('websockets', function() {
       });
 
       afterEach(function(done) {
-        if (! calleeSecondDevice.isClosed) {
+        if (!calleeSecondDevice.isClosed) {
           calleeSecondDevice.close();
         }
         done();

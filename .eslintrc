@@ -51,7 +51,7 @@ rules:
   "no-return-assign": 2
   "no-script-url": 2
   "no-self-compare": 2
-  "no-shadow": 2
+  "no-shadow": 0
   "no-sync": 0
   "no-ternary": 0
   "no-undef": 2
@@ -94,3 +94,4 @@ rules:
   "no-path-concat": 0
   "no-process-exit": 0
   "eol-last": 2
+  "key-spacing": 0
