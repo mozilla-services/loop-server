@@ -702,7 +702,7 @@ RedisStorage.prototype = {
 
     this._client.del('call.' + callId, function(err, result) {
       if (err) return callback(err);
-      callback(null, parseInt(result) !== 0);
+      callback(null, parseInt(result, 10) !== 0);
     });
   },
 
