@@ -1367,7 +1367,7 @@ RedisStorage.prototype = {
     var self = this;
     self._client.setex('heartbeat', 3600, time(),
       function(err) {
-        if (err) return callback(false);
+        if (err) return callback(err);
         callback(true);
       });
   }

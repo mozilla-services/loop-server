@@ -25,7 +25,7 @@ module.exports = function(app, conf, logError, storage, tokBox) {
 
       res.status(status)
          .json({
-           storage: storageStatus,
+           storage: storageStatus === true,
            provider: (requestError === null) ? true : false,
            message: message,
            push: pushStatus
@@ -33,6 +33,9 @@ module.exports = function(app, conf, logError, storage, tokBox) {
     }
 
     storage.ping(function(storageStatus) {
+      if (storageStatus !== true) {
+        logError(storageStatus);
+      }
       tokBox.ping({timeout: conf.get('heartbeatTimeout')},
         function(requestError) {
           // Setting pushStatus to undefined makes it not included in the json
