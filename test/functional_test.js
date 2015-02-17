@@ -250,7 +250,7 @@ function runOnPrefix(apiPrefix) {
           callback(null, {statusCode: 200});
         });
         sandbox.stub(storage, "ping", function(callback) {
-          callback(false);
+          callback(new Error("read only"));
         });
 
         supertest(app)

@@ -733,7 +733,7 @@ describe("Storage", function() {
       describe("#ping", function() {
         it("should return true if we are connected", function(done) {
           storage.ping(function(connected) {
-            assert(connected);
+            expect(connected).to.eql(true);
             done();
           });
         });
@@ -1112,7 +1112,7 @@ describe("Storage", function() {
           callback("Error: Redis is read-only");
         });
       storage.ping(function(connected) {
-        expect(connected).to.be.false;
+        expect(connected).to.eql("Error: Redis is read-only");
         done();
       });
     });
