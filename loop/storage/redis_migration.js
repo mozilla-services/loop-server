@@ -155,6 +155,15 @@ function createClient(options) {
     });
   };
 
+  Proxy.prototype.ping = function(callback) {
+    old_db.setex('heartbeat', 3600, time(), function(err) {
+      if (err) return callback(err);
+      new_db.setex('heartbeat', 3600, time(), function(err) {
+        callback(err);
+      });
+    });
+  };
+
   // For multi, we just chain them as "normal" operations, copying keys for all
   // the operations (so we actually lose the benefit offered by multi).
   Proxy.prototype.multi = function() {
@@ -192,6 +201,7 @@ function createClient(options) {
   };
 
   Proxy.prototype.copyKey = copyKey;
+
 
   return new Proxy();
 }
