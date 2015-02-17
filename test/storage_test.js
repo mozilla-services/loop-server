@@ -35,47 +35,47 @@ describe("Storage", function() {
         a_second = 1 / 3600,  // A second in hours.
         calls = [
         {
-          callId:       randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userMac,
-          sessionId:    fakeCallInfo.session1,
-          calleeToken:  fakeCallInfo.token1,
-          callState:    constants.CALL_STATES.INIT,
-          timestamp:    now - 3
+          callId: randomBytes(16).toString("hex"),
+          callerId: callerId,
+          userMac: userMac,
+          sessionId: fakeCallInfo.session1,
+          calleeToken: fakeCallInfo.token1,
+          callState: constants.CALL_STATES.INIT,
+          timestamp: now - 3
         },
         {
-          callId:       randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userMac,
-          sessionId:    fakeCallInfo.session2,
-          calleeToken:  fakeCallInfo.token2,
-          callState:    constants.CALL_STATES.INIT,
-          timestamp:    now - 2
+          callId: randomBytes(16).toString("hex"),
+          callerId: callerId,
+          userMac: userMac,
+          sessionId: fakeCallInfo.session2,
+          calleeToken: fakeCallInfo.token2,
+          callState: constants.CALL_STATES.INIT,
+          timestamp: now - 2
         },
         {
-          callId:       randomBytes(16).toString("hex"),
-          callerId:     callerId,
-          userMac:      userMac,
-          sessionId:    fakeCallInfo.session3,
-          calleeToken:  fakeCallInfo.token2,
-          callState:    constants.CALL_STATES.TERMINATED,
-          timestamp:    now - 1
+          callId: randomBytes(16).toString("hex"),
+          callerId: callerId,
+          userMac: userMac,
+          sessionId: fakeCallInfo.session3,
+          calleeToken: fakeCallInfo.token2,
+          callState: constants.CALL_STATES.TERMINATED,
+          timestamp: now - 1
         }
       ],
       call = calls[0],
       urls = [
         {
-          timestamp:  now,
+          timestamp: now,
           expires: now + callUrls.timeout,
           userMac: userMac
         },
         {
-          timestamp:  now + 1,
+          timestamp: now + 1,
           expires: now + callUrls.timeout,
           userMac: userMac
         },
         {
-          timestamp:  now + 2,
+          timestamp: now + 2,
           expires: now + callUrls.timeout,
           userMac: userMac
         }

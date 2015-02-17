@@ -54,6 +54,7 @@ function createClient(options) {
    **/
   var copyKey = function(key, callback) {
     old_db.pttl(key, function(err, ttl) {
+      ttl = parseInt(ttl, 10);
       if (err) throw err;
       if (ttl === -2) {
         // The key doesn't exist.
@@ -75,6 +76,7 @@ function createClient(options) {
           old_db.del(key, function(err){
             if (err) return callback(err);
             callback(null);
+            return;
           });
         });
       });
