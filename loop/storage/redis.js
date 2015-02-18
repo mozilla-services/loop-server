@@ -1358,7 +1358,6 @@ RedisStorage.prototype = {
     } else {
       self._client.setex('heartbeat', 3600, time(),
         function(err) {
-          console.log(err);
           if (err) return callback(err);
           callback(true);
         });
