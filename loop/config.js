@@ -184,13 +184,19 @@ var conf = convict({
     settings: {
       doc: "js object of options to pass to the storage engine",
       format: Object,
-      default: {}
+      default: {
+        port: 6379,
+        host: 'localhost'
+      }
     }
   },
   pubsub: {
     doc: "js object of options to pass to the pubsub engine",
     format: Object,
-    default: {}
+    default: {
+      port: 6379,
+      host: 'localhost'
+    }
   },
   fakeTokBox: {
     doc: "Mock TokBox calls",
