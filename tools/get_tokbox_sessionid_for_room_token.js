@@ -1,12 +1,12 @@
 var readline = require('readline');
 var conf = require('../loop/config').conf;
-var redis = require("redis");
+var redis = require('redis');
 
-var storage = conf.get("storage");
+var storage = conf.get('storage');
 var args = process.argv.slice(2);
 var verbose = args.indexOf('--verbose') !== -1;
 
-if (storage.engine === "redis") {
+if (storage.engine === 'redis') {
   var options = storage.settings;
   var client = redis.createClient(
     options.port,
@@ -15,7 +15,7 @@ if (storage.engine === "redis") {
   );
   if (options.db) client.select(options.db);
 
-  console.log("Please enter a roomToken per line. Ctrl+D to stop.");
+  console.log('Please enter a roomToken per line. Ctrl+D to stop.');
 
   rl = readline.createInterface({
     input: process.stdin,
