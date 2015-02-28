@@ -5,7 +5,7 @@
 This is the server part of the Loop project. You can find more information on
 its APIs by looking at [the online documentation](https://docs.services.mozilla.com/loop/)
 
-## How to install?
+## How do I install loop server?
 
 You will need [Redis](http://redis.io/) server installed:
 
@@ -44,7 +44,7 @@ git clone https://github.com/mozilla/loop-server.git
 cd loop-server && make install
 ```
 
-## How to run it?
+## How do I run it?
 
 You can create your configuration file in `config/{NODE_ENV}.json`
 
@@ -67,7 +67,7 @@ make runserver
 
 (which is equivalent to `NODE_ENV=dev make runserver`)
 
-## How to run the tests?
+## How do I run the tests?
 
 ```sh
 make test
@@ -83,7 +83,7 @@ value is high enough or you will get EMFILE errors:
 ulimit -S -n 2048
 ```
 
-## Where to report bugs?
+## Where do I report bugs?
 
 You should report bugs/issues or feature requests via [the loop-server bugzilla
 component](https://bugzilla.mozilla.org/enter_bug.cgi?product=Loop&component=Server)
