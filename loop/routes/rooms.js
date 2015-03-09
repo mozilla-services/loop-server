@@ -292,6 +292,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
       validators.isRoomParticipant(req, res, function() {
         getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
           if (res.serverError(err)) return;
+          req.roomParticipantsCount = roomData.participants.length;
           res.status(200).json(roomData);
         });
       });
@@ -419,9 +420,17 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 sendError(res, 410, errors.EXPIRED, "Participation has expired.");
                 return;
               }
-              storage.getRoomParticipant(req.token, participantHmac, function(err, participant) {
+              storage.getRoomParticipants(req.token, function(err,
+                  participants) {
                 if (res.serverError(err)) return;
-                req.roomConnectionId = participant.id;
+
+                // Room participants are used by metrics
+                req.roomParticipantsCount = participants.length;
+                var participant = participants.filter(function(participant) {
+                  return participant.hawkIdHmac === participantHmac;
+                });
+                req.roomConnectionId = participant[0].id;
+
                 res.status(200).json({
                   expires: ttl
                 });
@@ -441,7 +450,15 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                     "leave",
                     function(err) {
                       if (res.serverError(err)) return;
-                      res.status(204).json();
+                      storage.getRoomParticipants(req.token, function(err,
+                          participants) {
+                        if (res.serverError(err)) return;
+                        
+                        // Room participants are used by metrics
+                        req.roomParticipantsCount = participants.length;
+                        
+                        res.status(204).json();
+                      });
                     });
                 });
             });
