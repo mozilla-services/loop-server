@@ -208,6 +208,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
           storage.setUserRoomData(req.user, token, roomData, function(err) {
             if (res.serverError(err)) return;
+
+            // Log the roomToken
+            req.roomToken = token;
+
             notifyOwner(req.user, roomData.updateTime, "creation", function(err) {
               if (res.serverError(err)) return;
               res.status(201).json({
