@@ -345,6 +345,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 role,
                 channel
               );
+              req.roomStorageData.sessionToken = sessionToken;
 
               function next(err) {
                 if (res.serverError(err)) return;

@@ -32,7 +32,8 @@ describe("metrics middleware", function() {
     req.callId = '1234';
     req.callUrlData = {userMac: 'userMacHere'};
     req.roomConnectionId = "roomConnectionId";
-    req.roomStorageData = {};
+    req.roomStorageData = {sessionToken: "sessionToken",
+                           sessionId: "sessionId"};
     req.roomParticipantsCount = 5;
     res.status(200).json();
   });
@@ -96,6 +97,8 @@ describe("metrics middleware", function() {
         expect(logged.action).to.eql('join');
         expect(logged.participants).to.eql(5);
         expect(logged.roomConnectionId).to.eql("roomConnectionId");
+        expect(logged.sessionId).to.eql("sessionId");
+        expect(logged.sessionToken).to.eql("sessionToken");
         done();
       });
   });

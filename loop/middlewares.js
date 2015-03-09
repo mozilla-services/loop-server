@@ -91,6 +91,12 @@ function logMetrics(req, res, next) {
         if (req.roomStorageData.hasOwnProperty("participants")) {
           line.participants = req.roomStorageData.participants.length;
         }
+
+        line.sessionId = req.roomStorageData.sessionId;
+
+        if (req.roomStorageData.hasOwnProperty("sessionToken")) {
+          line.sessionToken = req.roomStorageData.sessionToken;
+        }
       }
 
       if (req.hasOwnProperty("roomConnectionId")) {
