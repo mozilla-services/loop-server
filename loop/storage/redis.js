@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
-var redis = require("redis");
+var redis = require("./redis_client");
 var async = require("async");
 var constants = require("../constants");
 var migrationClient = require("./redis_migration");

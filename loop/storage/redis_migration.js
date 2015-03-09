@@ -7,6 +7,7 @@
 var redis = require("redis");
 var async = require("async");
 var conf = require('../config').conf;
+var MULTI_OPERATIONS = require("./redis_client").MULTI_OPERATIONS;
 
 // Operations supported by the migration backend.
 var SUPPORTED_OPERATIONS = [
@@ -14,12 +15,6 @@ var SUPPORTED_OPERATIONS = [
   'scard', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
   'expire', 'incr', 'decr', 'hmset', 'hgetall', 'hset', 'hget', 'hsetnx',
   'hdel'
-];
-
-var MULTI_OPERATIONS = [
-  'pttl', 'ttl', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
-  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del',
-  'hgetall', 'get', 'scard'
 ];
 
 /**
