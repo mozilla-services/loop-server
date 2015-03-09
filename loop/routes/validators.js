@@ -290,6 +290,9 @@ module.exports = function(conf, logError, storage) {
       }
 
       req.roomStorageData.participants = participants.map(function(participant) {
+        if (participant.hawkIdHmac === participantHmac) {
+          req.roomConnectionId = participant.id;
+        }
         delete participant.hawkIdHmac;
         return participant;
       });

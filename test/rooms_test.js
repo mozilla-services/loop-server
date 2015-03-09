@@ -609,6 +609,29 @@ describe("/rooms", function() {
         .include(authenticateWithHawkOrToken);
     });
 
+    it("should log the roomConnectionId", function(done) {
+      createRoom(hawkCredentials, {
+        roomOwner: "Mathieu",
+        roomName: "UX discussion",
+        maxSize: "3",
+        expiresIn: "10"
+      }).end(function(err, postRes) {
+        if (err) throw err;
+
+        var roomToken = postRes.body.roomToken;
+
+        supertest(app)
+          .get('/rooms/' + roomToken)
+          .type('json')
+          .expect(200)
+          .end(function(err, getRes) {
+            if (err) throw err;
+            expect(getRes.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+            done();
+          });
+      });
+    });
+
     it("should return 200 with public room info if not participating", function(done) {
       createRoom(hawkCredentials, {
         roomOwner: "Mathieu",
@@ -932,6 +955,22 @@ describe("/rooms", function() {
       });
 
       describe("Handle 'join'", function() {
+        it("should log the roomConnectionId", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken, {
+              action: "join",
+              clientMaxSize: 10,
+              displayName: "Natim"
+            }).end(function(err, res) {
+              if (err) throw err;
+              expect(res.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+              done();
+            });
+          });
+        });
 
         it("should fail if params are missing.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
@@ -1185,6 +1224,26 @@ describe("/rooms", function() {
           clock.restore();
         });
 
+        it("should log the roomConnectionId", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken, {
+              action: "join",
+              clientMaxSize: 10,
+              displayName: "Natim"
+            }).end(function(err) {
+              if (err) throw err;
+              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+                if (err) throw err;
+                expect(res.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+                done();
+              });
+            });
+          });
+        });
+
         it("should touch the participant and return the next expiration.",
           function(done) {
             var startTime = parseInt(Date.now() / 1000, 10);
@@ -1208,6 +1267,23 @@ describe("/rooms", function() {
       });
 
       describe("Handle 'leave'", function() {
+        it("should log the roomConnectionId", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+
+            var roomToken = postRes.body.roomToken;
+
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+                if (err) throw err;
+                expect(res.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+                done();
+              });
+            });
+          });
+        });
+
         it("should remove the participant from the room.", function(done) {
           createRoom(hawkCredentials).end(function(err, res) {
             if (err) throw err;

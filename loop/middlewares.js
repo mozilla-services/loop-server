@@ -92,6 +92,10 @@ function logMetrics(req, res, next) {
         }
       }
 
+      if (req.hasOwnProperty("roomConnectionId")) {
+        line.roomConnectionId = req.roomConnectionId;
+      }
+
       if (res.statusCode === 401) {
         line.authorization = req.headers.authorization;
         line.hawk = req.hawk;
