@@ -311,7 +311,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     auth.authenticateWithHawkOrToken, function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var roomOwnerHmac = req.roomStorageData.roomOwnerHmac;
-      var ROOM_ACTIONS = ["join", "refresh", "leave"];
+      var ROOM_ACTIONS = ["join", "refresh", "status", "leave"];
       var action = req.body.action;
       var code;
 
@@ -442,6 +442,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
               });
             });
         },
+        handleUpdateStatus: function(req, res) {
+          sendError(res, 400, errors.INVALID_PARAMETERS, "Invalid status body.");
+        },
         handleLeave: function(req, res) {
           storage.getRoomParticipant(req.token, participantHmac,
             function(err, participant) {
@@ -474,6 +477,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         handlers.handleJoin(req, res);
       } else if (action === "refresh") {
         handlers.handleRefresh(req, res);
+      } else if (action === "status") {
+        handlers.handleUpdateStatus(req, res);
       } else if (action === "leave") {
         handlers.handleLeave(req, res);
       }

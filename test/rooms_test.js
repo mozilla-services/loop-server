@@ -159,6 +159,33 @@ var refreshRoom = function(credentials, roomToken, status) {
   return req;
 };
 
+var updateStateRoom = function(credentials, roomToken, data, status) {
+  if (data === undefined) {
+    data = {
+      event: "Session.connectionCreated",
+      state: "sendrecv",
+      connections: 2,
+      sendStreams: 1,
+      recvStreams: 1
+    };
+  }
+  data.action = "status";
+
+  var req = supertest(app)
+    .post('/rooms/' + roomToken)
+    .send(data)
+    .type("json")
+    .expect(status || 204);
+
+  if (credentials.token !== undefined) {
+    req = req.auth(credentials.token, "");
+  } else {
+    req = req.hawk(credentials.hawkCredentials || credentials);
+  }
+
+  return req;
+};
+
 var leaveRoom = function(credentials, roomToken, status) {
   var req = supertest(app)
     .post('/rooms/' + roomToken)
@@ -1331,6 +1358,26 @@ describe("/rooms", function() {
               });
             });
           });
+      });
+
+      describe("Handle 'status'", function() {
+        it("should reject if body is incomplete.", function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              updateStateRoom(hawkCredentials, roomToken, {}, 400).end(function(err, res) {
+                if (err) throw err;
+                expectFormattedError(
+                  res, 400, errors.INVALID_PARAMETERS,
+                  "Invalid status body."
+                );
+                done();
+              });
+            });
+          });
+        });
       });
 
       describe("Handle 'leave'", function() {
