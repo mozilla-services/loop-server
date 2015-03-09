@@ -47,8 +47,8 @@ function RedisStorage(options, settings) {
     });
   } else {
     this._client = redis.createClient(
-      options.port,
-      options.host,
+      options.port || 6379,
+      options.host || "localhost",
       options.options
     );
     if (options.db) {
