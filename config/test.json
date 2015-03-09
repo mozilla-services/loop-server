@@ -5,7 +5,11 @@
     "engine": "redis",
     "settings": {
       "db": 5,
+      "host": "localhost",
+      "port": 6379,
       "migrateFrom": {
+        "host": "localhost",
+        "port": 6379,
         "db": 4
       }
     }

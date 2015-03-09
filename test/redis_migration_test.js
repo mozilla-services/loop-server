@@ -15,7 +15,7 @@ describe("redis migration", function() {
   beforeEach(function() {
     var options = {
       oldDB: conf.get('storage').settings,
-      newDB: { db: 4 }
+      newDB: { host: "localhost", port: 6379, db: 4 }
     };
     client = getClient(options)
   });

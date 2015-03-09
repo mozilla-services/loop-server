@@ -1081,8 +1081,12 @@ describe("Storage", function() {
     return getStorage({
       engine: "redis",
       settings: {
+        "host": "localhost",
+        "port": 6379,
         "db": 5,
         "migrateFrom": {
+          "host": "localhost",
+          "port": 6379,
           "db": 4
         }
       }

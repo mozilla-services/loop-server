@@ -25,8 +25,14 @@ describe('Tools', function() {
     var options = {
       engine: "redis",
       settings: {
+        "host": "localhost",
+        "port": 6379,
         "db": 5,
-        "migrateFrom": { "db": 4 }
+        "migrateFrom": {
+          "host": "localhost",
+          "port": 6379,
+          "db": 4,
+        }
       }
     };
 
