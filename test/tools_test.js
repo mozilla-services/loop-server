@@ -14,6 +14,7 @@ var getStorage = require("../loop/storage");
 
 var moveRedisData = require("../tools/move_redis_data");
 var migrateRoomParticipants = require("../tools/migrate_1121403_roomparticipants");
+var get_session_id_for_rooms = require("../tools/get_tokbox_sessionid_for_room_token");
 
 
 var storage = loop.storage;
@@ -179,5 +180,32 @@ describe('Tools', function() {
         });
       });
     });
-  })
+  });
+
+  describe('get_tokbox_session_ids_for_room_tokens', function() {
+    var roomTokens = ['ooByyZNJyEs', 'M6iilFJply8'];
+
+    beforeEach(function(done) {
+      var multi = storage._client.multi();
+      roomTokens.forEach(function(token) {
+        multi.set('room.' + token, JSON.stringify({sessionId: 'tokbox_' + token}));
+      });
+      multi.exec(done);
+    });
+
+    afterEach(function(done) {
+      storage.drop(done);
+    });
+
+    it("should return the list of rooms with the sessionId", function(done) {
+      get_session_id_for_rooms(storage._client, roomTokens, function(err, results) {
+        if (err) throw err;
+        expect(results).to.eql({
+          'ooByyZNJyEs': 'tokbox_ooByyZNJyEs',
+          'M6iilFJply8': 'tokbox_M6iilFJply8'
+        });
+        done();
+      });
+    });
+  });
 });

@@ -6,7 +6,26 @@ var storage = conf.get('storage');
 var args = process.argv.slice(2);
 var verbose = args.indexOf('--verbose') !== -1;
 
-if (storage.engine === 'redis') {
+function get_session_id_for_rooms(client, roomTokens, callback) {
+  var multi = client.multi();
+
+  roomTokens.forEach(function(roomToken) {
+    multi.get('room.' + roomToken);
+  });
+  multi.exec(function(err, results) {
+    if (err) return callback(err);
+
+    var output = {};
+    results.forEach(function(result, i) {
+      if (result !== null) {
+        output[roomTokens[i]] = JSON.parse(result).sessionId;
+      }
+    });
+    callback(null, output);
+  });
+}
+
+if (require.main === module && storage.engine === 'redis') {
   var options = storage.settings;
   var client = redis.createClient(
     options.port,
@@ -23,27 +42,19 @@ if (storage.engine === 'redis') {
     terminal: false
   });
 
-  var multi = client.multi();
   var roomTokens = [];
 
   rl.on('line', function (roomToken) {
     roomTokens.push(roomToken);
-    multi.get('room.' + roomToken);
   });
 
   rl.on('close', function() {
-    multi.exec(function(err, results) {
+    get_session_id_for_rooms(client, roomTokens, function(err, output) {
       if (err) throw err;
-
-      var output = {};
-
-      for (var i=0; i < results.length; i++) {
-        if (results[i] !== null) {
-          output[roomTokens[i]] = JSON.parse(results[i]).sessionId;
-        }
-      }
       console.log(JSON.stringify(output));
       process.exit(0);
     });
   });
 }
+
+module.exports = get_session_id_for_rooms;
