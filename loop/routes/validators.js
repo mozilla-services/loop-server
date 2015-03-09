@@ -243,6 +243,17 @@ module.exports = function(conf, logError, storage) {
         }
       }
 
+      var integerFields = ['connections', 'sendStreams', 'recvStreams'];
+      for (i = 0; i < integerFields.length; i++) {
+        var field = integerFields[i];
+        var intValue = parseInt(req.body[field], 10);
+        if (isNaN(intValue) || intValue < 0) {
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "Invalid " + field + " number.");
+          return;
+        }
+      }
+
       var stateMachine = {
         init: {
           transitions: [
@@ -304,6 +315,7 @@ module.exports = function(conf, logError, storage) {
       }
 
     }
+
     next();
   }
 

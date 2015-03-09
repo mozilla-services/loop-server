@@ -1427,6 +1427,78 @@ describe("/rooms", function() {
           });
         });
 
+        it("should reject if connections is not a number.", function(done) {
+          exampleBody.connections = 'abc';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid connections number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if connections is not a positive integer.", function(done) {
+          exampleBody.connections = -1;
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid connections number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if sendStreams is not a number.", function(done) {
+          exampleBody.sendStreams = 'abc';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid sendStreams number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if sendStreams is not a positive integer.", function(done) {
+          exampleBody.sendStreams = -1;
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid sendStreams number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if recvStreams is not a number.", function(done) {
+          exampleBody.recvStreams = 'abc';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid recvStreams number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if recvStreams is not a positive integer.", function(done) {
+          exampleBody.recvStreams = -1;
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid recvStreams number."
+            );
+            done();
+          });
+        });
+
         it("should return empty body if successful.", function(done) {
           updateStateRoom(hawkCredentials, roomToken).end(function(err) {
             if (err) throw err;
