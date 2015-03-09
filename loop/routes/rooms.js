@@ -308,7 +308,8 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * Actions are "join", "leave", "refresh".
    **/
   apiRouter.post('/rooms/:token', validators.validateRoomToken,
-    auth.authenticateWithHawkOrToken, function(req, res) {
+    validators.validateRoomStatusUpdate, auth.authenticateWithHawkOrToken,
+    function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var roomOwnerHmac = req.roomStorageData.roomOwnerHmac;
       var ROOM_ACTIONS = ["join", "refresh", "status", "leave"];
@@ -443,7 +444,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             });
         },
         handleUpdateStatus: function(req, res) {
-          sendError(res, 400, errors.INVALID_PARAMETERS, "Invalid status body.");
+          res.status(204).json();
         },
         handleLeave: function(req, res) {
           storage.getRoomParticipant(req.token, participantHmac,

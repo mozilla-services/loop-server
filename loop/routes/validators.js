@@ -223,6 +223,91 @@ module.exports = function(conf, logError, storage) {
   }
 
   /**
+   * Validate the room status update fields passed in the body.
+   **/
+  function validateRoomStatusUpdate(req, res, next) {
+
+    if (req.body.action && req.body.action === 'status') {
+
+      // Mandatory fields
+      var expectedFields = ['event', 'state', 'connections', 'sendStreams',
+        'recvStreams'
+      ];
+
+      for (var i = 0; i < expectedFields.length; i++) {
+        var field = expectedFields[i];
+        if (!req.body.hasOwnProperty(field)) {
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "'" + field + "' field is missing in body.");
+          return;
+        }
+      }
+
+      var stateMachine = {
+        init: {
+          transitions: [
+            'Session.connectionCreated'
+          ]
+        },
+        waiting: {
+          transitions: [
+            'Session.connectionCreated'
+          ]
+        },
+        starting: {
+          transitions: [
+            'Publisher.streamCreated',
+            'Session.streamCreated'
+          ]
+        },
+        sending: {
+          transitions: [
+            'Publisher.streamDestroyed',
+            'Session.streamCreated'
+          ]
+        },
+        sendrecv: {
+          transitions: [
+            'Publisher.streamDestroyed',
+            'Session.streamDestroyed'
+          ]
+        },
+        receiving: {
+          transitions: [
+            'Publisher.streamCreated',
+            'Session.streamDestroyed'
+          ]
+        },
+        cleanup: {
+          transitions: []
+        }
+      };
+
+      var state = req.body.state,
+          event = req.body.event;
+
+      // Validate that state is known
+      if (!stateMachine.hasOwnProperty(state)) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "Unknown state '" + state + "'.");
+        return;
+      }
+
+      var transitions = stateMachine[state].transitions;
+      transitions.push('Session.connectionDestroyed');
+
+      // Validate that event is valid
+      if (transitions.indexOf(event) < 0) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "Invalid event '" + event + "' for state '" + state + "'.");
+        return;
+      }
+
+    }
+    next();
+  }
+
+  /**
    * Validates the given token exists and is valid.
    *
    * Once this is done, populates the:
@@ -305,6 +390,7 @@ module.exports = function(conf, logError, storage) {
     validateCallParams: validateCallParams,
     validateCallUrlParams: validateCallUrlParams,
     validateRoomParams: validateRoomParams,
+    validateRoomStatusUpdate: validateRoomStatusUpdate,
     validateRoomToken: validateRoomToken,
     isRoomOwner: isRoomOwner,
     isRoomParticipant: isRoomParticipant

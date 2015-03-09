@@ -163,7 +163,7 @@ var updateStateRoom = function(credentials, roomToken, data, status) {
   if (data === undefined) {
     data = {
       event: "Session.connectionCreated",
-      state: "sendrecv",
+      state: "init",
       connections: 2,
       sendStreams: 1,
       recvStreams: 1
@@ -992,7 +992,7 @@ describe("/rooms", function() {
             .end(function(err, res) {
               if (err) throw err;
               expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                "action should be one of join, refresh, leave");
+                "action should be one of join, refresh, status, leave");
               done();
             });
         });
@@ -1361,24 +1361,80 @@ describe("/rooms", function() {
       });
 
       describe("Handle 'status'", function() {
-        it("should reject if body is incomplete.", function(done) {
+
+        function createAndJoinRoom(callback) {
           createRoom(hawkCredentials).end(function(err, res) {
             if (err) throw err;
             var roomToken = res.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              updateStateRoom(hawkCredentials, roomToken, {}, 400).end(function(err, res) {
-                if (err) throw err;
-                expectFormattedError(
-                  res, 400, errors.INVALID_PARAMETERS,
-                  "Invalid status body."
-                );
-                done();
-              });
+              callback(roomToken);
             });
+          });
+        }
+
+        var exampleBody;
+        var roomToken;
+
+        beforeEach(function(done) {
+          exampleBody = {
+            event: "Session.connectionCreated",
+            state: "init",
+            connections: 2,
+            sendStreams: 1,
+            recvStreams: 1
+          };
+
+          createAndJoinRoom(function (token) {
+            roomToken = token;
+            done();
+          });
+        });
+
+        it("should reject if body is incomplete.", function(done) {
+          updateStateRoom(hawkCredentials, roomToken, {}, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "'event' field is missing in body."
+            );
+            done();
+          });
+        });
+
+        it("should reject if state is unknown.", function(done) {
+          exampleBody.state = 'happy';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Unknown state 'happy'."
+            );
+            done();
+          });
+        });
+
+        it("should reject if event is not a valid transition.", function(done) {
+          exampleBody.state = 'sending';
+          exampleBody.event = 'Publisher.streamCreated';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid event 'Publisher.streamCreated' for state 'sending'."
+            );
+            done();
+          });
+        });
+
+        it("should return empty body if successful.", function(done) {
+          updateStateRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            done();
           });
         });
       });
+
 
       describe("Handle 'leave'", function() {
         it("should log the roomConnectionId", function(done) {
@@ -1492,7 +1548,7 @@ describe("/rooms", function() {
           .end(function(err, res) {
             if (err) throw err;
             expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                "action should be one of join, refresh, leave");
+                                 "action should be one of join, refresh, status, leave");
             done();
           });
       });
