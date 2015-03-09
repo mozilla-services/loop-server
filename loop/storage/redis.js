@@ -1190,6 +1190,25 @@ RedisStorage.prototype = {
   },
 
   /**
+   * Get a room participant.
+   *
+   * @param {String}   roomToken, the room identifier;
+   * @param {String}   hawkIdHmac, the hmac-ed hawk id of the client;
+   * @param {Function} A callback that will be called when the action
+   *                   has been processed.
+   **/
+  getRoomParticipant: function(roomToken, hawkIdHmac, callback) {
+    if (isUndefined(roomToken, "roomToken", callback)) return;
+    if (isUndefined(hawkIdHmac, "hawkIdHmac", callback)) return;
+
+    this._client.get('roomparticipant.' + roomToken + '.' + hawkIdHmac,
+      function(err, data) {
+        if (err) return callback(err);
+        decode(data, callback);
+      });
+  },
+
+  /**
    * Update the participant time to live.
    *
    * @param {String}   roomToken, the room identifier;

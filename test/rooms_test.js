@@ -15,7 +15,7 @@ var hmac = require("../loop/hmac");
 var getMiddlewares = require("./support").getMiddlewares;
 var encrypt = require('../loop/encrypt').encrypt;
 
-
+var hekaLogger = require('../loop/logger').hekaLogger;
 var loop = require("../loop");
 var request = require("request");
 var app = loop.app;
@@ -609,29 +609,6 @@ describe("/rooms", function() {
         .include(authenticateWithHawkOrToken);
     });
 
-    it("should log the roomConnectionId", function(done) {
-      createRoom(hawkCredentials, {
-        roomOwner: "Mathieu",
-        roomName: "UX discussion",
-        maxSize: "3",
-        expiresIn: "10"
-      }).end(function(err, postRes) {
-        if (err) throw err;
-
-        var roomToken = postRes.body.roomToken;
-
-        supertest(app)
-          .get('/rooms/' + roomToken)
-          .type('json')
-          .expect(200)
-          .end(function(err, getRes) {
-            if (err) throw err;
-            expect(getRes.req.roomConnectionId).to.eql(postRes.roomConnectionId);
-            done();
-          });
-      });
-    });
-
     it("should return 200 with public room info if not participating", function(done) {
       createRoom(hawkCredentials, {
         roomOwner: "Mathieu",
@@ -921,6 +898,23 @@ describe("/rooms", function() {
 
   describe("POST /rooms/:token", function() {
     var token, postReq;
+    var logs = [];
+    var oldMetrics = conf.get("hekaMetrics");
+
+    beforeEach(function() {
+      oldMetrics.activated = true;
+      conf.set("hekaMetrics", oldMetrics);
+      sandbox.stub(hekaLogger, 'info', function(op, log) {
+        log.op = op;
+        logs.push(log);
+      });
+    });
+
+    afterEach(function() {
+      oldMetrics.activated = false;
+      conf.set("hekaMetrics", oldMetrics);
+      logs = [];
+    });
 
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'post', '/rooms/:token'))
@@ -958,15 +952,11 @@ describe("/rooms", function() {
         it("should log the roomConnectionId", function(done) {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
-
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken, {
-              action: "join",
-              clientMaxSize: 10,
-              displayName: "Natim"
-            }).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
               if (err) throw err;
-              expect(res.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+              expect(logs).to.length(2);
+              expect(logs[1]["roomConnectionId"]).to.not.be.undefined;
               done();
             });
           });
@@ -1227,17 +1217,13 @@ describe("/rooms", function() {
         it("should log the roomConnectionId", function(done) {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
-
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken, {
-              action: "join",
-              clientMaxSize: 10,
-              displayName: "Natim"
-            }).end(function(err) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
                 if (err) throw err;
-                expect(res.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+                expect(logs).to.length(3);
+                expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
                 done();
               });
             });
@@ -1270,14 +1256,13 @@ describe("/rooms", function() {
         it("should log the roomConnectionId", function(done) {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
-
             var roomToken = postRes.body.roomToken;
-
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
                 if (err) throw err;
-                expect(res.req.roomConnectionId).to.eql(postRes.roomConnectionId);
+                expect(logs).to.length(3);
+                expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
                 done();
               });
             });
@@ -1801,7 +1786,7 @@ describe("/rooms", function() {
                 if (err) throw err;
                 expect(res.body).to.length(1);
                 expect(res.body[0].ctime).to.be.gte(startTime);
-                expect(res.body[0].creationTime).to.be.gte(startTime)
+                expect(res.body[0].creationTime).to.be.gte(startTime);
                 expect(res.body[0].expiresAt).to.be.gt(startTime);
 
                 var participants = res.body[0].participants;
