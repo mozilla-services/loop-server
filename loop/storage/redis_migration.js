@@ -203,8 +203,8 @@ function createClient(options) {
  **/
 function getClient(options) {
   var client = redis.createClient(
-    options.port,
-    options.host,
+    options.port || 6379,
+    options.host || "localhost",
     // This is to return buffers when buffers are sent as params.
     {detect_buffers: true}
   );
