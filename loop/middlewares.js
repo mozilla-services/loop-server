@@ -59,8 +59,9 @@ function logMetrics(req, res, next) {
   if (conf.get('hekaMetrics').activated === true) {
     res.on('finish', function() {
       var ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      var action;
       if (req.body && req.body.action) {
-        var action = req.body.action;
+        action = req.body.action;
       }
 
       var line = {
@@ -94,6 +95,10 @@ function logMetrics(req, res, next) {
 
       if (req.hasOwnProperty("roomConnectionId")) {
         line.roomConnectionId = req.roomConnectionId;
+      }
+
+      if (req.hasOwnProperty("roomParticipantsCount")) {
+        line.participants = req.roomParticipantsCount;
       }
 
       if (res.statusCode === 401) {

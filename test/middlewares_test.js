@@ -32,7 +32,8 @@ describe("metrics middleware", function() {
     req.callId = '1234';
     req.callUrlData = {userMac: 'userMacHere'};
     req.roomConnectionId = "roomConnectionId";
-    req.roomStorageData = {participants: new Array(5)}
+    req.roomStorageData = {};
+    req.roomParticipantsCount = 5;
     res.status(200).json();
   });
 

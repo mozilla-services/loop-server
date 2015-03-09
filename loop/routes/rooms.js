@@ -353,7 +353,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                     if (res.serverError(err)) return;
 
                     // Room participants are used by metrics
-                    req.roomStorageData.participants = participants;
+                    req.roomParticipantsCount = participants.length;
 
                     var roomMaxSize = req.roomStorageData.maxSize;
                     if (!canJoinRoom(
@@ -381,6 +381,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                           account: account
                         }, ttl, function(err) {
                           if (res.serverError(err)) return;
+
+                          // We've just added a new participant.
+                          req.roomParticipantsCount++;
+
                           emitRoomEvent(req.token,
                             req.roomStorageData.roomOwnerHmac,
                             "join",
