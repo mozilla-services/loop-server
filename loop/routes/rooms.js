@@ -308,7 +308,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * Actions are "join", "leave", "refresh".
    **/
   apiRouter.post('/rooms/:token', validators.validateRoomToken,
-    validators.validateRoomStatusUpdate, auth.authenticateWithHawkOrToken,
+    auth.authenticateWithHawkOrToken,
     function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var roomOwnerHmac = req.roomStorageData.roomOwnerHmac;
@@ -445,7 +445,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
         },
         handleUpdateStatus: function(req, res) {
           // Room status update is validated and logged in middlewares
-          res.status(204).json();
+          validators.validateRoomStatusUpdate(req, res, function () {
+            res.status(204).json();
+          });
         },
         handleLeave: function(req, res) {
           storage.getRoomParticipant(req.token, participantHmac,
