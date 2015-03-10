@@ -4,7 +4,6 @@
 
 "use strict";
 var expect = require("chai").expect;
-var assert = require("chai").assert;
 var sinon = require("sinon");
 
 var redis_client = require("../loop/storage/redis_client");
@@ -37,7 +36,8 @@ describe("redis_client", function() {
 
       it("should expose supported multi operations", function() {
         var multi = client.multi();
-        expect(multi.__proto__).to.include.keys(redis_client.MULTI_OPERATIONS);
+        expect(Object.getPrototypeOf(multi))
+          .to.include.keys(redis_client.MULTI_OPERATIONS);
       });
 
       it("should stack multi operations and execute them", function(done) {
