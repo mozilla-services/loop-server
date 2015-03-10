@@ -1,4 +1,5 @@
 SERVER_URL = https://loop.stage.mozaws.net:443
+SIMPLE_PUSH_URL = https://call.stage.mozaws.net/
 
 # Hackety-hack around OSX system python bustage.
 # The need for this should go away with a future osx/xcode update.
@@ -26,18 +27,18 @@ clean:
 
 # Run a single test from the venv machine, for sanity-checking.
 test: install
-	./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_http_calls
-	./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_websockets
+	SIMPLE_PUSH_URL=$(SIMPLE_PUSH_URL) ./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_http_calls
+	SIMPLE_PUSH_URL=$(SIMPLE_PUSH_URL) ./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_websockets
 
 # Run a bench of 20 concurrent users.
 bench:
-	./venv/bin/loads-runner --config=./config/bench.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
+	SIMPLE_PUSH_URL=$(SIMPLE_PUSH_URL) ./venv/bin/loads-runner --config=./config/bench.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 
 # Run a much bigger bench, by submitting to broker in AWS.
 megabench:
 	./venv/bin/loads-runner --config=./config/megabench.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 #	./venv/bin/loads-runner --config=./config/megabench.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_websockets
-#
+
 smoke:
 	./venv/bin/loads-runner --config=./config/smoke.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
 
