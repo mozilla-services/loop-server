@@ -372,8 +372,9 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                     getUserAccount(storage, req, function(err, acc) {
                       if (res.serverError(err)) return;
                       encryptAccountName(req.token, acc, function(account) {
+                        req.roomConnectionId = uuid.v4();
                         storage.addRoomParticipant(req.token, participantHmac, {
-                          id: uuid.v4(),
+                          id: req.roomConnectionId,
                           displayName: req.body.displayName,
                           clientMaxSize: requestMaxSize,
                           userMac: req.user,
@@ -414,21 +415,30 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                 sendError(res, 410, errors.EXPIRED, "Participation has expired.");
                 return;
               }
-              res.status(200).json({
-                expires: ttl
+              storage.getRoomParticipant(req.token, participantHmac, function(err, participant) {
+                if (res.serverError(err)) return;
+                req.roomConnectionId = participant.id;
+                res.status(200).json({
+                  expires: ttl
+                });
               });
             });
         },
         handleLeave: function(req, res) {
-          storage.deleteRoomParticipant(req.token, participantHmac,
-            function(err) {
+          storage.getRoomParticipant(req.token, participantHmac,
+            function(err, participant) {
               if (res.serverError(err)) return;
-              emitRoomEvent(
-                req.token, req.roomStorageData.roomOwnerHmac,
-                "leave",
+              req.roomConnectionId = participant.id;
+              storage.deleteRoomParticipant(req.token, participantHmac,
                 function(err) {
                   if (res.serverError(err)) return;
-                  res.status(204).json();
+                  emitRoomEvent(
+                    req.token, req.roomStorageData.roomOwnerHmac,
+                    "leave",
+                    function(err) {
+                      if (res.serverError(err)) return;
+                      res.status(204).json();
+                    });
                 });
             });
         }

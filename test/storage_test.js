@@ -904,6 +904,20 @@ describe("Storage", function() {
         });
       });
 
+      describe("#getRoomParticipant", function() {
+        it("should get a participant of the room", function(done) {
+          storage.addRoomParticipant(roomToken, idHmac, {"apiKey": "1"}, ttl,
+            function(err) {
+              if (err) throw err;
+              storage.getRoomParticipant(roomToken, idHmac, function(err, participant) {
+                if (err) throw err;
+                expect(participant).to.eql({"apiKey": "1", "hawkIdHmac": idHmac});
+                done();
+              });
+            });
+        });
+      });
+
       describe("#touchRoomParticipant", function() {
 
         it("should change the room participant expiricy", function(done) {

@@ -15,7 +15,7 @@ var hmac = require("../loop/hmac");
 var getMiddlewares = require("./support").getMiddlewares;
 var encrypt = require('../loop/encrypt').encrypt;
 
-
+var hekaLogger = require('../loop/logger').hekaLogger;
 var loop = require("../loop");
 var request = require("request");
 var app = loop.app;
@@ -898,6 +898,23 @@ describe("/rooms", function() {
 
   describe("POST /rooms/:token", function() {
     var token, postReq;
+    var logs = [];
+    var oldMetrics = conf.get("hekaMetrics");
+
+    beforeEach(function() {
+      oldMetrics.activated = true;
+      conf.set("hekaMetrics", oldMetrics);
+      sandbox.stub(hekaLogger, 'info', function(op, log) {
+        log.op = op;
+        logs.push(log);
+      });
+    });
+
+    afterEach(function() {
+      oldMetrics.activated = false;
+      conf.set("hekaMetrics", oldMetrics);
+      logs = [];
+    });
 
     it("should have the validateRoomToken middleware.", function() {
       expect(getMiddlewares(apiRouter, 'post', '/rooms/:token'))
@@ -932,6 +949,18 @@ describe("/rooms", function() {
       });
 
       describe("Handle 'join'", function() {
+        it("should log the roomConnectionId", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+              if (err) throw err;
+              expect(logs).to.length(2);
+              expect(logs[1]["roomConnectionId"]).to.not.be.undefined;
+              done();
+            });
+          });
+        });
 
         it("should fail if params are missing.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
@@ -1185,6 +1214,22 @@ describe("/rooms", function() {
           clock.restore();
         });
 
+        it("should log the roomConnectionId", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+                if (err) throw err;
+                expect(logs).to.length(3);
+                expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
+                done();
+              });
+            });
+          });
+        });
+
         it("should touch the participant and return the next expiration.",
           function(done) {
             var startTime = parseInt(Date.now() / 1000, 10);
@@ -1208,6 +1253,22 @@ describe("/rooms", function() {
       });
 
       describe("Handle 'leave'", function() {
+        it("should log the roomConnectionId", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+                if (err) throw err;
+                expect(logs).to.length(3);
+                expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
+                done();
+              });
+            });
+          });
+        });
+
         it("should remove the participant from the room.", function(done) {
           createRoom(hawkCredentials).end(function(err, res) {
             if (err) throw err;
@@ -1725,7 +1786,7 @@ describe("/rooms", function() {
                 if (err) throw err;
                 expect(res.body).to.length(1);
                 expect(res.body[0].ctime).to.be.gte(startTime);
-                expect(res.body[0].creationTime).to.be.gte(startTime)
+                expect(res.body[0].creationTime).to.be.gte(startTime);
                 expect(res.body[0].expiresAt).to.be.gt(startTime);
 
                 var participants = res.body[0].participants;
