@@ -382,7 +382,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                         }, ttl, function(err) {
                           if (res.serverError(err)) return;
 
-                          // We've just added a new participant.
+                          // A participant was just added.
                           req.roomParticipantsCount++;
 
                           emitRoomEvent(req.token,

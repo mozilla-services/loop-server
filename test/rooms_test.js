@@ -962,6 +962,19 @@ describe("/rooms", function() {
           });
         });
 
+        it("should log the accurate number of participants", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+              if (err) throw err;
+              expect(logs).to.length(2);
+              expect(logs[1]["participants"]).to.eql(1);
+              done();
+            });
+          });
+        });
+
         it("should fail if params are missing.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
