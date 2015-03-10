@@ -453,10 +453,10 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
                       storage.getRoomParticipants(req.token, function(err,
                           participants) {
                         if (res.serverError(err)) return;
-                        
+
                         // Room participants are used by metrics
                         req.roomParticipantsCount = participants.length;
-                        
+
                         res.status(204).json();
                       });
                     });
