@@ -21,13 +21,33 @@ describe("redis_client", function() {
 
   describe("createClient", function() {
     it("should return an object", function() {
-      expect(redis_client.createClient()).to.be.an("object");
+      expect(redis_client.createClient(6379, "localhost")).to.be.an("object");
+    });
+
+    it("should let default multi support with sharding disabled",
+      function(done) {
+        var client = redis_client.createClient(6379, "localhost", {
+          sharding: false
+        });
+        var stub = sandbox.stub(client, "set", function(key, value, cb) {
+          cb();
+        });
+
+        var multi = client.multi();
+        multi.set("foo", "foo");
+        multi.set("bar", "bar");
+        multi.exec(function(err) {
+          sinon.assert.notCalled(stub);
+          done(err);
+        });
     });
 
     describe("#multi", function() {
       var client;
       beforeEach(function() {
-        client = redis_client.createClient()
+        client = redis_client.createClient(6379, "localhost", {
+          sharding: true
+        })
       });
 
       it("should return an object", function() {
@@ -69,7 +89,6 @@ describe("redis_client", function() {
           done(err);
         });
       });
-
     })
   });
 });

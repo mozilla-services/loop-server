@@ -13,36 +13,41 @@ var MULTI_OPERATIONS = [
 ];
 
 
-function createClient() {
-  var client = redis.createClient.apply(redis, arguments);
-
-  client.multi = function() {
-    var self = this;
-    var Multi = function() {
-      this.operations = [];
-    };
-
-    // Each time an operation is done on a multi, add it to a
-    // list to execute.
-    MULTI_OPERATIONS.forEach(function(operation) {
-      Multi.prototype[operation] = function() {
-        this.operations.push([
-          operation, Array.prototype.slice.call(arguments)
-        ]);
+function createClient(port, host, options) {
+  if (options === undefined) {
+    options = {};
+  }
+  var client = redis.createClient(port, host, options);
+  // Only bypass multi if sharding is enabled.
+  if (options.sharding === true) {
+    client.multi = function() {
+      var self = this;
+      var Multi = function() {
+        this.operations = [];
       };
-    });
 
-    Multi.prototype.exec = function(callback){
-      async.mapSeries(this.operations, function(operation, done){
-        var operationName = operation[0];
-        var operationArguments = operation[1];
+      // Each time an operation is done on a multi, add it to a
+      // list to execute.
+      MULTI_OPERATIONS.forEach(function(operation) {
+        Multi.prototype[operation] = function() {
+          this.operations.push([
+            operation, Array.prototype.slice.call(arguments)
+          ]);
+        };
+      });
 
-        operationArguments.push(done);
-        self[operationName].apply(self, operationArguments);
-      }, callback);
+      Multi.prototype.exec = function(callback){
+        async.mapSeries(this.operations, function(operation, done){
+          var operationName = operation[0];
+          var operationArguments = operation[1];
+
+          operationArguments.push(done);
+          self[operationName].apply(self, operationArguments);
+        }, callback);
+      };
+      return new Multi();
     };
-    return new Multi();
-  };
+  }
 
   return client;
 }

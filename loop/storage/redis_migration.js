@@ -4,7 +4,7 @@
 
 "use strict";
 
-var redis = require("redis");
+var redis = require("./redis_client");
 var async = require("async");
 var conf = require('../config').conf;
 var MULTI_OPERATIONS = require("./redis_client").MULTI_OPERATIONS;
@@ -200,8 +200,11 @@ function getClient(options) {
   var client = redis.createClient(
     options.port || 6379,
     options.host || "localhost",
-    // This is to return buffers when buffers are sent as params.
-    {detect_buffers: true}
+    {
+      // This is to return buffers when buffers are sent as params.
+      detect_buffers: true,
+      sharding: options.sharding
+    }
   );
   if (options.db) {
     client.select(options.db);
