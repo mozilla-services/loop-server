@@ -12,6 +12,13 @@ var hmac = require('./hmac');
 var sendError = require('./utils').sendError;
 var fxa = require('./fxa');
 
+USER_TYPE = {
+  registeredUser: "Registered User",
+  unregisteredUser: "Unregistered User",
+  unauthenticatedUser: "Link-clicker User",
+  unreachableUser: "Unreachable User"
+}
+
 
 module.exports = function(conf, logError, storage, statsdClient) {
   var hawkOptions = {
@@ -40,8 +47,10 @@ module.exports = function(conf, logError, storage, statsdClient) {
       if (user !== null) {
         // If an identity is defined for this hawk session, use it.
         req.user = user;
+        req.userType = USER_TYPE.registeredUser;
       } else {
         req.user = req.hawkIdHmac;
+        req.userType = USER_TYPE.unregisteredUser;
       }
 
       storage.touchHawkSession(req.user, req.hawkIdHmac, function(err) {
@@ -182,6 +191,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
                 hawk.setHawkHeaders(res, sessionToken);
                 req.hawkIdHmac = hawkIdHmac;
                 req.user = userHmac;
+                req.userType = USER_TYPE.registeredUser;
                 next();
               });
           });
@@ -225,6 +235,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
         return;
       }
       req.participantTokenHmac = tokenHmac;
+      req.userType = USER_TYPE.unauthenticatedUser;
       next();
     });
   }
@@ -301,6 +312,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     requireFxA: requireFxA,
     requireRegisteredUser: requireRegisteredUser,
     requireBasicAuthToken: requireBasicAuthToken,
-    unauthorized: unauthorized
+    unauthorized: unauthorized,
+    USER_TYPE: USER_TYPE
   };
 };
