@@ -2,7 +2,7 @@ import json
 import random
 from six.moves import range
 
-MAX_NUMBER_OF_PEOPLE_JOINING = 5  # Pick a random number between 1 and this value.
+MAX_NUMBER_OF_PEOPLE_JOINING = 5  # Pick a randint between 1 and this value.
 PERCENTAGE_OF_REFRESH = 50
 PERCENTAGE_OF_MANUAL_LEAVE = 60
 PERCENTAGE_OF_MANUAL_ROOM_DELETE = 80
@@ -12,8 +12,8 @@ class TestRoomsMixin(object):
     def setupRoom(self):
         self.register({
             "simplePushURLs": {
-                "calls": "https://call.stage.mozaws.net/",
-                "rooms": "https://call.stage.mozaws.net/"
+                "calls": self.simple_push_url,
+                "rooms": self.simple_push_url
             }
         })
         room_token = self.create_room()

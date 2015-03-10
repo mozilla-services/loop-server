@@ -12,7 +12,7 @@ class TestCallsMixin(object):
 
     def register(self, data=None):
         if data is None:
-            data = {'simple_push_url': 'https://call.stage.mozaws.net/'}
+            data = {'simple_push_url': self.simple_push_url}
         resp = self.session.post(
             self.base_url + '/registration',
             data=json.dumps(data),

@@ -6,6 +6,8 @@ from .rooms import TestRoomsMixin
 from .websocket import TestWebsocketMixin
 
 from loads.case import TestCase
+import os
+DEFAULT_SIMPLE_PUSH_URL = "https://call.stage.mozaws.net/"
 
 
 class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
@@ -13,6 +15,8 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
         super(TestLoop, self).__init__(*args, **kwargs)
         r = self.session.get(self.server_url)
         self.base_url = r.request.url.rstrip('/')
+        self.simple_push_url = os.getenv("SIMPLE_PUSH_URL",
+                                         DEFAULT_SIMPLE_PUSH_URL)
 
     def setUp(self):
         self.wss = []
