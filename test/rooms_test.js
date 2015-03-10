@@ -459,12 +459,26 @@ describe("/rooms", function() {
 
   describe("POST /rooms for room creation", function() {
     var postRoomReq;
+    var logs = [];
+    var oldMetrics = conf.get("hekaMetrics");
 
     beforeEach(function() {
+      oldMetrics.activated = true;
+      conf.set("hekaMetrics", oldMetrics);
+      sandbox.stub(hekaLogger, 'info', function(op, log) {
+        log.op = op;
+        logs.push(log);
+      });
       postRoomReq = supertest(app)
         .post('/rooms')
         .type('json')
         .hawk(hawkCredentials);
+    });
+
+    afterEach(function() {
+      oldMetrics.activated = false;
+      conf.set("hekaMetrics", oldMetrics);
+      logs = [];
     });
 
     it("should have the validateRoomParams middleware.", function() {
@@ -595,7 +609,14 @@ describe("/rooms", function() {
      });
     });
 
-    it("should not use two times the same token");
+    it("should log the roomToken", function(done) {
+      createRoom(hawkCredentials).end(function(err, postRes) {
+        if (err) throw err;
+        expect(logs).to.length(1);
+        expect(logs[0].roomToken).to.not.be.undefined;
+        done();
+      });
+    });
   });
 
   describe("GET /rooms/:token", function() {
