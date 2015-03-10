@@ -234,8 +234,10 @@ module.exports = function(conf, logError, storage) {
         'recvStreams'
       ];
 
+      var field;
+
       for (var i = 0; i < expectedFields.length; i++) {
-        var field = expectedFields[i];
+        field = expectedFields[i];
         if (!req.body.hasOwnProperty(field)) {
           sendError(res, 400, errors.INVALID_PARAMETERS,
                     "'" + field + "' field is missing in body.");
@@ -245,7 +247,7 @@ module.exports = function(conf, logError, storage) {
 
       var integerFields = ['connections', 'sendStreams', 'recvStreams'];
       for (i = 0; i < integerFields.length; i++) {
-        var field = integerFields[i];
+        field = integerFields[i];
         var intValue = parseInt(req.body[field], 10);
         if (isNaN(intValue) || intValue < 0) {
           sendError(res, 400, errors.INVALID_PARAMETERS,
@@ -314,6 +316,11 @@ module.exports = function(conf, logError, storage) {
         return;
       }
 
+      // Store room status for logging
+      req.roomStatusData = {};
+      expectedFields.forEach(function (f) {
+        req.roomStatusData[f] = req.body[f];
+      });
     }
 
     next();

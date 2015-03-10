@@ -162,6 +162,7 @@ var refreshRoom = function(credentials, roomToken, status) {
 var updateStateRoom = function(credentials, roomToken, data, status) {
   if (data === undefined) {
     data = {
+      action: "status",
       event: "Session.connectionCreated",
       state: "init",
       connections: 2,
@@ -169,7 +170,6 @@ var updateStateRoom = function(credentials, roomToken, data, status) {
       recvStreams: 1
     };
   }
-  data.action = "status";
 
   var req = supertest(app)
     .post('/rooms/' + roomToken)
@@ -1373,11 +1373,21 @@ describe("/rooms", function() {
           });
         }
 
+        apiRouter.post('/validate-room-status', validators.validateRoomStatusUpdate, function(req, res) {
+          res.status(200).json(req.roomStatusData);
+        });
+
+        var validateRoomStatus;
         var exampleBody;
         var roomToken;
 
         beforeEach(function(done) {
+          validateRoomStatus = supertest(app)
+            .post('/validate-room-status')
+            .type('json');
+
           exampleBody = {
+            action: "status",
             event: "Session.connectionCreated",
             state: "init",
             connections: 2,
@@ -1391,15 +1401,48 @@ describe("/rooms", function() {
           });
         });
 
-        it("should reject if body is incomplete.", function(done) {
-          updateStateRoom(hawkCredentials, roomToken, {}, 400).end(function(err, res) {
+        it("should return empty body if successful.", function(done) {
+          updateStateRoom(hawkCredentials, roomToken).end(function(err) {
             if (err) throw err;
-            expectFormattedError(
-              res, 400, errors.INVALID_PARAMETERS,
-              "'event' field is missing in body."
-            );
             done();
           });
+        });
+
+        it("should not log data if invalid.", function(done) {
+          exampleBody.state = 'happy';
+          validateRoomStatus
+            .send(exampleBody)
+            .end(function (err, res) {
+              if (err) throw err;
+              expect(res.body.event).to.eql(undefined);
+              done();
+            });
+        });
+
+        it("should log room status data if successful.", function(done) {
+          validateRoomStatus
+            .send(exampleBody)
+            .end(function (err, res) {
+              if (err) throw err;
+              expect(res.body.event).to.not.eql(undefined);
+              expect(res.body.state).to.not.eql(undefined);
+              expect(res.body.connections).to.not.eql(undefined);
+              expect(res.body.recvStreams).to.not.eql(undefined);
+              expect(res.body.sendStreams).to.not.eql(undefined);
+              done();
+            });
+        });
+
+        it("should reject if body is incomplete.", function(done) {
+          updateStateRoom(hawkCredentials, roomToken, {action: 'status'}, 400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(
+                res, 400, errors.INVALID_PARAMETERS,
+                "'event' field is missing in body."
+              );
+              done();
+            });
         });
 
         it("should reject if state is unknown.", function(done) {
@@ -1495,13 +1538,6 @@ describe("/rooms", function() {
               res, 400, errors.INVALID_PARAMETERS,
               "Invalid recvStreams number."
             );
-            done();
-          });
-        });
-
-        it("should return empty body if successful.", function(done) {
-          updateStateRoom(hawkCredentials, roomToken).end(function(err) {
-            if (err) throw err;
             done();
           });
         });

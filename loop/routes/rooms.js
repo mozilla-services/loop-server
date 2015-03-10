@@ -444,6 +444,7 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             });
         },
         handleUpdateStatus: function(req, res) {
+          // Room status update is validated and logged in middlewares
           res.status(204).json();
         },
         handleLeave: function(req, res) {

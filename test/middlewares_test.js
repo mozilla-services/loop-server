@@ -35,6 +35,7 @@ describe("metrics middleware", function() {
     req.roomStorageData = {sessionToken: "sessionToken",
                            sessionId: "sessionId"};
     req.roomParticipantsCount = 5;
+    req.roomStatusData = {state: 'init', event: 'Session.connectionCreated'};
     req.roomToken = "roomToken";
     res.status(200).json();
   });
@@ -101,6 +102,18 @@ describe("metrics middleware", function() {
         expect(logged.roomConnectionId).to.eql("roomConnectionId");
         expect(logged.sessionId).to.eql("sessionId");
         expect(logged.sessionToken).to.eql("sessionToken");
+        done();
+      });
+  });
+
+  it("should log room status details", function (done) {
+    supertest(app)
+      .get(apiPrefix + '/with-metrics-middleware')
+      .end(function(err) {
+        if (err) throw err;
+        var logged = logs[0];
+        expect(logged.state).to.eql('init');
+        expect(logged.event).to.eql('Session.connectionCreated');
         done();
       });
   });

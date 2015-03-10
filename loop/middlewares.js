@@ -109,10 +109,15 @@ function logMetrics(req, res, next) {
         line.participants = req.roomParticipantsCount;
       }
 
+      if (req.hasOwnProperty("roomStatusData")) {
+        Object.keys(req.roomStatusData).forEach(function(k) {
+          line[k] = req.roomStatusData[k];
+        });
+      }
+
       if (req.hasOwnProperty("roomToken")) {
         line.roomToken = req.roomToken;
       }
-
       if (res.statusCode === 401) {
         line.authorization = req.headers.authorization;
         line.hawk = req.hawk;
