@@ -34,6 +34,8 @@ var sessionToken = conf.get("fakeCallInfo").token1;
 var user = "alexis@notmyidea.org";
 var spurl = "http://notmyidea.org";
 
+var USER_TYPES = require('../loop/constants').USER_TYPES;
+
 /**
  * Generates hawk credentials for the given user and return them.
  *
@@ -953,7 +955,7 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
               expect(logs[1]["roomConnectionId"]).to.not.be.undefined;
@@ -966,10 +968,25 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
               expect(logs[1]["participants"]).to.eql(1);
+              done();
+            });
+          });
+        });
+
+        it("should log the user type", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            expect(logs).to.length(1);
+            expect(logs[0].userType).to.eql(USER_TYPES.REGISTERED);
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              expect(logs).to.length(2);
+              expect(logs[1].userType).to.eql(USER_TYPES.REGISTERED);
               done();
             });
           });
@@ -1233,7 +1250,7 @@ describe("/rooms", function() {
             var roomToken = postRes.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+              refreshRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
@@ -1272,7 +1289,7 @@ describe("/rooms", function() {
             var roomToken = postRes.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+              leaveRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
@@ -1377,6 +1394,22 @@ describe("/rooms", function() {
               if (err) throw err;
               expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
                                   "Missing: displayName, clientMaxSize");
+              done();
+            });
+        });
+
+        it("should log the user type", function(done) {
+          postReq
+            .send({
+              action: "join",
+              clientMaxSize: 10,
+              displayName: "Natim"
+            })
+            .expect(200)
+            .end(function(err) {
+              if (err) throw err;
+              expect(logs).to.length(2);
+              expect(logs[1].userType).to.eql(USER_TYPES.UNAUTHENTICATED);
               done();
             });
         });
@@ -1505,6 +1538,19 @@ describe("/rooms", function() {
                 .end(done);
             });
           });
+
+        it("should log the user type", function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(null, roomToken).end(function(err) {
+              if (err) throw err;
+              expect(logs).to.length(3);
+              expect(logs[2].userType).to.eql(USER_TYPES.UNAUTHENTICATED);
+              done();
+            });
+          });
+        });
 
         it("should touch the participant and return the next expiration.",
           function(done) {

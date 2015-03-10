@@ -16,7 +16,7 @@ var errors = require("./errno.json");
 var hekaLogger = require('./logger').hekaLogger;
 var logging = require("express-logging");
 var time = require('./utils').time;
-var USER_TYPE = require('./auth').USER_TYPE;
+var USER_TYPES = require('./constants').USER_TYPES;
 
 function handle503(logError) {
   return function UnavailableService(req, res, next) {
@@ -73,7 +73,7 @@ function logMetrics(req, res, next) {
         agent: req.headers['user-agent'],
         time: isoDateString(new Date()),
         uid: req.user,
-        userType: req.userType || USER_TYPE.unreachableUser,
+        userType: req.userType || USER_TYPES.UNAUTHENTICATED,
         callId: req.callId,
         token: req.token,
         v: loopPackageData.version,
