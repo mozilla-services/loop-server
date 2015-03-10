@@ -953,7 +953,7 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
               expect(logs[1].roomConnectionId).to.not.be.undefined;
@@ -966,7 +966,7 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
               expect(logs[1].participants).to.eql(1);
@@ -1233,7 +1233,7 @@ describe("/rooms", function() {
             var roomToken = postRes.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+              refreshRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[2].roomConnectionId).to.not.be.undefined;
@@ -1247,9 +1247,9 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+              refreshRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[2].participants).to.eql(1);
@@ -1288,7 +1288,7 @@ describe("/rooms", function() {
             var roomToken = postRes.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+              leaveRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[2].roomConnectionId).to.not.be.undefined;
@@ -1302,9 +1302,9 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+              leaveRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[2].participants).to.eql(0);
