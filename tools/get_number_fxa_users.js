@@ -14,13 +14,13 @@ function main(callback) {
     if (options.db) client.select(options.db);
 
     var multi = client.multi();
-    multi.keys("userid.*");
-    multi.keys("hawkuser.*");
+    multi.eval("return #redis.pcall('keys', 'userid.*')", 0);
+    multi.eval("return #redis.pcall('keys', 'hawkuser.*')", 0);
     multi.exec(function (err, results) {
       if (err) throw err;
       callback({
-        total: results[0].length,
-        count: results[1].length
+        total: results[0],
+        count: results[1]
       });
     });
   }
