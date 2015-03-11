@@ -230,14 +230,14 @@ module.exports = function(conf, logError, storage) {
 
     if (req.body.action && req.body.action === 'status') {
 
-      // Mandatory fields
-      var expectedFields = ['event', 'state', 'connections', 'sendStreams',
-        'recvStreams'
+      // Validate mandatory fields.
+      var expectedFields = [
+        'event', 'state', 'connections', 'sendStreams', 'recvStreams'
       ];
 
       var field;
 
-      for (var i = 0; i < expectedFields.length; i++) {
+      for (var i=0, n=expectedFields.length; i<n; i++) {
         field = expectedFields[i];
         if (!req.body.hasOwnProperty(field)) {
           sendError(res, 400, errors.INVALID_PARAMETERS,
@@ -246,6 +246,7 @@ module.exports = function(conf, logError, storage) {
         }
       }
 
+      // Validate positive integer values.
       var integerFields = ['connections', 'sendStreams', 'recvStreams'];
       for (i = 0; i < integerFields.length; i++) {
         field = integerFields[i];
@@ -285,7 +286,7 @@ module.exports = function(conf, logError, storage) {
       var state = req.body.state,
           event = req.body.event;
 
-      // Validate that state is known
+      // Validate that state is known.
       if (!validEvents.hasOwnProperty(state)) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "Unknown state '" + state + "'.");
@@ -295,14 +296,14 @@ module.exports = function(conf, logError, storage) {
       var events = validEvents[state];
       events.push(constants.ROOM_EVENTS.SESSION_CONNECTION_DESTROYED);
 
-      // Validate that event is valid
+      // Validate that event is valid.
       if (events.indexOf(event) < 0) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "Invalid event '" + event + "' for state '" + state + "'.");
         return;
       }
 
-      // Store room status for logging
+      // Store room status for logging.
       req.roomStatusData = {};
       expectedFields.forEach(function (f) {
         req.roomStatusData[f] = req.body[f];
