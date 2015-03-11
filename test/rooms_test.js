@@ -953,10 +953,10 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
-              expect(logs[1]["roomConnectionId"]).to.not.be.undefined;
+              expect(logs[1].roomConnectionId).to.not.be.undefined;
               done();
             });
           });
@@ -966,10 +966,10 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
-              expect(logs[1]["participants"]).to.eql(1);
+              expect(logs[1].participants).to.eql(1);
               done();
             });
           });
@@ -1233,10 +1233,26 @@ describe("/rooms", function() {
             var roomToken = postRes.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              refreshRoom(hawkCredentials, roomToken).end(function(err, res) {
+              refreshRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
-                expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
+                expect(logs[2].roomConnectionId).to.not.be.undefined;
+                done();
+              });
+            });
+          });
+        });
+
+        it("should log the accurate number of participants", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              refreshRoom(hawkCredentials, roomToken).end(function(err) {
+                if (err) throw err;
+                expect(logs).to.length(3);
+                expect(logs[2].participants).to.eql(1);
                 done();
               });
             });
@@ -1272,15 +1288,32 @@ describe("/rooms", function() {
             var roomToken = postRes.body.roomToken;
             joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
-              leaveRoom(hawkCredentials, roomToken).end(function(err, res) {
+              leaveRoom(hawkCredentials, roomToken).end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
-                expect(logs[2]["roomConnectionId"]).to.not.be.undefined;
+                expect(logs[2].roomConnectionId).to.not.be.undefined;
                 done();
               });
             });
           });
         });
+
+        it("should log the accurate number of participants", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              leaveRoom(hawkCredentials, roomToken).end(function(err) {
+                if (err) throw err;
+                expect(logs).to.length(3);
+                expect(logs[2].participants).to.eql(0);
+                done();
+              });
+            });
+          });
+        });
+
 
         it("should remove the participant from the room.", function(done) {
           createRoom(hawkCredentials).end(function(err, res) {
