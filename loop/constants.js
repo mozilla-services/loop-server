@@ -39,8 +39,8 @@ module.exports = {
     BAD_REASON: "Invalid reason: should be alphanumeric"
   },
   USER_TYPES: {
-    REGISTERED: "Registered User",
-    UNREGISTERED: "Unregistered User",
-    UNAUTHENTICATED: "Link-clicker User"
+    REGISTERED: "Registered",
+    UNREGISTERED: "Unregistered",
+    UNAUTHENTICATED: "Link-clicker"
   }
 };
