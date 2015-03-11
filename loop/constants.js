@@ -37,5 +37,10 @@ module.exports = {
     BAD_AUTHENTICATION: "bad authentication",
     BAD_CALLID: "bad callId",
     BAD_REASON: "Invalid reason: should be alphanumeric"
+  },
+  USER_TYPES: {
+    REGISTERED: "Registered User",
+    UNREGISTERED: "Unregistered User",
+    UNAUTHENTICATED: "Link-clicker User"
   }
 };

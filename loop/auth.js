@@ -12,6 +12,8 @@ var hmac = require('./hmac');
 var sendError = require('./utils').sendError;
 var fxa = require('./fxa');
 
+var USER_TYPES = require('./constants').USER_TYPES;
+
 
 module.exports = function(conf, logError, storage, statsdClient) {
   var hawkOptions = {
@@ -40,8 +42,10 @@ module.exports = function(conf, logError, storage, statsdClient) {
       if (user !== null) {
         // If an identity is defined for this hawk session, use it.
         req.user = user;
+        req.userType = USER_TYPES.REGISTERED;
       } else {
         req.user = req.hawkIdHmac;
+        req.userType = USER_TYPES.UNREGISTERED;
       }
 
       storage.touchHawkSession(req.user, req.hawkIdHmac, function(err) {
@@ -182,6 +186,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
                 hawk.setHawkHeaders(res, sessionToken);
                 req.hawkIdHmac = hawkIdHmac;
                 req.user = userHmac;
+                req.userType = USER_TYPES.REGISTERED;
                 next();
               });
           });
@@ -225,6 +230,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
         return;
       }
       req.participantTokenHmac = tokenHmac;
+      req.userType = USER_TYPES.UNAUTHENTICATED;
       next();
     });
   }
