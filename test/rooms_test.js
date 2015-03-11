@@ -639,7 +639,7 @@ describe("/rooms", function() {
     });
 
     it("should log the roomToken", function(done) {
-      createRoom(hawkCredentials).end(function(err, postRes) {
+      createRoom(hawkCredentials).end(function(err) {
         if (err) throw err;
         expect(logs).to.length(1);
         expect(logs[0].roomToken).to.not.be.undefined;
@@ -1029,7 +1029,7 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
               expect(logs[1].sessionId).to.not.be.undefined;
