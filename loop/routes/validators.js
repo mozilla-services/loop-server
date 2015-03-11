@@ -237,7 +237,7 @@ module.exports = function(conf, logError, storage) {
 
       var field;
 
-      for (var i=0, n=expectedFields.length; i<n; i++) {
+      for (var i = 0, n = expectedFields.length; i < n; i++) {
         field = expectedFields[i];
         if (!req.body.hasOwnProperty(field)) {
           sendError(res, 400, errors.INVALID_PARAMETERS,
