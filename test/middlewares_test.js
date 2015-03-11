@@ -34,6 +34,7 @@ describe("metrics middleware", function() {
     req.roomConnectionId = "roomConnectionId";
     req.roomStorageData = {};
     req.roomParticipantsCount = 5;
+    req.roomToken = "roomToken";
     res.status(200).json();
   });
 
@@ -94,6 +95,7 @@ describe("metrics middleware", function() {
         expect(logged.calleeId).to.eql('userMacHere');
         expect(logged.callerId).to.eql('uuid');
         expect(logged.action).to.eql('join');
+        expect(logged.roomToken).to.eql("roomToken");
         expect(logged.participants).to.eql(5);
         expect(logged.roomConnectionId).to.eql("roomConnectionId");
         done();
