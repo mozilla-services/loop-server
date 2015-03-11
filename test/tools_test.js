@@ -15,6 +15,7 @@ var getStorage = require("../loop/storage");
 var moveRedisData = require("../tools/move_redis_data");
 var migrateRoomParticipants = require("../tools/migrate_1121403_roomparticipants");
 var get_session_id_for_rooms = require("../tools/get_tokbox_sessionid_for_room_token");
+var get_number_fxa_users = require("../tools/get_number_fxa_users");
 
 
 var storage = loop.storage;
@@ -203,6 +204,30 @@ describe('Tools', function() {
         expect(results).to.eql({
           'ooByyZNJyEs': 'tokbox_ooByyZNJyEs',
           'M6iilFJply8': 'tokbox_M6iilFJply8'
+        });
+        done();
+      });
+    });
+  });
+
+  describe('get_number_fxa_users', function() {
+    before(function(done) {
+      var multi = storage._client.multi();
+      multi.set('userid.12345', 'encrypted_user_id');
+      multi.set('userid.56789', 'encrypted_user_id');
+      multi.set('hawkuser.56789', 'userMac');
+      multi.exec(done);
+    });
+
+    after(function(done) {
+      storage.drop(done);
+    });
+
+    it("should return the number of FxA users in the database", function(done) {
+      get_number_fxa_users(function(results) {
+        expect(results).to.eql({
+          count: 1,
+          total: 2
         });
         done();
       });
