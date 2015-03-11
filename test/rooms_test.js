@@ -996,6 +996,20 @@ describe("/rooms", function() {
           });
         });
 
+        it("should log the sessionId and sessionToken", function(done) {
+          createRoom(hawkCredentials).end(function(err, postRes) {
+            if (err) throw err;
+            var roomToken = postRes.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+              if (err) throw err;
+              expect(logs).to.length(2);
+              expect(logs[1].sessionId).to.not.be.undefined;
+              expect(logs[1].sessionToken).to.not.be.undefined;
+              done();
+            });
+          });
+        });
+
         it("should fail if params are missing.", function(done) {
         createRoom(hawkCredentials).end(function(err, res) {
           if (err) throw err;
