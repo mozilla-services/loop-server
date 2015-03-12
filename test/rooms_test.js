@@ -159,6 +159,33 @@ var refreshRoom = function(credentials, roomToken, status) {
   return req;
 };
 
+var updateStateRoom = function(credentials, roomToken, data, status) {
+  if (data === undefined) {
+    data = {
+      action: "status",
+      event: "Session.connectionCreated",
+      state: "init",
+      connections: 2,
+      sendStreams: 1,
+      recvStreams: 1
+    };
+  }
+
+  var req = supertest(app)
+    .post('/rooms/' + roomToken)
+    .send(data)
+    .type("json")
+    .expect(status || 204);
+
+  if (credentials.token !== undefined) {
+    req = req.auth(credentials.token, "");
+  } else {
+    req = req.hawk(credentials.hawkCredentials || credentials);
+  }
+
+  return req;
+};
+
 var leaveRoom = function(credentials, roomToken, status) {
   var req = supertest(app)
     .post('/rooms/' + roomToken)
@@ -612,7 +639,7 @@ describe("/rooms", function() {
     });
 
     it("should log the roomToken", function(done) {
-      createRoom(hawkCredentials).end(function(err, postRes) {
+      createRoom(hawkCredentials).end(function(err) {
         if (err) throw err;
         expect(logs).to.length(1);
         expect(logs[0].roomToken).to.not.be.undefined;
@@ -965,7 +992,7 @@ describe("/rooms", function() {
             .end(function(err, res) {
               if (err) throw err;
               expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                "action should be one of join, refresh, leave");
+                "action should be one of join, refresh, status, leave");
               done();
             });
         });
@@ -1002,7 +1029,7 @@ describe("/rooms", function() {
           createRoom(hawkCredentials).end(function(err, postRes) {
             if (err) throw err;
             var roomToken = postRes.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               expect(logs).to.length(2);
               expect(logs[1].sessionId).to.not.be.undefined;
@@ -1333,6 +1360,190 @@ describe("/rooms", function() {
           });
       });
 
+      describe("Handle 'status'", function() {
+
+        function createAndJoinRoom(callback) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              callback(roomToken);
+            });
+          });
+        }
+
+        apiRouter.post('/validate-room-status', validators.validateRoomStatusUpdate, function(req, res) {
+          res.status(200).json(req.roomStatusData);
+        });
+
+        var validateRoomStatus;
+        var exampleBody;
+        var roomToken;
+
+        beforeEach(function(done) {
+          validateRoomStatus = supertest(app)
+            .post('/validate-room-status')
+            .type('json');
+
+          exampleBody = {
+            action: "status",
+            event: "Session.connectionCreated",
+            state: "init",
+            connections: 2,
+            sendStreams: 1,
+            recvStreams: 1
+          };
+
+          createAndJoinRoom(function (token) {
+            roomToken = token;
+            done();
+          });
+        });
+
+        it("should return empty body if successful.", function(done) {
+          updateStateRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            done();
+          });
+        });
+
+        it("should not log data if invalid.", function(done) {
+          exampleBody.state = 'happy';
+          validateRoomStatus
+            .send(exampleBody)
+            .end(function (err, res) {
+              if (err) throw err;
+              expect(res.body.event).to.eql(undefined);
+              done();
+            });
+        });
+
+        it("should log room status data if successful.", function(done) {
+          validateRoomStatus
+            .send(exampleBody)
+            .end(function (err, res) {
+              if (err) throw err;
+              expect(res.body.event).to.not.eql(undefined);
+              expect(res.body.state).to.not.eql(undefined);
+              expect(res.body.connections).to.not.eql(undefined);
+              expect(res.body.recvStreams).to.not.eql(undefined);
+              expect(res.body.sendStreams).to.not.eql(undefined);
+              done();
+            });
+        });
+
+        it("should reject if body is incomplete.", function(done) {
+          updateStateRoom(hawkCredentials, roomToken, {action: 'status'}, 400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(
+                res, 400, errors.INVALID_PARAMETERS,
+                "'event' field is missing in body."
+              );
+              done();
+            });
+        });
+
+        it("should reject if state is unknown.", function(done) {
+          exampleBody.state = 'happy';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Unknown state 'happy'."
+            );
+            done();
+          });
+        });
+
+        it("should reject if event is not a valid transition.", function(done) {
+          exampleBody.state = 'sending';
+          exampleBody.event = 'Publisher.streamCreated';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid event 'Publisher.streamCreated' for state 'sending'."
+            );
+            done();
+          });
+        });
+
+        it("should reject if connections is not a number.", function(done) {
+          exampleBody.connections = 'abc';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid connections number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if connections is not a positive integer.", function(done) {
+          exampleBody.connections = -1;
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid connections number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if sendStreams is not a number.", function(done) {
+          exampleBody.sendStreams = 'abc';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid sendStreams number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if sendStreams is not a positive integer.", function(done) {
+          exampleBody.sendStreams = -1;
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid sendStreams number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if recvStreams is not a number.", function(done) {
+          exampleBody.recvStreams = 'abc';
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid recvStreams number."
+            );
+            done();
+          });
+        });
+
+        it("should reject if recvStreams is not a positive integer.", function(done) {
+          exampleBody.recvStreams = -1;
+          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(
+              res, 400, errors.INVALID_PARAMETERS,
+              "Invalid recvStreams number."
+            );
+            done();
+          });
+        });
+      });
+
+
       describe("Handle 'leave'", function() {
         it("should log the roomConnectionId", function(done) {
           createRoom(hawkCredentials).end(function(err, postRes) {
@@ -1445,7 +1656,7 @@ describe("/rooms", function() {
           .end(function(err, res) {
             if (err) throw err;
             expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                "action should be one of join, refresh, leave");
+                                 "action should be one of join, refresh, status, leave");
             done();
           });
       });

@@ -9,6 +9,7 @@ var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 var tokenlib = require('../tokenlib');
 var time = require('../utils').time;
+var constants = require("../constants");
 
 
 module.exports = function(conf, logError, storage) {
@@ -223,6 +224,96 @@ module.exports = function(conf, logError, storage) {
   }
 
   /**
+   * Validate the room status update fields passed in the body.
+   **/
+  function validateRoomStatusUpdate(req, res, next) {
+
+    if (req.body.action && req.body.action === 'status') {
+
+      // Validate mandatory fields.
+      var expectedFields = [
+        'event', 'state', 'connections', 'sendStreams', 'recvStreams'
+      ];
+
+      var field;
+
+      for (var i = 0, n = expectedFields.length; i < n; i++) {
+        field = expectedFields[i];
+        if (!req.body.hasOwnProperty(field)) {
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "'" + field + "' field is missing in body.");
+          return;
+        }
+      }
+
+      // Validate positive integer values.
+      var integerFields = ['connections', 'sendStreams', 'recvStreams'];
+      for (i = 0; i < integerFields.length; i++) {
+        field = integerFields[i];
+        var intValue = parseInt(req.body[field], 10);
+        if (isNaN(intValue) || intValue < 0) {
+          sendError(res, 400, errors.INVALID_PARAMETERS,
+                    "Invalid " + field + " number.");
+          return;
+        }
+      }
+
+      var validEvents = {};
+      validEvents[constants.ROOM_STATES.INIT] = [
+        constants.ROOM_EVENTS.SESSION_CONNECTION_CREATED
+      ];
+      validEvents[constants.ROOM_STATES.WAITING] = [
+        constants.ROOM_EVENTS.SESSION_CONNECTION_CREATED
+      ];
+      validEvents[constants.ROOM_STATES.STARTING] = [
+        constants.ROOM_EVENTS.SESSION_STREAM_CREATED,
+        constants.ROOM_EVENTS.PUBLISHER_STREAM_CREATED
+      ];
+      validEvents[constants.ROOM_STATES.SENDING] = [
+        constants.ROOM_EVENTS.PUBLISHER_STREAM_DESTROYED,
+        constants.ROOM_EVENTS.SESSION_STREAM_CREATED
+      ];
+      validEvents[constants.ROOM_STATES.SEND_RECV] = [
+        constants.ROOM_EVENTS.PUBLISHER_STREAM_DESTROYED,
+        constants.ROOM_EVENTS.SESSION_STREAM_DESTROYED
+      ];
+      validEvents[constants.ROOM_STATES.RECEIVING] = [
+        constants.ROOM_EVENTS.PUBLISHER_STREAM_CREATED,
+        constants.ROOM_EVENTS.SESSION_STREAM_DESTROYED
+      ];
+      validEvents[constants.ROOM_STATES.CLEANUP] = [];
+
+      var state = req.body.state,
+          event = req.body.event;
+
+      // Validate that state is known.
+      if (!validEvents.hasOwnProperty(state)) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "Unknown state '" + state + "'.");
+        return;
+      }
+
+      var events = validEvents[state];
+      events.push(constants.ROOM_EVENTS.SESSION_CONNECTION_DESTROYED);
+
+      // Validate that event is valid.
+      if (events.indexOf(event) < 0) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "Invalid event '" + event + "' for state '" + state + "'.");
+        return;
+      }
+
+      // Store room status for logging.
+      req.roomStatusData = {};
+      expectedFields.forEach(function (f) {
+        req.roomStatusData[f] = req.body[f];
+      });
+    }
+
+    next();
+  }
+
+  /**
    * Validates the given token exists and is valid.
    *
    * Once this is done, populates the:
@@ -305,6 +396,7 @@ module.exports = function(conf, logError, storage) {
     validateCallParams: validateCallParams,
     validateCallUrlParams: validateCallUrlParams,
     validateRoomParams: validateRoomParams,
+    validateRoomStatusUpdate: validateRoomStatusUpdate,
     validateRoomToken: validateRoomToken,
     isRoomOwner: isRoomOwner,
     isRoomParticipant: isRoomParticipant

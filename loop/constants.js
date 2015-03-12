@@ -14,6 +14,23 @@ module.exports = {
     CONNECTED: "connected",
     TERMINATED: "terminated"
   },
+  ROOM_STATES: {
+    INIT: "init",
+    WAITING: "waiting",
+    STARTING: "starting",
+    SENDING: "sending",
+    SEND_RECV: "sendrecv",
+    RECEIVING: "receiving",
+    CLEANUP: "cleanup"
+  },
+  ROOM_EVENTS: {
+    SESSION_CONNECTION_CREATED: "Session.connectionCreated",
+    SESSION_CONNECTION_DESTROYED: "Session.connectionDestroyed",
+    SESSION_STREAM_CREATED: "Session.streamCreated",
+    SESSION_STREAM_DESTROYED: "Session.streamDestroyed",
+    PUBLISHER_STREAM_CREATED: "Publisher.streamCreated",
+    PUBLISHER_STREAM_DESTROYED: "Publisher.streamDestroyed"
+  },
   MESSAGE_EVENTS: {
     ACCEPT: "accept",
     MEDIA_UP: "media-up",
