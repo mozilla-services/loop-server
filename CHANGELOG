@@ -3,6 +3,34 @@ Changelog
 
 This document describes changes between each past release.
 
+0.16.0 (2015-03-12)
+-------------------
+
+Breaking changes:
+~~~~~~~~~~~~~~~~~
+
+  - Log the correct number of users in a room (1137882)
+
+New features:
+~~~~~~~~~~~~~
+
+  - Handle the status action (1137849)
+  - Added a command to count the number of FxA users (1125597)
+  - Log tokbox sessionIds associated to the rooms (1134886)
+  - Log current room connection id for GET / POSTS on /rooms/{token} (1134884)
+  - Log room participant identifier (1134884)
+  - Log number of participants for all room actions (1137886)
+  - Log the room token on room creation (1137883)
+  - Log user type (1140181)
+
+Internal changes:
+~~~~~~~~~~~~~~~~~
+
+  - Updated NPM dependencies;
+  - Updated linting rules;
+  - Loadtests can now precise the SIMPLE_PUSH_URL to use
+
+
 0.15.6 (2015-02-18)
 -------------------
 
