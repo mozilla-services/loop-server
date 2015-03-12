@@ -45,6 +45,7 @@ function RedisStorage(options, settings) {
       oldDB: options.migrateFrom,
       newDB: options
     });
+    this.migrationBackend = true;
   } else {
     this._client = redis.createClient(
       options.port || 6379,
@@ -1365,11 +1366,21 @@ RedisStorage.prototype = {
    **/
   ping: function(callback) {
     var self = this;
-    self._client.setex('heartbeat', 3600, time(),
-      function(err) {
-        if (err) return callback(false);
-        callback(true);
+    if (self.migrationBackend) {
+      self._client.old_db.setex('heartbeat', 3600, time(), function(err) {
+        if (err) return callback(err);
+        self._client.new_db.setex('heartbeat', 3600, time(), function(err2) {
+          if (err2) return callback(err2);
+          callback(true);
+        });
       });
+    } else {
+      self._client.setex('heartbeat', 3600, time(),
+        function(err) {
+          if (err) return callback(err);
+          callback(true);
+        });
+    }
   }
 };
 

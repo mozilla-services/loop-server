@@ -193,6 +193,7 @@ function createClient(options) {
 
   Proxy.prototype.copyKey = copyKey;
 
+
   return new Proxy();
 }
 
