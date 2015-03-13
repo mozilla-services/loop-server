@@ -4,11 +4,9 @@
 
 "use strict";
 var expect = require("chai").expect;
-var assert = require("chai").assert;
 var sinon = require("sinon");
 
 var getFileStorage = require("../loop/files");
-var conf = require("../loop").conf;
 var uuid = require("node-uuid");
 var path = require("path");
 var fs = require("fs");

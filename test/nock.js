@@ -4,7 +4,6 @@
 
 var _nock = require('nock');
 var Filesystem = require('../loop/files/filesystem');
-var encode = require('../loop/utils').encode;
 
 var local = new Filesystem({base_dir: 'var/tests/s3/'});
 
@@ -59,15 +58,13 @@ function mock(options) {
     return nock('https://s3.amazonaws.com')
       .filteringPath(function filter(_path) {
         id = _path.replace('/' + bucket + '/', '');
-        path = _path.replace(id, 'XXX');
-        return path;
+        return _path.replace(id, 'XXX');
       })
       .delete(u)
       .reply(204, function(uri, body, callback) {
         local.remove(id, function() {
           callback();
         });
-        return s;
       });
   }
 

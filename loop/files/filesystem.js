@@ -84,7 +84,7 @@ Filesystem.prototype = {
       .digest()
       .toString('hex');
     return path.join(this._base_dir,
-                     shasum.substring(0,3),
+                     shasum.substring(0, 3),
                      shasum.substring(3));
   }
 };
