@@ -8,32 +8,12 @@ var async = require("async");
 var constants = require("../constants");
 var migrationClient = require("./redis_migration");
 var time = require('../utils').time;
+var encode = require('../utils').encode;
+var decode = require('../utils').decode;
+var isUndefined = require('../utils').isUndefined;
+var clone = require('../utils').clone;
 
 var SIMPLE_PUSH_TOPICS = ["calls", "rooms"];
-
-var isUndefined = function(field, fieldName, callback) {
-  if (field === undefined) {
-    callback(new Error(fieldName + " should not be undefined"));
-    return true;
-  }
-  return false;
-};
-
-function encode(data) {
-  return JSON.stringify(data);
-}
-
-function decode(string, callback) {
-  try {
-    callback(null, JSON.parse(string));
-  } catch (e) {
-    callback(e);
-  }
-}
-
-function clone(data) {
-  return JSON.parse(JSON.stringify(data));
-}
 
 function RedisStorage(options, settings) {
   this._settings = settings;

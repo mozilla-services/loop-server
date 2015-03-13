@@ -6,26 +6,9 @@
 var crypto = require('crypto');
 var fs = require('fs');
 var path = require('path');
-
-var isUndefined = function(field, fieldName, callback) {
-  if (field === undefined) {
-    callback(new Error(fieldName + " should not be undefined"));
-    return true;
-  }
-  return false;
-};
-
-function encode(data) {
-  return JSON.stringify(data);
-}
-
-function decode(string, callback) {
-  try {
-    callback(null, JSON.parse(string));
-  } catch (e) {
-    callback(e);
-  }
-}
+var encode = require('../utils').encode;
+var decode = require('../utils').decode;
+var isUndefined = require('../utils').isUndefined;
 
 function Filesystem(options, settings) {
   this._settings = settings;
@@ -39,24 +22,16 @@ Filesystem.prototype = {
    *
    * @param {String}    filename, the filename of the object to store.
    * @param {String}    body, the content of the file to store
-   * @param {Float}     file ttl in seconds
    * @param {Function}  A callback that will be called once data had been
    *                    stored.
    **/
-  write: function(filename, body, ttl, callback) {
+  write: function(filename, body, callback) {
     if (isUndefined(filename, "filename", callback)) return;
     if (isUndefined(body, "body", callback)) return;
-    if (callback === undefined) {
-      callback = ttl;
-      ttl = undefined;
-    }
     var file_path = this.createPath(filename);
     fs.mkdir(path.dirname(file_path), '0750', function(err) {
       if (err && err.code !== 'EEXIST') return callback(err);
-      fs.writeFile(file_path, encode({
-        expiresAt: Date.now() + (ttl * 1000),
-        content: body
-      }), callback);
+      fs.writeFile(file_path, encode(body), callback);
     });
   },
 
@@ -75,19 +50,7 @@ Filesystem.prototype = {
         if (err.code === "ENOENT") return callback(null, null);
         return callback(err);
       }
-      decode(data, function(err, data) {
-        if (err) return callback(err);
-        // Handle the file ttl
-        if (data.hasOwnProperty('expiresAt')) {
-          if (data.expiresAt !== null && data.expiresAt <= Date.now()) {
-            return self.remove(filename, function(err) {
-              if (err) return callback(err);
-              callback(null, null);
-            });
-          }
-        }
-        callback(null, data.content);
-      });
+      decode(data, callback);
     });
   },
 

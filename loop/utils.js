@@ -108,6 +108,31 @@ function dedupeArray(array) {
   });
 }
 
+function isUndefined(field, fieldName, callback) {
+  if (field === undefined) {
+    callback(new Error(fieldName + " should not be undefined"));
+    return true;
+  }
+  return false;
+}
+
+function encode(data) {
+  return JSON.stringify(data);
+}
+
+function decode(string, callback) {
+  if (!string) return callback(null, null);
+  try {
+    callback(null, JSON.parse(string));
+  } catch (e) {
+    callback(e);
+  }
+}
+
+function clone(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
 module.exports = {
   getProgressURL: getProgressURL,
   sendError: sendError,
@@ -115,5 +140,9 @@ module.exports = {
   time: time,
   getUserAccount: getUserAccount,
   getSimplePushURLS: getSimplePushURLS,
-  dedupeArray: dedupeArray
+  dedupeArray: dedupeArray,
+  encode: encode,
+  decode: decode,
+  isUndefined: isUndefined,
+  clone: clone
 };

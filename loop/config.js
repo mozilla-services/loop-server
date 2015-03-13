@@ -540,6 +540,11 @@ if (conf.get('fxaOAuth').activated && conf.get('fxaOAuth').client_id === "") {
     "Set fxaOAuth.activated config key to false to continue";
 }
 
+if (conf.get('env') === 'test') {
+  process.env.AWS_ACCESS_KEY_ID = 'TESTME';
+  process.env.AWS_SECRET_ACCESS_KEY = 'TESTME';
+}
+
 // Verify timers
 var timers = conf.get("timers");
 var minCallDuration = timers.supervisoryDuration +
