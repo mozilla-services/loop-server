@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+ "use strict";
+
 var _nock = require('nock');
 var Filesystem = require('../loop/files/filesystem');
 
@@ -38,7 +40,7 @@ function mock(options) {
       .reply(200, function(uri, body, callback) {
         local.write(id, body, function(err) {
           if (err) throw err;
-          callback();
+          callback(err);
         });
       });
   }
@@ -53,7 +55,7 @@ function mock(options) {
       .reply(200, function(uri, body, callback) {
         local.read(id, function(err, data) {
           if (err) throw err;
-          callback(data);
+          callback(err, data);
         });
       });
   }
@@ -67,7 +69,7 @@ function mock(options) {
       .delete(u)
       .reply(204, function(uri, body, callback) {
         local.remove(id, function() {
-          callback();
+          callback(null);
         });
       });
   }
