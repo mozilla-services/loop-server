@@ -101,6 +101,14 @@ describe.only("Files", function() {
   }
 
   // Test all the file storages implementation.
+
+  testStorage("AWS", true, function createFilesysteStorage(options, callback) {
+    callback(null, getFileStorage({
+      engine: "aws",
+      settings: {sslEnabled: true}
+    }, options));
+  });
+
   testStorage("Filesystem", false, function createFilesysteStorage(options, callback) {
     var test_base_dir = path.join("var/tests/fs/", uuid.v4());
     fs.mkdir(test_base_dir, '0750', function(err) {
@@ -111,12 +119,4 @@ describe.only("Files", function() {
       }, options));
     });
   });
-
-  testStorage("AWS", true, function createFilesysteStorage(options, callback) {
-    callback(null, getFileStorage({
-      engine: "aws",
-      settings: {sslEnabled: true}
-    }, options));
-  });
-
 });

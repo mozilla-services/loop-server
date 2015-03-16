@@ -28,6 +28,7 @@ function mock(options) {
       });
     }
     outstandingMocks = [];
+    _nock.cleanAll();
   }
 
   function writeAws() {
