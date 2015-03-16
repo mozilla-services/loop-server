@@ -19,8 +19,12 @@ function mock(options) {
     return scope;
   }
 
-  function done() {
-    outstandingMocks.forEach(function(mock) { mock.done(); });
+  function done(verifyNock) {
+    if (verifyNock) {
+      outstandingMocks.forEach(function(mock) {
+        mock.done();
+      });
+    }
     outstandingMocks = [];
   }
 

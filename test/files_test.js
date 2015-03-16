@@ -11,16 +11,17 @@ var uuid = require("node-uuid");
 var path = require("path");
 var fs = require("fs");
 
-var mock = require("./nock")({bucket: 'room_encrypted_files'});
+var httpMock = require("./nock");
 
 describe.only("Files", function() {
-  function testStorage(name, createStorage) {
-    var storage;
+  function testStorage(name, verifyNock, createStorage) {
+    var storage, mock;
 
     describe(name, function() {
       var sandbox;
 
       beforeEach(function(done) {
+        mock = httpMock({bucket: 'room_encrypted_files'});
         sandbox = sinon.sandbox.create();
         createStorage({}, function(err, fileStorage) {
           storage = fileStorage;
@@ -29,7 +30,6 @@ describe.only("Files", function() {
       });
 
       afterEach(function(done) {
-        mock.done();
         sandbox.restore();
         // Ignore remove errors.
         mock.removeAws();
@@ -37,12 +37,13 @@ describe.only("Files", function() {
           mock.removeAws();
           storage.remove("foobar", function() {
             storage = undefined;
+            mock.done(verifyNock);
             done();
           });
         });
       });
 
-      it.only("should write a file.", function(done) {
+      it("should write a file.", function(done) {
         mock.writeAws();
         storage.write("test", {"key": "data"}, function(err) {
           if (err) throw err;
@@ -100,7 +101,7 @@ describe.only("Files", function() {
   }
 
   // Test all the file storages implementation.
-  testStorage("Filesystem", function createFilesysteStorage(options, callback) {
+  testStorage("Filesystem", false, function createFilesysteStorage(options, callback) {
     var test_base_dir = path.join("var/tests/fs/", uuid.v4());
     fs.mkdir(test_base_dir, '0750', function(err) {
       if (err) return callback(err);
@@ -111,7 +112,7 @@ describe.only("Files", function() {
     });
   });
 
-  testStorage("AWS", function createFilesysteStorage(options, callback) {
+  testStorage("AWS", true, function createFilesysteStorage(options, callback) {
     callback(null, getFileStorage({
       engine: "aws",
       settings: {sslEnabled: true}

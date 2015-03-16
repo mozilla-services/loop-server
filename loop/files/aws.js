@@ -34,7 +34,7 @@ AwsDriver.prototype = {
     if (isUndefined(filename, "filename", callback)) return;
     if (isUndefined(body, "body", callback)) return;
     var s3 = this._s3;
-    console.log('upload.start', {key: filename, bucket: this._publicBucket});
+    // console.log('upload.start', {key: filename, bucket: this._publicBucket});
     s3.createBucket({Bucket: this._publicBucket}, function() {
       s3.putObject({
         Body: encode(body),
@@ -43,7 +43,7 @@ AwsDriver.prototype = {
         ContentType: CONTENT_TYPE
       }, function(err, data) {
         if (err) return callback(err);
-        console.log('upload.end', {key: filename, data: data});
+        // console.log('upload.end', {key: filename, data: data});
         callback(null, filename);
       });
     }.bind(this));
@@ -59,7 +59,7 @@ AwsDriver.prototype = {
    **/
   read: function(filename, callback) {
     var s3 = this._s3;
-    console.log('read.start', {key: filename, bucket: this._publicBucket});
+    // console.log('read.start', {key: filename, bucket: this._publicBucket});
     s3.getObject({
       Bucket: this._publicBucket,
       Key: filename
@@ -68,10 +68,8 @@ AwsDriver.prototype = {
         if (err.code !== "NoSuchKey") return callback(err);
         return callback(null, null);
       }
-      console.log("BODY", data);
       var body = data.Body.toString();
-      console.log("BODY2", body);
-      console.log('read.stop', {key: filename, data: body});
+      // console.log('read.stop', {key: filename, data: body});
       decode(body, callback);
     });
   },
@@ -86,14 +84,13 @@ AwsDriver.prototype = {
    **/
   remove: function(filename, callback) {
     var s3 = this._s3;
-    console.log("delete.start", {bucket: this._publicBucket, key: filename});
+    // console.log("delete.start", {bucket: this._publicBucket, key: filename});
     s3.deleteObject({
       Bucket: this._publicBucket,
       Key: filename
     }, function(err, data) {
-      console.log(err);
       if (err && err.code !== "NoSuchKey") return callback(err);
-      console.log("delete.end", {key: filename, data: data});
+      // console.log("delete.end", {key: filename, data: data});
       callback(null, filename);
     });
   }
