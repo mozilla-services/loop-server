@@ -4,12 +4,13 @@
 
  "use strict";
 
-var _nock = require('nock');
 var Filesystem = require('../loop/files/filesystem');
 
 var local = new Filesystem({base_dir: 'var/tests/s3/'});
 
 function mock(options) {
+  var _nock = require('nock');
+  _nock.enableNetConnect(/127.0.0.1|localhost/);
   var bucket = options.bucket;
   var u = '/' + bucket + '/XXX';
   var id;

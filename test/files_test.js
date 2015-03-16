@@ -13,7 +13,7 @@ var fs = require("fs");
 
 var httpMock = require("./nock");
 
-describe.only("Files", function() {
+describe("Files", function() {
   function testStorage(name, verifyNock, createStorage) {
     var storage, mock;
 
@@ -119,4 +119,5 @@ describe.only("Files", function() {
       }, options));
     });
   });
+
 });
