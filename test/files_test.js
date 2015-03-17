@@ -110,7 +110,7 @@ describe("Files", function() {
   });
 
   testStorage("Filesystem", false, function createFilesysteStorage(options, callback) {
-    var test_base_dir = path.join("var/tests/fs/", uuid.v4());
+    var test_base_dir = path.join("/tmp", uuid.v4());
     fs.mkdir(test_base_dir, '0750', function(err) {
       if (err) return callback(err);
       callback(null, getFileStorage({

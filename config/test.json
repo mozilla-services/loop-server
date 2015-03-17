@@ -12,7 +12,7 @@
   },
   "files": {
     "settings": {
-      "base_dir": "var/tests/fs/"
+      "base_dir": "/tmp"
     }
   },
   "hawkIdSecret": "6b4a7eec5406fcb3d394e7f64b2a72a2",

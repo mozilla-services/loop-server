@@ -6,7 +6,7 @@
 
 var Filesystem = require('../loop/files/filesystem');
 
-var local = new Filesystem({base_dir: 'var/tests/s3/'});
+var local = new Filesystem({base_dir: '/tmp'});
 
 function mock(options) {
   var _nock = require('nock');
