@@ -588,21 +588,24 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
 
         storage.deleteRoomsData(roomsToDelete, function(err) {
           if (res.serverError(err)) return;
-          var now = time();
-          notifyOwner(req.user, now, "deletion", function(err) {
+          async.map(roomsToDelete, filestorage.remove.bind(filestorage), function(err) {
             if (res.serverError(err)) return;
+            var now = time();
+            notifyOwner(req.user, now, "deletion", function(err) {
+              if (res.serverError(err)) return;
 
-            var responses = {};
-            roomTokens.forEach(function(roomToken) {
-              if (roomsToDelete.indexOf(roomToken) === -1) {
-                responses[roomToken] = {
-                  code: 404, errno: errors.INVALID_TOKEN, error: "Room not found."
-                };
-              } else {
-                responses[roomToken] = {code: 200};
-              }
+              var responses = {};
+              roomTokens.forEach(function(roomToken) {
+                if (roomsToDelete.indexOf(roomToken) === -1) {
+                  responses[roomToken] = {
+                    code: 404, errno: errors.INVALID_TOKEN, error: "Room not found."
+                  };
+                } else {
+                  responses[roomToken] = {code: 200};
+                }
+              });
+              res.status(status || 207).json({"responses": responses});
             });
-            res.status(status || 207).json({"responses": responses});
           });
         });
       });

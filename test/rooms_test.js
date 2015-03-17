@@ -2327,6 +2327,41 @@ describe("/rooms", function() {
       });
     });
 
+    it("should delete rooms and room context if the user is the room owner", function(done) {
+      var data = {
+        context: {
+          value: "Toto",
+          alg: "foobar",
+          wrappedKey: "foobar"
+        },
+        expiresIn: "5",
+        roomOwner: "Alexis",
+        maxSize: 2
+      };
+      createRoom(hawkCredentials, data).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        createRoom(hawkCredentials, data).end(function(err, res) {
+          if (err) throw err;
+          var roomToken2 = res.body.roomToken;
+          requests = [];
+          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err) {
+            if (err) throw err;
+            expect(requests).to.length(1);
+            filestorage.read(roomToken, function(err, data) {
+              if (err) throw err;
+              expect(data).to.eql(null);
+              filestorage.read(roomToken2, function(err, data) {
+                if (err) throw err;
+                expect(data).to.eql(null);
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+
     it("should return a 404 if no room where found", function(done) {
       createRoom(hawkCredentials).end(function(err, res) {
         if (err) throw err;
