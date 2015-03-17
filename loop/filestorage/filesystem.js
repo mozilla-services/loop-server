@@ -28,7 +28,7 @@ Filesystem.prototype = {
   write: function(filename, body, callback) {
     if (isUndefined(filename, "filename", callback)) return;
     if (body === undefined) return callback(null, null);
-    var file_path = this.createPath(filename);
+    var file_path = this.buildPath(filename);
     fs.mkdir(path.dirname(file_path), '0750', function(err) {
       if (err && err.code !== 'EEXIST') return callback(err);
       fs.writeFile(file_path, encode(body), callback);
@@ -45,7 +45,7 @@ Filesystem.prototype = {
    **/
   read: function(filename, callback) {
     var self = this;
-    fs.readFile(self.createPath(filename), function(err, data) {
+    fs.readFile(self.buildPath(filename), function(err, data) {
       if (err) {
         if (err.code === "ENOENT") return callback(null, null);
         return callback(err);
@@ -63,21 +63,21 @@ Filesystem.prototype = {
    *                    stored.
    **/
   remove: function(filename, callback) {
-    fs.unlink(this.createPath(filename), function(err) {
+    fs.unlink(this.buildPath(filename), function(err) {
       if (err && err.code !== "ENOENT") return callback(err);
       callback();
     });
   },
 
   /**
-   * Build a path for the given filename.
+   * Build a path for the given filename (with a hash of the filename).
    *
    * @param {String}    filename, the filename of the object to store.
    * @param {String}    body, the content of the file to store
    * @param {Function}  A callback that will be called once data had been
    *                    stored.
    **/
-  createPath: function(filename) {
+  buildPath: function(filename) {
     var shasum = crypto
       .createHash("sha256")
       .update(filename)

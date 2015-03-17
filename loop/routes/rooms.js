@@ -19,7 +19,7 @@ var time = require('../utils').time;
 var hmac = require('../hmac');
 
 
-module.exports = function (apiRouter, conf, logError, storage, files, auth,
+module.exports = function (apiRouter, conf, logError, storage, filestorage, auth,
                            validators, tokBox, simplePush, notifications) {
 
   var roomsConf = conf.get("rooms");
@@ -168,7 +168,7 @@ module.exports = function (apiRouter, conf, logError, storage, files, auth,
             owner: (participant.userMac === roomStorageData.roomOwnerHmac)
           };
         });
-        files.read(token, function(err, data) {
+        filestorage.read(token, function(err, data) {
           if (err) return callback(err);
           callback(null, {
             roomUrl: roomsConf.webAppUrl.replace('{token}', token),
@@ -214,7 +214,7 @@ module.exports = function (apiRouter, conf, logError, storage, files, auth,
           storage.setUserRoomData(req.user, token, roomData, function(err) {
             if (res.serverError(err)) return;
 
-            files.write(token, roomContext, function(err) {
+            filestorage.write(token, roomContext, function(err) {
               if (res.serverError(err)) return;
 
               // Log the roomToken
@@ -258,7 +258,7 @@ module.exports = function (apiRouter, conf, logError, storage, files, auth,
 
         // If context is present in the patch, rewrite it.
         if (req.hasOwnProperty("roomRequestContext")) {
-          files.write(req.token, req.roomRequestContext, notifyAndReturn);
+          filestorage.write(req.token, req.roomRequestContext, notifyAndReturn);
           return;
         }
         notifyAndReturn(null);
@@ -284,7 +284,7 @@ module.exports = function (apiRouter, conf, logError, storage, files, auth,
     function(req, res) {
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
-        files.remove(req.token, function(err) {
+        filestorage.remove(req.token, function(err) {
         if (res.serverError(err)) return;
           var now = time();
           notifyOwner(req.user, now, "deletion", function(err) {
@@ -304,7 +304,7 @@ module.exports = function (apiRouter, conf, logError, storage, files, auth,
     auth.authenticateWithHawkOrToken,
     function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
-      files.read(req.token, function(err, roomContext) {
+      filestorage.read(req.token, function(err, roomContext) {
         if (res.serverError(err)) return;
         if (participantHmac === undefined) {
           var roomToken = req.roomStorageData.roomToken;

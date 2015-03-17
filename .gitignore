@@ -11,4 +11,3 @@ heka*.log
 loadtests/venv/
 loadtest.log
 loadtests/.env.install
-var/tests/

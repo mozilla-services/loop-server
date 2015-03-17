@@ -46,8 +46,8 @@ var storage = getStorage(conf.get("storage"), {
   'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
-var getFileStorage = require('./files');
-var files = getFileStorage(conf.get("files"));
+var getFileStorage = require('./filestorage');
+var filestorage = getFileStorage(conf.get("filestorage"));
 
 var statsdClient;
 if (conf.get('statsdEnabled') === true) {
@@ -134,7 +134,7 @@ if (conf.get("fxaOAuth").activated !== false) {
 }
 
 var rooms = require("./routes/rooms");
-rooms(apiRouter, conf, logError, storage, files, auth, validators, tokBox,
+rooms(apiRouter, conf, logError, storage, filestorage, auth, validators, tokBox,
       simplePush, notifications);
 
 var session = require("./routes/session");
@@ -198,7 +198,7 @@ module.exports = {
   server: server,
   conf: conf,
   storage: storage,
-  files: files,
+  filestorage: filestorage,
   tokBox: tokBox,
   statsdClient: statsdClient,
   shutdown: shutdown,

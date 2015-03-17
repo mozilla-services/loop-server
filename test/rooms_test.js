@@ -24,7 +24,7 @@ var validators = loop.validators;
 var apiRouter = loop.apiRouter;
 var conf = loop.conf;
 var storage = loop.storage;
-var files = loop.files;
+var filestorage = loop.filestorage;
 var tokBox = loop.tokBox;
 
 var requireHawkSession = auth.requireHawkSession;
@@ -702,7 +702,7 @@ describe("/rooms", function() {
 
           expect(requests).to.length(1);
 
-          files.read(res.body.roomToken, function(err, data) {
+          filestorage.read(res.body.roomToken, function(err, data) {
             if (err) throw err;
             expect(data).to.eql({
               value: "Something in b64",
@@ -2272,7 +2272,7 @@ describe("/rooms", function() {
         deleteRoom(hawkCredentials, roomToken).end(function(err) {
           if (err) throw err;
           expect(requests).to.length(1);
-          files.read(roomToken, function(err, data) {
+          filestorage.read(roomToken, function(err, data) {
             if (err) throw err;
             expect(data).to.eql(null);
             done();

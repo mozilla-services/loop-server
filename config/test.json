@@ -10,7 +10,7 @@
       }
     }
   },
-  "files": {
+  "filestorage": {
     "settings": {
       "base_dir": "/tmp"
     }

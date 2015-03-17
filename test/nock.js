@@ -4,7 +4,7 @@
 
  "use strict";
 
-var Filesystem = require('../loop/files/filesystem');
+var Filesystem = require('../loop/filestorage/filesystem');
 
 var local = new Filesystem({base_dir: '/tmp'});
 

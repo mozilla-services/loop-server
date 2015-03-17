@@ -6,7 +6,7 @@
 var expect = require("chai").expect;
 var sinon = require("sinon");
 
-var getFileStorage = require("../loop/files");
+var getFileStorage = require("../loop/filestorage");
 var uuid = require("node-uuid");
 var path = require("path");
 var fs = require("fs");
