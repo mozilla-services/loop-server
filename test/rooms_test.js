@@ -1513,7 +1513,6 @@ describe("/rooms", function() {
         it("should notify the room owner when a participant expires",
         function(done) {
           var participantTTL = conf.get('rooms').participantTTL;
-          sandbox.stub()
           createRoom(hawkCredentials, {
             roomOwner: "Alexis",
             roomName: "UX discussion",
@@ -2280,6 +2279,30 @@ describe("/rooms", function() {
         });
       });
     });
+
+    it("should remove the roomContext when a room expires",
+      function(done) {
+        createRoom(hawkCredentials, {
+          roomOwner: "Alexis",
+          context: {
+            value: "foo",
+            alg: "bar",
+            wrappedKey: "foobar"
+          },
+          maxSize: "2",
+          expiresIn: "1"
+        }).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          filestorage.read(roomToken, function(err, data) {
+            if (err) throw err;
+            expect(data).to.not.eql(null);
+            setTimeout(function() {
+              filestorage.read(roomToken, done);
+            }, 1000 + 500);
+          });
+        });
+      });
   });
 
   describe("PATCH /rooms", function() {

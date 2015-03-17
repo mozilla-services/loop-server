@@ -632,4 +632,16 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
     });
   });
 
+  // Remove the roomContext when a room expires.
+  notifications.on('room.', function(key) {
+    var parts = key.split('.');
+    var roomToken = parts[1];
+
+    filestorage.remove(roomToken, function(err) {
+      if (err) {
+        logError(err);
+        return;
+      }
+    });
+  });
 };
