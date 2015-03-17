@@ -198,6 +198,7 @@ module.exports = {
   server: server,
   conf: conf,
   storage: storage,
+  files: files,
   tokBox: tokBox,
   statsdClient: statsdClient,
   shutdown: shutdown,

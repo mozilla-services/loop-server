@@ -354,7 +354,7 @@ module.exports = function(conf, logError, storage) {
    * - req.token parameters with the appropriate values.
    **/
   function validateRoomToken(req, res, next) {
-    req.token = req.param('token');
+    req.token = req.params.token;
     storage.getRoomData(req.token, function(err, roomData) {
       if (res.serverError(err)) return;
       if (roomData === null) {
