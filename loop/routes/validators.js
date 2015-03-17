@@ -32,7 +32,7 @@ module.exports = function(conf, logError, storage) {
 
   /**
    * Middleware that requires the given parameters to be set.
-   * Can take a list a param to handle the OR ie: ['context', 'roomName']
+   * Can take a list of params to handle the OR ie: ['context', 'roomName']
    **/
   function requireParams() {
     var params = Array.prototype.slice.call(arguments);
