@@ -27,7 +27,7 @@ Filesystem.prototype = {
    **/
   write: function(filename, body, callback) {
     if (isUndefined(filename, "filename", callback)) return;
-    if (isUndefined(body, "body", callback)) return;
+    if (body === undefined) return callback(null, null);
     var file_path = this.createPath(filename);
     fs.mkdir(path.dirname(file_path), '0750', function(err) {
       if (err && err.code !== 'EEXIST') return callback(err);

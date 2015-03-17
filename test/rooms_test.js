@@ -445,6 +445,48 @@ describe("/rooms", function() {
         .expect(400)
         .end(done);
       });
+
+      it("should fail if both context and roomName are present", function(done) {
+        validateRoomReq.send({
+          roomName: "UX Discussion",
+          context: {
+            value: "Toto",
+            alg: "foobar",
+            wrappedKey: "foobar"
+          },
+          expiresIn: "5",
+          roomOwner: "Alexis",
+          maxSize: 2
+        })
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+            "roomName has been deprecated, please store it encrypted inside the context.");
+          done();
+        });
+      });
+
+      it("should fail if context does contains value, alg and wrappedKey properties",
+        function(done) {
+          validateRoomReq.send({
+            context: {
+              alg: "foobar",
+              wrappedKey: "foobar"
+            },
+            expiresIn: "5",
+            roomOwner: "Alexis",
+            maxSize: 2
+          })
+          .expect(400)
+          .end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+              "context should be an object containing `value`, `alg` " +
+              "and `wrappedKey` properties.");
+            done();
+          });
+        });
     });
 
     describe("#isRoomOwner", function() {
@@ -529,7 +571,7 @@ describe("/rooms", function() {
       .end(function(err, res) {
         if (err) throw err;
         expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                            "Missing: roomName");
+                            "Missing: context");
         done();
       });
     });
@@ -681,6 +723,7 @@ describe("/rooms", function() {
             expect(getRes.body).to.eql({
               roomToken: roomToken,
               roomName: "UX discussion",
+              context: null,
               roomOwner: "Mathieu",
               roomUrl: roomUrl
             });
@@ -730,6 +773,7 @@ describe("/rooms", function() {
                 roomName: "UX discussion",
                 maxSize: 3,
                 clientMaxSize: 3,
+                context: null,
                 participants: []
               });
               done();
@@ -860,6 +904,7 @@ describe("/rooms", function() {
                     roomToken: roomToken,
                     roomUrl: roomUrl,
                     clientMaxSize: 3,
+                    context: null,
                     maxSize: 3,
                     participants: [],
                     roomName: "New name",
@@ -932,6 +977,7 @@ describe("/rooms", function() {
                     roomToken: roomToken,
                     roomUrl: roomUrl,
                     clientMaxSize: 2,
+                    context: null,
                     maxSize: 2,
                     participants: [],
                     roomName: "About UX",
@@ -2148,7 +2194,8 @@ describe("/rooms", function() {
                   roomUrl: roomWebappUrl,
                   roomName: 'UX discussion',
                   maxSize: 3,
-                  clientMaxSize: 2
+                  clientMaxSize: 2,
+                  context: null
                 });
                 done();
               });

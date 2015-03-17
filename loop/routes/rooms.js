@@ -19,7 +19,7 @@ var time = require('../utils').time;
 var hmac = require('../hmac');
 
 
-module.exports = function (apiRouter, conf, logError, storage, auth,
+module.exports = function (apiRouter, conf, logError, storage, files, auth,
                            validators, tokBox, simplePush, notifications) {
 
   var roomsConf = conf.get("rooms");
@@ -168,17 +168,21 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
             owner: (participant.userMac === roomStorageData.roomOwnerHmac)
           };
         });
-        return callback(null, {
-          roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-          roomName: roomStorageData.roomName,
-          roomOwner: roomStorageData.roomOwner,
-          maxSize: roomStorageData.maxSize,
-          clientMaxSize: clientMaxSize,
-          creationTime: roomStorageData.creationTime,
-          expiresAt: roomStorageData.expiresAt,
-          ctime: roomStorageData.updateTime,
-          participants: participants,
-          roomToken: token
+        files.read(token, function(err, data) {
+          if (err) return callback(err);
+          callback(null, {
+            roomUrl: roomsConf.webAppUrl.replace('{token}', token),
+            roomName: roomStorageData.roomName,
+            context: data,
+            roomOwner: roomStorageData.roomOwner,
+            maxSize: roomStorageData.maxSize,
+            clientMaxSize: clientMaxSize,
+            creationTime: roomStorageData.creationTime,
+            expiresAt: roomStorageData.expiresAt,
+            ctime: roomStorageData.updateTime,
+            participants: participants,
+            roomToken: token
+          });
         });
       });
   }
@@ -187,10 +191,11 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
    * Create a new room with the given information
    **/
   apiRouter.post('/rooms', auth.requireHawkSession,
-    validators.requireParams('roomName', 'roomOwner', 'maxSize'),
+    validators.requireParams(['context', 'roomName'], 'roomOwner', 'maxSize'),
     validators.validateRoomParams, function(req, res) {
 
       var roomData = req.roomRequestData;
+      var roomContext = req.roomRequestContext;
       var token = tokenlib.generateToken(roomsConf.tokenSize);
       var now = time();
       roomData.creationTime = now;
@@ -209,15 +214,19 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
           storage.setUserRoomData(req.user, token, roomData, function(err) {
             if (res.serverError(err)) return;
 
-            // Log the roomToken
-            req.roomToken = token;
-
-            notifyOwner(req.user, roomData.updateTime, "creation", function(err) {
+            files.write(token, roomContext, function(err) {
               if (res.serverError(err)) return;
-              res.status(201).json({
-                roomToken: token,
-                roomUrl: roomsConf.webAppUrl.replace('{token}', token),
-                expiresAt: roomData.expiresAt
+
+              // Log the roomToken
+              req.roomToken = token;
+
+              notifyOwner(req.user, roomData.updateTime, "creation", function(err) {
+                if (res.serverError(err)) return;
+                res.status(201).json({
+                  roomToken: token,
+                  roomUrl: roomsConf.webAppUrl.replace('{token}', token),
+                  expiresAt: roomData.expiresAt
+                });
               });
             });
           });
@@ -246,12 +255,23 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
 
       storage.setUserRoomData(req.user, req.token, roomData, function(err) {
         if (res.serverError(err)) return;
-        notifyOwner(req.user, now, "modification", function(err) {
+
+        // If context is present in the patch, rewrite it.
+        if (req.hasOwnProperty("roomRequestContext")) {
+          files.write(req.token, req.roomRequestContext, notifyAndReturn);
+          return;
+        }
+        notifyAndReturn(null);
+
+        function notifyAndReturn(err) {
           if (res.serverError(err)) return;
-          res.status(200).json({
-            expiresAt: roomData.expiresAt
+          notifyOwner(req.user, now, "modification", function(err) {
+            if (res.serverError(err)) return;
+            res.status(200).json({
+              expiresAt: roomData.expiresAt
+            });
           });
-        });
+        }
       });
     });
 
@@ -264,10 +284,13 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     function(req, res) {
       storage.deleteRoomData(req.token, function(err) {
         if (res.serverError(err)) return;
-        var now = time();
-        notifyOwner(req.user, now, "deletion", function(err) {
-          if (res.serverError(err)) return;
-          res.status(204).json({});
+        files.remove(req.token, function(err) {
+        if (res.serverError(err)) return;
+          var now = time();
+          notifyOwner(req.user, now, "deletion", function(err) {
+            if (res.serverError(err)) return;
+            res.status(204).json({});
+          });
         });
       });
     });
@@ -281,23 +304,26 @@ module.exports = function (apiRouter, conf, logError, storage, auth,
     auth.authenticateWithHawkOrToken,
     function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
+      files.read(req.token, function(err, roomContext) {
+        if (res.serverError(err)) return;
+        if (participantHmac === undefined) {
+          var roomToken = req.roomStorageData.roomToken;
+          res.status(200).json({
+            roomToken: req.roomStorageData.roomToken,
+            roomName: req.roomStorageData.roomName,
+            context: roomContext,
+            roomOwner: req.roomStorageData.roomOwner,
+            roomUrl: roomsConf.webAppUrl.replace('{token}', roomToken)
+          });
+          return;
+        }
 
-      if (participantHmac === undefined) {
-        var roomToken = req.roomStorageData.roomToken;
-        res.status(200).json({
-          roomToken: req.roomStorageData.roomToken,
-          roomName: req.roomStorageData.roomName,
-          roomOwner: req.roomStorageData.roomOwner,
-          roomUrl: roomsConf.webAppUrl.replace('{token}', roomToken)
-        });
-        return;
-      }
-
-      validators.isRoomParticipant(req, res, function() {
-        getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
-          if (res.serverError(err)) return;
-          req.roomParticipantsCount = roomData.participants.length;
-          res.status(200).json(roomData);
+        validators.isRoomParticipant(req, res, function() {
+          getRoomInfo(req.token, req.roomStorageData, function(err, roomData) {
+            if (res.serverError(err)) return;
+            req.roomParticipantsCount = roomData.participants.length;
+            res.status(200).json(roomData);
+          });
         });
       });
     });

@@ -46,6 +46,9 @@ var storage = getStorage(conf.get("storage"), {
   'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
+var getFileStorage = require('./files');
+var files = getFileStorage(conf.get("files"));
+
 var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
@@ -61,6 +64,8 @@ ravenClient.captureMessage(startupMessage, {level: 'info'});
 function logError(err) {
   if (conf.get('env') !== 'test') {
     hekaLogger.debug("error", err);
+  } else {
+    console.log("ERROR", err);
   }
   ravenClient.captureError(err);
 }
@@ -129,7 +134,7 @@ if (conf.get("fxaOAuth").activated !== false) {
 }
 
 var rooms = require("./routes/rooms");
-rooms(apiRouter, conf, logError, storage, auth, validators, tokBox,
+rooms(apiRouter, conf, logError, storage, files, auth, validators, tokBox,
       simplePush, notifications);
 
 var session = require("./routes/session");

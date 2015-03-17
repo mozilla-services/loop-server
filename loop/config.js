@@ -190,6 +190,20 @@ var conf = convict({
       }
     }
   },
+  files: {
+    engine: {
+      doc: "engine type",
+      format: String,
+      default: "filesystem"
+    },
+    settings: {
+      doc: "js object of options to pass to the files engine",
+      format: Object,
+      default: {
+        base_dir: "/var/files/"
+      }
+    }
+  },
   pubsub: {
     doc: "js object of options to pass to the pubsub engine",
     format: Object,

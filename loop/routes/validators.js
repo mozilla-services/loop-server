@@ -18,7 +18,7 @@ module.exports = function(conf, logError, storage) {
    * the "token" parameter.
    **/
   function validateToken(req, res, next) {
-    req.token = req.param('token');
+    req.token = req.params.token;
     storage.getCallUrlData(req.token, function(err, urlData) {
       if (res.serverError(err)) return;
       if (urlData === null) {
@@ -32,6 +32,7 @@ module.exports = function(conf, logError, storage) {
 
   /**
    * Middleware that requires the given parameters to be set.
+   * Can take a list a param to handle the OR ie: ['context', 'roomName']
    **/
   function requireParams() {
     var params = Array.prototype.slice.call(arguments);
@@ -44,9 +45,19 @@ module.exports = function(conf, logError, storage) {
         return;
       }
 
-      missingParams = params.filter(function(param) {
-        return req.body[param] === undefined;
-      });
+      missingParams = params.map(function(param) {
+        var parameters = param;
+        if (!Array.isArray(parameters)) {
+          parameters = [param];
+        }
+
+        if (parameters.every(function(param) {
+          return req.body[param] === undefined;
+        })) {
+          return parameters[0];
+        }
+        return null;
+      }).filter(function(param) { return param !== null });
 
       if (missingParams.length > 0) {
         sendError(res, 400, errors.MISSING_PARAMETERS,
@@ -169,13 +180,34 @@ module.exports = function(conf, logError, storage) {
     var expiresIn = roomsConf.defaultTTL,
         maxTTL = roomsConf.maxTTL,
         serverMaxSize = roomsConf.maxSize,
-        maxSize;
+        maxSize, asRoomName = false;
 
     if (req.body.hasOwnProperty('roomName')) {
+      asRoomName = true;
+      res.set("Alert", "The roomName parameter as been deprecated, you should use context.");
       if (req.body.roomName.length > roomsConf.maxRoomNameSize) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "roomName should be shorter than " +
                   roomsConf.maxRoomNameSize + " characters");
+        return;
+      }
+    }
+
+    if (req.body.hasOwnProperty('context')) {
+      if (asRoomName) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "roomName has been deprecated, please store it " +
+                  "encrypted inside the context.");
+        return;
+      }
+
+      var context = req.body.context;
+      if (!(context.hasOwnProperty("value") &&
+            context.hasOwnProperty("alg") &&
+            context.hasOwnProperty("wrappedKey"))) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "context should be an object containing " +
+                  "`value`, `alg` and `wrappedKey` properties.");
         return;
       }
     }
@@ -219,6 +251,7 @@ module.exports = function(conf, logError, storage) {
       roomOwner: req.body.roomOwner,
       maxSize: maxSize
     };
+    req.roomRequestContext = req.body.context;
 
     next();
   }

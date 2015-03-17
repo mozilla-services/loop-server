@@ -33,5 +33,10 @@
   },
   "rooms": {
     "HKDFSalt": "80368f70556467c69b9ca88e4f127f72"
+  },
+  "files": {
+    "settings": {
+      "base_dir": "var/tests/fs/"
+    }
   }
 }
