@@ -45,19 +45,15 @@ module.exports = function(conf, logError, storage) {
         return;
       }
 
-      missingParams = params.map(function(param) {
-        var parameters = param;
-        if (!Array.isArray(parameters)) {
-          parameters = [param];
+      missingParams = params.filter(function(param) {
+        if (Array.isArray(param)) {
+          var matches = param.some(function(p) {
+            return req.body[p] !== undefined;
+          });
+          return !matches;
         }
-
-        if (parameters.every(function(param) {
-          return req.body[param] === undefined;
-        })) {
-          return parameters[0];
-        }
-        return null;
-      }).filter(function(param) { return param !== null });
+        return req.body[param] === undefined;
+      });
 
       if (missingParams.length > 0) {
         sendError(res, 400, errors.MISSING_PARAMETERS,
@@ -184,7 +180,7 @@ module.exports = function(conf, logError, storage) {
 
     if (req.body.hasOwnProperty('roomName')) {
       asRoomName = true;
-      res.set("Alert", "The roomName parameter as been deprecated, you should use context.");
+      res.set("Alert", "The roomName parameter has been deprecated, you should use context.");
       if (req.body.roomName.length > roomsConf.maxRoomNameSize) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "roomName should be shorter than " +

@@ -42,7 +42,7 @@ AwsDriver.prototype = {
         Bucket: this._publicBucket,
         Key: filename,
         ContentType: CONTENT_TYPE
-      }, function(err, data) {
+      }, function(err) {
         if (err) return callback(err);
         // console.log('upload.end', {key: filename, data: data});
         callback(null, filename);
@@ -87,7 +87,7 @@ AwsDriver.prototype = {
     s3.deleteObject({
       Bucket: this._publicBucket,
       Key: filename
-    }, function(err, data) {
+    }, function(err) {
       if (err && err.code !== "NoSuchKey") return callback(err);
       // console.log("delete.end", {key: filename, data: data});
       callback(null, filename);
