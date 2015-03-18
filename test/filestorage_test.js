@@ -18,7 +18,7 @@ describe("Files", function() {
     var storage, mock, statsdSpy;
 
     describe(name, function() {
-      var sandbox, statsdClient, statsSpy;
+      var sandbox, statsdClient;
 
       beforeEach(function(done) {
         sandbox = sinon.sandbox.create();
@@ -116,7 +116,7 @@ describe("Files", function() {
         settings: {sslEnabled: true}
       }, options, statsdClient));
     });
-  
+
   testStorage("Filesystem", false,
     function createFilesystemStorage(options, statsdClient, callback) {
       var test_base_dir = path.join("/tmp", uuid.v4());
