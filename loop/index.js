@@ -46,13 +46,14 @@ var storage = getStorage(conf.get("storage"), {
   'roomsDeletedTTL': conf.get('rooms').deletedTTL
 });
 
-var getFileStorage = require('./filestorage');
-var filestorage = getFileStorage(conf.get("filestorage"));
-
 var statsdClient;
 if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
 }
+
+
+var getFileStorage = require('./filestorage');
+var filestorage = getFileStorage(conf.get("filestorage"), {}, statsdClient);
 
 var tokBox = new TokBox(conf.get('tokBox'), statsdClient);
 

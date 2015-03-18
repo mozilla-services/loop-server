@@ -11,7 +11,8 @@ var isUndefined = require('../utils').isUndefined;
 var DEFAULT_PUBLIC_BUCKET = "room_encrypted_files";
 var CONTENT_TYPE = "application/json";
 
-function AwsDriver(options, settings) {
+function AwsDriver(options, settings, statsdClient) {
+  this.statsdClient = statsdClient;
   this._settings = settings || {};
   this._publicBucket = options.publicBucket || DEFAULT_PUBLIC_BUCKET;
   if (!/^[a-zA-Z0-9_\-]+$/.test(this._publicBucket)) {
@@ -35,7 +36,8 @@ AwsDriver.prototype = {
     if (body === undefined) return callback(null, null);
 
     var s3 = this._s3;
-    // console.log('upload.start', {key: filename, bucket: this._publicBucket});
+    var self = this;
+    var startTime = Date.now();
     s3.createBucket({Bucket: this._publicBucket}, function() {
       s3.putObject({
         Body: encode(body),
@@ -44,7 +46,12 @@ AwsDriver.prototype = {
         ContentType: CONTENT_TYPE
       }, function(err) {
         if (err) return callback(err);
-        // console.log('upload.end', {key: filename, data: data});
+        if (self.statsdClient !== undefined) {
+          self.statsdClient.timing(
+            'aws.write',
+            Date.now() - startTime
+          );
+        }
         callback(null, filename);
       });
     }.bind(this));
@@ -59,7 +66,8 @@ AwsDriver.prototype = {
    **/
   read: function(filename, callback) {
     var s3 = this._s3;
-    // console.log('read.start', {key: filename, bucket: this._publicBucket});
+    var self = this;
+    var startTime = Date.now();
     s3.getObject({
       Bucket: this._publicBucket,
       Key: filename
@@ -69,7 +77,12 @@ AwsDriver.prototype = {
         return callback(null, null);
       }
       var body = data.Body.toString();
-      // console.log('read.stop', {key: filename, data: body});
+      if (self.statsdClient !== undefined) {
+        self.statsdClient.timing(
+          'aws.read',
+          Date.now() - startTime
+        );
+      }
       decode(body, callback);
     });
   },
@@ -83,13 +96,19 @@ AwsDriver.prototype = {
    **/
   remove: function(filename, callback) {
     var s3 = this._s3;
-    // console.log("delete.start", {bucket: this._publicBucket, key: filename});
+    var self = this;
+    var startTime = Date.now();
     s3.deleteObject({
       Bucket: this._publicBucket,
       Key: filename
     }, function(err) {
       if (err && err.code !== "NoSuchKey") return callback(err);
-      // console.log("delete.end", {key: filename, data: data});
+      if (self.statsdClient !== undefined) {
+        self.statsdClient.timing(
+          'aws.remove',
+          Date.now() - startTime
+        );
+      }
       callback(null, filename);
     });
   }

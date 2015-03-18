@@ -4,12 +4,12 @@
 
 "use strict";
 
-function getFileStorage(conf, options) {
+function getFileStorage(conf, options, statsdClient) {
   var engine = conf.engine || 'filesystem';
   var settings = conf.settings || {};
 
   var Storage = require('./' + engine + '.js');
-  return new Storage(settings, options);
+  return new Storage(settings, options, statsdClient);
 }
 
 module.exports = getFileStorage;

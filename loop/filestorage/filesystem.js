@@ -10,7 +10,8 @@ var encode = require('../utils').encode;
 var decode = require('../utils').decode;
 var isUndefined = require('../utils').isUndefined;
 
-function Filesystem(options, settings) {
+function Filesystem(options, settings, statsdClient) {
+  this.statsdClient = statsdClient;
   this._settings = settings;
   this._base_dir = options.base_dir;
 }
@@ -29,9 +30,20 @@ Filesystem.prototype = {
     if (isUndefined(filename, "filename", callback)) return;
     if (body === undefined) return callback(null, null);
     var file_path = this.buildPath(filename);
+    var self = this;
+    var startTime = Date.now();
     fs.mkdir(path.dirname(file_path), '0750', function(err) {
       if (err && err.code !== 'EEXIST') return callback(err);
-      fs.writeFile(file_path, encode(body), callback);
+      fs.writeFile(file_path, encode(body), function(err) {
+        if (err) return callback(err);
+        if (self.statsdClient !== undefined) {
+          self.statsdClient.timing(
+            'filesystem.write',
+            Date.now() - startTime
+          );
+        }
+        callback();
+      });
     });
   },
 
@@ -45,12 +57,22 @@ Filesystem.prototype = {
    **/
   read: function(filename, callback) {
     var self = this;
+    var startTime = Date.now();
     fs.readFile(self.buildPath(filename), function(err, data) {
       if (err) {
         if (err.code === "ENOENT") return callback(null, null);
         return callback(err);
       }
-      decode(data, callback);
+      decode(data, function(err, data) {
+        if (err) return callback(err);
+        if (self.statsdClient !== undefined) {
+          self.statsdClient.timing(
+            'filesystem.read',
+            Date.now() - startTime
+          );
+        }
+        callback(null, data);
+      });
     });
   },
 
@@ -63,8 +85,16 @@ Filesystem.prototype = {
    *                    stored.
    **/
   remove: function(filename, callback) {
+    var self = this;
+    var startTime = Date.now();
     fs.unlink(this.buildPath(filename), function(err) {
       if (err && err.code !== "ENOENT") return callback(err);
+      if (self.statsdClient !== undefined) {
+        self.statsdClient.timing(
+          'filesystem.remove',
+          Date.now() - startTime
+        );
+      }
       callback();
     });
   },
