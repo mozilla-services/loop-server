@@ -65,8 +65,6 @@ ravenClient.captureMessage(startupMessage, {level: 'info'});
 function logError(err) {
   if (conf.get('env') !== 'test') {
     hekaLogger.debug("error", err);
-  } else {
-    console.log("ERROR", err);
   }
   ravenClient.captureError(err);
 }

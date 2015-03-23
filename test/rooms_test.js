@@ -572,7 +572,7 @@ describe("/rooms", function() {
       .end(function(err, res) {
         if (err) throw err;
         expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                            "Missing: context");
+                            "Missing: context,roomName");
         done();
       });
     });
