@@ -9,7 +9,6 @@ var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 var tokenlib = require('../tokenlib');
 var time = require('../utils').time;
-var constants = require("../constants");
 
 
 module.exports = function(conf, logError, storage) {
@@ -256,51 +255,6 @@ module.exports = function(conf, logError, storage) {
                     "Invalid " + field + " number.");
           return;
         }
-      }
-
-      var validEvents = {};
-      validEvents[constants.ROOM_STATES.INIT] = [
-        constants.ROOM_EVENTS.SESSION_CONNECTION_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.WAITING] = [
-        constants.ROOM_EVENTS.SESSION_CONNECTION_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.STARTING] = [
-        constants.ROOM_EVENTS.SESSION_STREAM_CREATED,
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.SENDING] = [
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_DESTROYED,
-        constants.ROOM_EVENTS.SESSION_STREAM_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.SEND_RECV] = [
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_DESTROYED,
-        constants.ROOM_EVENTS.SESSION_STREAM_DESTROYED
-      ];
-      validEvents[constants.ROOM_STATES.RECEIVING] = [
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_CREATED,
-        constants.ROOM_EVENTS.SESSION_STREAM_DESTROYED
-      ];
-      validEvents[constants.ROOM_STATES.CLEANUP] = [];
-
-      var state = req.body.state,
-          event = req.body.event;
-
-      // Validate that state is known.
-      if (!validEvents.hasOwnProperty(state)) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "Unknown state '" + state + "'.");
-        return;
-      }
-
-      var events = validEvents[state];
-      events.push(constants.ROOM_EVENTS.SESSION_CONNECTION_DESTROYED);
-
-      // Validate that event is valid.
-      if (events.indexOf(event) < 0) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "Invalid event '" + event + "' for state '" + state + "'.");
-        return;
       }
 
       // Store room status for logging.

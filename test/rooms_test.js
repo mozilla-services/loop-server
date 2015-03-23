@@ -1408,27 +1408,29 @@ describe("/rooms", function() {
           });
         });
 
-        it("should not log data if invalid.", function(done) {
-          exampleBody.state = 'happy';
+        it("should log room status data if successful.", function(done) {
           validateRoomStatus
             .send(exampleBody)
-            .end(function (err, res) {
+            .end(function (err) {
               if (err) throw err;
-              expect(res.body.event).to.eql(undefined);
+              expect(logs).to.length(3);
+              expect(logs[2].event).to.not.eql(undefined);
+              expect(logs[2].state).to.not.eql(undefined);
+              expect(logs[2].connections).to.not.eql(undefined);
+              expect(logs[2].recvStreams).to.not.eql(undefined);
+              expect(logs[2].sendStreams).to.not.eql(undefined);
               done();
             });
         });
 
-        it("should log room status data if successful.", function(done) {
+        it("should log room status data even if unknown.", function(done) {
+          exampleBody.state = 'hello world';
           validateRoomStatus
             .send(exampleBody)
-            .end(function (err, res) {
+            .end(function (err) {
               if (err) throw err;
-              expect(res.body.event).to.not.eql(undefined);
-              expect(res.body.state).to.not.eql(undefined);
-              expect(res.body.connections).to.not.eql(undefined);
-              expect(res.body.recvStreams).to.not.eql(undefined);
-              expect(res.body.sendStreams).to.not.eql(undefined);
+              expect(logs).to.length(3);
+              expect(logs[2].state).to.eql('hello world');
               done();
             });
         });
@@ -1443,31 +1445,6 @@ describe("/rooms", function() {
               );
               done();
             });
-        });
-
-        it("should reject if state is unknown.", function(done) {
-          exampleBody.state = 'happy';
-          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
-            if (err) throw err;
-            expectFormattedError(
-              res, 400, errors.INVALID_PARAMETERS,
-              "Unknown state 'happy'."
-            );
-            done();
-          });
-        });
-
-        it("should reject if event is not a valid transition.", function(done) {
-          exampleBody.state = 'sending';
-          exampleBody.event = 'Publisher.streamCreated';
-          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
-            if (err) throw err;
-            expectFormattedError(
-              res, 400, errors.INVALID_PARAMETERS,
-              "Invalid event 'Publisher.streamCreated' for state 'sending'."
-            );
-            done();
-          });
         });
 
         it("should reject if connections is not a number.", function(done) {
