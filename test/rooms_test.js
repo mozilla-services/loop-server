@@ -24,6 +24,7 @@ var validators = loop.validators;
 var apiRouter = loop.apiRouter;
 var conf = loop.conf;
 var storage = loop.storage;
+var filestorage = loop.filestorage;
 var tokBox = loop.tokBox;
 
 var requireHawkSession = auth.requireHawkSession;
@@ -445,6 +446,48 @@ describe("/rooms", function() {
         .expect(400)
         .end(done);
       });
+
+      it("should fail if both context and roomName are present", function(done) {
+        validateRoomReq.send({
+          roomName: "UX Discussion",
+          context: {
+            value: "Toto",
+            alg: "foobar",
+            wrappedKey: "foobar"
+          },
+          expiresIn: "5",
+          roomOwner: "Alexis",
+          maxSize: 2
+        })
+        .expect(400)
+        .end(function(err, res) {
+          if (err) throw err;
+          expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+            "roomName has been deprecated, please store it encrypted inside the context.");
+          done();
+        });
+      });
+
+      it("should fail if context does contains value, alg and wrappedKey properties",
+        function(done) {
+          validateRoomReq.send({
+            context: {
+              alg: "foobar",
+              wrappedKey: "foobar"
+            },
+            expiresIn: "5",
+            roomOwner: "Alexis",
+            maxSize: 2
+          })
+          .expect(400)
+          .end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
+              "context should be an object containing `value`, `alg` " +
+              "and `wrappedKey` properties.");
+            done();
+          });
+        });
     });
 
     describe("#isRoomOwner", function() {
@@ -529,7 +572,7 @@ describe("/rooms", function() {
       .end(function(err, res) {
         if (err) throw err;
         expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                            "Missing: roomName");
+                            "Missing: context,roomName");
         done();
       });
     });
@@ -562,7 +605,7 @@ describe("/rooms", function() {
       });
     });
 
-    it("should create the room.", function(done) {
+    it("should create the room with roomName.", function(done) {
       var startTime = parseInt(Date.now() / 1000, 10);
       supertest(app)
       .post('/rooms')
@@ -607,6 +650,67 @@ describe("/rooms", function() {
 
           expect(requests).to.length(1);
           done();
+        });
+     });
+    });
+
+    it("should create the room with context.", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+      .post('/rooms')
+      .type('json')
+      .hawk(hawkCredentials)
+      .send({
+        roomOwner: "Alexis",
+        context: {
+          value: "Something in b64",
+          alg: "foobar",
+          wrappedKey: "key"
+        },
+        maxSize: "3",
+        expiresIn: "10"
+      })
+      .expect(201)
+      .end(function(err, res) {
+        if (err) throw err;
+        expect(res.body.roomToken).to.not.be.undefined;
+        expect(res.body.roomUrl).to.eql(
+          conf.get('rooms').webAppUrl.replace('{token}', res.body.roomToken));
+
+        expect(res.body.expiresAt).to.equal(startTime + 10 * 3600);
+
+        storage.getRoomData(res.body.roomToken, function(err, roomData) {
+          if (err) throw err;
+
+          expect(roomData.expiresAt).to.not.eql(undefined);
+          delete roomData.expiresAt;
+          expect(roomData.creationTime).to.not.eql(undefined);
+          delete roomData.creationTime;
+          expect(roomData.updateTime).to.not.eql(undefined);
+          delete roomData.updateTime;
+
+          expect(roomData).to.eql({
+            apiKey: tokBox._opentok.default.apiKey,
+            sessionId: sessionId,
+            channel: "default",
+            roomToken: res.body.roomToken,
+            maxSize: 3,
+            roomOwner: "Alexis",
+            expiresIn: 10,
+            roomOwnerHmac: userHmac
+          });
+
+          expect(requests).to.length(1);
+
+          filestorage.read(res.body.roomToken, function(err, data) {
+            if (err) throw err;
+            expect(data).to.eql({
+              value: "Something in b64",
+              alg: "foobar",
+              wrappedKey: "key"
+            });
+            done();
+          });
         });
      });
     });
@@ -681,6 +785,45 @@ describe("/rooms", function() {
             expect(getRes.body).to.eql({
               roomToken: roomToken,
               roomName: "UX discussion",
+              context: null,
+              roomOwner: "Mathieu",
+              roomUrl: roomUrl
+            });
+            done();
+          });
+      });
+    });
+
+    it("should return 200 with public room info with context", function(done) {
+      createRoom(hawkCredentials, {
+        roomOwner: "Mathieu",
+        context: {
+          value: "Something in b64",
+          alg: "foobar",
+          wrappedKey: "key"
+        },
+        maxSize: "3",
+        expiresIn: "10"
+      }).end(function(err, postRes) {
+        if (err) throw err;
+
+        var roomToken = postRes.body.roomToken;
+        var roomUrl = conf.get('rooms').webAppUrl
+          .replace('{token}', roomToken);
+
+        supertest(app)
+          .get('/rooms/' + roomToken)
+          .type('json')
+          .expect(200)
+          .end(function(err, getRes) {
+            if (err) throw err;
+            expect(getRes.body).to.eql({
+              roomToken: roomToken,
+              context: {
+                value: "Something in b64",
+                alg: "foobar",
+                wrappedKey: "key"
+              },
               roomOwner: "Mathieu",
               roomUrl: roomUrl
             });
@@ -728,6 +871,63 @@ describe("/rooms", function() {
                 roomUrl: roomUrl,
                 roomOwner: "Alexis",
                 roomName: "UX discussion",
+                maxSize: 3,
+                clientMaxSize: 3,
+                context: null,
+                participants: []
+              });
+              done();
+            });
+        });
+    });
+
+    it("should return 200 with all room info if participating with context", function(done) {
+      var startTime = parseInt(Date.now() / 1000, 10);
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          context: {
+            value: "Something in b64",
+            alg: "foobar",
+            wrappedKey: "key"
+          },
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          var roomToken = postRes.body.roomToken;
+          supertest(app)
+            .get('/rooms/' + roomToken)
+            .type('json')
+            .hawk(hawkCredentials)
+            .expect(200)
+            .end(function(err, getRes) {
+              if (err) throw err;
+              expect(getRes.body.creationTime).to.be.gte(startTime);
+              expect(getRes.body.ctime).to.be.gte(startTime);
+              expect(getRes.body.expiresAt).to.be.gte(startTime + 10 * 3600);
+
+              delete getRes.body.creationTime;
+              delete getRes.body.ctime;
+              delete getRes.body.expiresAt;
+
+              var roomUrl = conf.get('rooms').webAppUrl
+                .replace('{token}', roomToken);
+
+              expect(getRes.body).to.eql({
+                roomToken: roomToken,
+                roomUrl: roomUrl,
+                roomOwner: "Alexis",
+                context: {
+                  value: "Something in b64",
+                  alg: "foobar",
+                  wrappedKey: "key"
+                },
                 maxSize: 3,
                 clientMaxSize: 3,
                 participants: []
@@ -860,6 +1060,7 @@ describe("/rooms", function() {
                     roomToken: roomToken,
                     roomUrl: roomUrl,
                     clientMaxSize: 3,
+                    context: null,
                     maxSize: 3,
                     participants: [],
                     roomName: "New name",
@@ -932,12 +1133,78 @@ describe("/rooms", function() {
                     roomToken: roomToken,
                     roomUrl: roomUrl,
                     clientMaxSize: 2,
+                    context: null,
                     maxSize: 2,
                     participants: [],
                     roomName: "About UX",
                     roomOwner: "Natim"
                   });
 
+                  expect(requests).to.length(1);
+                  done();
+                });
+            });
+        });
+    });
+
+    it("should store the context if provided", function(done) {
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          requests = [];
+          var roomToken = postRes.body.roomToken;
+          supertest(app)
+            .patch('/rooms/' + roomToken)
+            .hawk(hawkCredentials)
+            .send({
+              context: {
+                value: "Something in b64",
+                alg: "foobar",
+                wrappedKey: "key"
+              }
+            })
+            .expect(200)
+            .end(function(err) {
+              if (err) throw err;
+              supertest(app)
+                .get('/rooms/' + roomToken)
+                .type('json')
+                .hawk(hawkCredentials)
+                .expect(200)
+                .end(function(err, getRes) {
+                  if (err) throw err;
+
+                  delete getRes.body.creationTime;
+                  delete getRes.body.ctime;
+                  delete getRes.body.expiresAt;
+
+                  var roomUrl = conf.get('rooms').webAppUrl
+                    .replace('{token}', roomToken);
+
+                  expect(getRes.body).to.eql({
+                    roomToken: roomToken,
+                    roomUrl: roomUrl,
+                    clientMaxSize: 3,
+                    roomName: "UX discussion",
+                    context: {
+                      value: "Something in b64",
+                      alg: "foobar",
+                      wrappedKey: "key"
+                    },
+                    maxSize: 3,
+                    participants: [],
+                    roomOwner: "Alexis"
+                  });
                   expect(requests).to.length(1);
                   done();
                 });
@@ -1246,7 +1513,6 @@ describe("/rooms", function() {
         it("should notify the room owner when a participant expires",
         function(done) {
           var participantTTL = conf.get('rooms').participantTTL;
-          sandbox.stub()
           createRoom(hawkCredentials, {
             roomOwner: "Alexis",
             roomName: "UX discussion",
@@ -1408,27 +1674,29 @@ describe("/rooms", function() {
           });
         });
 
-        it("should not log data if invalid.", function(done) {
-          exampleBody.state = 'happy';
+        it("should log room status data if successful.", function(done) {
           validateRoomStatus
             .send(exampleBody)
-            .end(function (err, res) {
+            .end(function (err) {
               if (err) throw err;
-              expect(res.body.event).to.eql(undefined);
+              expect(logs).to.length(3);
+              expect(logs[2].event).to.not.eql(undefined);
+              expect(logs[2].state).to.not.eql(undefined);
+              expect(logs[2].connections).to.not.eql(undefined);
+              expect(logs[2].recvStreams).to.not.eql(undefined);
+              expect(logs[2].sendStreams).to.not.eql(undefined);
               done();
             });
         });
 
-        it("should log room status data if successful.", function(done) {
+        it("should log room status data even if unknown.", function(done) {
+          exampleBody.state = 'hello world';
           validateRoomStatus
             .send(exampleBody)
-            .end(function (err, res) {
+            .end(function (err) {
               if (err) throw err;
-              expect(res.body.event).to.not.eql(undefined);
-              expect(res.body.state).to.not.eql(undefined);
-              expect(res.body.connections).to.not.eql(undefined);
-              expect(res.body.recvStreams).to.not.eql(undefined);
-              expect(res.body.sendStreams).to.not.eql(undefined);
+              expect(logs).to.length(3);
+              expect(logs[2].state).to.eql('hello world');
               done();
             });
         });
@@ -1443,31 +1711,6 @@ describe("/rooms", function() {
               );
               done();
             });
-        });
-
-        it("should reject if state is unknown.", function(done) {
-          exampleBody.state = 'happy';
-          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
-            if (err) throw err;
-            expectFormattedError(
-              res, 400, errors.INVALID_PARAMETERS,
-              "Unknown state 'happy'."
-            );
-            done();
-          });
-        });
-
-        it("should reject if event is not a valid transition.", function(done) {
-          exampleBody.state = 'sending';
-          exampleBody.event = 'Publisher.streamCreated';
-          updateStateRoom(hawkCredentials, roomToken, exampleBody, 400).end(function(err, res) {
-            if (err) throw err;
-            expectFormattedError(
-              res, 400, errors.INVALID_PARAMETERS,
-              "Invalid event 'Publisher.streamCreated' for state 'sending'."
-            );
-            done();
-          });
         });
 
         it("should reject if connections is not a number.", function(done) {
@@ -1987,6 +2230,56 @@ describe("/rooms", function() {
         });
       });
     });
+
+    it("should delete the room context if present", function(done) {
+      createRoom(hawkCredentials, {
+        roomOwner: "Alexis",
+        context: {
+          value: "Toto",
+          alg: "foobar",
+          wrappedKey: "foobar"
+        },
+        maxSize: "3",
+        expiresIn: "10"
+      }).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        requests = [];
+        deleteRoom(hawkCredentials, roomToken).end(function(err) {
+          if (err) throw err;
+          expect(requests).to.length(1);
+          filestorage.read(roomToken, function(err, data) {
+            if (err) throw err;
+            expect(data).to.eql(null);
+            done();
+          });
+        });
+      });
+    });
+
+    it("should remove the roomContext when a room expires",
+      function(done) {
+        createRoom(hawkCredentials, {
+          roomOwner: "Alexis",
+          context: {
+            value: "foo",
+            alg: "bar",
+            wrappedKey: "foobar"
+          },
+          maxSize: "2",
+          expiresIn: "1"
+        }).end(function(err, res) {
+          if (err) throw err;
+          var roomToken = res.body.roomToken;
+          filestorage.read(roomToken, function(err, data) {
+            if (err) throw err;
+            expect(data).to.not.eql(null);
+            setTimeout(function() {
+              filestorage.read(roomToken, done);
+            }, 1000 + 500);
+          });
+        });
+      });
   });
 
   describe("PATCH /rooms", function() {
@@ -2028,6 +2321,41 @@ describe("/rooms", function() {
             getRoomInfo(hawkCredentials, roomToken, 404).end(function(err) {
               if (err) throw err;
               getRoomInfo(hawkCredentials, roomToken2, 404).end(done);
+            });
+          });
+        });
+      });
+    });
+
+    it("should delete rooms and room context if the user is the room owner", function(done) {
+      var data = {
+        context: {
+          value: "Toto",
+          alg: "foobar",
+          wrappedKey: "foobar"
+        },
+        expiresIn: "5",
+        roomOwner: "Alexis",
+        maxSize: 2
+      };
+      createRoom(hawkCredentials, data).end(function(err, res) {
+        if (err) throw err;
+        var roomToken = res.body.roomToken;
+        createRoom(hawkCredentials, data).end(function(err, res) {
+          if (err) throw err;
+          var roomToken2 = res.body.roomToken;
+          requests = [];
+          deleteRooms(hawkCredentials, [roomToken, roomToken2]).end(function(err) {
+            if (err) throw err;
+            expect(requests).to.length(1);
+            filestorage.read(roomToken, function(err, data) {
+              if (err) throw err;
+              expect(data).to.eql(null);
+              filestorage.read(roomToken2, function(err, data) {
+                if (err) throw err;
+                expect(data).to.eql(null);
+                done();
+              });
             });
           });
         });
@@ -2148,7 +2476,8 @@ describe("/rooms", function() {
                   roomUrl: roomWebappUrl,
                   roomName: 'UX discussion',
                   maxSize: 3,
-                  clientMaxSize: 2
+                  clientMaxSize: 2,
+                  context: null
                 });
                 done();
               });

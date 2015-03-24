@@ -51,6 +51,10 @@ if (conf.get('statsdEnabled') === true) {
   statsdClient = new StatsdClient(conf.get('statsd'));
 }
 
+
+var getFileStorage = require('./filestorage');
+var filestorage = getFileStorage(conf.get("filestorage"), {}, statsdClient);
+
 var tokBox = new TokBox(conf.get('tokBox'), statsdClient);
 
 var ravenClient = new raven.Client(conf.get('sentryDSN'));
@@ -129,7 +133,7 @@ if (conf.get("fxaOAuth").activated !== false) {
 }
 
 var rooms = require("./routes/rooms");
-rooms(apiRouter, conf, logError, storage, auth, validators, tokBox,
+rooms(apiRouter, conf, logError, storage, filestorage, auth, validators, tokBox,
       simplePush, notifications);
 
 var session = require("./routes/session");
@@ -193,6 +197,7 @@ module.exports = {
   server: server,
   conf: conf,
   storage: storage,
+  filestorage: filestorage,
   tokBox: tokBox,
   statsdClient: statsdClient,
   shutdown: shutdown,

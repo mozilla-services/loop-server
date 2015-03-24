@@ -9,7 +9,6 @@ var sendError = require('../utils').sendError;
 var getSimplePushURLS = require('../utils').getSimplePushURLS;
 var tokenlib = require('../tokenlib');
 var time = require('../utils').time;
-var constants = require("../constants");
 
 
 module.exports = function(conf, logError, storage) {
@@ -18,7 +17,7 @@ module.exports = function(conf, logError, storage) {
    * the "token" parameter.
    **/
   function validateToken(req, res, next) {
-    req.token = req.param('token');
+    req.token = req.params.token;
     storage.getCallUrlData(req.token, function(err, urlData) {
       if (res.serverError(err)) return;
       if (urlData === null) {
@@ -32,6 +31,7 @@ module.exports = function(conf, logError, storage) {
 
   /**
    * Middleware that requires the given parameters to be set.
+   * Can take a list of params to handle the OR ie: ['context', 'roomName']
    **/
   function requireParams() {
     var params = Array.prototype.slice.call(arguments);
@@ -45,6 +45,12 @@ module.exports = function(conf, logError, storage) {
       }
 
       missingParams = params.filter(function(param) {
+        if (Array.isArray(param)) {
+          var matches = param.some(function(p) {
+            return req.body[p] !== undefined;
+          });
+          return !matches;
+        }
         return req.body[param] === undefined;
       });
 
@@ -169,13 +175,34 @@ module.exports = function(conf, logError, storage) {
     var expiresIn = roomsConf.defaultTTL,
         maxTTL = roomsConf.maxTTL,
         serverMaxSize = roomsConf.maxSize,
-        maxSize;
+        maxSize, asRoomName = false;
 
     if (req.body.hasOwnProperty('roomName')) {
+      asRoomName = true;
+      res.set("Alert", "The roomName parameter has been deprecated, you should use context.");
       if (req.body.roomName.length > roomsConf.maxRoomNameSize) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
                   "roomName should be shorter than " +
                   roomsConf.maxRoomNameSize + " characters");
+        return;
+      }
+    }
+
+    if (req.body.hasOwnProperty('context')) {
+      if (asRoomName) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "roomName has been deprecated, please store it " +
+                  "encrypted inside the context.");
+        return;
+      }
+
+      var context = req.body.context;
+      if (!(context.hasOwnProperty("value") &&
+            context.hasOwnProperty("alg") &&
+            context.hasOwnProperty("wrappedKey"))) {
+        sendError(res, 400, errors.INVALID_PARAMETERS,
+                  "context should be an object containing " +
+                  "`value`, `alg` and `wrappedKey` properties.");
         return;
       }
     }
@@ -219,6 +246,7 @@ module.exports = function(conf, logError, storage) {
       roomOwner: req.body.roomOwner,
       maxSize: maxSize
     };
+    req.roomRequestContext = req.body.context;
 
     next();
   }
@@ -258,51 +286,6 @@ module.exports = function(conf, logError, storage) {
         }
       }
 
-      var validEvents = {};
-      validEvents[constants.ROOM_STATES.INIT] = [
-        constants.ROOM_EVENTS.SESSION_CONNECTION_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.WAITING] = [
-        constants.ROOM_EVENTS.SESSION_CONNECTION_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.STARTING] = [
-        constants.ROOM_EVENTS.SESSION_STREAM_CREATED,
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.SENDING] = [
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_DESTROYED,
-        constants.ROOM_EVENTS.SESSION_STREAM_CREATED
-      ];
-      validEvents[constants.ROOM_STATES.SEND_RECV] = [
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_DESTROYED,
-        constants.ROOM_EVENTS.SESSION_STREAM_DESTROYED
-      ];
-      validEvents[constants.ROOM_STATES.RECEIVING] = [
-        constants.ROOM_EVENTS.PUBLISHER_STREAM_CREATED,
-        constants.ROOM_EVENTS.SESSION_STREAM_DESTROYED
-      ];
-      validEvents[constants.ROOM_STATES.CLEANUP] = [];
-
-      var state = req.body.state,
-          event = req.body.event;
-
-      // Validate that state is known.
-      if (!validEvents.hasOwnProperty(state)) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "Unknown state '" + state + "'.");
-        return;
-      }
-
-      var events = validEvents[state];
-      events.push(constants.ROOM_EVENTS.SESSION_CONNECTION_DESTROYED);
-
-      // Validate that event is valid.
-      if (events.indexOf(event) < 0) {
-        sendError(res, 400, errors.INVALID_PARAMETERS,
-                  "Invalid event '" + event + "' for state '" + state + "'.");
-        return;
-      }
-
       // Store room status for logging.
       req.roomStatusData = {};
       expectedFields.forEach(function (f) {
@@ -321,7 +304,7 @@ module.exports = function(conf, logError, storage) {
    * - req.token parameters with the appropriate values.
    **/
   function validateRoomToken(req, res, next) {
-    req.token = req.param('token');
+    req.token = req.params.token;
     storage.getRoomData(req.token, function(err, roomData) {
       if (res.serverError(err)) return;
       if (roomData === null) {

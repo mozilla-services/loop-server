@@ -190,6 +190,20 @@ var conf = convict({
       }
     }
   },
+  filestorage: {
+    engine: {
+      doc: "engine type",
+      format: ["filesystem", "s3"],
+      default: "filesystem"
+    },
+    settings: {
+      doc: "js object of options to pass to the files engine",
+      format: Object,
+      default: {
+        base_dir: "/tmp"
+      }
+    }
+  },
   pubsub: {
     doc: "js object of options to pass to the pubsub engine",
     format: Object,
@@ -538,6 +552,12 @@ if (conf.get('hawkSessionDuration') <
 if (conf.get('fxaOAuth').activated && conf.get('fxaOAuth').client_id === "") {
   throw "fxaOAuth is activated but not well configured. " +
     "Set fxaOAuth.activated config key to false to continue";
+}
+
+// Configure S3 the environment variable for tests.
+if (conf.get('env') === 'test') {
+  process.env.AWS_ACCESS_KEY_ID = 'TESTME';
+  process.env.AWS_SECRET_ACCESS_KEY = 'TESTME';
 }
 
 // Verify timers

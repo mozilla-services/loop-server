@@ -4,9 +4,10 @@
 
 "use strict";
 
-var redis = require("redis");
+var redis = require("./redis_client");
 var async = require("async");
 var conf = require('../config').conf;
+var MULTI_OPERATIONS = require("./redis_client").MULTI_OPERATIONS;
 
 // Operations supported by the migration backend.
 var SUPPORTED_OPERATIONS = [
@@ -14,12 +15,6 @@ var SUPPORTED_OPERATIONS = [
   'scard', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
   'expire', 'incr', 'decr', 'hmset', 'hgetall', 'hset', 'hget', 'hsetnx',
   'hdel'
-];
-
-var MULTI_OPERATIONS = [
-  'pttl', 'ttl', 'set', 'setex', 'psetex', 'sadd', 'srem', 'pexpire',
-  'expire', 'incr', 'decr', 'hmset', 'hset', 'hsetnx', 'hdel', 'del',
-  'hgetall', 'get', 'scard'
 ];
 
 /**
@@ -206,8 +201,11 @@ function getClient(options) {
   var client = redis.createClient(
     options.port || 6379,
     options.host || "localhost",
-    // This is to return buffers when buffers are sent as params.
-    {detect_buffers: true}
+    {
+      // This is to return buffers when buffers are sent as params.
+      detect_buffers: true,
+      sharding: options.sharding
+    }
   );
   if (options.db) {
     client.select(options.db);
