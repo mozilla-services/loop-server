@@ -16,7 +16,7 @@ New features:
 ~~~~~~~~~~~~~
 
 - Allow removal of transactions (MULTI) when sharding is enabled (#315)
-- Added file system and S3 file storage mechanisms (1141105)
+- Add file system and S3 file storage mechanisms (1141105)
 
 
 0.16.0 (2015-03-12)
