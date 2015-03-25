@@ -53,10 +53,9 @@ if (conf.get('statsdEnabled') === true) {
 
 
 var getFileStorage = require('./filestorage');
-var bucketName = "net-mozaws-" + config.get('env') + "-encrypted-files";
 var filestorage = getFileStorage(
   conf.get("filestorage"),
-  {publicBucket: bucketName},
+  {},
   statsdClient
 );
 
