@@ -32,7 +32,6 @@
     },
     "tokenDuration": 86400
   },
-  "webAppUrl": "http://localhost:3000/#call/{token}",
   "fakeCallInfo": {
     "apiKey": "fake API key",
     "session1": "1_MX40NDY4NzQ0Mn5-V2VkIE1hciAxMiwAMzo1OTo1MSBQRFgQMjAxNH4wLjQO5TMzMj3Mfg",
