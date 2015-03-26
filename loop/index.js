@@ -53,7 +53,11 @@ if (conf.get('statsdEnabled') === true) {
 
 
 var getFileStorage = require('./filestorage');
-var filestorage = getFileStorage(conf.get("filestorage"), {}, statsdClient);
+var filestorage = getFileStorage(
+  conf.get("filestorage"),
+  {},
+  statsdClient
+);
 
 var tokBox = new TokBox(conf.get('tokBox'), statsdClient);
 

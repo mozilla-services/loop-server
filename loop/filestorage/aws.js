@@ -14,7 +14,7 @@ var CONTENT_TYPE = "application/json";
 function AwsDriver(options, settings, statsdClient) {
   this.statsdClient = statsdClient;
   this._settings = settings || {};
-  this._publicBucket = options.publicBucket || DEFAULT_PUBLIC_BUCKET;
+  this._publicBucket = settings.bucketName || DEFAULT_PUBLIC_BUCKET;
   if (!/^[a-zA-Z0-9_\-]+$/.test(this._publicBucket)) {
     throw new Error('Illegal Bucket Name: ' + this._publicBucket);
   }
