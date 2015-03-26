@@ -3,6 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
+0.17.1 (2015-03-26)
+-------------------
+
+- S3 bucket names can be defined in the configuration.
+
 0.17.0 (2015-03-24)
 -------------------
 
