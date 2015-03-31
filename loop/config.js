@@ -193,7 +193,7 @@ var conf = convict({
   filestorage: {
     engine: {
       doc: "engine type",
-      format: ["filesystem", "s3"],
+      format: ["filesystem", "aws"],
       default: "filesystem"
     },
     settings: {
