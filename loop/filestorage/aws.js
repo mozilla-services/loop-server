@@ -47,7 +47,7 @@ AwsDriver.prototype = {
       if (err) return callback(err);
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
-          'aws.write',
+          'loop.aws.write',
           Date.now() - startTime
         );
       }
@@ -77,7 +77,7 @@ AwsDriver.prototype = {
       var body = data.Body.toString();
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
-          'aws.read',
+          'loop.aws.read',
           Date.now() - startTime
         );
       }
@@ -103,7 +103,7 @@ AwsDriver.prototype = {
       if (err && err.code !== "NoSuchKey") return callback(err);
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
-          'aws.remove',
+          'loop.aws.remove',
           Date.now() - startTime
         );
       }

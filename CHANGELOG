@@ -7,6 +7,7 @@ This document describes changes between each past release.
 -------------------
 
 - AWS driver did not take bucket configuration into account.
+- Add a ``loop.`` prefix on not prefixed keys.
 
 
 0.17.2 (2015-03-31)

@@ -73,7 +73,7 @@ TokBox.prototype = {
         }
         if (self.statsdClient !== undefined) {
           self.statsdClient.timing(
-            'tokbox.createSession',
+            'loop.tokbox.createSession',
             Date.now() - startTime
           );
         }

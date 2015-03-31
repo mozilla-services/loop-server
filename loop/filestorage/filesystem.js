@@ -37,7 +37,7 @@ Filesystem.prototype = {
         if (err) return callback(err);
         if (self.statsdClient !== undefined) {
           self.statsdClient.timing(
-            'filesystem.write',
+            'loop.filesystem.write',
             Date.now() - startTime
           );
         }
@@ -66,7 +66,7 @@ Filesystem.prototype = {
         if (err) return callback(err);
         if (self.statsdClient !== undefined) {
           self.statsdClient.timing(
-            'filesystem.read',
+            'loop.filesystem.read',
             Date.now() - startTime
           );
         }
@@ -90,7 +90,7 @@ Filesystem.prototype = {
       if (err && err.code !== "ENOENT") return callback(err);
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
-          'filesystem.remove',
+          'loop.filesystem.remove',
           Date.now() - startTime
         );
       }
