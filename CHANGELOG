@@ -3,10 +3,10 @@ Changelog
 
 This document describes changes between each past release.
 
-0.17.3 (unreleased)
+0.17.3 (2015-03-31)
 -------------------
 
-- No changes yet.
+- AWS driver did not take bucket configuration into account.
 
 
 0.17.2 (2015-03-31)
