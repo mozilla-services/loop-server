@@ -61,8 +61,8 @@ describe("simplePush object", function() {
       simplePush.notify("reason", "url1", 12345);
 
       assert.calledTwice(statsdSpy);
-      assert.calledWithExactly(statsdSpy, "simplepush.call.reason", 1);
-      assert.calledWithExactly(statsdSpy, "simplepush.call", 1);
+      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.reason", 1);
+      assert.calledWithExactly(statsdSpy, "loop.simplepush.call", 1);
     });
 
 });

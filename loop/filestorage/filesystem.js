@@ -10,10 +10,9 @@ var encode = require('../utils').encode;
 var decode = require('../utils').decode;
 var isUndefined = require('../utils').isUndefined;
 
-function Filesystem(options, settings, statsdClient) {
+function Filesystem(settings, options, statsdClient) {
   this.statsdClient = statsdClient;
-  this._settings = settings;
-  this._base_dir = options.base_dir;
+  this._base_dir = settings.base_dir;
 }
 
 Filesystem.prototype = {
@@ -38,7 +37,7 @@ Filesystem.prototype = {
         if (err) return callback(err);
         if (self.statsdClient !== undefined) {
           self.statsdClient.timing(
-            'filesystem.write',
+            'loop.filesystem.write',
             Date.now() - startTime
           );
         }
@@ -67,7 +66,7 @@ Filesystem.prototype = {
         if (err) return callback(err);
         if (self.statsdClient !== undefined) {
           self.statsdClient.timing(
-            'filesystem.read',
+            'loop.filesystem.read',
             Date.now() - startTime
           );
         }
@@ -91,7 +90,7 @@ Filesystem.prototype = {
       if (err && err.code !== "ENOENT") return callback(err);
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
-          'filesystem.remove',
+          'loop.filesystem.remove',
           Date.now() - startTime
         );
       }
