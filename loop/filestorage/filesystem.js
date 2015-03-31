@@ -10,10 +10,9 @@ var encode = require('../utils').encode;
 var decode = require('../utils').decode;
 var isUndefined = require('../utils').isUndefined;
 
-function Filesystem(options, settings, statsdClient) {
+function Filesystem(settings, options, statsdClient) {
   this.statsdClient = statsdClient;
-  this._settings = settings;
-  this._base_dir = options.base_dir;
+  this._base_dir = settings.base_dir;
 }
 
 Filesystem.prototype = {

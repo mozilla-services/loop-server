@@ -11,7 +11,7 @@ var isUndefined = require('../utils').isUndefined;
 var DEFAULT_PUBLIC_BUCKET = "room_encrypted_files";
 var CONTENT_TYPE = "application/json";
 
-function AwsDriver(options, settings, statsdClient) {
+function AwsDriver(settings, options, statsdClient) {
   this.statsdClient = statsdClient;
   this._settings = settings || {};
   this._publicBucket = settings.bucketName || DEFAULT_PUBLIC_BUCKET;
@@ -38,23 +38,21 @@ AwsDriver.prototype = {
     var s3 = this._s3;
     var self = this;
     var startTime = Date.now();
-    s3.createBucket({Bucket: this._publicBucket}, function() {
-      s3.putObject({
-        Body: encode(body),
-        Bucket: this._publicBucket,
-        Key: filename,
-        ContentType: CONTENT_TYPE
-      }, function(err) {
-        if (err) return callback(err);
-        if (self.statsdClient !== undefined) {
-          self.statsdClient.timing(
-            'aws.write',
-            Date.now() - startTime
-          );
-        }
-        callback(null, filename);
-      });
-    }.bind(this));
+    s3.putObject({
+      Body: encode(body),
+      Bucket: this._publicBucket,
+      Key: filename,
+      ContentType: CONTENT_TYPE
+    }, function(err) {
+      if (err) return callback(err);
+      if (self.statsdClient !== undefined) {
+        self.statsdClient.timing(
+          'aws.write',
+          Date.now() - startTime
+        );
+      }
+      callback(null, filename);
+    });
   },
 
   /**
