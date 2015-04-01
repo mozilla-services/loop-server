@@ -1,11 +1,14 @@
 import json
+import os
 import random
+from base64 import b64encode
 from six.moves import range
 
 MAX_NUMBER_OF_PEOPLE_JOINING = 5  # Pick a randint between 1 and this value.
 PERCENTAGE_OF_REFRESH = 50
 PERCENTAGE_OF_MANUAL_LEAVE = 60
 PERCENTAGE_OF_MANUAL_ROOM_DELETE = 80
+PERCENTAGE_OF_ROOM_CONTEXT = 75
 
 
 class TestRoomsMixin(object):
@@ -39,14 +42,26 @@ class TestRoomsMixin(object):
 
     def create_room(self):
         self.hawk_room_owner = self.hawk_auth
+        data = {
+            "roomName": "UX Discussion",
+            "expiresIn": 1,
+            "roomOwner": "Alexis",
+            "maxSize": MAX_NUMBER_OF_PEOPLE_JOINING
+        }
+
+        if random.randint(0, 100) < PERCENTAGE_OF_ROOM_CONTEXT:
+            del data['roomName']
+            data['context'] = {
+                "value": b64encode(os.urandom(1024)).decode('utf-8'),
+                "alg": "AES-GCM",
+                "wrappedKey": b64encode(os.urandom(16)).decode('utf-8')
+            }
+            self.incr_counter("room-with-context")
+
+
         resp = self.session.post(
             self.base_url + '/rooms',
-            data=json.dumps({
-                "roomName": "UX Discussion",
-                "expiresIn": 1,
-                "roomOwner": "Alexis",
-                "maxSize": MAX_NUMBER_OF_PEOPLE_JOINING
-            }),
+            data=json.dumps(data),
             headers={'Content-Type': 'application/json'},
             auth=self.hawk_room_owner
         )
