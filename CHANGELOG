@@ -3,10 +3,11 @@ Changelog
 
 This document describes changes between each past release.
 
-0.17.4 (unreleased)
+0.17.4 (2015-04-09)
 -------------------
 
-- No changes yet.
+- Downgrade request to 2.45.0, since later versions introduce a latency in our
+  requests.
 
 
 0.17.3 (2015-03-31)
