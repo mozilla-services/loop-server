@@ -44,7 +44,10 @@ AwsDriver.prototype = {
       Key: filename,
       ContentType: CONTENT_TYPE
     }, function(err) {
-      if (err) return callback(err);
+      if (err) {
+        err.message = err.message + "(bucket name: " + self._publicBucket + ")";
+        return callback(err);
+      }
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
           'loop.aws.write',
@@ -67,11 +70,14 @@ AwsDriver.prototype = {
     var self = this;
     var startTime = Date.now();
     s3.getObject({
-      Bucket: this._publicBucket,
+      Bucket: self._publicBucket,
       Key: filename
     }, function(err, data) {
       if (err) {
-        if (err.code !== "NoSuchKey") return callback(err);
+        if (err.code !== "NoSuchKey") {
+          err.message = err.message + "(bucket name: " + self._publicBucket + ")";
+          return callback(err);
+        }
         return callback(null, null);
       }
       var body = data.Body.toString();
@@ -100,7 +106,10 @@ AwsDriver.prototype = {
       Bucket: this._publicBucket,
       Key: filename
     }, function(err) {
-      if (err && err.code !== "NoSuchKey") return callback(err);
+      if (err && err.code !== "NoSuchKey") {
+        err.message = err.message + "(bucket name: " + self._publicBucket + ")";
+        return callback(err);
+      }
       if (self.statsdClient !== undefined) {
         self.statsdClient.timing(
           'loop.aws.remove',
