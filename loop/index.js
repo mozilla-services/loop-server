@@ -168,7 +168,7 @@ if (argv.hasOwnProperty("fd")) {
     hekaLogger.debug("server", 'Server listening on fd://' + fd);
   });
 } else {
-  server.listen(conf.get('port'), conf.get('ip'), function() {
+  server.listen(conf.get('port'), conf.get('ip'), conf.get('acceptBacklog'), function() {
     hekaLogger.debug("server", 'Server listening on http://' +
                      conf.get('ip') + ':' + conf.get('port'));
   });
