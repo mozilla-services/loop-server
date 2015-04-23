@@ -479,6 +479,11 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
           storage.getRoomParticipant(req.token, participantHmac,
             function(err, participant) {
               if (res.serverError(err)) return;
+              if (participant === null) {
+                sendError(res, 400, errors.NOT_ROOM_PARTICIPANT,
+                  "Unable to leave a room you have not joined.");
+                return;
+              }
               req.roomConnectionId = participant.id;
               storage.deleteRoomParticipant(req.token, participantHmac,
                 function(err) {
