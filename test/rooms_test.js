@@ -1867,7 +1867,7 @@ describe("/rooms", function() {
           });
         });
 
-        it("should reject a leave if nobody is in the room", function(done) {
+        it("should reject if user had not joined the room", function(done) {
           register(hawkCredentials, "http://notmyidea.org").end(function(err) {
             if (err) throw err;
             createRoom(hawkCredentials).end(function(err, res) {

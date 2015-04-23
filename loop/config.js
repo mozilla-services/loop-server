@@ -100,7 +100,7 @@ var conf = convict({
     default: 5000,
     env: "PORT"
   },
-  acceptBacklog:  {
+  acceptBacklog: {
     doc: "The maximum length of the queue of pending connections",
     format: Number,
     default: 511,
