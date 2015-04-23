@@ -4,6 +4,10 @@
 
 "use strict";
 
+var heapdump = require('heapdump');
+var util = require('util');
+var path = require('path');
+
 var conf = require('./config').conf;
 
 if (conf.get('newRelic').activated) {
@@ -193,6 +197,23 @@ function shutdown(callback) {
 }
 
 process.on('SIGTERM', shutdown);
+
+process.on('uncaughtException', function(err) {
+  ravenClient.captureError(err);
+  if (conf.get('dumpHeap').activated === true) {
+    var dir = conf.get('dumpHeap').location;
+    var now = Date.now();
+    var nanos = process.hrtime()[1];
+    var filename = util.format('%s-%s.heapsnapshot', now, nanos);
+
+    heapdump.writeSnapshot(path.join(dir, filename), function(err) {
+      if (err) {
+        ravenClient.captureError(err);
+      }
+      process.exit(1);
+    });
+  }
+});
 
 module.exports = {
   app: app,
