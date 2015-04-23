@@ -458,6 +458,18 @@ var conf = convict({
       default: "Loop Server"
     }
   },
+  dumpHeap: {
+    activated: {
+      doc: "Defines if uncaught exceptions should dump snapshots",
+      default: true,
+      format: Boolean
+    },
+    location: {
+      doc: "Location where to output the files (directory).",
+      format: String,
+      default: '/tmp'
+    }
+  },
   rooms: {
     defaultTTL: {
       doc: "The default TTL for a room (in hours)",
