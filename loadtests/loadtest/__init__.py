@@ -36,6 +36,7 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
     def test_http_calls(self):
         self.setupCall()
         self.setupRoom()
+        self.test_401_with_stale_timestamp()
 
     def test_websockets(self):
         self._test_websockets_basic_scenario()

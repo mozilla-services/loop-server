@@ -74,3 +74,30 @@ class TestCallsMixin(object):
         self.assertEquals(resp.status_code, 204,
                           "Revoke call-url token failed: %s" % resp.content)
         self.incr_counter("revoke_token")
+
+    def test_401_with_stale_timestamp(self):
+        data = {'simple_push_url': self.simple_push_url}
+        resp = self.session.post(
+            self.base_url + '/registration',
+            data=json.dumps(data),
+            headers={'Content-Type': 'application/json'})
+        self.assertEquals(200, resp.status_code,
+                          "Registration failed: %s" % resp.content)
+
+        try:
+            hawk_auth = HawkAuth(
+                hawk_session=resp.headers['hawk-session-token'],
+                server_url=self.server_url, _timestamp=1431698847)
+        except KeyError:
+            print resp
+            raise
+        else:
+            resp = self.session.post(
+                self.base_url + '/registration',
+                data=json.dumps({'simple_push_url': self.simple_push_url}),
+                headers={'Content-Type': 'application/json'},
+                auth=hawk_auth
+            )
+            self.assertEquals(resp.status_code, 401,
+                              "Staled timestamp verification failed.")
+            self.incr_counter("stale-timestamp-verification")
