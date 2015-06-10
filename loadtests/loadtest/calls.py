@@ -5,7 +5,7 @@ from requests_hawk import HawkAuth
 class TestCallsMixin(object):
     def setupCall(self):
         self.register()
-        token = self.generate_call_url()
+        token = self.generate_call()
         call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
         return token, call_data, calls
@@ -31,15 +31,15 @@ class TestCallsMixin(object):
             self.incr_counter("register")
             return self.hawk_auth
 
-    def generate_call_url(self):
+    def generate_call(self):
         resp = self.session.post(
-            self.base_url + '/call-url',
+            self.base_url + '/calls',
             data=json.dumps({'callerId': 'alexis@mozilla.com'}),
             headers={'Content-Type': 'application/json'},
             auth=self.hawk_auth
         )
         self.assertEquals(resp.status_code, 200,
-                          "Call-Url creation failed: %s" % resp.content)
+                          "Call creation failed: %s" % resp.content)
         self.incr_counter("generate-call-url")
         data = self._get_json(resp)
         call_url = data.get('callUrl', data.get('call_url'))
