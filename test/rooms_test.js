@@ -1147,6 +1147,34 @@ describe("/rooms", function() {
         });
     });
 
+    it("should return 400 if provided context is null", function (done) {
+      supertest(app)
+        .post('/rooms')
+        .type('json')
+        .hawk(hawkCredentials)
+        .send({
+          roomOwner: "Alexis",
+          roomName: "UX discussion",
+          maxSize: "3",
+          expiresIn: "10"
+        })
+        .expect(201)
+        .end(function(err, postRes) {
+          if (err) throw err;
+          supertest(app)
+            .patch('/rooms/' + postRes.body.roomToken)
+            .hawk(hawkCredentials)
+            .send({
+              context: null
+            })
+            .expect(400)
+            .end(function(err, getRes) {
+              if (err) throw err;
+              done();
+            });
+        });
+    });
+
     it("should store the context if provided", function(done) {
       supertest(app)
         .post('/rooms')
