@@ -197,7 +197,8 @@ module.exports = function(conf, logError, storage) {
       }
 
       var context = req.body.context;
-      if (!(context.hasOwnProperty("value") &&
+      if (!(context &&
+            context.hasOwnProperty("value") &&
             context.hasOwnProperty("alg") &&
             context.hasOwnProperty("wrappedKey"))) {
         sendError(res, 400, errors.INVALID_PARAMETERS,
