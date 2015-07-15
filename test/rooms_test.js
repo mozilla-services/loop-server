@@ -1702,6 +1702,15 @@ describe("/rooms", function() {
           });
         });
 
+        it("should log the roomConnectionId", function(done) {
+          updateStateRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            expect(logs).to.length(3);
+            expect(logs[2].roomConnectionId).to.not.be.undefined;
+            done();
+          });
+        });
+
         it("should log room status data if successful.", function(done) {
           validateRoomStatus
             .send(exampleBody)
