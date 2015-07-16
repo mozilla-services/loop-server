@@ -477,7 +477,7 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                 if (res.serverError(err)) return;
                 if (participant === null) {
                   sendError(res, 400, errors.NOT_ROOM_PARTICIPANT,
-                            "Unable to leave a room you have not joined.");
+                            "Can't update status for a room you aren't in.");
                   return;
                 }
                 req.roomConnectionId = participant.id;
