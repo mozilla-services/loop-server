@@ -472,7 +472,17 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
         handleUpdateStatus: function(req, res) {
           // Room status update is validated and logged in middlewares
           validators.validateRoomStatusUpdate(req, res, function () {
-            res.status(204).json();
+            storage.getRoomParticipant(req.token, participantHmac,
+              function(err, participant) {
+                if (res.serverError(err)) return;
+                if (participant === null) {
+                  sendError(res, 400, errors.NOT_ROOM_PARTICIPANT,
+                            "Can't update status for a room you aren't in.");
+                  return;
+                }
+                req.roomConnectionId = participant.id;
+                res.status(204).json();
+              });
           });
         },
         handleLeave: function(req, res) {

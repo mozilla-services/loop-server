@@ -1702,6 +1702,48 @@ describe("/rooms", function() {
           });
         });
 
+        it("should log the roomConnectionId", function(done) {
+          updateStateRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            expect(logs).to.length(3);
+            expect(logs[2].roomConnectionId).to.not.be.undefined;
+            done();
+          });
+        });
+
+        it("should reject if user had not joined the room", function(done) {
+          register(hawkCredentials, "http://notmyidea.org").end(function(err) {
+            if (err) throw err;
+            createRoom(hawkCredentials).end(function(err, res) {
+              if (err) throw err;
+              var roomToken = res.body.roomToken;
+
+              updateStateRoom(hawkCredentials, roomToken, undefined, 400)
+                .end(function(err, res) {
+                  if (err) throw err;
+                  expectFormattedError(
+                    res, 400, errors.NOT_ROOM_PARTICIPANT,
+                    "Can't update status for a room you aren't in.");
+                  done();
+                });
+            });
+          });
+        });
+
+        it("should return a 503 in case of storage error.", function(done) {
+          sandbox.stub(storage, "getRoomParticipant",
+            function(roomTokens, participantHmac, callback) {
+              callback("error");
+            });
+
+          updateStateRoom(hawkCredentials, roomToken, undefined, 503).end(function(err, res) {
+            if (err) throw err;
+            expectFormattedError(res, 503, errors.BACKEND,
+                                 "Service Unavailable");
+            done();
+          });
+        });
+
         it("should log room status data if successful.", function(done) {
           validateRoomStatus
             .send(exampleBody)
@@ -1907,9 +1949,9 @@ describe("/rooms", function() {
                   res, 400, errors.NOT_ROOM_PARTICIPANT,
                   "Unable to leave a room you have not joined.");
                 done();
-              })
-            })
-          })
+              });
+            });
+          });
         });
       });
     });
