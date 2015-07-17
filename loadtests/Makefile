@@ -12,7 +12,7 @@ INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 .env.install:
 	virtualenv ./venv
 	$(INSTALL) pexpect >> loadtest.log && \
-	$(INSTALL) configparser==3.3.0r2 >> loadtest.log && \
+	$(INSTALL) configparser==3.3.0post2 >> loadtest.log && \
 	$(INSTALL) gevent >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
