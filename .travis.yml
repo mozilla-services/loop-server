@@ -8,6 +8,8 @@ python:
 node_js:
   - "0.10"
 
+sudo: false
+
 services: redis-server
 
 before_install:
