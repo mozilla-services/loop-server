@@ -1,18 +1,54 @@
 import json
+import os
+import uuid
 from requests_hawk import HawkAuth
+
+import fxa.oauth
+from fxa.core import Client
+from fxa.tests.utils import TestEmailAccount
+
+# XXX Using the same fxa as the dev server, as the staging setup isn't working
+# for me.
+DEFAULT_FXA_URL = "https://stable.dev.lcip.org/auth/"
+DEFAULT_FXA_OAUTH_URL = "https://oauth-stable.dev.lcip.org/v1"
 
 
 class TestCallsMixin(object):
     def setupCall(self):
+        self.getFxAToken()
         self.register()
         token = self.generate_call()
         call_data = self.initiate_call(token)
         calls = self.list_pending_calls()
         return token, call_data, calls
 
+    def getFxAToken(self):
+        # XXX incomplete, doesn't work.
+        random_user = uuid.uuid4().hex
+        user_email = "loop-%s@restmail.net" % random_user
+        acct = TestEmailAccount(user_email)
+        client = Client(os.getenv("FXA_URL", DEFAULT_FXA_URL))
+        fxa_session = client.create_account(user_email, random_user)
+        print user_email
+        def is_verify_email(m):
+            return "x-verify-code" in m["headers"]
+
+        message = acct.wait_for_email(is_verify_email)
+        fxa_session.verify_email_code(message["headers"]["x-verify-code"])
+
+        assertion = fxa_session.get_identity_assertion(audience='Loop')
+
+        fxaClient = fxa.oauth.Client(server_url=DEFAULT_FXA_OAUTH_URL, client_id="263ceaa5546dce83")
+        # XXX This fails for some reason.
+        code = fxaClient.authorize_code(assertion, scope='Loop')
+        token = fxaClient.trade_code(code)
+
+        print token
+
     def register(self, data=None):
         if data is None:
             data = {'simple_push_url': self.simple_push_url}
+
         resp = self.session.post(
             self.base_url + '/registration',
             data=json.dumps(data),

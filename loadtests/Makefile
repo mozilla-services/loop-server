@@ -1,5 +1,5 @@
-SERVER_URL = https://loop.stage.mozaws.net:443
-SIMPLE_PUSH_URL = https://call.stage.mozaws.net/
+SERVER_URL = https://loop-dev.stage.mozaws.net/
+SIMPLE_PUSH_URL = https://loop-webapp-dev.stage.mozaws.net/
 
 # Hackety-hack around OSX system python bustage.
 # The need for this should go away with a future osx/xcode update.
@@ -16,6 +16,7 @@ INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 	$(INSTALL) gevent >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
+	$(INSTALL) PyFxA >> loadtest.log && \
 	rm loadtest.log || cat loadtest.log
 	touch $@
 
