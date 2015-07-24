@@ -12,7 +12,7 @@ var dedupeArray = require('./utils').dedupeArray;
  **/
 var SimplePush = function(statsdClient, logError) {
   this.statsdClient = statsdClient;
-  this.logError = logError;
+  this.logError = logError || function() {};
 }
 
 SimplePush.prototype = {
