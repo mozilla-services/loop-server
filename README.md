@@ -88,6 +88,15 @@ ulimit -S -n 2048
 You should report bugs/issues or feature requests via [the loop-server bugzilla
 component](https://bugzilla.mozilla.org/enter_bug.cgi?product=Hello (Loop)&component=Server)
 
+## How do I create the release "deploy to stage" bug?
+
+1. Install [deploy-tix](https://github.com/rpappalax/deploy-tix)
+2. Run it.
+
+```sh
+ticket -r mozilla -a loop-client -e stage -n 0.17.8 -z -u bugzilla_username -p bugzilla_password
+```
+
 ## Estimate Redis Memory Usage
 
 To estimate Redis usage, checkout the repository and run the `redis_usage.py`
