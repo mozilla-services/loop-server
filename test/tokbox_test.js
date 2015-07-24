@@ -71,11 +71,12 @@ describe("TokBox", function() {
   });
 
   describe("#getSessionTokens", function() {
-    var tokBox, openTokSpy, statsdClient, statsdSpy;
+    var tokBox, openTokSpy, statsdClient, statsdTimer, statsdCount;
 
     beforeEach(function() {
-      statsdClient = { timing: function() {} };
-      statsdSpy = sandbox.spy(statsdClient, "timing");
+      statsdClient = { timing: function() {}, count: function() {} };
+      statsdTimer = sandbox.spy(statsdClient, "timing");
+      statsdCount = sandbox.spy(statsdClient, "count");
 
       openTokSpy = sandbox.spy(loopTokbox, "OpenTok");
       openTokSpy.withArgs(
@@ -130,7 +131,8 @@ describe("TokBox", function() {
 
       tokBox.getSessionTokens(function(error, info) {
         expect(error).eql(null);
-        assert.calledOnce(statsdSpy);
+        assert.calledOnce(statsdTimer);
+        assert.calledOnce(statsdCount);
         done();
       });
 
