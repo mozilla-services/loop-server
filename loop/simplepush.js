@@ -10,8 +10,9 @@ var dedupeArray = require('./utils').dedupeArray;
 /**
  * Simple client to handle simple push notifications
  **/
-var SimplePush = function(statsdClient) {
+var SimplePush = function(statsdClient, logError) {
   this.statsdClient = statsdClient;
+  this.logError = logError;
 }
 
 SimplePush.prototype = {
@@ -35,7 +36,7 @@ SimplePush.prototype = {
       }, function(err) {
         if (self.statsdClient !== undefined) {
           if (err) {
-            console.error(simplePushUrl, err);
+            self.logError(err);
             self.statsdClient.count("loop.simplepush.call.failures", 1);
             self.statsdClient.count("loop.simplepush.call." + reason + ".failures", 1);
           } else {

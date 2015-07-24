@@ -43,7 +43,7 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
           var pushStatus;
           if (req.query.SP_LOCATION !== undefined) {
             request.put(req.query.SP_LOCATION, function(error, response) {
-              if (error) console.error(req.query.SP_LOCATION, error);
+              if (error) logError(error);
               pushStatus = (!error && response.statusCode === 200);
               returnStatus(storageStatus, requestError, pushStatus);
               if (statsdClient !== undefined) {

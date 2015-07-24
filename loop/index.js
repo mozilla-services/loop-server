@@ -90,7 +90,7 @@ var corsEnabled = cors({
 });
 
 var SimplePush = require("./simplepush");
-var simplePush = new SimplePush(statsdClient);
+var simplePush = new SimplePush(statsdClient, logError);
 
 
 var app = express();
