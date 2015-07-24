@@ -728,7 +728,7 @@ function runOnPrefix(apiPrefix) {
           .end(function(err) {
             if (err) throw err;
             assert.calledOnce(statsdClient.count);
-            assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
+            assert.calledWithExactly(statsdClient.count, "loop.call-urls", 1);
             done();
           });
       });
@@ -858,7 +858,7 @@ function runOnPrefix(apiPrefix) {
             assert.calledOnce(statsdClient.count);
             assert.calledWithExactly(
               statsdClient.count,
-              "loop-activated-users",
+              "loop.activated-users",
               1
             );
             done();

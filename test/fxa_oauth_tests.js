@@ -125,7 +125,7 @@ describe('/fxa-oauth', function () {
             assert.calledOnce(statsdClient.count);
             assert.calledWithExactly(
               statsdClient.count,
-              "loop-activated-users",
+              "loop.activated-users",
               1
             );
             done();

@@ -47,7 +47,7 @@ module.exports = function (app, conf, logError, storage, auth, validators,
         }
 
         if (statsdClient !== undefined) {
-          statsdClient.count('loop-call-urls', 1);
+          statsdClient.count('loop.call-urls', 1);
         }
 
         if (req.urlData.issuer && req.urlData.issuer.length) {
