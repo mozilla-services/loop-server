@@ -86,7 +86,7 @@ ulimit -S -n 2048
 ## Where do I report bugs?
 
 You should report bugs/issues or feature requests via [the loop-server bugzilla
-component](https://bugzilla.mozilla.org/enter_bug.cgi?product=Loop&component=Server)
+component](https://bugzilla.mozilla.org/enter_bug.cgi?product=Hello (Loop)&component=Server)
 
 ## Estimate Redis Memory Usage
 
