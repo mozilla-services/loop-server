@@ -35,6 +35,7 @@ SimplePush.prototype = {
       }, function(err) {
         if (self.statsdClient !== undefined) {
           if (err) {
+            console.error(simplePushUrl, err);
             self.statsdClient.count("loop.simplepush.call.failures", 1);
             self.statsdClient.count("loop.simplepush.call." + reason + ".failures", 1);
           } else {
