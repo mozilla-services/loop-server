@@ -117,7 +117,7 @@ var getValidators = require("./routes/validators");
 var validators = getValidators(conf, logError, storage);
 
 var home = require("./routes/home");
-home(apiRouter, conf, logError, storage, tokBox);
+home(apiRouter, conf, logError, storage, tokBox, statsdClient);
 
 var registration = require("./routes/registration");
 registration(apiRouter, conf, logError, storage, auth, validators);

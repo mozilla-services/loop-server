@@ -32,8 +32,16 @@ SimplePush.prototype = {
       request.put({
         url: simplePushUrl,
         form: { version: version }
-      }, function() {
-        // Catch errors.
+      }, function(err) {
+        if (self.statsdClient !== undefined) {
+          if (err) {
+            self.statsdClient.count("loop.simplepush.call.failures", 1);
+            self.statsdClient.count("loop.simplepush.call." + reason + ".failures", 1);
+          } else {
+            self.statsdClient.count("loop.simplepush.call.success", 1);
+            self.statsdClient.count("loop.simplepush.call." + reason + ".success", 1);
+          }
+        }
       });
     });
   }
