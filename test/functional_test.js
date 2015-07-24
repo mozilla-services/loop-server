@@ -309,6 +309,7 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "put", function(options, callback) {
           callback(new Error("error"));
         });
+
         supertest(app)
           .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
           .expect(503)
@@ -319,6 +320,35 @@ function runOnPrefix(apiPrefix) {
               'provider': true,
               'push': false
             });
+            done();
+          });
+      });
+
+      it("should count SimplePush call if it's not able to reach the SP url", function(done) {
+        sandbox.stub(tokBox, "ping", function(options, callback) {
+          callback(null);
+        });
+
+        sandbox.stub(request, "put", function(options, callback) {
+          callback(new Error("error"));
+        });
+
+        sandbox.stub(statsdClient, "count");
+
+        supertest(app)
+          .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+          .expect(503)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.eql({
+              'storage': true,
+              'provider': true,
+              'push': false
+            });
+            assert.calledTwice(statsdClient.count);
+            assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
+            assert.calledWithExactly(statsdClient.count,
+                                     "loop.simplepush.call.heartbeat.failures", 1);
             done();
           });
       });
@@ -342,6 +372,37 @@ function runOnPrefix(apiPrefix) {
                 'provider': true,
                 'push': true
               });
+              done();
+            });
+      });
+
+      it("should count SP call if it's able to reach all backends (with SP specified)",
+        function(done) {
+          sandbox.stub(tokBox, "ping", function(options, callback) {
+            callback(null);
+          });
+
+          sandbox.stub(request, "put", function(options, callback) {
+            callback(null, {statusCode: 200});
+          });
+
+          sandbox.stub(statsdClient, "count");
+
+          supertest(app)
+            .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+            .expect(200)
+            .end(function(err, res) {
+              if (err) throw err;
+              expect(res.body).to.eql({
+                'storage': true,
+                'provider': true,
+                'push': true
+              });
+              assert.calledTwice(statsdClient.count);
+              assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
+              assert.calledWithExactly(statsdClient.count,
+                                       "loop.simplepush.call.heartbeat.success", 1);
+
               done();
             });
       });
@@ -667,7 +728,7 @@ function runOnPrefix(apiPrefix) {
           .end(function(err) {
             if (err) throw err;
             assert.calledOnce(statsdClient.count);
-            assert.calledWithExactly(statsdClient.count, "loop-call-urls", 1);
+            assert.calledWithExactly(statsdClient.count, "loop.call-urls", 1);
             done();
           });
       });
@@ -797,7 +858,7 @@ function runOnPrefix(apiPrefix) {
             assert.calledOnce(statsdClient.count);
             assert.calledWithExactly(
               statsdClient.count,
-              "loop-activated-users",
+              "loop.activated-users",
               1
             );
             done();

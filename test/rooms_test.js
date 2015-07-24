@@ -1168,7 +1168,7 @@ describe("/rooms", function() {
               context: null
             })
             .expect(400)
-            .end(function(err, getRes) {
+            .end(function(err) {
               if (err) throw err;
               done();
             });

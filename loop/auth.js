@@ -76,7 +76,7 @@ module.exports = function(conf, logError, storage, statsdClient) {
     var hawkIdHmac = hmac(tokenId, conf.get("hawkIdSecret"));
     storage.setHawkSession(hawkIdHmac, authKey, function(err) {
       if (statsdClient && err === null) {
-        statsdClient.count('loop-activated-users', 1);
+        statsdClient.count('loop.activated-users', 1);
       }
       callback(err);
     });

@@ -8,7 +8,7 @@ var loopPackageData = require('../../package.json');
 var git = require('git-rev');
 var request = require('request');
 
-module.exports = function(app, conf, logError, storage, tokBox) {
+module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
   /**
    * Checks that the service and its dependencies are healthy.
    **/
@@ -43,8 +43,19 @@ module.exports = function(app, conf, logError, storage, tokBox) {
           var pushStatus;
           if (req.query.SP_LOCATION !== undefined) {
             request.put(req.query.SP_LOCATION, function(error, response) {
+              if (error) logError(error);
               pushStatus = (!error && response.statusCode === 200);
               returnStatus(storageStatus, requestError, pushStatus);
+              if (statsdClient !== undefined) {
+                statsdClient.count('loop.simplepush.call', 1);
+                var counter_push_status_counter;
+                if (pushStatus) {
+                  counter_push_status_counter = 'loop.simplepush.call.heartbeat.success';
+                } else {
+                  counter_push_status_counter = 'loop.simplepush.call.heartbeat.failures';
+                }
+                statsdClient.count(counter_push_status_counter, 1);
+              }
             });
           } else {
             returnStatus(storageStatus, requestError, pushStatus);
