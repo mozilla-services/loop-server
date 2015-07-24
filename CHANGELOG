@@ -3,11 +3,21 @@ Changelog
 
 This document describes changes between each past release.
 
+0.17.8 (2015-07-24)
+-------------------
+
+- Add SimplePush statsd counter (#342)
+- Add TokBox statsd counter (#335)
+- Log roomConnectionId on action:status calls (#339)
+- Handle room creation with null context (#338)
+
+
 0.17.7 (2015-04-24)
 -------------------
 
 - Reject leave on non-joined rooms (#332)
 - Dump the heap on uncaught errors (#333)
+
 
 0.17.6 (2015-04-21)
 -------------------
