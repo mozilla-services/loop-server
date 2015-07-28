@@ -14,7 +14,7 @@ class TestWebsocketMixin(object):
         return ws
 
     def _test_websockets_basic_scenario(self):
-        token, call_data, calls = self.setupCall()
+        call_data, calls = self.setupCall()
         progress_url = call_data['progressURL']
         caller_websocket_token = call_data['websocketToken']
         callee_websocket_token = calls[0]['websocketToken']
@@ -97,7 +97,7 @@ class TestWebsocketMixin(object):
         side.
 
         """
-        token, call_data, calls = self.setupCall()
+        call_data, calls = self.setupCall()
         progress_url = call_data['progressURL']
         caller_websocket_token = call_data['websocketToken']
         callee_websocket_token = calls[0]['websocketToken']
@@ -142,7 +142,7 @@ class TestWebsocketMixin(object):
         devices should stop ringing after some time.
 
         """
-        token, call_data, calls = self.setupCall()
+        call_data, calls = self.setupCall()
         progress_url = call_data['progressURL']
         caller_websocket_token = call_data['websocketToken']
         callee_websocket_token = calls[0]['websocketToken']
@@ -195,7 +195,7 @@ class TestWebsocketMixin(object):
         server should close the connection after some time.
 
         """
-        token, call_data, calls = self.setupCall()
+        call_data, calls = self.setupCall()
         progress_url = call_data['progressURL']
         caller_websocket_token = call_data['websocketToken']
         callee_websocket_token = calls[0]['websocketToken']
@@ -257,4 +257,3 @@ class TestWebsocketMixin(object):
 
         while not self.terminated:
             gevent.sleep(.5)
-

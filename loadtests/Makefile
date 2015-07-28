@@ -16,7 +16,7 @@ INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 	$(INSTALL) gevent >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
-	$(INSTALL) PyFxA >> loadtest.log && \
+	$(INSTALL) PyFxA[openssl] >> loadtest.log && \
 	rm loadtest.log || cat loadtest.log
 	touch $@
 
