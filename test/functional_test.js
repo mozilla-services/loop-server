@@ -247,7 +247,16 @@ function runOnPrefix(apiPrefix) {
     describe("GET /__hearbeat__", function() {
 
       it("should return a 503 if storage is down", function(done) {
+        // TokBox
         sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // SimplePush
+        sandbox.stub(request, "put", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // FxA Verifier
+        sandbox.stub(request, "get", function(options, callback) {
           callback(null, {statusCode: 200});
         });
         sandbox.stub(storage, "ping", function(callback) {
@@ -261,15 +270,25 @@ function runOnPrefix(apiPrefix) {
             if (err) throw err;
             expect(res.body).to.eql({
               'storage': false,
-              'provider': true
+              'provider': true,
+              'verifier': true
             });
             done();
           });
       });
 
       it("should return a 503 if provider service is down", function(done) {
+        // TokBox
         sandbox.stub(request, "post", function(options, callback) {
           callback(new Error("blah"));
+        });
+        // SimplePush
+        sandbox.stub(request, "put", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // FxA Verifier
+        sandbox.stub(request, "get", function(options, callback) {
+          callback(null, {statusCode: 200});
         });
         supertest(app)
           .get(apiPrefix + '/__heartbeat__')
@@ -279,14 +298,24 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': false,
-              'message': "TokBox Error: The request failed: Error: blah"
+              'message': "TokBox Error: The request failed: Error: blah",
+              'verifier': true
             });
             done();
           });
       });
 
       it("should return a 200 if all dependencies are ok", function(done) {
+        // TokBox
         sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // SimplePush
+        sandbox.stub(request, "put", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // FxA Verifier
+        sandbox.stub(request, "get", function(options, callback) {
           callback(null, {statusCode: 200});
         });
         supertest(app)
@@ -296,7 +325,8 @@ function runOnPrefix(apiPrefix) {
             if (err) throw err;
             expect(res.body).to.eql({
               'storage': true,
-              'provider': true
+              'provider': true,
+              'verifier': true
             });
             done();
           });
@@ -307,8 +337,17 @@ function runOnPrefix(apiPrefix) {
           callback(null);
         });
 
+        // TokBox
+        sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // SimplePush
         sandbox.stub(request, "put", function(options, callback) {
           callback(new Error("error"));
+        });
+        // FxA Verifier
+        sandbox.stub(request, "get", function(options, callback) {
+          callback(null, {statusCode: 200});
         });
 
         supertest(app)
@@ -319,7 +358,8 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': true,
-              'push': false
+              'push': false,
+              'verifier': true
             });
             done();
           });
@@ -330,8 +370,17 @@ function runOnPrefix(apiPrefix) {
           callback(null);
         });
 
+        // TokBox
+        sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // SimplePush
         sandbox.stub(request, "put", function(options, callback) {
           callback(new Error("error"));
+        });
+        // FxA Verifier
+        sandbox.stub(request, "get", function(options, callback) {
+          callback(null, {statusCode: 200});
         });
 
         sandbox.stub(statsdClient, "count");
@@ -344,7 +393,8 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': true,
-              'push': false
+              'push': false,
+              'verifier': true
             });
             assert.calledTwice(statsdClient.count);
             assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
@@ -360,9 +410,19 @@ function runOnPrefix(apiPrefix) {
             callback(null);
           });
 
+          // TokBox
+          sandbox.stub(request, "post", function(options, callback) {
+            callback(null, {statusCode: 200});
+          });
+          // SimplePush
           sandbox.stub(request, "put", function(options, callback) {
             callback(null, {statusCode: 200});
           });
+          // FxA Verifier
+          sandbox.stub(request, "get", function(options, callback) {
+            callback(null, {statusCode: 200});
+          });
+
           supertest(app)
             .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
             .expect(200)
@@ -371,7 +431,8 @@ function runOnPrefix(apiPrefix) {
               expect(res.body).to.eql({
                 'storage': true,
                 'provider': true,
-                'push': true
+                'push': true,
+                'verifier': true
               });
               done();
             });
@@ -383,7 +444,16 @@ function runOnPrefix(apiPrefix) {
             callback(null);
           });
 
+          // TokBox
+          sandbox.stub(request, "post", function(options, callback) {
+            callback(null, {statusCode: 200});
+          });
+          // SimplePush
           sandbox.stub(request, "put", function(options, callback) {
+            callback(null, {statusCode: 200});
+          });
+          // FxA Verifier
+          sandbox.stub(request, "get", function(options, callback) {
             callback(null, {statusCode: 200});
           });
 
@@ -397,7 +467,8 @@ function runOnPrefix(apiPrefix) {
               expect(res.body).to.eql({
                 'storage': true,
                 'provider': true,
-                'push': true
+                'push': true,
+                'verifier': true
               });
               assert.calledTwice(statsdClient.count);
               assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
@@ -406,6 +477,33 @@ function runOnPrefix(apiPrefix) {
 
               done();
             });
+      });
+
+      it("should return a 503 if the FxA verifier is down.", function(done) {
+        // TokBox
+        sandbox.stub(request, "post", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // SimplePush
+        sandbox.stub(request, "put", function(options, callback) {
+          callback(null, {statusCode: 200});
+        });
+        // FxA Verifier
+        sandbox.stub(request, "get", function(options, callback) {
+          callback(null, {statusCode: 503});
+        });
+        supertest(app)
+          .get(apiPrefix + '/__heartbeat__')
+          .expect(503)
+          .end(function(err, res) {
+            if (err) throw err;
+            expect(res.body).to.eql({
+              'storage': true,
+              'provider': true,
+              'verifier': false
+            });
+            done();
+          });
       });
     });
 
