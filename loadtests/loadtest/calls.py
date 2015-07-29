@@ -1,21 +1,57 @@
 import json
+import os
+import uuid
+from six.moves.urllib.parse import urlparse
 from requests_hawk import HawkAuth
+
+import fxa.oauth
+from fxa.core import Client
+from fxa.tests.utils import TestEmailAccount
+from fxa.plugins.requests import FxABrowserIDAuth
+
+# XXX Using the same fxa as the dev server, as the staging setup isn't working
+# for me.
+DEFAULT_FXA_URL = "https://api.accounts.firefox.com/v1"
 
 
 class TestCallsMixin(object):
     def setupCall(self):
-        self.register()
-        token = self.generate_call_url()
-        call_data = self.initiate_call(token)
+        self.register(auth=self.auth)
+        call_data = self.initiate_call()
         calls = self.list_pending_calls()
-        return token, call_data, calls
+        return call_data, calls
 
-    def register(self, data=None):
+    def getAuth(self):
+        self.account_server_url = os.getenv("FXA_URL", DEFAULT_FXA_URL)
+        random_user = uuid.uuid4().hex
+        self.user_email = "loop-%s@restmail.net" % random_user
+        acct = TestEmailAccount(self.user_email)
+        client = Client(self.account_server_url)
+        fxa_session = client.create_account(self.user_email,
+                                            password=random_user)
+        def is_verify_email(m):
+            return "x-verify-code" in m["headers"]
+
+        message = acct.wait_for_email(is_verify_email)
+        fxa_session.verify_email_code(message["headers"]["x-verify-code"])
+
+        url = urlparse(self.base_url)
+        audience = "%s://%s" % (url.scheme, url.hostname)
+
+        return FxABrowserIDAuth(
+            self.user_email,
+            password=random_user,
+            audience=audience,
+            server_url=self.account_server_url)
+
+    def register(self, data=None, auth=None):
         if data is None:
             data = {'simple_push_url': self.simple_push_url}
+
         resp = self.session.post(
             self.base_url + '/registration',
             data=json.dumps(data),
+            auth=auth,
             headers={'Content-Type': 'application/json'})
         self.assertEquals(200, resp.status_code,
                           "Registration failed: %s" % resp.content)
@@ -31,26 +67,14 @@ class TestCallsMixin(object):
             self.incr_counter("register")
             return self.hawk_auth
 
-    def generate_call_url(self):
-        resp = self.session.post(
-            self.base_url + '/call-url',
-            data=json.dumps({'callerId': 'alexis@mozilla.com'}),
-            headers={'Content-Type': 'application/json'},
-            auth=self.hawk_auth
-        )
-        self.assertEquals(resp.status_code, 200,
-                          "Call-Url creation failed: %s" % resp.content)
-        self.incr_counter("generate-call-url")
-        data = self._get_json(resp)
-        call_url = data.get('callUrl', data.get('call_url'))
-        return call_url.split('/').pop()
-
-    def initiate_call(self, token):
+    def initiate_call(self):
         # This happens when not authenticated.
         resp = self.session.post(
-            self.base_url + '/calls/%s' % token,
-            data=json.dumps({"callType": "audio-video"}),
-            headers={'Content-Type': 'application/json'}
+            self.base_url + '/calls',
+            data=json.dumps({'calleeId': self.user_email,
+                             'callType': 'audio-video'}),
+            headers={'Content-Type': 'application/json'},
+            auth=self.hawk_auth
         )
         self.assertEquals(resp.status_code, 200,
                           "Call Initialization failed: %s" % resp.content)

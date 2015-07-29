@@ -23,6 +23,7 @@ var tokBox = loop.tokBox;
 var storage = loop.storage;
 var statsdClient = loop.statsdClient;
 var getProgressURL = require("../loop/utils").getProgressURL;
+var time = require('../loop/utils').time;
 
 var Token = require("express-hawkauth").Token;
 var tokenlib = require("../loop/tokenlib");
@@ -480,12 +481,16 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a list of call-url with some information",
         function(done) {
-          supertest(app)
-            .post(apiPrefix + '/call-url')
-            .hawk(hawkCredentials)
-            .type('json')
-            .send({callerId: callerId, expiresIn: 5, issuer: "alexis"})
-            .end(function(err) {
+          storage.addUserCallUrlData(userHmac,
+            tokenlib.generateToken(conf.get('callUrls').tokenSize), {
+              userMac: userHmac,
+              callerId: callerId,
+              timestamp: time(),
+              issuer: "alexis",
+              subject: undefined,
+              expires: time() + (10 * tokenlib.ONE_HOUR)
+            },
+            function(err) {
               if (err) throw err;
 
               jsonReq.send({}).expect(200).end(function(err, res) {
@@ -507,13 +512,16 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a list of call-url with some information & subject",
         function(done) {
-          supertest(app)
-            .post(apiPrefix + '/call-url')
-            .hawk(hawkCredentials)
-            .type('json')
-            .send({callerId: callerId, expiresIn: 5, issuer: "alexis",
-                   subject: "dummySubject"})
-            .end(function(err) {
+          storage.addUserCallUrlData(userHmac,
+            tokenlib.generateToken(conf.get('callUrls').tokenSize), {
+              userMac: userHmac,
+              callerId: callerId,
+              timestamp: time(),
+              issuer: "alexis",
+              subject: "dummySubject",
+              expires: time() + (10 * tokenlib.ONE_HOUR)
+            },
+            function(err) {
               if (err) throw err;
 
               jsonReq.send({}).expect(200).end(function(err, res) {
@@ -551,186 +559,13 @@ function runOnPrefix(apiPrefix) {
           .include(requireHawkSession);
       });
 
-      it("should require a callerId parameter", function(done) {
-        jsonReq.send({}).expect(400).end(function(err, res) {
+      it("should return a 405", function(done) {
+        jsonReq.send({}).expect(405).end(function(err, res) {
           if (err) throw err;
-          expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                              "Missing: callerId");
+          expectFormattedError(res, 405, errors.NO_LONGER_SUPPORTED,
+                               "No longer supported");
           done();
         });
-      });
-
-      it("should check that the given expiration is a number", function(done) {
-        jsonReq
-          .send({callerId: callerId, expiresIn: "not a number"})
-          .expect(400)
-          .end(function(err, res) {
-            if (err) throw err;
-            expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
-                                "expiresIn should be a valid number");
-            done();
-          });
-      });
-
-      describe("with mocked maxTimeout", function() {
-        var oldMaxTimeout;
-
-        beforeEach(function() {
-          oldMaxTimeout = callUrls.maxTimeout;
-          callUrls.maxTimeout = 5;
-          conf.set('callUrls', callUrls);
-        });
-
-        afterEach(function() {
-          callUrls.maxTimeout = oldMaxTimeout;
-          conf.set('callUrls', callUrls);
-        });
-
-        it("should check the given expiration is not greater than the max",
-          function(done) {
-            jsonReq
-              .send({callerId: callerId, expiresIn: "10"})
-              .expect(400)
-              .end(function(err, res) {
-                if (err) throw err;
-                expectFormattedError(res, 400, errors.INVALID_PARAMETERS,
-                                    "expiresIn should be less than 5");
-                done();
-              });
-          });
-      });
-
-      it("should accept an expiresIn parameter", function(done) {
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId, expiresIn: 5})
-          .end(function(err, res) {
-            if (err) throw err;
-            var callUrl = res.body.callUrl,
-                token;
-
-            token = callUrl.split("/").pop();
-
-            storage.getCallUrlData(token, function(err, urlData) {
-              if (err) throw err;
-              expect(urlData.expires).not.eql(undefined);
-              done();
-            });
-          });
-      });
-
-      it("should generate a valid call-url", function(done) {
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId})
-          .end(function(err, res) {
-            if (err) throw err;
-            var callUrl = res.body.callUrl, token;
-
-            expect(callUrl).to.not.equal(null);
-            var urlStart = conf.get('callUrls').webAppUrl
-              .replace('{token}', '');
-            expect(callUrl).to.contain(urlStart);
-
-            token = callUrl.split("/").pop();
-
-            storage.getCallUrlData(token, function(err, urlData) {
-              if (err) throw err;
-              expect(urlData.userMac).not.eql(undefined);
-              done();
-            });
-          });
-      });
-
-      it("should store provided issuer", function(done) {
-        var issuer = "aIssuer";
-        jsonReq
-          .expect(200)
-          .send({ callerId: callerId, issuer: issuer})
-          .end(function(err, res) {
-            if (err) throw err;
-            var callUrl = res.body.callUrl;
-            var token = callUrl.split("/").pop();
-
-            storage.getCallUrlData(token, function(err, urlData) {
-              if (err) throw err;
-              expect(urlData.issuer).eql(issuer);
-              done();
-            });
-          });
-      });
-
-      it("should not store issuer if an anonymous identity is " +
-         "provided", function(done) {
-        var token = new Token();
-        token.getCredentials(function(tokenId, authKey) {
-          var anonymousHawkCredentials = {
-            id: tokenId,
-            key: authKey,
-            algorithm: "sha256"
-          };
-          var anonymousHawkIdHmac = hmac(tokenId, conf.get('hawkIdSecret'));
-          storage.setHawkSession(anonymousHawkIdHmac, authKey, function(err) {
-            if (err) throw err;
-            supertest(app)
-              .post(apiPrefix + "/call-url")
-              .hawk(anonymousHawkCredentials)
-              .send({ callerId: callerId })
-              .expect(200)
-              .end(function(err, res) {
-                if (err) throw err;
-                var callUrl = res.body.callUrl;
-                var token = callUrl.split("/").pop();
-                storage.getCallUrlData(token, function(err, urlData) {
-                  if (err) throw err;
-                  expect(urlData.issuer).eql(undefined);
-                  done();
-                });
-              });
-          });
-        });
-      });
-
-      it("should store user identity if no issuer is provided", function(done) {
-        jsonReq
-          .expect(200)
-          .send({ callerId: callerId })
-          .end(function(err, res) {
-            if (err) throw err;
-            var callUrl = res.body.callUrl;
-            var token = callUrl.split("/").pop();
-
-            storage.getCallUrlData(token, function(err, urlData) {
-              if (err) throw err;
-              expect(urlData.issuer).eql(user);
-              done();
-            });
-          });
-      });
-
-      it("should return the expiration date of the call-url", function(done) {
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId})
-          .end(function(err, res) {
-            if (err) throw err;
-            var expiresAt = res.body.expiresAt;
-            expect(expiresAt).not.eql(undefined);
-            done();
-          });
-      });
-
-      it("should count new url generation using statsd", function(done) {
-        sandbox.stub(statsdClient, "count");
-        jsonReq
-          .expect(200)
-          .send({callerId: callerId})
-          .end(function(err) {
-            if (err) throw err;
-            assert.calledOnce(statsdClient.count);
-            assert.calledWithExactly(statsdClient.count, "loop.call-urls", 1);
-            done();
-          });
       });
     });
 
@@ -788,16 +623,6 @@ function runOnPrefix(apiPrefix) {
               "Request body should be defined as application/json");
             done();
           });
-      });
-
-      // https://bugzilla.mozilla.org/show_bug.cgi?id=986578
-      it("should accept request with custom JSON content-type.", function(done) {
-        supertest(app)
-          .post(apiPrefix + '/call-url')
-          .send({callerId: callerId})
-          .hawk(hawkCredentials)
-          .type('application/json; charset=utf-8')
-          .expect(200).end(done);
       });
 
       it("should return a 200 if everything went fine", function(done) {
