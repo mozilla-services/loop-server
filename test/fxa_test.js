@@ -153,7 +153,7 @@ describe("fxa authentication", function() {
 
       fxa.verifyAssertion("assertion", [audience], ["trusted-issuer"],
         function(err) {
-          expect(err).eql("Issuer is not trusted");
+          expect(err.message).eql("Issuer is not trusted");
         });
     });
 
@@ -197,7 +197,7 @@ describe("fxa authentication", function() {
 
       fxa.verifyAssertion(assertion, validAudiences, [assertion.issuer],
         function(err) {
-          expect(err).to.eql("Invalid audience");
+          expect(err.message).to.eql("Invalid audience");
           done();
         });
     });

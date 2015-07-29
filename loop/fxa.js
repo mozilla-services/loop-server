@@ -45,7 +45,7 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
   try {
     var assertionAudience = exports.getAssertionAudience(assertion);
   } catch (e) {
-    callback("Malformed audience");
+    callback(new Error("Malformed audience"));
     return;
   }
   var audience;
@@ -55,7 +55,7 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
   if (trustedAudienceIndex !== -1) {
     audience = audiences[trustedAudienceIndex];
   } else {
-    callback("Invalid audience");
+    callback(new Error("Invalid audience"));
     return;
   }
 
@@ -65,15 +65,20 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
       audience: audience,
       assertion: assertion
     }
-  }, function(err, message, data) {
+  }, function(err, response, data) {
     if (err) return callback(err);
+    if (data === undefined) {
+      callback(new Error(conf.get('fxaVerifier') +
+                         " verifier service seems unavailable."));
+      return;
+    }
     // Check the issuer is trusted.
     if (data.status !== "okay") {
       callback(data.reason);
       return;
     }
     if (trustedIssuers.indexOf(data.issuer) === -1) {
-      callback("Issuer is not trusted");
+      callback(new Error("Issuer is not trusted"));
       return;
     }
     callback(null, data);
