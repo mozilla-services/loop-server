@@ -68,8 +68,9 @@ function verifyAssertion(assertion, audiences, trustedIssuers, callback) {
   }, function(err, response, data) {
     if (err) return callback(err);
     if (data === undefined) {
-      callback(new Error(conf.get('fxaVerifier') +
-                         " verifier service seems unavailable."));
+      callback(new Error(
+        "Verifier service unavailable: " + conf.get('fxaVerifier') +
+        " returned a " + response.statusCode));
       return;
     }
     // Check the issuer is trusted.
