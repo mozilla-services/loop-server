@@ -45,11 +45,11 @@ describe("fxa authentication", function() {
 
       // Mock the calls to the external BrowserID verifier.
       sandbox.stub(fxa, "verifyAssertion",
-        function(assertion, audience, trustedIssuers, callback){
+        function(assertion, audience, trustedIssuers, callback) {
           if (assertion === expectedAssertion) {
             callback(null, {email: user});
           } else {
-            callback("invalid assertion \"1a2w3e4r5t6y\"");
+            callback(new Error("invalid assertion \"1a2w3e4r5t6y\""));
           }
         });
     });

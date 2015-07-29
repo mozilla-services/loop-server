@@ -104,7 +104,7 @@ function runOnPrefix(apiPrefix) {
           if (assertion === expectedAssertion) {
             callback(null, {idpClaims: {"fxa-verifiedEmail": user}});
           } else {
-            callback("error");
+            callback(new Error("error"));
           }
         });
 

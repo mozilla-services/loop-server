@@ -99,8 +99,9 @@ function getMiddleware(conf, callback) {
   function requireBrowserID(req, res, next) {
     var authorization, assertion, policy, splitted;
 
-    function _unauthorized(message){
+    function _unauthorized(err){
       var header = "BrowserID";
+      var message = err ? err.message : undefined;
       if (message) header += ' error="' + message.replace(/"/g, '\"') + '"';
       res.set('WWW-Authenticate', header);
       sendError(res, 401, errors.INVALID_AUTH_TOKEN, message || "Unauthorized");
