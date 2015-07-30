@@ -29,7 +29,7 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
            provider: (tokboxError === null) ? true : false,
            message: message,
            push: pushStatus,
-           verifier: verifierStatus
+           fxaVerifier: verifierStatus
          });
     }
 

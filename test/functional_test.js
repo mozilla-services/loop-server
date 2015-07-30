@@ -271,7 +271,7 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': false,
               'provider': true,
-              'verifier': true
+              'fxaVerifier': true
             });
             done();
           });
@@ -299,7 +299,7 @@ function runOnPrefix(apiPrefix) {
               'storage': true,
               'provider': false,
               'message': "TokBox Error: The request failed: Error: blah",
-              'verifier': true
+              'fxaVerifier': true
             });
             done();
           });
@@ -326,7 +326,7 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': true,
-              'verifier': true
+              'fxaVerifier': true
             });
             done();
           });
@@ -359,7 +359,7 @@ function runOnPrefix(apiPrefix) {
               'storage': true,
               'provider': true,
               'push': false,
-              'verifier': true
+              'fxaVerifier': true
             });
             done();
           });
@@ -394,7 +394,7 @@ function runOnPrefix(apiPrefix) {
               'storage': true,
               'provider': true,
               'push': false,
-              'verifier': true
+              'fxaVerifier': true
             });
             assert.calledTwice(statsdClient.count);
             assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
@@ -432,7 +432,7 @@ function runOnPrefix(apiPrefix) {
                 'storage': true,
                 'provider': true,
                 'push': true,
-                'verifier': true
+                'fxaVerifier': true
               });
               done();
             });
@@ -468,7 +468,7 @@ function runOnPrefix(apiPrefix) {
                 'storage': true,
                 'provider': true,
                 'push': true,
-                'verifier': true
+                'fxaVerifier': true
               });
               assert.calledTwice(statsdClient.count);
               assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
@@ -500,7 +500,7 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': true,
-              'verifier': false
+              'fxaVerifier': false
             });
             done();
           });
