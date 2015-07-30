@@ -3,10 +3,13 @@ Changelog
 
 This document describes changes between each past release.
 
-0.17.9 (unreleased)
+0.18.0 (2015-07-29)
 -------------------
 
-- No changes yet.
+- Fix 500 when FxA verifier is down now explain why in a 401. (#343)
+- Disable the call-url creation endpoint (#337)
+- The loadtests now use a FxA test account to place a call (#337)
+- Add a check for the Firefox Account verifier in the heartbeat (#345)
 
 
 0.17.8 (2015-07-24)
