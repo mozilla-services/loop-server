@@ -23,7 +23,7 @@ install: ./venv/.env.install
 
 # Clean all the things installed by `make build`.
 clean:
-	rm -rf ./venv *.pyc
+	rm -rf ./venv loadtest/*.pyc
 
 # Run a single test from the venv machine, for sanity-checking.
 test: install
