@@ -18,7 +18,7 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
         self.simple_push_url = os.getenv("SIMPLE_PUSH_URL",
                                          DEFAULT_SIMPLE_PUSH_URL)
         # Only create the restmail account once.
-        self.auth = self.getAuth()
+        self.auth = self.get_auth()
 
     def setUp(self):
         self.wss = []
