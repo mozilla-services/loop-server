@@ -4,7 +4,6 @@ import uuid
 from six.moves.urllib.parse import urlparse
 from requests_hawk import HawkAuth
 
-import fxa.oauth
 from fxa.core import Client
 from fxa.tests.utils import TestEmailAccount
 from fxa.plugins.requests import FxABrowserIDAuth
@@ -21,7 +20,7 @@ class TestCallsMixin(object):
         calls = self.list_pending_calls()
         return call_data, calls
 
-    def getAuth(self):
+    def get_auth(self):
         self.account_server_url = os.getenv("FXA_URL", DEFAULT_FXA_URL)
         random_user = uuid.uuid4().hex
         self.user_email = "loop-%s@restmail.net" % random_user
@@ -29,6 +28,7 @@ class TestCallsMixin(object):
         client = Client(self.account_server_url)
         fxa_session = client.create_account(self.user_email,
                                             password=random_user)
+
         def is_verify_email(m):
             return "x-verify-code" in m["headers"]
 
