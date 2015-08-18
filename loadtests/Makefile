@@ -17,7 +17,13 @@ INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
 	$(INSTALL) PyFxA[openssl] >> loadtest.log && \
-	$(INSTALL) backports.functools-lru-cache &&\
+	wget https://pypi.python.org/packages/source/b/backports.functools_lru_cache/backports.functools_lru_cache-1.0.3.tar.gz &&\
+	tar -xvzf backports.functools_lru_cache-1.0.3.tar.gz &&\
+	pushd backports.functools_lru_cache-1.0.3 &&\
+	../venv/bin/python setup.py install &&\
+	popd &&\
+	rm backports.functools_lru_cache-1.0.3.tar.gz&&\
+	rm -fr backports.functools_lru_cache-1.0.3&&\
 	rm loadtest.log && touch $@ || cat loadtest.log
 
 install: ./venv/.env.install
@@ -37,8 +43,8 @@ bench:
 
 # Run a much bigger bench, by submitting to broker in AWS.
 megabench:
-	./venv/bin/loads-runner --config=./config/megabench.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
-#	./venv/bin/loads-runner --config=./config/megabench.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_websockets
+	./venv/bin/loads-runner --config=./config/megabench.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_http_calls&
+	./venv/bin/loads-runner --config=./config/megabench.ini --server-url=$(SERVER_URL) loadtest.TestLoop._test_websockets_basic_scenario
 
 smoke:
 	./venv/bin/loads-runner --config=./config/smoke.ini --user-id=$(USER) --server-url=$(SERVER_URL) loadtest.TestLoop.test_all
