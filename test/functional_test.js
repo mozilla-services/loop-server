@@ -247,6 +247,7 @@ function runOnPrefix(apiPrefix) {
     describe("GET /__hearbeat__", function() {
 
       it("should return a 503 if storage is down", function(done) {
+        var fxaStatusUrl;
         // TokBox
         sandbox.stub(request, "post", function(options, callback) {
           callback(null, {statusCode: 200});
@@ -257,6 +258,7 @@ function runOnPrefix(apiPrefix) {
         });
         // FxA Verifier
         sandbox.stub(request, "get", function(options, callback) {
+          fxaStatusUrl = options.url;
           callback(null, {statusCode: 200});
         });
         sandbox.stub(storage, "ping", function(callback) {
@@ -273,6 +275,8 @@ function runOnPrefix(apiPrefix) {
               'provider': true,
               'fxaVerifier': true
             });
+            var expected = 'https://verifier.accounts.firefox.com/status';
+            expect(fxaStatusUrl).to.eql(expected);
             done();
           });
       });
