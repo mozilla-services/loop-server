@@ -7,6 +7,7 @@
 var loopPackageData = require('../../package.json');
 var git = require('git-rev');
 var request = require('request');
+var url = require('url')
 
 module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
   /**
@@ -40,7 +41,7 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
       tokBox.ping({timeout: conf.get('heartbeatTimeout')},
         function(tokboxError) {
           request.get({
-            url: conf.get('fxaVerifier'),
+            url: url.resolve(conf.get('fxaVerifier'), '/status'),
             timeout: conf.get('heartbeatTimeout')
           }, function(err, response) {
             var verifierStatus = !err && response.statusCode === 200;
