@@ -1477,6 +1477,28 @@ describe("/rooms", function() {
           });
         });
 
+        it("should accept the room owner to rejoin the room", function(done){
+          createRoom(hawkCredentials, {
+            roomOwner: "Alexis",
+            roomName: "UX discussion",
+            maxSize: "2",
+            expiresIn: "10"
+          }).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+              if (err) throw err;
+              joinWithNewUser(storage, 'user1', roomToken, function(res) {
+                res.end(function(err) {
+                  if (err) throw err;
+                  // Rejoin should work
+                  joinRoom(hawkCredentials, roomToken).end(done);
+                });
+              });
+            });
+          });
+        });
+
         it("a user should be able to join after the room owner", function(done){
           createRoom(hawkCredentials, {
             roomOwner: "Alexis",
