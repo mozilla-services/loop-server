@@ -1486,7 +1486,7 @@ describe("/rooms", function() {
           }).end(function(err, res) {
             if (err) throw err;
             var roomToken = res.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               joinWithNewUser(storage, 'user1', roomToken, function(res) {
                 res.end(function(err) {
@@ -1508,7 +1508,7 @@ describe("/rooms", function() {
           }).end(function(err, res) {
             if (err) throw err;
             var roomToken = res.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err, res) {
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
               if (err) throw err;
               if (err) throw err;
               generateHawkCredentials(storage, 'Natim', function(natimCredentials) {

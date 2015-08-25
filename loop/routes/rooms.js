@@ -386,16 +386,19 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                     if (res.serverError(err)) return;
 
                     // Room participants are used by metrics
+                    var otherParticipants = participants.filter(function(participant) {
+                      return req.user === undefined || participant.userMac !== req.user;
+                    });
                     req.roomParticipantsCount = participants.length;
 
                     var roomMaxSize = req.roomStorageData.maxSize;
                     if (!canJoinRoom(
-                          participants, roomMaxSize,
+                          otherParticipants, roomMaxSize,
                           req.roomStorageData.roomOwnerHmac,
                           req.user)) {
                       sendError(res, 400, errors.ROOM_FULL, "The room is full.");
                       return;
-                    } else if (requestMaxSize <= participants.length) {
+                    } else if (requestMaxSize <= otherParticipants.length) {
                       // You cannot handle the number of actual participants.
                       sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
                         "Too many participants in the room for you to handle.");
