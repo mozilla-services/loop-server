@@ -385,10 +385,12 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                   participants) {
                     if (res.serverError(err)) return;
 
-                    // Room participants are used by metrics
+                    // The room participants list except ourselves.
                     var otherParticipants = participants.filter(function(participant) {
                       return req.user === undefined || participant.userMac !== req.user;
                     });
+
+                    // Room participants are used by metrics
                     req.roomParticipantsCount = participants.length;
 
                     var roomMaxSize = req.roomStorageData.maxSize;
