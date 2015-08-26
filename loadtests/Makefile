@@ -35,6 +35,7 @@ clean:
 
 # Run a single test from the venv machine, for sanity-checking.
 test: install
+	SIMPLE_PUSH_URL=$(SIMPLE_PUSH_URL) ./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_smoke
 	SIMPLE_PUSH_URL=$(SIMPLE_PUSH_URL) ./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_http_calls
 	SIMPLE_PUSH_URL=$(SIMPLE_PUSH_URL) ./venv/bin/loads-runner --config=./config/test.ini --server-url=$(SERVER_URL) loadtest.TestLoop.test_websockets
 

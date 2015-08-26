@@ -32,6 +32,7 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
                 ws.sock.close()
 
     def test_all(self):
+        self.test_smoke()
         self.test_http_calls()
         self._test_websockets_basic_scenario()
 
@@ -45,6 +46,14 @@ class TestLoop(TestCallsMixin, TestRoomsMixin, TestWebsocketMixin, TestCase):
         self._test_websockets_supervisory_timeout()
         self._test_websockets_connection_timeout()
         self._test_websockets_ringing_timeout()
+
+    def test_smoke(self):
+        resp = self.session.get(
+            self.base_url + '/__heartbeat__',
+            headers={'Content-Type': 'application/json'}
+        )
+        self.assertEquals(200, resp.status_code,
+                          "Heartbeat returned a %s" % resp.status_code)
 
     def _get_json(self, resp):
         try:
