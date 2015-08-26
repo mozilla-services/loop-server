@@ -385,7 +385,16 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                   participants) {
                     if (res.serverError(err)) return;
 
-                    // The room participants list except ourselves.
+                    // When talking about room participants, we are
+                    // talking about user devices present in the room.
+
+                    // In case we are rejoining, we don't want to
+                    // consider this session to already be in the
+                    // room. The otherParticipants filters this
+                    // session device from the participant list so
+                    // that we can rejoin even if we are already
+                    // supposed to be in the roon.
+
                     var otherParticipants = participants.filter(function(participant) {
                       return req.user === undefined || participant.userMac !== req.user;
                     });
