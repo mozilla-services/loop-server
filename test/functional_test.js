@@ -73,6 +73,10 @@ function runOnPrefix(apiPrefix) {
       });
   }
 
+  function startsWith(string, prefix) {
+    return string.lastIndexOf(prefix, 0) === 0;
+  }
+
   describe("on " + (apiPrefix || "/"), function() {
 
     var sandbox, expectedAssertion, pushURL, pushURL2, pushURL3,
@@ -244,7 +248,11 @@ function runOnPrefix(apiPrefix) {
       });
     });
 
-    describe("GET /__hearbeat__", function() {
+    describe("GET /__heartbeat__", function() {
+      var defaultPushURI = "https://push.services.mozilla.com/";
+      beforeEach(function() {
+        conf.set("pushServerURIs", ["wss://push.services.mozilla.com/"]);
+      });
 
       it("should return a 503 if storage is down", function(done) {
         var fxaStatusUrl;
@@ -252,13 +260,11 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "post", function(options, callback) {
           callback(null, {statusCode: 200});
         });
-        // SimplePush
-        sandbox.stub(request, "put", function(options, callback) {
-          callback(null, {statusCode: 200});
-        });
-        // FxA Verifier
+        // FxA Verifier and SimplePush
         sandbox.stub(request, "get", function(options, callback) {
-          fxaStatusUrl = options.url;
+          if (!startsWith(options.url, defaultPushURI)) {
+            fxaStatusUrl = options.url;
+          }
           callback(null, {statusCode: 200});
         });
         sandbox.stub(storage, "ping", function(callback) {
@@ -273,6 +279,7 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': false,
               'provider': true,
+              'push': true,
               'fxaVerifier': true
             });
             var expected = 'https://verifier.accounts.firefox.com/status';
@@ -286,11 +293,7 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "post", function(options, callback) {
           callback(new Error("blah"));
         });
-        // SimplePush
-        sandbox.stub(request, "put", function(options, callback) {
-          callback(null, {statusCode: 200});
-        });
-        // FxA Verifier
+        // FxA Verifier and SimplePush
         sandbox.stub(request, "get", function(options, callback) {
           callback(null, {statusCode: 200});
         });
@@ -302,6 +305,7 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': false,
+              'push': true,
               'message': "TokBox Error: The request failed: Error: blah",
               'fxaVerifier': true
             });
@@ -314,11 +318,7 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "post", function(options, callback) {
           callback(null, {statusCode: 200});
         });
-        // SimplePush
-        sandbox.stub(request, "put", function(options, callback) {
-          callback(null, {statusCode: 200});
-        });
-        // FxA Verifier
+        // FxA Verifier and SimplePush
         sandbox.stub(request, "get", function(options, callback) {
           callback(null, {statusCode: 200});
         });
@@ -330,13 +330,19 @@ function runOnPrefix(apiPrefix) {
             expect(res.body).to.eql({
               'storage': true,
               'provider': true,
+              'push': true,
               'fxaVerifier': true
             });
             done();
           });
       });
 
-      it("should return a 503 if it's not able to reach the SP url", function(done) {
+      it("should return a 503 if it's not able to reach a SP url", function(done) {
+        conf.set("pushServerURIs", [
+          "wss://push1.services.mozilla.com",
+          "http://push2.services.mozilla.com",
+          "ws://push3.services.mozilla.com"
+        ]);
         sandbox.stub(tokBox, "ping", function(options, callback) {
           callback(null);
         });
@@ -345,17 +351,17 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "post", function(options, callback) {
           callback(null, {statusCode: 200});
         });
-        // SimplePush
-        sandbox.stub(request, "put", function(options, callback) {
-          callback(new Error("error"));
-        });
-        // FxA Verifier
+        // FxA Verifier and SimplePush
         sandbox.stub(request, "get", function(options, callback) {
-          callback(null, {statusCode: 200});
+          if (startsWith(options.url, "http://push3.services.mozilla.com")) {
+            callback(new Error("error"));
+          } else {
+            callback(null, {statusCode: 200});
+          }
         });
 
         supertest(app)
-          .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+          .get(apiPrefix + '/__heartbeat__')
           .expect(503)
           .end(function(err, res) {
             if (err) throw err;
@@ -378,19 +384,19 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "post", function(options, callback) {
           callback(null, {statusCode: 200});
         });
-        // SimplePush
-        sandbox.stub(request, "put", function(options, callback) {
-          callback(new Error("error"));
-        });
-        // FxA Verifier
+        // FxA Verifier and SimplePush
         sandbox.stub(request, "get", function(options, callback) {
-          callback(null, {statusCode: 200});
+          if (startsWith(options.url, defaultPushURI)) {
+            callback(new Error("error"));
+          } else {
+            callback(null, {statusCode: 200});
+          }
         });
 
         sandbox.stub(statsdClient, "count");
 
         supertest(app)
-          .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+          .get(apiPrefix + '/__heartbeat__')
           .expect(503)
           .end(function(err, res) {
             if (err) throw err;
@@ -410,6 +416,11 @@ function runOnPrefix(apiPrefix) {
 
       it("should return a 200 if it's able to reach all backends (with SP specified)",
         function(done) {
+          conf.set("pushServerURIs", [
+            "wss://push1.services.mozilla.com",
+            "http://push2.services.mozilla.com",
+            "ws://push3.services.mozilla.com"
+          ]);
           sandbox.stub(tokBox, "ping", function(options, callback) {
             callback(null);
           });
@@ -418,17 +429,13 @@ function runOnPrefix(apiPrefix) {
           sandbox.stub(request, "post", function(options, callback) {
             callback(null, {statusCode: 200});
           });
-          // SimplePush
-          sandbox.stub(request, "put", function(options, callback) {
-            callback(null, {statusCode: 200});
-          });
-          // FxA Verifier
+          // FxA Verifier and SimplePush
           sandbox.stub(request, "get", function(options, callback) {
             callback(null, {statusCode: 200});
           });
 
           supertest(app)
-            .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+            .get(apiPrefix + '/__heartbeat__')
             .expect(200)
             .end(function(err, res) {
               if (err) throw err;
@@ -452,11 +459,7 @@ function runOnPrefix(apiPrefix) {
           sandbox.stub(request, "post", function(options, callback) {
             callback(null, {statusCode: 200});
           });
-          // SimplePush
-          sandbox.stub(request, "put", function(options, callback) {
-            callback(null, {statusCode: 200});
-          });
-          // FxA Verifier
+          // FxA Verifier and SimplePush
           sandbox.stub(request, "get", function(options, callback) {
             callback(null, {statusCode: 200});
           });
@@ -464,7 +467,7 @@ function runOnPrefix(apiPrefix) {
           sandbox.stub(statsdClient, "count");
 
           supertest(app)
-            .get(apiPrefix + '/__heartbeat__/?SP_LOCATION=http://test')
+            .get(apiPrefix + '/__heartbeat__')
             .expect(200)
             .end(function(err, res) {
               if (err) throw err;
@@ -488,13 +491,13 @@ function runOnPrefix(apiPrefix) {
         sandbox.stub(request, "post", function(options, callback) {
           callback(null, {statusCode: 200});
         });
-        // SimplePush
-        sandbox.stub(request, "put", function(options, callback) {
-          callback(null, {statusCode: 200});
-        });
-        // FxA Verifier
+        // FxA Verifier and SimplePush
         sandbox.stub(request, "get", function(options, callback) {
-          callback(null, {statusCode: 503});
+          if (startsWith(options.url, defaultPushURI)) {
+            callback(null, {statusCode: 200});
+          } else {
+            callback(null, {statusCode: 503});
+          }
         });
         supertest(app)
           .get(apiPrefix + '/__heartbeat__')
@@ -503,6 +506,7 @@ function runOnPrefix(apiPrefix) {
             if (err) throw err;
             expect(res.body).to.eql({
               'storage': true,
+              'push': true,
               'provider': true,
               'fxaVerifier': false
             });

@@ -7,9 +7,31 @@
 var loopPackageData = require('../../package.json');
 var git = require('git-rev');
 var request = require('request');
-var url = require('url')
+var url = require('url');
+var async = require('async');
+
+function isSuccess(statusCode) {
+  return statusCode === 200;
+}
 
 module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
+  function pingPushServer(pushServerURI, callback) {
+    var serverURL = url.parse(pushServerURI, false, true);
+    var protocol = serverURL.protocol === 'wss:' ? 'https' :
+      serverURL.protocol === 'ws:' ? 'http' : serverURL.protocol;
+    request.get({
+      url: url.format({
+        protocol: protocol,
+        host: serverURL.host,
+        pathname: '/status'
+      }),
+      timeout: conf.get('heartbeatTimeout')
+    }, function(error, response) {
+      if (error) return callback(error);
+      callback(null, response.statusCode);
+    });
+  }
+
   /**
    * Checks that the service and its dependencies are healthy.
    **/
@@ -44,29 +66,23 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
             url: url.resolve(conf.get('fxaVerifier'), '/status'),
             timeout: conf.get('heartbeatTimeout')
           }, function(err, response) {
-            var verifierStatus = !err && response.statusCode === 200;
-            // Setting pushStatus to undefined makes it not included in the json
-            // response.
-            var pushStatus;
-            if (req.query.SP_LOCATION !== undefined) {
-              request.put(req.query.SP_LOCATION, function(error, response) {
-                if (error) logError(error);
-                pushStatus = (!error && response.statusCode === 200);
-                returnStatus(storageStatus, tokboxError, pushStatus, verifierStatus);
-                if (statsdClient !== undefined) {
-                  statsdClient.count('loop.simplepush.call', 1);
-                  var counter_push_status_counter;
-                  if (pushStatus) {
-                    counter_push_status_counter = 'loop.simplepush.call.heartbeat.success';
-                  } else {
-                    counter_push_status_counter = 'loop.simplepush.call.heartbeat.failures';
-                  }
-                  statsdClient.count(counter_push_status_counter, 1);
-                }
-              });
-            } else {
+            var verifierStatus = !err && isSuccess(response.statusCode);
+            var pushServerURIs = conf.get('pushServerURIs');
+            async.map(pushServerURIs, pingPushServer, function(error, statusCodes) {
+              if (error) logError(error);
+              var pushStatus = (!error && statusCodes.every(isSuccess));
               returnStatus(storageStatus, tokboxError, pushStatus, verifierStatus);
-            }
+              if (statsdClient !== undefined) {
+                statsdClient.count('loop.simplepush.call', 1);
+                var counter_push_status_counter;
+                if (pushStatus) {
+                  counter_push_status_counter = 'loop.simplepush.call.heartbeat.success';
+                } else {
+                  counter_push_status_counter = 'loop.simplepush.call.heartbeat.failures';
+                }
+                statsdClient.count(counter_push_status_counter, 1);
+              }
+            });
           });
         });
     });
