@@ -385,17 +385,31 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                   participants) {
                     if (res.serverError(err)) return;
 
+                    // When talking about room participants, we are
+                    // talking about user devices present in the room.
+
+                    // In case we are rejoining, we don't want to
+                    // consider this session to already be in the
+                    // room. The otherParticipants filters this
+                    // session device from the participant list so
+                    // that we can rejoin even if we are already
+                    // supposed to be in the roon.
+
+                    var otherParticipants = participants.filter(function(participant) {
+                      return req.user === undefined || participant.userMac !== req.user;
+                    });
+
                     // Room participants are used by metrics
                     req.roomParticipantsCount = participants.length;
 
                     var roomMaxSize = req.roomStorageData.maxSize;
                     if (!canJoinRoom(
-                          participants, roomMaxSize,
+                          otherParticipants, roomMaxSize,
                           req.roomStorageData.roomOwnerHmac,
                           req.user)) {
                       sendError(res, 400, errors.ROOM_FULL, "The room is full.");
                       return;
-                    } else if (requestMaxSize <= participants.length) {
+                    } else if (requestMaxSize <= otherParticipants.length) {
                       // You cannot handle the number of actual participants.
                       sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
                         "Too many participants in the room for you to handle.");
