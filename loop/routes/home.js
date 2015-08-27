@@ -55,7 +55,9 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
       };
 
       // Log the erroneous call to Sentry.
-      if (status === 503) logError(new Error("Heartbeat: " + JSON.stringify(data)));
+      if (status === 503) {
+        logError(new Error("Heartbeat: " + JSON.stringify(data)));
+      }
 
       res.status(status).json(data);
     }
