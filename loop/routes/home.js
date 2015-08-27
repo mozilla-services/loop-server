@@ -46,14 +46,20 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
         if (tokboxError !== null) message = "TokBox " + tokboxError;
       }
 
-      res.status(status)
-         .json({
-           storage: storageStatus === true,
-           provider: (tokboxError === null) ? true : false,
-           message: message,
-           push: pushStatus,
-           fxaVerifier: verifierStatus
-         });
+      var data = {
+        storage: storageStatus === true,
+        provider: (tokboxError === null) ? true : false,
+        message: message,
+        push: pushStatus,
+        fxaVerifier: verifierStatus
+      };
+
+      // Log the erroneous call to Sentry.
+      if (status === 503) {
+        logError(new Error("Heartbeat: " + JSON.stringify(data)));
+      }
+
+      res.status(status).json(data);
     }
 
     storage.ping(function(storageStatus) {
