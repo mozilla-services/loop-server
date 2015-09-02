@@ -3,10 +3,13 @@ Changelog
 
 This document describes changes between each past release.
 
-0.19.0 (Unreleased)
+0.19.0 (2015-09-02)
 -------------------
 
-- XXX
+- Logs an error if the Heartbeat fails (#355)
+- A user should be able to rejoin with the same session (#353)
+- Use the configured push server health endpoint for hearbeat checks (#351)
+
 
 0.18.1 (2015-08-20)
 -------------------
