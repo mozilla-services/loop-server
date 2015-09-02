@@ -1392,10 +1392,7 @@ function runOnPrefix(apiPrefix) {
             conf.set('hekaMetrics', hekaMetrics);
             sandbox.stub(hekaLogger, "info", function(op, log) {
               log.op = op;
-              try {
-                _logs.push(log);
-              } catch (e) {
-              }
+              _logs.push(log);
             });
 
             sandbox.stub(tokBox, "getSessionTokens", function(opts, callback) {
