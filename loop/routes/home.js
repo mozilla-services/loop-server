@@ -72,6 +72,7 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
             url: url.resolve(conf.get('fxaVerifier'), '/status'),
             timeout: conf.get('heartbeatTimeout')
           }, function(err, response) {
+            if (err) logError(err);
             var verifierStatus = !err && isSuccess(response.statusCode);
             var pushServerURIs = conf.get('pushServerURIs');
             async.map(pushServerURIs, pingPushServer, function(error, statusCodes) {
