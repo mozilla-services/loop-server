@@ -68,6 +68,7 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
       }
       tokBox.ping({timeout: conf.get('heartbeatTimeout')},
         function(tokboxError) {
+          if (tokboxError) logError(tokboxError);
           request.get({
             url: url.resolve(conf.get('fxaVerifier'), '/status'),
             timeout: conf.get('heartbeatTimeout')
