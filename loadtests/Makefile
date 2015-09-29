@@ -4,7 +4,9 @@ SIMPLE_PUSH_URL = https://loop-webapp.stage.mozaws.net/
 # Hackety-hack around OSX system python bustage.
 # The need for this should go away with a future osx/xcode update.
 ARCHFLAGS = -Wno-error=unused-command-line-argument-hard-error-in-future
-INSTALL = ARCHFLAGS=$(ARCHFLAGS) ./venv/bin/pip install
+# On OSX 10.11, clang now uses c11 as default. Specify c99 so gevent can build.
+CFLAGS = '-std=c99'
+INSTALL = ARCHFLAGS=$(ARCHFLAGS) CFLAGS=$(CFLAGS) ./venv/bin/pip install
 SHELL = /bin/bash
 
 .PHONY: install clean bench megabench
