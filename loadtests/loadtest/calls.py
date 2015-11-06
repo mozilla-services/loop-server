@@ -5,12 +5,13 @@ from six.moves.urllib.parse import urlparse
 from requests_hawk import HawkAuth
 
 from fxa.core import Client
-from fxa.tests.utils import TestEmailAccount
+from fxa import errors
 from fxa.plugins.requests import FxABrowserIDAuth
 
 # XXX Using the same fxa as the dev server, as the staging setup isn't working
 # for me.
-DEFAULT_FXA_URL = "https://api.accounts.firefox.com/v1"
+DEFAULT_FXA_URL = "https://api-accounts.stage.mozaws.net"
+ERROR_ACCOUNT_EXISTS = 101
 
 
 class TestCallsMixin(object):
@@ -24,16 +25,14 @@ class TestCallsMixin(object):
         self.account_server_url = os.getenv("FXA_URL", DEFAULT_FXA_URL)
         random_user = uuid.uuid4().hex
         self.user_email = "loop-%s@restmail.net" % random_user
-        acct = TestEmailAccount(self.user_email)
         client = Client(self.account_server_url)
-        fxa_session = client.create_account(self.user_email,
-                                            password=random_user)
-
-        def is_verify_email(m):
-            return "x-verify-code" in m["headers"]
-
-        message = acct.wait_for_email(is_verify_email)
-        fxa_session.verify_email_code(message["headers"]["x-verify-code"])
+        try:
+            client.create_account(self.user_email,
+                                  password=random_user,
+                                  preVerified=True)
+        except errors.ClientError as e:
+            if e.errno != ERROR_ACCOUNT_EXISTS:
+                raise
 
         url = urlparse(self.base_url)
         audience = "%s://%s" % (url.scheme, url.hostname)

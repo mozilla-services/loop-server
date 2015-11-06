@@ -21,6 +21,7 @@
   "sentryDSN": false,
   "allowedOrigins": ["*"],
   "statsdEnabled": false,
+  "fxaTrustedIssuers": ["api.accounts.firefox.com", "api-accounts.stage.mozaws.net"],
   "fxaAudiences": ["app://loop.services.mozilla.com", "http://loop.services.mozilla.com", "http://localhost", "http://127.0.0.1"],
   "fxaOAuth": {
     "client_id": "cdaf76e75c7f7a00",
