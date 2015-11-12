@@ -8,10 +8,9 @@ from fxa.core import Client
 from fxa import errors
 from fxa.plugins.requests import FxABrowserIDAuth
 
-# XXX Using the same fxa as the dev server, as the staging setup isn't working
-# for me.
+# Using FxA stage since we are using preVerified account creation
 DEFAULT_FXA_URL = "https://api-accounts.stage.mozaws.net"
-ERROR_ACCOUNT_EXISTS = 101
+ERROR_ACCOUNT_EXISTS = 101  # XXX mozilla/PyFxA#34 to read that code from PyFxA
 
 
 class TestCallsMixin(object):
@@ -27,6 +26,7 @@ class TestCallsMixin(object):
         self.user_email = "loop-%s@restmail.net" % random_user
         client = Client(self.account_server_url)
         try:
+            # Note that ``preVerified`` will only works with stage environment.
             client.create_account(self.user_email,
                                   password=random_user,
                                   preVerified=True)
