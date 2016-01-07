@@ -40,7 +40,7 @@
     "statsd-node": "0.2.3",
     "strftime": "0.8.2",
     "urlsafe-base64": "1.0.0",
-    "ws": "0.7.1",
+    "ws": "1.0.1",
     "yargs": "3.0.4"
   },
   "devDependencies": {
