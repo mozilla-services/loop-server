@@ -16,9 +16,6 @@
     },
     "tokenDuration": 86400
   },
-  "callUrls": {
-    "webAppUrl": "http://localhost:3000/content/c/{token}"
-  },
   "sentryDSN": false,
   "allowedOrigins": [
     "http://localhost:3000"
@@ -33,6 +30,7 @@
     "client_secret": "74a35b3eeef81a4f36ba8e7bf76e9972a3af6bd7c4c2fba7db7ccfc8b324cb8b"
   },
   "rooms": {
-    "HKDFSalt": "80368f70556467c69b9ca88e4f127f72"
+    "HKDFSalt": "80368f70556467c69b9ca88e4f127f72",
+    "webAppUrl": "http://localhost:3000/{token}"
   }
 }
