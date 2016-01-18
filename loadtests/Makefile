@@ -19,7 +19,7 @@ SHELL = /bin/bash
 	$(INSTALL) gevent >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/loads.git  >> loadtest.log && \
 	$(INSTALL) git+git://github.com/mozilla-services/requests-hawk.git >> loadtest.log && \
-	$(INSTALL) PyFxA[openssl] >> loadtest.log && \
+	$(INSTALL) PyFxA >> loadtest.log && \
 	wget https://pypi.python.org/packages/source/b/backports.functools_lru_cache/backports.functools_lru_cache-1.0.3.tar.gz >> loadtest.log &&\
 	tar -xvzf backports.functools_lru_cache-1.0.3.tar.gz >> loadtest.log &&\
 	pushd backports.functools_lru_cache-1.0.3 &&\
