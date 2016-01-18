@@ -172,7 +172,7 @@ var conf = convict({
     webAppUrl: {
       doc: "Loop Web App Home Page.",
       format: "url",
-      default: "http://localhost:3000/content/c/{token}",
+      default: "http://localhost:3000/c/{token}",
       env: "WEB_APP_URL"
     }
   },
@@ -519,7 +519,7 @@ var conf = convict({
     webAppUrl: {
       doc: "Loop Web App rooms url.",
       format: "url",
-      default: "http://localhost:3000/content/{token}",
+      default: "http://localhost:3000/{token}",
       env: "ROOMS_WEB_APP_URL"
     },
     HKDFSalt: {
