@@ -106,6 +106,24 @@ describe("metrics middleware", function() {
       });
   });
 
+  it("should log the add-on version to heka", function(done) {
+    supertest(app)
+      .get(apiPrefix + '/with-metrics-middleware')
+      .set("x-loop-addon-ver", "1.3")
+      .send({'action': 'join'})
+      .expect(200)
+      .end(function(err) {
+        if (err) throw err;
+        var logged = logs[0];
+
+        expect(logged.op).to.eql('request.summary');
+        expect(logged.code).to.eql(200);
+        expect(logged.path).to.eql('/with-metrics-middleware');
+        expect(logged.loopAddonVersion).to.eql("1.3");
+        done();
+      });
+  });
+
   it("should log room status details", function (done) {
     supertest(app)
       .get(apiPrefix + '/with-metrics-middleware')

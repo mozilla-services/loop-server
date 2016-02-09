@@ -84,6 +84,10 @@ function logMetrics(req, res, next) {
         action: action
       };
 
+      if (req.headers.hasOwnProperty("x-loop-addon-ver")) {
+        line.loopAddonVersion = req.headers["x-loop-addon-ver"];
+      }
+
       if (req.hasOwnProperty("callUrlData")) {
         line.calleeId = req.callUrlData.userMac;
         line.callerId = req.user;
