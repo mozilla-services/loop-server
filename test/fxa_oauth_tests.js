@@ -116,17 +116,16 @@ describe('/fxa-oauth', function () {
       });
 
       it("should count new users if the session is created", function(done) {
-        sandbox.stub(statsdClient, "count");
+        sandbox.stub(statsdClient, "increment");
         supertest(app)
           .post(apiPrefix + '/fxa-oauth/params')
           .type('json')
           .send({}).expect(200).end(function(err) {
             if (err) throw err;
-            assert.calledOnce(statsdClient.count);
+            assert.calledOnce(statsdClient.increment);
             assert.calledWithExactly(
-              statsdClient.count,
-              "loop.activated-users",
-              1
+              statsdClient.increment,
+              "loop.activated-users"
             );
             done();
           });

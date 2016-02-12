@@ -24,7 +24,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var raven = require('raven');
 var cors = require('cors');
-var StatsdClient = require('statsd-node').client;
+var StatsdClient = require('node-statsd');
 
 var PubSub = require('./pubsub');
 

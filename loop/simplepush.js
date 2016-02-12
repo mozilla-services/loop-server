@@ -26,23 +26,17 @@ SimplePush.prototype = {
     var self = this;
 
     urls.forEach(function(simplePushUrl) {
-      if (self.statsdClient !== undefined) {
-        self.statsdClient.count("loop.simplepush.call", 1);
-        self.statsdClient.count("loop.simplepush.call." + reason, 1);
-      }
       request.put({
         url: simplePushUrl,
         form: { version: version }
       }, function(err) {
+        var status = 'success';
+        if (err) {
+          self.logError(err);
+          status = 'failure';
+        }
         if (self.statsdClient !== undefined) {
-          if (err) {
-            self.logError(err);
-            self.statsdClient.count("loop.simplepush.call.failures", 1);
-            self.statsdClient.count("loop.simplepush.call." + reason + ".failures", 1);
-          } else {
-            self.statsdClient.count("loop.simplepush.call.success", 1);
-            self.statsdClient.count("loop.simplepush.call." + reason + ".success", 1);
-          }
+          self.statsdClient.increment("loop.simplepush.call", 1, [reason, status]);
         }
       });
     });
