@@ -142,7 +142,7 @@ if (conf.get("fxaOAuth").activated !== false) {
 
 var rooms = require("./routes/rooms");
 rooms(apiRouter, conf, logError, storage, filestorage, auth, validators, tokBox,
-      simplePush, notifications);
+      simplePush, notifications, statsdClient);
 
 var session = require("./routes/session");
 session(apiRouter, conf, storage, auth);

@@ -1287,7 +1287,7 @@ describe("/rooms", function() {
             .end(function(err, res) {
               if (err) throw err;
               expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                "action should be one of join, refresh, status, leave");
+                "action should be one of join, refresh, status, leave, logDomain");
               done();
             });
         });
@@ -2038,7 +2038,7 @@ describe("/rooms", function() {
           .end(function(err, res) {
             if (err) throw err;
             expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                 "action should be one of join, refresh, status, leave");
+                                 "action should be one of join, refresh, status, leave, logDomain");
             done();
           });
       });

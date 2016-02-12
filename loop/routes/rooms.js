@@ -20,7 +20,7 @@ var hmac = require('../hmac');
 
 
 module.exports = function (apiRouter, conf, logError, storage, filestorage, auth,
-                           validators, tokBox, simplePush, notifications) {
+                           validators, tokBox, simplePush, notifications, statsdClient) {
 
   var roomsConf = conf.get("rooms");
 
@@ -331,14 +331,14 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
   /**
    * Do an action on a room.
    *
-   * Actions are "join", "leave", "refresh".
+   * Actions are "join", "leave", "refresh", "status", "logDomain".
    **/
   apiRouter.post('/rooms/:token', validators.validateRoomToken,
     auth.authenticateWithHawkOrToken,
     function(req, res) {
       var participantHmac = req.hawkIdHmac || req.participantTokenHmac;
       var roomOwnerHmac = req.roomStorageData.roomOwnerHmac;
-      var ROOM_ACTIONS = ["join", "refresh", "status", "leave"];
+      var ROOM_ACTIONS = ["join", "refresh", "status", "leave", "logDomain"];
       var action = req.body.action;
       var code;
 
@@ -529,6 +529,42 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                     });
                 });
             });
+        },
+        handleLogDomain: function(req, res) {
+          // Log whitelisted domain count in statsd.
+          validators.requireParams('domains')(
+            req, res, function(req, res) {
+              var domains = req.body.domains;
+              var validDomains = domains.filter(function(domain) {
+                return domain.hasOwnProperty("domain") && domain.hasOwnProperty("count");
+              });
+
+              if (validDomains.length !== domains.length) {
+                sendError(res, 400, errors.INVALID_PARAMETERS,
+                          "Domains must be a list of objects with both a " +
+                          "``domain`` and ``count`` property.");
+                return;
+              }
+
+              storage.getRoomParticipant(req.token, participantHmac,
+                function(err, participant) {
+                  if (res.serverError(err)) return;
+                  if (participant === null) {
+                    sendError(res, 400, errors.NOT_ROOM_PARTICIPANT,
+                              "Can't update status for a room you aren't in.");
+                    return;
+                  }
+                  if (statsdClient !== undefined) {
+                    req.body.domains.forEach(function(domain) {
+                      statsdClient.increment(
+                        "loop.room.shared_domains",
+                        domain.count,
+                        [domain.domain]);
+                    });
+                  }
+                  res.status(204).json();
+              });
+          });
         }
       };
 
@@ -540,6 +576,8 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
         handlers.handleUpdateStatus(req, res);
       } else if (action === "leave") {
         handlers.handleLeave(req, res);
+      } else if (action === "logDomain") {
+        handlers.handleLogDomain(req, res);
       }
     });
 
