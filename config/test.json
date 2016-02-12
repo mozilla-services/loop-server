@@ -71,6 +71,7 @@
   "hekaMetrics": {
     "activated": false,
     "debug": false,
-    "level": "DEBUG"
+    "level": "DEBUG",
+    "fmt": "pretty"
   }
 }
