@@ -533,7 +533,7 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
         handleLogDomain: function(req, res) {
           // Log whitelisted domain count in statsd.
           validators.requireParams('domains')(
-            req, res, function(req, res) {
+            req, res, function() {
               var domains = req.body.domains;
               var validDomains = domains.filter(function(domain) {
                 return domain.hasOwnProperty("domain") && domain.hasOwnProperty("count");

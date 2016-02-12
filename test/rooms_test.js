@@ -2006,6 +2006,60 @@ describe("/rooms", function() {
           });
         });
       });
+
+      describe("Handle 'logDomain'", function() {
+
+        function createAndJoinRoom(callback) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+            joinRoom(hawkCredentials, roomToken).end(function(err) {
+              if (err) throw err;
+              callback(roomToken);
+            });
+          });
+        }
+
+        var postReq;
+        var roomToken;
+
+        beforeEach(function(done) {
+          supertest(app)
+            .post('/rooms')
+            .type('json')
+            .hawk(hawkCredentials)
+            .send({
+              roomOwner: "Alexis",
+              roomName: "UX discussion",
+              maxSize: "3",
+              expiresIn: "10"
+            })
+            .expect(201)
+            .end(function(err, postRes) {
+              if (err) throw err;
+              roomToken = postRes.body.roomToken;
+              postReq = supertest(app)
+                .post('/rooms/' + roomToken)
+                .type('json');
+              done();
+            });
+        });
+
+        it("should return empty body if successful.", function(done) {
+          joinRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            postReq
+              .send({action: "logDomain",
+                     domains: [{domain: "mozilla.org", count: 4}]})
+              .expect(204)
+              .hawk(hawkCredentials)
+              .end(function(err, resp) {
+                if (err) throw err;
+                done();
+              });
+          });
+        });
+      });
     });
 
     describe("Using Token", function() {
