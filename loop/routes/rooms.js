@@ -12,6 +12,7 @@ var decrypt = require('../encrypt').decrypt;
 var encrypt = require('../encrypt').encrypt;
 var errors = require('../errno.json');
 var getUserAccount = require('../utils').getUserAccount;
+var hekaLogger = require('../logger').hekaLogger;
 var sendError = require('../utils').sendError;
 var tokenlib = require('../tokenlib');
 var time = require('../utils').time;
@@ -554,12 +555,21 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                               "Can't update status for a room you aren't in.");
                     return;
                   }
-                  if (statsdClient !== undefined) {
+
+                  if (conf.get('hekaMetrics').activated === true) {
                     req.body.domains.forEach(function(domain) {
-                      statsdClient.increment(
-                        "loop.room.shared_domains",
-                        domain.count,
-                        [domain.domain]);
+                      var line = {
+                        domain: domain.domain,
+                        count: domain.count
+                      };
+                      hekaLogger.info('domains.counters', line);
+
+                      if (statsdClient !== undefined) {
+                        statsdClient.increment(
+                          "loop.room.shared_domains",
+                          domain.count);
+                      }
+
                     });
                   }
                   res.status(204).json();
