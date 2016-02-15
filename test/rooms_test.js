@@ -2010,18 +2010,6 @@ describe("/rooms", function() {
       });
 
       describe("Handle 'logDomain'", function() {
-
-        function createAndJoinRoom(callback) {
-          createRoom(hawkCredentials).end(function(err, res) {
-            if (err) throw err;
-            var roomToken = res.body.roomToken;
-            joinRoom(hawkCredentials, roomToken).end(function(err) {
-              if (err) throw err;
-              callback(roomToken);
-            });
-          });
-        }
-
         var postReq;
         var roomToken;
 
@@ -2055,7 +2043,7 @@ describe("/rooms", function() {
                      domains: [{domain: "mozilla.org", count: 4}]})
               .expect(204)
               .hawk(hawkCredentials)
-              .end(function(err, resp) {
+              .end(function(err) {
                 if (err) throw err;
                 done();
               });
@@ -2073,7 +2061,7 @@ describe("/rooms", function() {
                                {domain: "ebay.fr", count: 2}]})
               .expect(204)
               .hawk(hawkCredentials)
-              .end(function(err, resp) {
+              .end(function(err) {
                 if (err) throw err;
                 assert.calledTwice(statsdClient.increment);
                 assert.calledWithExactly(statsdClient.increment,
@@ -2129,7 +2117,7 @@ describe("/rooms", function() {
                                {domain: "ebay.fr", count: 2}]})
               .expect(204)
               .hawk(hawkCredentials)
-              .end(function(err, resp) {
+              .end(function(err) {
                 if (err) throw err;
                 expect(logs).to.length(3);
                 expect(logs[0]).to.eql({op: 'domains.counters',
