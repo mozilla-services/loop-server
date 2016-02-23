@@ -6,25 +6,18 @@
 
 var errors = require('../errno.json');
 var sendError = require('../utils').sendError;
-var ua = require('universal-analytics');
 
+exports.sendAnalytics = require('../utils').sendAnalytics;
 
-module.exports = function (app, conf, auth, validators) {
+exports.analytics = function (app, conf, auth, validators) {
   /**
    * Delete an account and all data associated with it.
    **/
   app.post('/event', validators.requireParams('event', 'action', 'label'),
            auth.requireHawkSession, function(req, res) {
-    if (conf.ga.activated) {
-      var userAnalytics = ua(
-        conf.ga.id, req.user,
-        {strictCidFormat: false, https: true}
-      );
-      userAnalytics.event(
-        req.body.event,
-        req.body.action,
-        req.body.label
-      ).send();
+    var ga = conf.get("ga");
+    if (ga.activated) {
+      module.exports.sendAnalytics(ga.id, req.user, req.body);
       res.status(204).json({});
     } else {
       sendError(
