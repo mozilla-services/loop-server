@@ -529,6 +529,17 @@ var conf = convict({
       default: "",
       env: "ROOMS_HKDF_SECRET"
     }
+  },
+  ga: {
+    activated: {
+      doc: "Defines if uncaught exceptions should dump snapshots",
+      default: false,
+      format: Boolean
+    },
+    id: {
+      doc: "Google analytics ID",
+      format: String
+    }
   }
 });
 
