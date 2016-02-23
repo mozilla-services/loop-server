@@ -407,7 +407,7 @@ function runOnPrefix(apiPrefix) {
               'fxaVerifier': true
             });
             assert.calledOnce(statsdClient.increment);
-            assert.calledWithExactly(statsdClient.increment, "loop.simplepush.call", 1, ['failure']);
+            assert.calledWithExactly(statsdClient.increment, "loop.simplepush.call.heartbeat", 1, ['failure']);
             done();
           });
       });
@@ -476,7 +476,7 @@ function runOnPrefix(apiPrefix) {
                 'fxaVerifier': true
               });
               assert.calledOnce(statsdClient.increment);
-              assert.calledWithExactly(statsdClient.increment, "loop.simplepush.call", 1, ['success']);
+              assert.calledWithExactly(statsdClient.increment, "loop.simplepush.call.heartbeat", 1, ['success']);
               done();
             });
       });

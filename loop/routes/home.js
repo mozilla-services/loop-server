@@ -87,7 +87,7 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
                 } else {
                   tag = 'failure';
                 }
-                statsdClient.increment('loop.simplepush.call', 1, [tag]);
+                statsdClient.increment('loop.simplepush.call.heartbeat', 1, [tag]);
               }
             });
           });
