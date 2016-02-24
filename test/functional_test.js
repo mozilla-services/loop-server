@@ -393,7 +393,7 @@ function runOnPrefix(apiPrefix) {
           }
         });
 
-        sandbox.stub(statsdClient, "count");
+        sandbox.stub(statsdClient, "increment");
 
         supertest(app)
           .get(apiPrefix + '/__heartbeat__')
@@ -406,10 +406,8 @@ function runOnPrefix(apiPrefix) {
               'push': false,
               'fxaVerifier': true
             });
-            assert.calledTwice(statsdClient.count);
-            assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
-            assert.calledWithExactly(statsdClient.count,
-                                     "loop.simplepush.call.heartbeat.failures", 1);
+            assert.calledOnce(statsdClient.increment);
+            assert.calledWithExactly(statsdClient.increment, "loop.simplepush.call.heartbeat", 1, ['failure']);
             done();
           });
       });
@@ -464,7 +462,7 @@ function runOnPrefix(apiPrefix) {
             callback(null, {statusCode: 200});
           });
 
-          sandbox.stub(statsdClient, "count");
+          sandbox.stub(statsdClient, "increment");
 
           supertest(app)
             .get(apiPrefix + '/__heartbeat__')
@@ -477,11 +475,8 @@ function runOnPrefix(apiPrefix) {
                 'push': true,
                 'fxaVerifier': true
               });
-              assert.calledTwice(statsdClient.count);
-              assert.calledWithExactly(statsdClient.count, "loop.simplepush.call", 1);
-              assert.calledWithExactly(statsdClient.count,
-                                       "loop.simplepush.call.heartbeat.success", 1);
-
+              assert.calledOnce(statsdClient.increment);
+              assert.calledWithExactly(statsdClient.increment, "loop.simplepush.call.heartbeat", 1, ['success']);
               done();
             });
       });
@@ -778,7 +773,7 @@ function runOnPrefix(apiPrefix) {
       });
 
       it("should count new users if the session is created", function(done) {
-        sandbox.stub(statsdClient, "count");
+        sandbox.stub(statsdClient, "increment");
         supertest(app)
           .post(apiPrefix + '/registration')
           .type('json')
@@ -786,25 +781,23 @@ function runOnPrefix(apiPrefix) {
             'simplePushURL': pushURL
           }).expect(200).end(function(err) {
             if (err) throw err;
-            assert.calledOnce(statsdClient.count);
+            assert.calledOnce(statsdClient.increment);
             assert.calledWithExactly(
-              statsdClient.count,
-              "loop.activated-users",
-              1
-            );
+              statsdClient.increment,
+              "loop.activated-users");
             done();
           });
       });
 
       it("shouldn't count a new user if the session already exists",
         function(done) {
-          sandbox.stub(statsdClient, "count");
+          sandbox.stub(statsdClient, "increment");
           jsonReq
             .send({
               'simple_push_url': pushURL
             }).expect(200).end(function(err) {
               if (err) throw err;
-              assert.notCalled(statsdClient.count);
+              assert.notCalled(statsdClient.increment);
               done();
             });
         });

@@ -24,7 +24,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var raven = require('raven');
 var cors = require('cors');
-var StatsdClient = require('statsd-node').client;
+var StatsdClient = require('node-statsd');
 
 var PubSub = require('./pubsub');
 
@@ -142,7 +142,7 @@ if (conf.get("fxaOAuth").activated !== false) {
 
 var rooms = require("./routes/rooms");
 rooms(apiRouter, conf, logError, storage, filestorage, auth, validators, tokBox,
-      simplePush, notifications);
+      simplePush, notifications, statsdClient);
 
 var session = require("./routes/session");
 session(apiRouter, conf, storage, auth);

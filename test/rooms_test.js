@@ -8,6 +8,7 @@ var expect = require("chai").expect;
 var addHawk = require("superagent-hawk");
 var supertest = addHawk(require("supertest"));
 var sinon = require("sinon");
+var assert = sinon.assert;
 var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
 var Token = require("express-hawkauth").Token;
@@ -23,6 +24,7 @@ var auth = loop.auth;
 var validators = loop.validators;
 var apiRouter = loop.apiRouter;
 var conf = loop.conf;
+var statsdClient = loop.statsdClient;
 var storage = loop.storage;
 var filestorage = loop.filestorage;
 var tokBox = loop.tokBox;
@@ -1287,7 +1289,7 @@ describe("/rooms", function() {
             .end(function(err, res) {
               if (err) throw err;
               expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                "action should be one of join, refresh, status, leave");
+                "action should be one of join, refresh, status, leave, logDomain");
               done();
             });
         });
@@ -2006,6 +2008,163 @@ describe("/rooms", function() {
           });
         });
       });
+
+      describe("Handle 'logDomain'", function() {
+        var postReq;
+        var roomToken;
+
+        beforeEach(function(done) {
+          supertest(app)
+            .post('/rooms')
+            .type('json')
+            .hawk(hawkCredentials)
+            .send({
+              roomOwner: "Alexis",
+              roomName: "UX discussion",
+              maxSize: "3",
+              expiresIn: "10"
+            })
+            .expect(201)
+            .end(function(err, postRes) {
+              if (err) throw err;
+              roomToken = postRes.body.roomToken;
+              postReq = supertest(app)
+                .post('/rooms/' + roomToken)
+                .type('json');
+              done();
+            });
+        });
+
+        it("should return empty body if successful.", function(done) {
+          joinRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            postReq
+              .send({action: "logDomain",
+                     domains: [{domain: "mozilla.org", count: 4}]})
+              .expect(204)
+              .hawk(hawkCredentials)
+              .end(function(err) {
+                if (err) throw err;
+                done();
+              });
+          });
+        });
+
+        it("should count total domain metrics in statsd.", function(done) {
+          joinRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            sandbox.stub(statsdClient, "increment");
+
+            postReq
+              .send({action: "logDomain",
+                     domains: [{domain: "mozilla.org", count: 4},
+                               {domain: "ebay.fr", count: 2}]})
+              .expect(204)
+              .hawk(hawkCredentials)
+              .end(function(err) {
+                if (err) throw err;
+                assert.calledTwice(statsdClient.increment);
+                assert.calledWithExactly(statsdClient.increment,
+                                         "loop.room.shared_domains", 4);
+                assert.calledWithExactly(statsdClient.increment,
+                                         "loop.room.shared_domains", 2);
+                done();
+              });
+          });
+        });
+
+        it("should reject if user had not joined the room", function(done) {
+          postReq
+            .send({action: "logDomain",
+                   domains: [{domain: "mozilla.org", count: 4}]})
+            .expect(400)
+            .hawk(hawkCredentials)
+            .end(function(err, res) {
+              if (err) throw err;
+                expectFormattedError(
+                  res, 400, errors.NOT_ROOM_PARTICIPANT,
+                  "Can't update status for a room you aren't in.");
+                done();
+            });
+        });
+
+        it("should return a 503 in case of storage error.", function(done) {
+          sandbox.stub(storage, "getRoomParticipant",
+            function(roomTokens, participantHmac, callback) {
+              callback("error");
+            });
+
+          postReq
+            .send({action: "logDomain",
+                   domains: [{domain: "mozilla.org", count: 4}]})
+            .expect(503)
+            .hawk(hawkCredentials)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(res, 503, errors.BACKEND,
+                                   "Service Unavailable");
+              done();
+            });
+        });
+
+        it("should log domain count data if successful.", function(done) {
+          joinRoom(hawkCredentials, roomToken).end(function(err) {
+            if (err) throw err;
+            logs = [];  // Reset hekaLogs.
+            postReq
+              .send({action: "logDomain",
+                     domains: [{domain: "mozilla.org", count: 4},
+                               {domain: "ebay.fr", count: 2}]})
+              .expect(204)
+              .hawk(hawkCredentials)
+              .end(function(err) {
+                if (err) throw err;
+                expect(logs).to.length(3);
+                expect(logs[0]).to.eql({op: 'domains.counters',
+                                        domain: 'mozilla.org',
+                                        count: 4});
+                expect(logs[1]).to.eql({op: 'domains.counters',
+                                        domain: 'ebay.fr',
+                                        count: 2});
+                done();
+              });
+          });
+        });
+
+        it("should reject if body is incomplete (domain property missing).", function(done) {
+            postReq
+              .send({action: "logDomain",
+                     domains: [{domain: "mozilla.org"}]})
+              .expect(400)
+              .hawk(hawkCredentials)
+              .end(function(err, res) {
+                if (err) throw err;
+                expectFormattedError(
+                  res, 400, errors.INVALID_PARAMETERS,
+                  "Domains must be a list of objects with both a " +
+                  "``domain`` and ``count`` property."
+                );
+                done();
+              });
+        });
+
+        it("should reject if body is incomplete (count property missing).", function(done) {
+            postReq
+              .send({action: "logDomain",
+                     domains: [{domain: "mozilla.org", count: 4}, {count: 2}]})
+              .expect(400)
+              .hawk(hawkCredentials)
+              .end(function(err, res) {
+                if (err) throw err;
+                expectFormattedError(
+                  res, 400, errors.INVALID_PARAMETERS,
+                  "Domains must be a list of objects with both a " +
+                  "``domain`` and ``count`` property."
+                );
+                done();
+              });
+        });
+      });
     });
 
     describe("Using Token", function() {
@@ -2038,7 +2197,7 @@ describe("/rooms", function() {
           .end(function(err, res) {
             if (err) throw err;
             expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
-                                 "action should be one of join, refresh, status, leave");
+                                 "action should be one of join, refresh, status, leave, logDomain");
             done();
           });
       });

@@ -74,9 +74,9 @@ describe("TokBox", function() {
     var tokBox, openTokSpy, statsdClient, statsdTimer, statsdCount;
 
     beforeEach(function() {
-      statsdClient = { timing: function() {}, count: function() {} };
+      statsdClient = { timing: function() {}, increment: function() {} };
       statsdTimer = sandbox.spy(statsdClient, "timing");
-      statsdCount = sandbox.spy(statsdClient, "count");
+      statsdCount = sandbox.spy(statsdClient, "increment");
 
       openTokSpy = sandbox.spy(loopTokbox, "OpenTok");
       openTokSpy.withArgs(

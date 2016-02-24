@@ -55,17 +55,14 @@ describe("simplePush object", function() {
     });
 
     it("should notify using the statsd client if present", function() {
-      var statsdClient = { count: function() {} };
-      var statsdSpy = sandbox.spy(statsdClient, "count");
+      var statsdClient = { increment: function() {} };
+      var statsdSpy = sandbox.spy(statsdClient, "increment");
 
       var simplePush = new SimplePush(statsdClient);
       simplePush.notify("reason", "url1", 12345);
 
-      assert.callCount(statsdSpy, 4);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.reason", 1);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call", 1);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.success", 1);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.reason.success", 1);
+      assert.calledOnce(statsdSpy);
+      assert.calledWithExactly(statsdSpy, "loop.simplepush.call", 1, ["reason", "success"]);
     });
 
     it("should notify using the statsd client for errors if present", function() {
@@ -78,16 +75,13 @@ describe("simplePush object", function() {
         callback("error");
       });
 
-      var statsdClient = { count: function() {} };
-      var statsdSpy = sandbox.spy(statsdClient, "count");
+      var statsdClient = { increment: function() {} };
+      var statsdSpy = sandbox.spy(statsdClient, "increment");
 
       var simplePush = new SimplePush(statsdClient);
       simplePush.notify("reason", "url1", 12345);
 
-      assert.callCount(statsdSpy, 4);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.reason", 1);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call", 1);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.failures", 1);
-      assert.calledWithExactly(statsdSpy, "loop.simplepush.call.reason.failures", 1);
+      assert.calledOnce(statsdSpy);
+      assert.calledWithExactly(statsdSpy, "loop.simplepush.call", 1, ["reason", "failure"]);
     });
 });

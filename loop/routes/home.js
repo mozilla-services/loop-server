@@ -81,14 +81,13 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
               var pushStatus = (!error && statusCodes.every(isSuccess));
               returnStatus(storageStatus, tokboxError, pushStatus, verifierStatus);
               if (statsdClient !== undefined) {
-                statsdClient.count('loop.simplepush.call', 1);
-                var counter_push_status_counter;
+                var tag;
                 if (pushStatus) {
-                  counter_push_status_counter = 'loop.simplepush.call.heartbeat.success';
+                  tag = 'success';
                 } else {
-                  counter_push_status_counter = 'loop.simplepush.call.heartbeat.failures';
+                  tag = 'failure';
                 }
-                statsdClient.count(counter_push_status_counter, 1);
+                statsdClient.increment('loop.simplepush.call.heartbeat', 1, [tag]);
               }
             });
           });
