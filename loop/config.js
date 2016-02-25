@@ -532,12 +532,12 @@ var conf = convict({
   },
   ga: {
     activated: {
-      doc: "Defines if uncaught exceptions should dump snapshots",
+      doc: "Should we send POST /events data to Google Analytics while true.",
       default: false,
       format: Boolean
     },
     id: {
-      doc: "Google analytics ID",
+      doc: "Google analytics ID.",
       format: String
     }
   }
