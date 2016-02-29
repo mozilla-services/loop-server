@@ -538,6 +538,7 @@ var conf = convict({
     },
     id: {
       doc: "Google analytics ID.",
+      default: "",
       format: String
     }
   }
