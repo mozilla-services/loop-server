@@ -6,7 +6,7 @@
 
 var async = require('async');
 var randomBytes = require('crypto').randomBytes;
-var errors = require('../errno.json');
+var errors = require('../errno');
 var hmac = require('../hmac');
 var getProgressURL = require('../utils').getProgressURL;
 var sendError = require('../utils').sendError;

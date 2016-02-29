@@ -529,6 +529,17 @@ var conf = convict({
       default: "",
       env: "ROOMS_HKDF_SECRET"
     }
+  },
+  ga: {
+    activated: {
+      doc: "Should we send POST /events data to Google Analytics while true.",
+      default: false,
+      format: Boolean
+    },
+    id: {
+      doc: "Google analytics ID.",
+      format: String
+    }
   }
 });
 

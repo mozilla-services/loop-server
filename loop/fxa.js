@@ -9,7 +9,7 @@ var request = require('request');
 var conf = require('./config').conf;
 var atob = require('atob');
 var sendError = require("./utils").sendError;
-var errors = require("./errno.json");
+var errors = require("./errno");
 
 // Don't be limited by the default node.js HTTP agent.
 var agent = new https.Agent();

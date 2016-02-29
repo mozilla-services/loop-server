@@ -10,7 +10,7 @@ var uuid = require('node-uuid');
 
 var decrypt = require('../encrypt').decrypt;
 var encrypt = require('../encrypt').encrypt;
-var errors = require('../errno.json');
+var errors = require('../errno');
 var getUserAccount = require('../utils').getUserAccount;
 var hekaLogger = require('../logger').hekaLogger;
 var sendError = require('../utils').sendError;

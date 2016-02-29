@@ -22,8 +22,10 @@ var conf = loop.conf;
 var tokBox = loop.tokBox;
 var storage = loop.storage;
 var statsdClient = loop.statsdClient;
-var getProgressURL = require("../loop/utils").getProgressURL;
-var time = require('../loop/utils').time;
+
+var utils = require("../loop/utils");
+var getProgressURL = utils.getProgressURL;
+var time = utils.time;
 
 var Token = require("express-hawkauth").Token;
 var tokenlib = require("../loop/tokenlib");
@@ -32,6 +34,7 @@ var tokBoxConfig = conf.get("tokBox");
 var hmac = require("../loop/hmac");
 var pjson = require("../package.json");
 
+var analytics = require("../loop/routes/analytics");
 var getMiddlewares = require("./support").getMiddlewares;
 var expectFormattedError = require("./support").expectFormattedError;
 var errors = require("../loop/errno.json");
@@ -1713,6 +1716,97 @@ function runOnPrefix(apiPrefix) {
           });
       });
     });
+
+    describe("POST /event", function() {
+      it("should fail if does not have event/label/action.", function(done) {
+          supertest(app)
+            .post('/event')
+            .type('json')
+            .expect('Content-Type', /json/)
+            .expect(400)
+            .end(function(err, res) {
+              if (err) throw err;
+              expectFormattedError(res, 400, errors.MISSING_PARAMETERS,
+                                   "Missing: event, action, label");
+              done();
+            });
+        });
+
+      it("should returns a 401 if no hawk session.", function(done) {
+          supertest(app)
+            .post('/event')
+            .type('json')
+            .expect('Content-Type', /json/)
+            .send({'event': 'tab_shared',
+                   'action': 'clicked',
+                   'label': 'Tab shared'})
+            .expect(401)
+            .end(done);
+        });
+
+      it("should returns a 405 if disabled in settings.", function(done) {
+          supertest(app)
+            .post('/event')
+            .type('json')
+            .expect('Content-Type', /json/)
+            .send({'event': 'tab_shared',
+                   'action': 'clicked',
+                   'label': 'Tab shared'})
+            .hawk(hawkCredentials)
+            .expect(405)
+            .end(done);
+        });
+
+      context("enabled", function() {
+        var sendAnalyticsStub;
+        beforeEach(function() {
+          sendAnalyticsStub = sandbox.stub(analytics, "sendAnalytics");
+          conf.set('ga', {
+            activated: true,
+            id: "fake-ga-id"
+          });
+        });
+
+        afterEach(function() {
+          conf.set('ga', {
+            activated: false,
+            id: null
+          });
+        });
+
+        it("should returns a 204 if everything went well.", function(done) {
+          supertest(app)
+            .post('/event')
+            .type('json')
+            .send({'event': 'tab_shared',
+                   'action': 'clicked',
+                   'label': 'Tab shared'})
+            .hawk(hawkCredentials)
+            .expect(204)
+            .end(done);
+        });
+
+        it("should pass gaID, userID and body to sendAnalytics.", function(done) {
+          supertest(app)
+            .post('/event')
+            .type('json')
+            .send({'event': 'tab_shared',
+                   'action': 'clicked',
+                   'label': 'Tab shared'})
+            .hawk(hawkCredentials)
+            .expect(204)
+            .end(function(err) {
+              if (err) throw err;
+              assert.calledWithExactly(sendAnalyticsStub, "fake-ga-id", userHmac, {
+                event: 'tab_shared',
+                action: 'clicked',
+                label: 'Tab shared'
+              });
+              done();
+            });
+        });
+      });
+    });
   });
 
   describe("GET /api-specs", function() {
@@ -1743,8 +1837,6 @@ function runOnPrefix(apiPrefix) {
           });
       });
   });
-
-
 }
 
 describe("HTTP API exposed by the server", function() {

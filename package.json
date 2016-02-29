@@ -39,6 +39,7 @@
     "sodium": "1.0.13",
     "node-statsd": "0.1.1",
     "strftime": "0.8.2",
+    "universal-analytics": "0.3.10",
     "urlsafe-base64": "1.0.0",
     "ws": "1.0.1",
     "yargs": "3.0.4"

@@ -7,7 +7,7 @@
 var randomBytes = require('crypto').randomBytes;
 var request = require('request');
 var sendError = require('../utils').sendError;
-var errors = require('../errno.json');
+var errors = require('../errno');
 var hmac = require('../hmac');
 var encrypt = require('../encrypt').encrypt;
 
