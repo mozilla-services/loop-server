@@ -98,7 +98,6 @@ function getSimplePushURLS(req, callback) {
  * Create a UA instance and sent an event to it.
  **/
 function sendAnalytics(gaID, userID, data) {
-  console.log("SendAnalytics");
   var userAnalytics = ua(gaID, userID, {strictCidFormat: false, https: true});
   userAnalytics.event(data.event, data.action, data.label).send();
 }

@@ -7,7 +7,7 @@
 var hawk = require('express-hawkauth');
 
 var encrypt = require("./encrypt").encrypt;
-var errors = require('./errno.json');
+var errors = require('./errno');
 var hmac = require('./hmac');
 var sendError = require('./utils').sendError;
 var fxa = require('./fxa');

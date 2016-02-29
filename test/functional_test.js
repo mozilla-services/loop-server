@@ -1767,9 +1767,7 @@ function runOnPrefix(apiPrefix) {
       context("enabled", function() {
         var sendAnalyticsStub;
         beforeEach(function() {
-          // XXX: stup node-analytics
           sendAnalyticsStub = sandbox.stub(analytics, "sendAnalytics");
-          // Activate ga in the configuration
           conf.set('ga', {
             activated: true,
             id: "fake-ga-id"
@@ -1807,9 +1805,9 @@ function runOnPrefix(apiPrefix) {
             .end(function(err) {
               if (err) throw err;
               assert.calledWithExactly(sendAnalyticsStub, "fake-ga-id", userHmac, {
-                'event': 'tab_shared',
-                'action': 'clicked',
-                'label': 'Tab shared'
+                event: 'tab_shared',
+                action: 'clicked',
+                label: 'Tab shared'
               });
               done();
             });

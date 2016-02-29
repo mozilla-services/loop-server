@@ -5,7 +5,7 @@
 "use strict";
 
 var conf = require("./config").conf;
-var loopPackageData = require('../package.json');
+var loopPackageData = require('../package');
 var os = require("os");
 
 // Assume the hostname will not change once the server is launched.

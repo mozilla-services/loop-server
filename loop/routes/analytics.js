@@ -4,7 +4,7 @@
 
 "use strict";
 
-var errors = require('../errno.json');
+var errors = require('../errno');
 var sendError = require('../utils').sendError;
 
 exports.sendAnalytics = require('../utils').sendAnalytics;
