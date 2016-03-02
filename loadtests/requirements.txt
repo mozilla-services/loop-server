@@ -1,4 +1,0 @@
-gevent
-six
-git+git://github.com/mozilla-services/loads.git
-git+git://github.com/mozilla-services/requests-hawk.git

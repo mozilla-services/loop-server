@@ -83,6 +83,12 @@ value is high enough or you will get EMFILE errors:
 ulimit -S -n 2048
 ```
 
+## How do I run the loadtests?
+
+The loadtests are in the
+[ailoads-loop](https://github.com/mozilla-services/ailoads-loop)
+repository.
+
 ## Where do I report bugs?
 
 You should report bugs/issues or feature requests via [the loop-server bugzilla
