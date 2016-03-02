@@ -36,7 +36,7 @@
     "raven": "0.7.2",
     "redis": "0.12.1",
     "request": "2.45.0",
-    "sodium": "1.0.13",
+    "sodium": "1.0.22",
     "node-statsd": "0.1.1",
     "strftime": "0.8.2",
     "universal-analytics": "0.3.10",
