@@ -215,7 +215,8 @@ var conf = convict({
     format: Object,
     default: {
       port: 6379,
-      host: 'localhost'
+      host: 'localhost',
+      skipConfig: false
     }
   },
   fakeTokBox: {
