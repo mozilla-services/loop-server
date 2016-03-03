@@ -251,6 +251,19 @@ function runOnPrefix(apiPrefix) {
       });
     });
 
+
+    describe("GET /__lbheartbeat__", function() {
+      it("should return a 200 if everything is ok", function(done) {
+        supertest(app)
+          .get(apiPrefix + '/__lbheartbeat__')
+          .expect(200)
+          .end(function(err) {
+            if (err) throw err;
+            done();
+          });
+      });
+    });
+
     describe("GET /__heartbeat__", function() {
       var defaultPushURI = "https://push.services.mozilla.com/";
       beforeEach(function() {
