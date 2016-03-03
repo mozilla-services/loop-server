@@ -3,10 +3,17 @@ Changelog
 
 This document describes changes between each past release.
 
-0.20.0 (unreleased)
+
+0.20.0 (2016-03-03)
 -------------------
 
-- Remove loads v1 loadtests.
+- Switch from statsd-node to node-statsd to handle tags. (#363)
+- Remove loads v1 loadtests. (#364)
+- Display pretty exception when tests raises with Mocha. (#365)
+- Add a new room action to get metrics about whitelisted shared domains (#365)
+- Add a new route to let the client send UX metrics in Google Analytics (#366)
+- Upgrade libsodium and add support for node 0.12 (#367)
+- Add a __lbhealthcheck__ endpoint (#368)
 
 
 0.19.3 (2016-02-12)
