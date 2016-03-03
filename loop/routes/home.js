@@ -96,6 +96,14 @@ module.exports = function(app, conf, logError, storage, tokBox, statsdClient) {
     });
   });
 
+
+  /**
+   * Checks that the service and its dependencies are healthy.
+   **/
+  app.get("/__lbheartbeat__", function(req, res) {
+    res.status(200).json({});
+  });
+
   /**
    * Displays some version information at the root of the service.
    **/
