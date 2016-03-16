@@ -4,10 +4,10 @@ Changelog
 This document describes changes between each past release.
 
 
-0.21.0 (unreleased)
+0.20.1 (2016-03-16)
 -------------------
 
-- No changes yet.
+- Revert sodium dep to 1.0.13 so that Centos 6.5 can install it.
 
 
 0.20.0 (2016-03-03)
