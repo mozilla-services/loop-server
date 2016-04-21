@@ -371,91 +371,114 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                 return;
               }
               var channel = req.roomStorageData.channel;
-              var ttl = roomsConf.participantTTL;
-              var role = req.user === roomOwnerHmac ? 'moderator' : 'publisher';
-              var sessionToken = tokBox.getSessionToken(
-                req.roomStorageData.sessionId,
-                role,
-                channel
-              );
-              req.roomStorageData.sessionToken = sessionToken;
 
-              function next(err) {
-                if (res.serverError(err)) return;
-                storage.getRoomParticipants(req.token, function(err,
-                  participants) {
+              // Look in the config for the current apiKey for this channel
+              if (tokBox.credentials[channel].apiKey !== req.roomStorageData.apiKey) {
+                // If the apiKey stored in the roomStorageData is not the same as in the config
+                // Ask for a new sessionId and store it in the roomStorageData.
+                tokBox.getSession({channel: channel},
+                  function(err, session, opentok) {
                     if (res.serverError(err)) return;
 
-                    // When talking about room participants, we are
-                    // talking about user devices present in the room.
+                    req.roomStorageData.sessionId = session.sessionId;
+                    req.roomStorageData.apiKey = opentok.apiKey;
 
-                    // In case we are rejoining, we don't want to
-                    // consider this session to already be in the
-                    // room. The otherParticipants filters this
-                    // session device from the participant list so
-                    // that we can rejoin even if we are already
-                    // supposed to be in the roon.
+                    storage.setUserRoomData(req.user, req.token,
+                                            req.roomStorageData, renderRoomInformation);
+                  });
+              } else {
+                renderRoomInformation();
+              }
 
-                    var otherParticipants = participants.filter(function(participant) {
-                      return req.user === undefined || participant.userMac !== req.user;
-                    });
+              function renderRoomInformation(err) {
+                if (res.serverError(err)) return;
 
-                    // Room participants are used by metrics
-                    req.roomParticipantsCount = participants.length;
+                var ttl = roomsConf.participantTTL;
+                var role = req.user === roomOwnerHmac ? 'moderator' : 'publisher';
+                var sessionToken = tokBox.getSessionToken(
+                  req.roomStorageData.sessionId,
+                  role,
+                  channel
+                );
+                req.roomStorageData.sessionToken = sessionToken;
 
-                    var roomMaxSize = req.roomStorageData.maxSize;
-                    if (!canJoinRoom(
-                          otherParticipants, roomMaxSize,
-                          req.roomStorageData.roomOwnerHmac,
-                          req.user)) {
-                      sendError(res, 400, errors.ROOM_FULL, "The room is full.");
-                      return;
-                    } else if (requestMaxSize <= otherParticipants.length) {
-                      // You cannot handle the number of actual participants.
-                      sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
-                        "Too many participants in the room for you to handle.");
-                      return;
-                    }
-
-                    getUserAccount(storage, req, function(err, acc) {
+                function next(err) {
+                  if (res.serverError(err)) return;
+                  storage.getRoomParticipants(req.token, function(err,
+                    participants) {
                       if (res.serverError(err)) return;
-                      encryptAccountName(req.token, acc, function(account) {
-                        req.roomConnectionId = uuid.v4();
-                        storage.addRoomParticipant(req.token, participantHmac, {
-                          id: req.roomConnectionId,
-                          displayName: req.body.displayName,
-                          clientMaxSize: requestMaxSize,
-                          userMac: req.user,
-                          account: account
-                        }, ttl, function(err) {
-                          if (res.serverError(err)) return;
 
-                          // A participant was just added.
-                          req.roomParticipantsCount++;
+                      // When talking about room participants, we are
+                      // talking about user devices present in the room.
 
-                          emitRoomEvent(req.token,
+                      // In case we are rejoining, we don't want to
+                      // consider this session to already be in the
+                      // room. The otherParticipants filters this
+                      // session device from the participant list so
+                      // that we can rejoin even if we are already
+                      // supposed to be in the roon.
+
+                      var otherParticipants = participants.filter(function(participant) {
+                        return req.user === undefined || participant.userMac !== req.user;
+                      });
+
+                      // Room participants are used by metrics
+                      req.roomParticipantsCount = participants.length;
+
+                      var roomMaxSize = req.roomStorageData.maxSize;
+                      if (!canJoinRoom(
+                            otherParticipants, roomMaxSize,
                             req.roomStorageData.roomOwnerHmac,
-                            "join",
-                            function(err) {
-                              if (res.serverError(err)) return;
-                              res.status(200).json({
-                                apiKey: req.roomStorageData.apiKey,
-                                sessionId: req.roomStorageData.sessionId,
-                                sessionToken: sessionToken,
-                                expires: ttl
+                            req.user)) {
+                        sendError(res, 400, errors.ROOM_FULL, "The room is full.");
+                        return;
+                      } else if (requestMaxSize <= otherParticipants.length) {
+                        // You cannot handle the number of actual participants.
+                        sendError(res, 400, errors.CLIENT_REACHED_CAPACITY,
+                          "Too many participants in the room for you to handle.");
+                        return;
+                      }
+
+                      getUserAccount(storage, req, function(err, acc) {
+                        if (res.serverError(err)) return;
+                        encryptAccountName(req.token, acc, function(account) {
+                          req.roomConnectionId = uuid.v4();
+                          storage.addRoomParticipant(req.token, participantHmac, {
+                            id: req.roomConnectionId,
+                            displayName: req.body.displayName,
+                            clientMaxSize: requestMaxSize,
+                            userMac: req.user,
+                            account: account
+                          }, ttl, function(err) {
+                            if (res.serverError(err)) return;
+
+                            // A participant was just added.
+                            req.roomParticipantsCount++;
+
+                            emitRoomEvent(req.token,
+                              req.roomStorageData.roomOwnerHmac,
+                              "join",
+                              function(err) {
+                                if (res.serverError(err)) return;
+                                res.status(200).json({
+                                  apiKey: req.roomStorageData.apiKey,
+                                  sessionId: req.roomStorageData.sessionId,
+                                  sessionToken: sessionToken,
+                                  expires: ttl
+                                });
                               });
-                            });
+                          });
                         });
                       });
-                    });
-                });
+                  });
+                }
+                if (participantHmac === undefined) {
+                  participantHmac = hmac(sessionToken, conf.get('userMacSecret'));
+                  storage.setRoomAccessToken(req.token, participantHmac, ttl, next);
+                  return;
+                }
+                next();
               }
-              if (participantHmac === undefined) {
-                participantHmac = hmac(sessionToken, conf.get('userMacSecret'));
-                storage.setRoomAccessToken(req.token, participantHmac, ttl, next);
-                return;
-              }
-              next();
             });
         },
         handleRefresh: function(req, res) {
