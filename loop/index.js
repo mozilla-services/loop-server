@@ -125,6 +125,7 @@ registration(apiRouter, conf, logError, storage, auth, validators);
 var account = require("./routes/account");
 account(apiRouter, storage, auth);
 
+/* statsdClient does not seem to be implemented in the module arguments*/
 var callUrl = require("./routes/call-url");
 callUrl(apiRouter, conf, logError, storage, auth, validators, statsdClient);
 
@@ -153,6 +154,12 @@ session(apiRouter, conf, storage, auth);
 var videur = require("./routes/videur");
 videur(apiRouter, conf);
 
+/* remote meta-data server*/
+var xeta = require("./routes/meta-data");
+xeta(apiRouter, conf);
+
+var phanproc = require("./routes/phantom-proc");
+phanproc(apiRouter, conf);
 
 app.use(apiPrefix, apiRouter);
 app.use("/", apiRouter);
