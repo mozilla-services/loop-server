@@ -383,7 +383,7 @@ module.exports = function (apiRouter, conf, logError, storage, filestorage, auth
                     req.roomStorageData.sessionId = session.sessionId;
                     req.roomStorageData.apiKey = opentok.apiKey;
 
-                    storage.setUserRoomData(req.user, req.token,
+                    storage.setUserRoomData(roomOwnerHmac, req.token,
                                             req.roomStorageData, renderRoomInformation);
                   });
               } else {
