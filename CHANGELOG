@@ -3,10 +3,12 @@ CHANGELOG
 
 This document describes changes between each past release.
 
-0.22.0 (unreleased)
+0.21.3 (2016-05-26)
 -------------------
 
-- No changes yet.
+- Revert sodium dep to 1.0.13 so that Centos 6.5 can install it.
+- Revert hiredis dep to 0.2.0 so that Centos 6.5 can install it.
+- Revert heapdump dep to 0.3.5 so that Centos 6.5 can install it.
 
 
 0.21.2 (2016-05-26)
