@@ -1675,6 +1675,41 @@ describe("/rooms", function() {
             });
           });
         });
+
+        it("should refresh the sessionId even if the user is a guest.", function(done) {
+          createRoom(hawkCredentials).end(function(err, res) {
+            if (err) throw err;
+            var roomToken = res.body.roomToken;
+
+            storage.getRoomData(roomToken, function(err, roomData) {
+              if (err) throw err;
+              // Update apiKey with other credentials
+              roomData.apiKey = "old api key";
+              roomData.sessionId = "old sessionId";
+              storage.setUserRoomData(userHmac, roomToken, roomData, function(err) {
+                if (err) throw err;
+                joinRoom(null, roomToken, {
+                  action: "join",
+                  clientMaxSize: 10,
+                  displayName: "Natim"
+                }).end(function(err, res) {
+                  if (err) throw err;
+                  expect(res.body).to.eql({
+                    "apiKey": tokBox._opentok.default.apiKey,
+                    "expires": conf.get("rooms").participantTTL,
+                    "sessionId": sessionId,
+                    "sessionToken": sessionToken
+                  });
+                  storage.getRoomParticipants(roomToken, function(err, participants) {
+                    if (err) throw err;
+                    expect(participants).to.length(1);
+                    done();
+                  });
+                });
+              });
+            });
+          });
+        });
       });
 
       describe("Handle 'refresh'", function() {
