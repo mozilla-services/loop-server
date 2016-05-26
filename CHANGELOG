@@ -3,10 +3,10 @@ CHANGELOG
 
 This document describes changes between each past release.
 
-0.22.0 (unreleased)
+0.21.2 (2016-05-26)
 -------------------
 
-- No changes yet.
+- Always use the roomOwnerHmac when upgrading rooms. (Bug 1275652)
 
 
 0.21.1 (2016-05-17)
