@@ -135,6 +135,9 @@ var storeUserCallTokens = calls(apiRouter, conf, logError, storage, tokBox,
 var pushServerConfig = require("./routes/push-server-config");
 pushServerConfig(apiRouter, conf);
 
+var firebaseProxy = require("./routes/firebase-proxy");
+firebaseProxy(apiRouter, conf, logError, storage, auth, validators, statsdClient);
+
 if (conf.get("fxaOAuth").activated !== false) {
   var fxaOAuth = require("./routes/fxa-oauth");
   fxaOAuth(apiRouter, conf, logError, storage, auth, validators);
