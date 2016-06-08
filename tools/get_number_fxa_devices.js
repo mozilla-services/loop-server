@@ -16,15 +16,15 @@ function main(callback) {
     client.keys('hawkuser.*', function(err, keys) {
       if (err) throw err;
       var multi = client.multi();
-      
+
       keys.forEach(function(key) {
         multi.get(key);
       });
-      
+
       multi.exec(function(err, results) {
         var users = {};
 
-        results.forEach(function(result, index) {
+        results.forEach(function(result) {
           if(!users.hasOwnProperty(result)) {
             users[result] = 1;
           } else {
@@ -35,20 +35,25 @@ function main(callback) {
         var total = Object.keys(users).length;
         var max = 0;
         var sum = 0;
+        var moreThan1 = 0;
         for(var key in users) {
           sum += users[key];
+          if (users[key] > 1) {
+            moreThan1++;
+          }
           if (max < users[key]) {
             max = users[key];
           }
         }
 
-        
+
         callback({
           users: total,
           average: sum/total,
-          max: max
+          max: max,
+          moreThan1: moreThan1
         });
-      });      
+      });
     });
   }
 }
@@ -57,7 +62,8 @@ function main(callback) {
 if (require.main === module) {
   main(function(results) {
     process.stdout.write(results.users + " FxA users with " +
-                         results.average + " devices in average and a maximum of " + results.max + ".\n");
+                         results.average + " devices on average and a maximum of " + results.max + ", ");
+    process.stdout.write("and " + results.moreThan1 + " FxA users with more than one device.\n");
     process.exit(0);
   });
 }
