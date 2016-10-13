@@ -35,7 +35,7 @@
     "phone": "git://github.com/Natim/node-phone.git#83a4f48",
     "raven": "0.7.2",
     "redis": "0.12.1",
-    "request": "2.45.0",
+    "request": "2.74.0",
     "sodium": "1.0.13",
     "node-statsd": "0.1.1",
     "strftime": "0.8.2",
