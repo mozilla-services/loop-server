@@ -38,13 +38,18 @@ module.exports = function (app, conf, logError, storage, auth) {
     });
 
   /**
-   * Deletes the given simple push URL (you need to have registered it
-   * to be able to unregister).
+   * Deletes the given current HawkSession and its associated SimplePushURLs
    **/
   app.delete('/registration', auth.requireHawkSession, function(req, res) {
     storage.removeSimplePushURLs(req.user, req.hawkIdHmac, function(err) {
       if (res.serverError(err)) return;
-      res.status(204).json();
+      storage.deleteHawkUserId(req.hawkIdHmac, function(err) {
+        if (res.serverError(err)) return;
+        storage.deleteHawkSession(req.hawkIdHmac, function(err) {
+          if (res.serverError(err)) return;
+          res.status(204).json();
+        });
+      });
     });
   });
 };

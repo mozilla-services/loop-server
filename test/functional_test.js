@@ -847,9 +847,24 @@ function runOnPrefix(apiPrefix) {
 
       it("should remove an existing simple push url for an user", function(done) {
         register(url, expectedAssertion, hawkCredentials, function() {
-          jsonReq.send({})
-            .expect(204)
-            .end(done);
+          storage.getUserSimplePushURLs(userHmac, function(err, spurls) {
+            if (err) throw err;
+            expect(spurls).to.eql({rooms: [], calls: ["http://www.mozilla.org"]});
+            jsonReq.send({})
+              .expect(204)
+              .end(function(err) {
+                if (err) throw err;
+                storage.getUserSimplePushURLs(userHmac, function(err, spurls) {
+                  if (err) throw err;
+                  expect(spurls).to.eql({rooms: [], calls: []});
+                  storage.getHawkSession(hawkIdHmac, function(err, result) {
+                    if (err) throw err;
+                    expect(result).to.eql(null);
+                    done();
+                  });
+                });
+              });
+            });
         });
       });
     });
